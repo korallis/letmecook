@@ -1,0 +1,482 @@
+{
+  "schema": 1,
+  "profile": "m0-linuxkit-arm64-docker29-uds-v1",
+  "selectedProfile": {
+    "id": "m0-linuxkit-arm64-docker29-uds-v1",
+    "engineVersion": "29.7.2",
+    "kernelVersion": "6.12.76-linuxkit",
+    "architecture": "arm64",
+    "image": "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0"
+  },
+  "dockerContext": "desktop-linux",
+  "runId": "gaffer-isolation-6810f3c80449",
+  "observedAt": "2026-09-14T12:02:16.058Z",
+  "image": "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0",
+  "syntheticInference": true,
+  "unattendedSupported": false,
+  "result": "blocked",
+  "commands": [
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "version",
+      "--format",
+      "{{json .}}"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "info",
+      "--format",
+      "{{json .}}"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "image",
+      "inspect",
+      "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "volume",
+      "create",
+      "--label",
+      "dev.gaffer.isolation-experiment=gaffer-isolation-6810f3c80449",
+      "--driver",
+      "local",
+      "--opt",
+      "type=tmpfs",
+      "--opt",
+      "device=tmpfs",
+      "--opt",
+      "o=size=1m,uid=1000,gid=1000,mode=0700",
+      "gaffer-isolation-6810f3c80449-socket"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "create",
+      "--name",
+      "gaffer-isolation-6810f3c80449-gateway",
+      "--label",
+      "dev.gaffer.isolation-experiment=gaffer-isolation-6810f3c80449",
+      "--platform",
+      "linux/arm64",
+      "--pull",
+      "never",
+      "--network",
+      "none",
+      "--user",
+      "1000:1000",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges=true",
+      "--read-only",
+      "--init",
+      "--cgroupns",
+      "private",
+      "--ipc",
+      "private",
+      "--cpus",
+      "0.5",
+      "--memory",
+      "128m",
+      "--memory-swap",
+      "128m",
+      "--pids-limit",
+      "64",
+      "--ulimit",
+      "nofile=256:256",
+      "--ulimit",
+      "core=0:0",
+      "--shm-size",
+      "4m",
+      "--tmpfs",
+      "/work:rw,exec,nosuid,nodev,size=32m,nr_inodes=4096,uid=1000,gid=1000,mode=0700",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,nodev,size=8m,nr_inodes=1024,uid=1000,gid=1000,mode=0700",
+      "--mount",
+      "type=bind,source=<host-fixture>/fixture,target=/fixture,readonly",
+      "--mount",
+      "type=volume,source=gaffer-isolation-6810f3c80449-socket,target=/router,volume-nocopy",
+      "--workdir",
+      "/work",
+      "--env",
+      "HOME=/work",
+      "--env",
+      "NODE_OPTIONS=",
+      "--log-driver",
+      "local",
+      "--log-opt",
+      "max-size=1m",
+      "--log-opt",
+      "max-file=1",
+      "--log-opt",
+      "compress=false",
+      "--restart",
+      "no",
+      "--env",
+      "HOST_TARGETS={\"secret\":\"<host-fixture>/synthetic-secret\",\"policy\":\"<host-fixture>/runner-policy\",\"hostHome\":\"<host-home>\"}",
+      "--env",
+      "FIXTURE_TOKEN",
+      "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0",
+      "node",
+      "/fixture/gateway.ts",
+      "gateway"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "inspect",
+      "gaffer-isolation-6810f3c80449-gateway"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "start",
+      "gaffer-isolation-6810f3c80449-gateway"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "logs",
+      "gaffer-isolation-6810f3c80449-gateway"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "inspect",
+      "gaffer-isolation-6810f3c80449-gateway"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "logs",
+      "gaffer-isolation-6810f3c80449-gateway"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "create",
+      "--name",
+      "gaffer-isolation-6810f3c80449-probe",
+      "--label",
+      "dev.gaffer.isolation-experiment=gaffer-isolation-6810f3c80449",
+      "--platform",
+      "linux/arm64",
+      "--pull",
+      "never",
+      "--network",
+      "none",
+      "--user",
+      "1000:1000",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges=true",
+      "--read-only",
+      "--init",
+      "--cgroupns",
+      "private",
+      "--ipc",
+      "private",
+      "--cpus",
+      "0.5",
+      "--memory",
+      "128m",
+      "--memory-swap",
+      "128m",
+      "--pids-limit",
+      "64",
+      "--ulimit",
+      "nofile=256:256",
+      "--ulimit",
+      "core=0:0",
+      "--shm-size",
+      "4m",
+      "--tmpfs",
+      "/work:rw,exec,nosuid,nodev,size=32m,nr_inodes=4096,uid=1000,gid=1000,mode=0700",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,nodev,size=8m,nr_inodes=1024,uid=1000,gid=1000,mode=0700",
+      "--mount",
+      "type=bind,source=<host-fixture>/fixture,target=/fixture,readonly",
+      "--mount",
+      "type=volume,source=gaffer-isolation-6810f3c80449-socket,target=/router,volume-nocopy,readonly",
+      "--workdir",
+      "/work",
+      "--env",
+      "HOME=/work",
+      "--env",
+      "NODE_OPTIONS=",
+      "--log-driver",
+      "local",
+      "--log-opt",
+      "max-size=1m",
+      "--log-opt",
+      "max-file=1",
+      "--log-opt",
+      "compress=false",
+      "--restart",
+      "no",
+      "--env",
+      "HOST_TARGETS={\"secret\":\"<host-fixture>/synthetic-secret\",\"policy\":\"<host-fixture>/runner-policy\",\"hostHome\":\"<host-home>\"}",
+      "--env",
+      "FIXTURE_TOKEN",
+      "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0",
+      "node",
+      "/fixture/worker.ts",
+      "probe"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "inspect",
+      "gaffer-isolation-6810f3c80449-probe"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "start",
+      "gaffer-isolation-6810f3c80449-probe"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "wait",
+      "gaffer-isolation-6810f3c80449-probe"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "inspect",
+      "gaffer-isolation-6810f3c80449-gateway"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "rm",
+      "-f",
+      "gaffer-isolation-6810f3c80449-gateway"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "inspect",
+      "gaffer-isolation-6810f3c80449-probe"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "rm",
+      "-f",
+      "gaffer-isolation-6810f3c80449-probe"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "volume",
+      "inspect",
+      "gaffer-isolation-6810f3c80449-socket"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "volume",
+      "rm",
+      "gaffer-isolation-6810f3c80449-socket"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "ps",
+      "-aq",
+      "--filter",
+      "label=dev.gaffer.isolation-experiment=gaffer-isolation-6810f3c80449"
+    ],
+    [
+      "docker",
+      "--context",
+      "desktop-linux",
+      "volume",
+      "ls",
+      "-q",
+      "--filter",
+      "label=dev.gaffer.isolation-experiment=gaffer-isolation-6810f3c80449"
+    ]
+  ],
+  "observations": {
+    "gatewayPreflight": {
+      "user": "1000:1000",
+      "network": "none",
+      "readonlyRoot": true,
+      "capDrop": [
+        "ALL"
+      ],
+      "securityOpt": [
+        "no-new-privileges=true"
+      ],
+      "memory": 134217728,
+      "memorySwap": 134217728,
+      "nanoCpus": 500000000,
+      "pids": 64,
+      "tmpfs": {
+        "/tmp": "rw,noexec,nosuid,nodev,size=8m,nr_inodes=1024,uid=1000,gid=1000,mode=0700",
+        "/work": "rw,exec,nosuid,nodev,size=32m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
+      },
+      "mounts": [
+        {
+          "type": "bind",
+          "destination": "/fixture",
+          "writable": false
+        },
+        {
+          "type": "volume",
+          "destination": "/router",
+          "writable": true
+        }
+      ]
+    },
+    "probePreflight": {
+      "user": "1000:1000",
+      "network": "none",
+      "readonlyRoot": true,
+      "capDrop": [
+        "ALL"
+      ],
+      "securityOpt": [
+        "no-new-privileges=true"
+      ],
+      "memory": 134217728,
+      "memorySwap": 134217728,
+      "nanoCpus": 500000000,
+      "pids": 64,
+      "tmpfs": {
+        "/tmp": "rw,noexec,nosuid,nodev,size=8m,nr_inodes=1024,uid=1000,gid=1000,mode=0700",
+        "/work": "rw,exec,nosuid,nodev,size=32m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
+      },
+      "mounts": [
+        {
+          "type": "bind",
+          "destination": "/fixture",
+          "writable": false
+        },
+        {
+          "type": "volume",
+          "destination": "/router",
+          "writable": false
+        }
+      ]
+    }
+  },
+  "acceptance": {
+    "independentReview": "required",
+    "prerequisiteIssue": 2,
+    "prerequisiteAcceptance": "not-evaluated-by-experiment"
+  },
+  "limitations": [
+    "Synthetic inference fixture. Combined live harness/model integration belongs to #6/#7. This experiment does not enable a product unattended runner."
+  ],
+  "blockers": [],
+  "runtime": {
+    "clientVersion": "29.7.2",
+    "server": {
+      "Platform": {
+        "Name": "Docker Desktop 4.86.0 (236216)"
+      },
+      "Version": "29.7.2",
+      "ApiVersion": "1.55",
+      "MinAPIVersion": "1.40",
+      "Os": "linux",
+      "Arch": "arm64",
+      "Components": [
+        {
+          "Name": "Engine",
+          "Version": "29.7.2",
+          "Details": {
+            "ApiVersion": "1.55",
+            "Arch": "arm64",
+            "BuildTime": "Wed Aug  5 18:28:35 2026",
+            "Experimental": "false",
+            "GitCommit": "6a43e3d",
+            "GoVersion": "go1.26.5",
+            "KernelVersion": "6.12.76-linuxkit",
+            "MinAPIVersion": "1.40",
+            "Module": "github.com/moby/moby/v2",
+            "ModuleVersion": "v2.0.0+unknown",
+            "Os": "linux"
+          }
+        },
+        {
+          "Name": "containerd",
+          "Version": "v2.2.5",
+          "Details": {
+            "GitCommit": "e53c7c1516c3b2bff98eb76f1f4117477e6f4e66"
+          }
+        },
+        {
+          "Name": "runc",
+          "Version": "1.3.6",
+          "Details": {
+            "GitCommit": "v1.3.6-0-g491b69ba"
+          }
+        },
+        {
+          "Name": "docker-init",
+          "Version": "0.19.0",
+          "Details": {
+            "GitCommit": "de40ad0"
+          }
+        }
+      ],
+      "GitCommit": "6a43e3d",
+      "GoVersion": "go1.26.5",
+      "KernelVersion": "6.12.76-linuxkit",
+      "BuildTime": "2026-08-05T18:28:35.000000000+00:00"
+    },
+    "cgroupVersion": "2",
+    "securityOptions": [
+      "name=seccomp,profile=builtin",
+      "name=cgroupns"
+    ],
+    "hostNode": "v26.8.2",
+    "hostPlatform": "darwin",
+    "hostArch": "arm64",
+    "macOS": "ProductName:\t\tmacOS\nProductVersion:\t\t26.6.2\nBuildVersion:\t\t25G83"
+  },
+  "error": "Error: docker wait failed: The operation was aborted\n    at docker (file://<host-home>/letmecook-issue-5/experiments/isolation/run.ts:53:11)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file://<host-home>/letmecook-issue-5/experiments/isolation/run.ts:112:23",
+  "cleanup": {
+    "verified": true,
+    "containersRemaining": 0,
+    "volumesRemaining": 0
+  },
+  "supervisorStopObservation": {
+    "signal": "SIGTERM",
+    "trigger": "Docker ps reported the probe container running",
+    "elapsedMs": 178,
+    "exitCode": 1
+  }
+}

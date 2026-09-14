@@ -1,0 +1,30 @@
+name: Isolation experiment checks
+on:
+  pull_request:
+    paths:
+      - 'experiments/isolation/**'
+      - 'tests/fixtures/isolation/**'
+      - '.github/workflows/isolation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'experiments/isolation/**'
+      - 'tests/fixtures/isolation/**'
+      - '.github/workflows/isolation.yml'
+permissions:
+  contents: read
+jobs:
+  tooling:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: experiments/isolation/package-lock.json
+      - run: npm ci --prefix experiments/isolation
+      - run: npm --prefix experiments/isolation run check
+      - run: npm --prefix experiments/isolation test
+      # The containment proof must run on the exact operator-selected profile.
+      # Passing tooling checks on a hosted runner is not a containment observation.
