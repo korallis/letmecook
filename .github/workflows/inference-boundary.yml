@@ -3,12 +3,14 @@ on:
   pull_request:
     paths:
       - 'experiments/inference-boundary/**'
+      - 'experiments/router-boundary-bridge/**'
       - 'tests/fixtures/9router/**'
       - '.github/workflows/inference-boundary.yml'
   push:
     branches: [main]
     paths:
       - 'experiments/inference-boundary/**'
+      - 'experiments/router-boundary-bridge/**'
       - 'tests/fixtures/9router/**'
       - '.github/workflows/inference-boundary.yml'
 permissions:
@@ -26,3 +28,6 @@ jobs:
       - run: npm ci --prefix experiments/inference-boundary
       - run: npm --prefix experiments/inference-boundary run check
       - run: npm --prefix experiments/inference-boundary test
+      - run: npm ci --prefix experiments/router-boundary-bridge --ignore-scripts
+      - run: npm --prefix experiments/router-boundary-bridge run check
+      - run: npm --prefix experiments/router-boundary-bridge test

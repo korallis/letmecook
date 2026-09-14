@@ -1,0 +1,634 @@
+{
+  "schema": 1,
+  "evidence": "retained actual synthetic failures, not final acceptance",
+  "runs": [
+    {
+      "observedAt": "2026-09-14T16:18:43.637Z",
+      "runId": "gaffer-bridge-f86ceadbc9bc",
+      "result": "blocked",
+      "sources": {
+        "experiments/inference-boundary/boundary.test.ts": "184fd24601e8c08d47007cd69e4d4d51b9458ee3ffb29a43ce439f2c7f386553",
+        "experiments/inference-boundary/boundary.ts": "0ab0fdd5ac992208295d38b9fee55632dca01701e2879fc6f82a1a5e5678c3a7",
+        "experiments/inference-boundary/demo.ts": "448bef33591c5408942adb0ea4a44c6473bac90831962dcabbd339b102b91fa3",
+        "experiments/inference-boundary/fixture.ts": "acc2080543fe4bd228900bab5b0b57ccfb13aca690c1d0da27cf221bc1bd412b",
+        "experiments/inference-boundary/json.ts": "7f26eb4cf1d4544f55a7b5a7c69cb8dc41de8aaa0c8db13596f59e981944c180",
+        "experiments/inference-boundary/package-lock.json": "10a402c72fae1b535ebbe43a8cbb6ddae3e706b9a41346c2da6416a66be361ba",
+        "experiments/inference-boundary/package.json": "d7fbd0eb5deda9d574787e57b1018baef704edec2c1c0a8b0bf4843a5cb7ea6c",
+        "experiments/inference-boundary/policy.ts": "1a89244fb4a01933e661795de0466ee14cc0e6c76ab075010db9833102f9a295",
+        "experiments/inference-boundary/protocol.ts": "39f2a61e4075617067e4a8b4f9b42fdc79c46ec768eee59b8135dfa1d001b40d",
+        "experiments/inference-boundary/prove.ts": "76bf6a73c17523e749d5389c10fcb4616708463e19e19fdba8f07a9168a7d750",
+        "experiments/inference-boundary/router-fixture.ts": "4efee902e2fe6646871074fe6b5b2e4d9b92988147280f3b83216026b4c2ce42",
+        "experiments/inference-boundary/router-gate.test.ts": "9bd4b5d08063551788fe17948f48937fa5852086aea5def86c9d1257dc4e8953",
+        "experiments/inference-boundary/router-policy.ts": "c286545d42a6b944055b24a78357da25098e7338d5456f20fb3aab21523539fa",
+        "experiments/inference-boundary/tsconfig.json": "e7fdc78d6c95f978eb355c76d005733baf15e891719f85e9a001e67fb65d435d",
+        "experiments/inference-boundary/types.ts": "055ef07825d4e9ac5699db6bc205fe83d24dadc979c2c6af05bb3715f683769c",
+        "experiments/inference-boundary/wait.ts": "c56f31eb6d68762bf4d083156a69d98ea01bc4942a5a05400a0de80f2d317e1d",
+        "experiments/router-boundary-bridge/authority.ts": "7729937330a972b03c5e149eb349c1a220c19af4fd289657af00a3a9bd77a1a0",
+        "experiments/router-boundary-bridge/gateway.ts": "0cdfa4110f85f0b0fd44fae198acb0b15f12f05e6c71015091dd35a8e9e16f6b",
+        "experiments/router-boundary-bridge/isolation.ts": "520746bf3bb55f90bf50df8c38573e000ef1e87017ea832a3c3a54908aa44894",
+        "experiments/router-boundary-bridge/package-lock.json": "339f74d15342bdb7229b56031a415487222fa4dd27cbd505ee6157951b088d5e",
+        "experiments/router-boundary-bridge/package.json": "2e68c01a535acf95652bf365b5dd11bbc919433965576946f0445de89c011c3c",
+        "experiments/router-boundary-bridge/run.ts": "577e8e7efdecbf020c5bb33f123f19166e3a71ef434de2fc31de1d4eb7406b81",
+        "experiments/router-boundary-bridge/supervise.ts": "bae1f8521746a147226998a72df226d894a9bbbccab4ba7867547776d08dad1f",
+        "experiments/router-boundary-bridge/tsconfig.json": "894336a6d0953d006061e64ac4ae1cf7606eca0cedc1ac78df576e6bbbcf7a4e",
+        "experiments/router-boundary-bridge/worker.ts": "2fa60dadc5515ed90695b87c57c185480883e03fd069b8a1305a36afa15a7430",
+        "experiments/router-authority-extension/chat-fixtures.mjs": "120115421a09892e1288a7e0de643e3d260f49245d546dc5e94364c858f3bbab",
+        "experiments/router-authority-extension/chat-terminal.test.mjs": "8ac6b6b98cf3b2ca6b80615a3d3c8b77d99b52195a17b329fe7c2820134e4d2a",
+        "experiments/router-authority-extension/integration.mjs": "69e8508d32c991f12a14f1f305d3975581012a6d4915e58ce0ae8a6cc7c69c76",
+        "experiments/router-authority-extension/loader.mjs": "98e15a52182833efe85cbe475bc7701f02cc48f861b4a1848e3a6a4e513ec35a",
+        "experiments/router-authority-extension/native-fixtures.mjs": "f2cf11a973d0a8035830d8670ef1bed9dc9e8b6d577c3f4ba8df2aaccb68464d",
+        "experiments/router-authority-extension/native-integration.mjs": "a1bdda8cf3f4ca5936d53b221e29563e83b214484911310bac6ff5e37fe0a0f4",
+        "experiments/router-authority-extension/package.json": "24a811a3da06a4ea3afdbcf246aa5d81095e00ce59d5ace368f4f6ea8f499b18",
+        "experiments/router-authority-extension/patches.mjs": "b88aad69c8b0b25d686f2b7c33fd535082f6049091757489419ec18dd3f3ab58",
+        "experiments/router-authority-extension/policy-regressions.mjs": "cf72e099290577f244f597ad84280a2598fd2452855e4169ff87d4bb551712b7",
+        "experiments/router-authority-extension/request-regressions.mjs": "b9c0427ece24d2febba8132d65793e50da4cc4bc152832dc9f797f6e8742081d",
+        "experiments/router-authority-extension/responses-terminal.test.mjs": "a83e1ba8edce55efa2cbf67eb9bbf42b9798210c95a4db9c0b604b7b555a268c",
+        "experiments/router-authority-extension/run-in-container.mjs": "b7238dd6dd68724b698c92c617835c429da55ebed53e7f5f57d575716f3cd295",
+        "experiments/router-authority-extension/runtime-identity.json": "ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f",
+        "experiments/router-authority-extension/source-lock.json": "681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c",
+        "experiments/router-authority-extension/transport-failures.mjs": "e4c99a65df8dcb7ef18ec1e34378c3a0b27797e5551b900b83cbc9f1b834dc8e",
+        "experiments/router-authority-extension/upstream-dependencies.lock.json": "87551d12f5d946cc1c98cf8e01cb4ec7d632f67dff0fb3554d0f556881843d05",
+        "experiments/router-authority-extension/upstream-package.json": "670515d6f190581be53f98f7e4a8764ab0a1ac3bc60858466ebfaea59fc77de7"
+      },
+      "runtime": {
+        "server": {
+          "Platform": {
+            "Name": "Docker Desktop 4.86.0 (236216)"
+          },
+          "Version": "29.7.2",
+          "ApiVersion": "1.55",
+          "MinAPIVersion": "1.40",
+          "Os": "linux",
+          "Arch": "arm64",
+          "Components": [
+            {
+              "Name": "Engine",
+              "Version": "29.7.2",
+              "Details": {
+                "ApiVersion": "1.55",
+                "Arch": "arm64",
+                "BuildTime": "Wed Aug  5 18:28:35 2026",
+                "Experimental": "false",
+                "GitCommit": "6a43e3d",
+                "GoVersion": "go1.26.5",
+                "KernelVersion": "6.12.76-linuxkit",
+                "MinAPIVersion": "1.40",
+                "Module": "github.com/moby/moby/v2",
+                "ModuleVersion": "v2.0.0+unknown",
+                "Os": "linux"
+              }
+            },
+            {
+              "Name": "containerd",
+              "Version": "v2.2.5",
+              "Details": {
+                "GitCommit": "e53c7c1516c3b2bff98eb76f1f4117477e6f4e66"
+              }
+            },
+            {
+              "Name": "runc",
+              "Version": "1.3.6",
+              "Details": {
+                "GitCommit": "v1.3.6-0-g491b69ba"
+              }
+            },
+            {
+              "Name": "docker-init",
+              "Version": "0.19.0",
+              "Details": {
+                "GitCommit": "de40ad0"
+              }
+            }
+          ],
+          "GitCommit": "6a43e3d",
+          "GoVersion": "go1.26.5",
+          "KernelVersion": "6.12.76-linuxkit",
+          "BuildTime": "2026-08-05T18:28:35.000000000+00:00"
+        },
+        "cgroupVersion": "2",
+        "securityOptions": [
+          "name=seccomp,profile=builtin",
+          "name=cgroupns"
+        ],
+        "image": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a"
+      },
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n\n    at file://<gaffer-source>/experiments/router-boundary-bridge/run.ts:35:96",
+      "cleanup": {
+        "verified": true,
+        "containersRemaining": 0,
+        "volumesRemaining": 0,
+        "errors": []
+      },
+      "observation": "bridge-first-run",
+      "passedCasesBeforeFailure": 0,
+      "failedContainers": [
+        {
+          "name": "gaffer-bridge-f86ceadbc9bc-compatible-success-gateway",
+          "state": {
+            "Status": "exited",
+            "Running": false,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 0,
+            "ExitCode": 1,
+            "Error": "",
+            "StartedAt": "2026-09-14T16:18:44.154641294Z",
+            "FinishedAt": "2026-09-14T16:18:45.021406462Z"
+          },
+          "logs": "[DB] Driver: node:sqlite | file: /work/router-db/db/data.sqlite\n[DB][migrate] applied #1 initial\n{\"event\":\"ready\",\"token\":\"<scoped-token>\",\"role\":\"worker\",\"model\":\"gaffer-coding\",\"tools\":false}\n[16:18:44] \u2139\ufe0f  [CHAT] Combo \"gaffer-coding\" with 2 models (strategy: fallback, sticky: 1)\n[16:18:44] \u2139\ufe0f  [COMBO] Trying model 1/2: openai-compatible-synthetic/synthetic-model\n[16:18:44] \ud83d\udfe1 \u25b6 POST gaffer-coding \u2192 openai-compatible-synthetic/synthetic-model \u00b7 FMT: openai\u2192openai \u00b7 STREAM \u00b7 1 MSG \u00b7 ACC:synthetic\n[16:18:44] \ud83d\udc1b [DBG:FETCH] OPENAI-COMPATIBLE-SYNTHETIC \u2192 http://127.0.0.1:47771/v1/chat/completions | body=146B | connectTimeout=60000ms\n[16:18:44] \ud83d\udc1b [DBG:FETCH] OPENAI-COMPATIBLE-SYNTHETIC \u2190 200 | ttft=7ms | ct=text/event-stream | cl=?\n[16:18:44] \ud83d\udc1b [DBG:STREAM] pipe start | stallTimeout=360000ms\n[16:18:44] \ud83d\udc1b [DBG:STREAM] chunk #1 | size=344B | gap=1ms | total=344B\n[16:18:44] \u2139\ufe0f  [COMBO] Model openai-compatible-synthetic/synthetic-model succeeded\n[16:18:44] \ud83d\udc1b [DBG:STREAM] upstream EOF | chunks=1 | bytes=344 | dur=2ms\n[16:18:44] \ud83d\udc1b [DBG:SSE] flush | provider=openai-compatible-synthetic | model=synthetic-model | recvLines=3 | emitted=0 | events=[none]\n[16:18:44] \ud83d\udfe1 \ud83d\udcca DONE 15ms \u00b7 TTFT 13ms \u00b7 IN 2037 \u00b7 OUT 3\n[16:18:44] \ud83d\udc1b [DBG:STREAM] complete | chunks=1 | bytes=344 | dur=4ms"
+        },
+        {
+          "name": "gaffer-bridge-f86ceadbc9bc-compatible-success-worker",
+          "state": {
+            "Status": "exited",
+            "Running": false,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 0,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-09-14T16:18:44.760104753Z",
+            "FinishedAt": "2026-09-14T16:18:44.964398045Z"
+          },
+          "logs": "{\"schema\":1,\"role\":\"worker\",\"requests\":[{\"requestId\":\"a8037e6d9ba14a5abc484f816676ad30\",\"status\":200,\"completed\":false,\"calls\":[],\"firstTerminalAt\":null,\"error\":\"invalid_stream\"}],\"toolEffects\":0,\"containment\":{\"inaccessible\":[\"/router-source\",\"/probe\",\"/boundary\",\"/work/router.sock\",\"/work/journal/state.json\",\"/work/approved.json\",\"/var/run/docker.sock\"],\"sharedEntries\":[\"inference.sock\"],\"directTcp\":\"blocked\",\"management\":404},\"resources\":{\"memoryPeak\":\"39497728\",\"memoryEvents\":\"low 0\\nhigh 0\\nmax 0\\noom 0\\noom_kill 0\\noom_group_kill 0\",\"pidsPeak\":\"12\"}}"
+        }
+      ]
+    },
+    {
+      "observedAt": "2026-09-14T16:19:21.228Z",
+      "runId": "gaffer-bridge-44f5d74052e5",
+      "result": "blocked",
+      "sources": {
+        "experiments/inference-boundary/boundary.test.ts": "184fd24601e8c08d47007cd69e4d4d51b9458ee3ffb29a43ce439f2c7f386553",
+        "experiments/inference-boundary/boundary.ts": "0ab0fdd5ac992208295d38b9fee55632dca01701e2879fc6f82a1a5e5678c3a7",
+        "experiments/inference-boundary/demo.ts": "448bef33591c5408942adb0ea4a44c6473bac90831962dcabbd339b102b91fa3",
+        "experiments/inference-boundary/fixture.ts": "acc2080543fe4bd228900bab5b0b57ccfb13aca690c1d0da27cf221bc1bd412b",
+        "experiments/inference-boundary/json.ts": "7f26eb4cf1d4544f55a7b5a7c69cb8dc41de8aaa0c8db13596f59e981944c180",
+        "experiments/inference-boundary/package-lock.json": "10a402c72fae1b535ebbe43a8cbb6ddae3e706b9a41346c2da6416a66be361ba",
+        "experiments/inference-boundary/package.json": "d7fbd0eb5deda9d574787e57b1018baef704edec2c1c0a8b0bf4843a5cb7ea6c",
+        "experiments/inference-boundary/policy.ts": "1a89244fb4a01933e661795de0466ee14cc0e6c76ab075010db9833102f9a295",
+        "experiments/inference-boundary/protocol.ts": "417b6925c7037ab3f315cb3d42228159ccc266a0b0e61f75722e58c07838a283",
+        "experiments/inference-boundary/prove.ts": "76bf6a73c17523e749d5389c10fcb4616708463e19e19fdba8f07a9168a7d750",
+        "experiments/inference-boundary/router-fixture.ts": "4efee902e2fe6646871074fe6b5b2e4d9b92988147280f3b83216026b4c2ce42",
+        "experiments/inference-boundary/router-gate.test.ts": "9bd4b5d08063551788fe17948f48937fa5852086aea5def86c9d1257dc4e8953",
+        "experiments/inference-boundary/router-policy.ts": "c286545d42a6b944055b24a78357da25098e7338d5456f20fb3aab21523539fa",
+        "experiments/inference-boundary/tsconfig.json": "e7fdc78d6c95f978eb355c76d005733baf15e891719f85e9a001e67fb65d435d",
+        "experiments/inference-boundary/types.ts": "055ef07825d4e9ac5699db6bc205fe83d24dadc979c2c6af05bb3715f683769c",
+        "experiments/inference-boundary/wait.ts": "c56f31eb6d68762bf4d083156a69d98ea01bc4942a5a05400a0de80f2d317e1d",
+        "experiments/router-boundary-bridge/authority.ts": "7729937330a972b03c5e149eb349c1a220c19af4fd289657af00a3a9bd77a1a0",
+        "experiments/router-boundary-bridge/gateway.ts": "ad2293d79ef47a972371bb57cf9157dd939038531b79e432caf932769531bb3f",
+        "experiments/router-boundary-bridge/isolation.ts": "520746bf3bb55f90bf50df8c38573e000ef1e87017ea832a3c3a54908aa44894",
+        "experiments/router-boundary-bridge/package-lock.json": "339f74d15342bdb7229b56031a415487222fa4dd27cbd505ee6157951b088d5e",
+        "experiments/router-boundary-bridge/package.json": "2e68c01a535acf95652bf365b5dd11bbc919433965576946f0445de89c011c3c",
+        "experiments/router-boundary-bridge/run.ts": "ee9f47bcdf933dbbd272576991cae7816c03dd81dbb717a3ad8e6af667d608b1",
+        "experiments/router-boundary-bridge/supervise.ts": "bae1f8521746a147226998a72df226d894a9bbbccab4ba7867547776d08dad1f",
+        "experiments/router-boundary-bridge/tsconfig.json": "894336a6d0953d006061e64ac4ae1cf7606eca0cedc1ac78df576e6bbbcf7a4e",
+        "experiments/router-boundary-bridge/worker.ts": "2fa60dadc5515ed90695b87c57c185480883e03fd069b8a1305a36afa15a7430",
+        "experiments/router-authority-extension/chat-fixtures.mjs": "120115421a09892e1288a7e0de643e3d260f49245d546dc5e94364c858f3bbab",
+        "experiments/router-authority-extension/chat-terminal.test.mjs": "8ac6b6b98cf3b2ca6b80615a3d3c8b77d99b52195a17b329fe7c2820134e4d2a",
+        "experiments/router-authority-extension/integration.mjs": "69e8508d32c991f12a14f1f305d3975581012a6d4915e58ce0ae8a6cc7c69c76",
+        "experiments/router-authority-extension/loader.mjs": "98e15a52182833efe85cbe475bc7701f02cc48f861b4a1848e3a6a4e513ec35a",
+        "experiments/router-authority-extension/native-fixtures.mjs": "f2cf11a973d0a8035830d8670ef1bed9dc9e8b6d577c3f4ba8df2aaccb68464d",
+        "experiments/router-authority-extension/native-integration.mjs": "a1bdda8cf3f4ca5936d53b221e29563e83b214484911310bac6ff5e37fe0a0f4",
+        "experiments/router-authority-extension/package.json": "24a811a3da06a4ea3afdbcf246aa5d81095e00ce59d5ace368f4f6ea8f499b18",
+        "experiments/router-authority-extension/patches.mjs": "b88aad69c8b0b25d686f2b7c33fd535082f6049091757489419ec18dd3f3ab58",
+        "experiments/router-authority-extension/policy-regressions.mjs": "cf72e099290577f244f597ad84280a2598fd2452855e4169ff87d4bb551712b7",
+        "experiments/router-authority-extension/request-regressions.mjs": "b9c0427ece24d2febba8132d65793e50da4cc4bc152832dc9f797f6e8742081d",
+        "experiments/router-authority-extension/responses-terminal.test.mjs": "a83e1ba8edce55efa2cbf67eb9bbf42b9798210c95a4db9c0b604b7b555a268c",
+        "experiments/router-authority-extension/run-in-container.mjs": "b7238dd6dd68724b698c92c617835c429da55ebed53e7f5f57d575716f3cd295",
+        "experiments/router-authority-extension/runtime-identity.json": "ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f",
+        "experiments/router-authority-extension/source-lock.json": "681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c",
+        "experiments/router-authority-extension/transport-failures.mjs": "e4c99a65df8dcb7ef18ec1e34378c3a0b27797e5551b900b83cbc9f1b834dc8e",
+        "experiments/router-authority-extension/upstream-dependencies.lock.json": "87551d12f5d946cc1c98cf8e01cb4ec7d632f67dff0fb3554d0f556881843d05",
+        "experiments/router-authority-extension/upstream-package.json": "670515d6f190581be53f98f7e4a8764ab0a1ac3bc60858466ebfaea59fc77de7"
+      },
+      "runtime": {
+        "server": {
+          "Platform": {
+            "Name": "Docker Desktop 4.86.0 (236216)"
+          },
+          "Version": "29.7.2",
+          "ApiVersion": "1.55",
+          "MinAPIVersion": "1.40",
+          "Os": "linux",
+          "Arch": "arm64",
+          "Components": [
+            {
+              "Name": "Engine",
+              "Version": "29.7.2",
+              "Details": {
+                "ApiVersion": "1.55",
+                "Arch": "arm64",
+                "BuildTime": "Wed Aug  5 18:28:35 2026",
+                "Experimental": "false",
+                "GitCommit": "6a43e3d",
+                "GoVersion": "go1.26.5",
+                "KernelVersion": "6.12.76-linuxkit",
+                "MinAPIVersion": "1.40",
+                "Module": "github.com/moby/moby/v2",
+                "ModuleVersion": "v2.0.0+unknown",
+                "Os": "linux"
+              }
+            },
+            {
+              "Name": "containerd",
+              "Version": "v2.2.5",
+              "Details": {
+                "GitCommit": "e53c7c1516c3b2bff98eb76f1f4117477e6f4e66"
+              }
+            },
+            {
+              "Name": "runc",
+              "Version": "1.3.6",
+              "Details": {
+                "GitCommit": "v1.3.6-0-g491b69ba"
+              }
+            },
+            {
+              "Name": "docker-init",
+              "Version": "0.19.0",
+              "Details": {
+                "GitCommit": "de40ad0"
+              }
+            }
+          ],
+          "GitCommit": "6a43e3d",
+          "GoVersion": "go1.26.5",
+          "KernelVersion": "6.12.76-linuxkit",
+          "BuildTime": "2026-08-05T18:28:35.000000000+00:00"
+        },
+        "cgroupVersion": "2",
+        "securityOptions": [
+          "name=seccomp,profile=builtin",
+          "name=cgroupns"
+        ],
+        "image": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a"
+      },
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n\n    at file://<gaffer-source>/experiments/router-boundary-bridge/run.ts:35:96\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+      "cleanup": {
+        "verified": true,
+        "containersRemaining": 0,
+        "volumesRemaining": 0,
+        "errors": []
+      },
+      "observation": "bridge-second-run",
+      "passedCasesBeforeFailure": 0,
+      "failedContainers": [
+        {
+          "name": "gaffer-bridge-44f5d74052e5-compatible-success-gateway",
+          "state": {
+            "Status": "exited",
+            "Running": false,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 0,
+            "ExitCode": 1,
+            "Error": "",
+            "StartedAt": "2026-09-14T16:19:21.45630184Z",
+            "FinishedAt": "2026-09-14T16:19:22.344969173Z"
+          },
+          "logs": "[DB] Driver: node:sqlite | file: /work/router-db/db/data.sqlite\n[DB][migrate] applied #1 initial\n{\"event\":\"ready\",\"token\":\"<scoped-token>\",\"role\":\"worker\",\"model\":\"gaffer-coding\",\"tools\":false}\n[16:19:22] \u2139\ufe0f  [CHAT] Combo \"gaffer-coding\" with 2 models (strategy: fallback, sticky: 1)\n[16:19:22] \u2139\ufe0f  [COMBO] Trying model 1/2: openai-compatible-synthetic/synthetic-model\n[16:19:22] \ud83d\udfe0 \u25b6 POST gaffer-coding \u2192 openai-compatible-synthetic/synthetic-model \u00b7 FMT: openai\u2192openai \u00b7 STREAM \u00b7 1 MSG \u00b7 ACC:synthetic\n[16:19:22] \ud83d\udc1b [DBG:FETCH] OPENAI-COMPATIBLE-SYNTHETIC \u2192 http://127.0.0.1:47771/v1/chat/completions | body=146B | connectTimeout=60000ms\n[16:19:22] \ud83d\udc1b [DBG:FETCH] OPENAI-COMPATIBLE-SYNTHETIC \u2190 200 | ttft=6ms | ct=text/event-stream | cl=?\n[16:19:22] \ud83d\udc1b [DBG:STREAM] pipe start | stallTimeout=360000ms\n[16:19:22] \ud83d\udc1b [DBG:STREAM] chunk #1 | size=344B | gap=1ms | total=344B\n[16:19:22] \u2139\ufe0f  [COMBO] Model openai-compatible-synthetic/synthetic-model succeeded\n[16:19:22] \ud83d\udc1b [DBG:STREAM] upstream EOF | chunks=1 | bytes=344 | dur=2ms\n[16:19:22] \ud83d\udc1b [DBG:SSE] flush | provider=openai-compatible-synthetic | model=synthetic-model | recvLines=3 | emitted=0 | events=[none]\n[16:19:22] \ud83d\udfe0 \ud83d\udcca DONE 15ms \u00b7 TTFT 13ms \u00b7 IN 2037 \u00b7 OUT 3\n[16:19:22] \ud83d\udc1b [DBG:STREAM] complete | chunks=1 | bytes=344 | dur=4ms\nError: ENOENT: no such file or directory, open '/work/result.json'"
+        },
+        {
+          "name": "gaffer-bridge-44f5d74052e5-compatible-success-worker",
+          "state": {
+            "Status": "exited",
+            "Running": false,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 0,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-09-14T16:19:22.080121048Z",
+            "FinishedAt": "2026-09-14T16:19:22.290334257Z"
+          },
+          "logs": "{\"schema\":1,\"role\":\"worker\",\"requests\":[{\"requestId\":\"66a1554f0c99411397feb3ad7c1ac807\",\"status\":200,\"completed\":false,\"calls\":[],\"firstTerminalAt\":null,\"error\":\"invalid_stream\"}],\"toolEffects\":0,\"containment\":{\"inaccessible\":[\"/router-source\",\"/probe\",\"/boundary\",\"/work/router.sock\",\"/work/journal/state.json\",\"/work/approved.json\",\"/var/run/docker.sock\"],\"sharedEntries\":[\"inference.sock\"],\"directTcp\":\"blocked\",\"management\":404},\"resources\":{\"memoryPeak\":\"38834176\",\"memoryEvents\":\"low 0\\nhigh 0\\nmax 0\\noom 0\\noom_kill 0\\noom_group_kill 0\",\"pidsPeak\":\"12\"}}"
+        }
+      ]
+    },
+    {
+      "observedAt": "2026-09-14T16:20:14.579Z",
+      "runId": "gaffer-bridge-c01e02028317",
+      "result": "blocked",
+      "sources": {
+        "experiments/inference-boundary/boundary.test.ts": "184fd24601e8c08d47007cd69e4d4d51b9458ee3ffb29a43ce439f2c7f386553",
+        "experiments/inference-boundary/boundary.ts": "0ab0fdd5ac992208295d38b9fee55632dca01701e2879fc6f82a1a5e5678c3a7",
+        "experiments/inference-boundary/demo.ts": "448bef33591c5408942adb0ea4a44c6473bac90831962dcabbd339b102b91fa3",
+        "experiments/inference-boundary/fixture.ts": "acc2080543fe4bd228900bab5b0b57ccfb13aca690c1d0da27cf221bc1bd412b",
+        "experiments/inference-boundary/json.ts": "7f26eb4cf1d4544f55a7b5a7c69cb8dc41de8aaa0c8db13596f59e981944c180",
+        "experiments/inference-boundary/package-lock.json": "10a402c72fae1b535ebbe43a8cbb6ddae3e706b9a41346c2da6416a66be361ba",
+        "experiments/inference-boundary/package.json": "d7fbd0eb5deda9d574787e57b1018baef704edec2c1c0a8b0bf4843a5cb7ea6c",
+        "experiments/inference-boundary/policy.ts": "1a89244fb4a01933e661795de0466ee14cc0e6c76ab075010db9833102f9a295",
+        "experiments/inference-boundary/protocol.ts": "417b6925c7037ab3f315cb3d42228159ccc266a0b0e61f75722e58c07838a283",
+        "experiments/inference-boundary/prove.ts": "76bf6a73c17523e749d5389c10fcb4616708463e19e19fdba8f07a9168a7d750",
+        "experiments/inference-boundary/router-fixture.ts": "4efee902e2fe6646871074fe6b5b2e4d9b92988147280f3b83216026b4c2ce42",
+        "experiments/inference-boundary/router-gate.test.ts": "9bd4b5d08063551788fe17948f48937fa5852086aea5def86c9d1257dc4e8953",
+        "experiments/inference-boundary/router-policy.ts": "c286545d42a6b944055b24a78357da25098e7338d5456f20fb3aab21523539fa",
+        "experiments/inference-boundary/tsconfig.json": "e7fdc78d6c95f978eb355c76d005733baf15e891719f85e9a001e67fb65d435d",
+        "experiments/inference-boundary/types.ts": "055ef07825d4e9ac5699db6bc205fe83d24dadc979c2c6af05bb3715f683769c",
+        "experiments/inference-boundary/wait.ts": "c56f31eb6d68762bf4d083156a69d98ea01bc4942a5a05400a0de80f2d317e1d",
+        "experiments/router-boundary-bridge/authority.ts": "7729937330a972b03c5e149eb349c1a220c19af4fd289657af00a3a9bd77a1a0",
+        "experiments/router-boundary-bridge/gateway.ts": "93c29e3a26c27bfe49557de42fc10df9472a9e0f038a3dae4a457494b9469434",
+        "experiments/router-boundary-bridge/isolation.ts": "520746bf3bb55f90bf50df8c38573e000ef1e87017ea832a3c3a54908aa44894",
+        "experiments/router-boundary-bridge/package-lock.json": "339f74d15342bdb7229b56031a415487222fa4dd27cbd505ee6157951b088d5e",
+        "experiments/router-boundary-bridge/package.json": "2e68c01a535acf95652bf365b5dd11bbc919433965576946f0445de89c011c3c",
+        "experiments/router-boundary-bridge/run.ts": "ee9f47bcdf933dbbd272576991cae7816c03dd81dbb717a3ad8e6af667d608b1",
+        "experiments/router-boundary-bridge/supervise.ts": "e417923c5a20432117b74f6face49b43c175211434035adb56d5a8f3901381cf",
+        "experiments/router-boundary-bridge/tsconfig.json": "894336a6d0953d006061e64ac4ae1cf7606eca0cedc1ac78df576e6bbbcf7a4e",
+        "experiments/router-boundary-bridge/worker.ts": "2fa60dadc5515ed90695b87c57c185480883e03fd069b8a1305a36afa15a7430",
+        "experiments/router-authority-extension/chat-fixtures.mjs": "120115421a09892e1288a7e0de643e3d260f49245d546dc5e94364c858f3bbab",
+        "experiments/router-authority-extension/chat-terminal.test.mjs": "8ac6b6b98cf3b2ca6b80615a3d3c8b77d99b52195a17b329fe7c2820134e4d2a",
+        "experiments/router-authority-extension/integration.mjs": "69e8508d32c991f12a14f1f305d3975581012a6d4915e58ce0ae8a6cc7c69c76",
+        "experiments/router-authority-extension/loader.mjs": "98e15a52182833efe85cbe475bc7701f02cc48f861b4a1848e3a6a4e513ec35a",
+        "experiments/router-authority-extension/native-fixtures.mjs": "f2cf11a973d0a8035830d8670ef1bed9dc9e8b6d577c3f4ba8df2aaccb68464d",
+        "experiments/router-authority-extension/native-integration.mjs": "a1bdda8cf3f4ca5936d53b221e29563e83b214484911310bac6ff5e37fe0a0f4",
+        "experiments/router-authority-extension/package.json": "24a811a3da06a4ea3afdbcf246aa5d81095e00ce59d5ace368f4f6ea8f499b18",
+        "experiments/router-authority-extension/patches.mjs": "b88aad69c8b0b25d686f2b7c33fd535082f6049091757489419ec18dd3f3ab58",
+        "experiments/router-authority-extension/policy-regressions.mjs": "cf72e099290577f244f597ad84280a2598fd2452855e4169ff87d4bb551712b7",
+        "experiments/router-authority-extension/request-regressions.mjs": "b9c0427ece24d2febba8132d65793e50da4cc4bc152832dc9f797f6e8742081d",
+        "experiments/router-authority-extension/responses-terminal.test.mjs": "a83e1ba8edce55efa2cbf67eb9bbf42b9798210c95a4db9c0b604b7b555a268c",
+        "experiments/router-authority-extension/run-in-container.mjs": "b7238dd6dd68724b698c92c617835c429da55ebed53e7f5f57d575716f3cd295",
+        "experiments/router-authority-extension/runtime-identity.json": "ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f",
+        "experiments/router-authority-extension/source-lock.json": "681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c",
+        "experiments/router-authority-extension/transport-failures.mjs": "e4c99a65df8dcb7ef18ec1e34378c3a0b27797e5551b900b83cbc9f1b834dc8e",
+        "experiments/router-authority-extension/upstream-dependencies.lock.json": "87551d12f5d946cc1c98cf8e01cb4ec7d632f67dff0fb3554d0f556881843d05",
+        "experiments/router-authority-extension/upstream-package.json": "670515d6f190581be53f98f7e4a8764ab0a1ac3bc60858466ebfaea59fc77de7"
+      },
+      "runtime": {
+        "server": {
+          "Platform": {
+            "Name": "Docker Desktop 4.86.0 (236216)"
+          },
+          "Version": "29.7.2",
+          "ApiVersion": "1.55",
+          "MinAPIVersion": "1.40",
+          "Os": "linux",
+          "Arch": "arm64",
+          "Components": [
+            {
+              "Name": "Engine",
+              "Version": "29.7.2",
+              "Details": {
+                "ApiVersion": "1.55",
+                "Arch": "arm64",
+                "BuildTime": "Wed Aug  5 18:28:35 2026",
+                "Experimental": "false",
+                "GitCommit": "6a43e3d",
+                "GoVersion": "go1.26.5",
+                "KernelVersion": "6.12.76-linuxkit",
+                "MinAPIVersion": "1.40",
+                "Module": "github.com/moby/moby/v2",
+                "ModuleVersion": "v2.0.0+unknown",
+                "Os": "linux"
+              }
+            },
+            {
+              "Name": "containerd",
+              "Version": "v2.2.5",
+              "Details": {
+                "GitCommit": "e53c7c1516c3b2bff98eb76f1f4117477e6f4e66"
+              }
+            },
+            {
+              "Name": "runc",
+              "Version": "1.3.6",
+              "Details": {
+                "GitCommit": "v1.3.6-0-g491b69ba"
+              }
+            },
+            {
+              "Name": "docker-init",
+              "Version": "0.19.0",
+              "Details": {
+                "GitCommit": "de40ad0"
+              }
+            }
+          ],
+          "GitCommit": "6a43e3d",
+          "GoVersion": "go1.26.5",
+          "KernelVersion": "6.12.76-linuxkit",
+          "BuildTime": "2026-08-05T18:28:35.000000000+00:00"
+        },
+        "cgroupVersion": "2",
+        "securityOptions": [
+          "name=seccomp,profile=builtin",
+          "name=cgroupns"
+        ],
+        "image": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a"
+      },
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n\n    at file://<gaffer-source>/experiments/router-boundary-bridge/run.ts:35:96\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+      "cleanup": {
+        "verified": true,
+        "containersRemaining": 0,
+        "volumesRemaining": 0,
+        "errors": []
+      },
+      "observation": "bridge-third-run",
+      "passedCasesBeforeFailure": 0,
+      "failedContainers": [
+        {
+          "name": "gaffer-bridge-c01e02028317-compatible-success-gateway",
+          "state": {
+            "Status": "exited",
+            "Running": false,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 0,
+            "ExitCode": 1,
+            "Error": "",
+            "StartedAt": "2026-09-14T16:20:14.800517253Z",
+            "FinishedAt": "2026-09-14T16:20:15.643817254Z"
+          },
+          "logs": "[DB] Driver: node:sqlite | file: /work/router-db/db/data.sqlite\n[DB][migrate] applied #1 initial\n{\"event\":\"ready\",\"token\":\"<scoped-token>\",\"role\":\"worker\",\"model\":\"gaffer-coding\",\"tools\":false}\n[16:20:15] \u2139\ufe0f  [CHAT] Combo \"gaffer-coding\" with 2 models (strategy: fallback, sticky: 1)\n[16:20:15] \u2139\ufe0f  [COMBO] Trying model 1/2: openai-compatible-synthetic/synthetic-model\n[16:20:15] \ud83d\udd35 \u25b6 POST gaffer-coding \u2192 openai-compatible-synthetic/synthetic-model \u00b7 FMT: openai\u2192openai \u00b7 STREAM \u00b7 1 MSG \u00b7 ACC:synthetic\n[16:20:15] \ud83d\udc1b [DBG:FETCH] OPENAI-COMPATIBLE-SYNTHETIC \u2192 http://127.0.0.1:47771/v1/chat/completions | body=146B | connectTimeout=60000ms\n[16:20:15] \ud83d\udc1b [DBG:FETCH] OPENAI-COMPATIBLE-SYNTHETIC \u2190 200 | ttft=7ms | ct=text/event-stream | cl=?\n[16:20:15] \ud83d\udc1b [DBG:STREAM] pipe start | stallTimeout=360000ms\n[16:20:15] \ud83d\udc1b [DBG:STREAM] chunk #1 | size=344B | gap=1ms | total=344B\n[16:20:15] \u2139\ufe0f  [COMBO] Model openai-compatible-synthetic/synthetic-model succeeded\n[16:20:15] \ud83d\udc1b [DBG:STREAM] upstream EOF | chunks=1 | bytes=344 | dur=2ms\n[16:20:15] \ud83d\udc1b [DBG:SSE] flush | provider=openai-compatible-synthetic | model=synthetic-model | recvLines=3 | emitted=0 | events=[none]\n[16:20:15] \ud83d\udd35 \ud83d\udcca DONE 15ms \u00b7 TTFT 13ms \u00b7 IN 2037 \u00b7 OUT 3\n[16:20:15] \ud83d\udc1b [DBG:STREAM] complete | chunks=1 | bytes=344 | dur=4ms\n(node:15) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:\n--import 'data:text/javascript,import { register } from \"node:module\"; import { pathToFileURL } from \"node:url\"; register(\"/probe/loader.mjs\", pathToFileURL(\"./\"));'\n(Use `node --trace-warnings ...` to show where the warning was created)\nTRANSLATED \"data: {\\\"id\\\":\\\"synthetic_original\\\",\\\"model\\\":\\\"synthetic-model\\\",\\\"object\\\":\\\"chat.completion.chunk\\\",\\\"choices\\\":[{\\\"index\\\":0,\\\"delta\\\":{\\\"content\\\":\\\"Hello \ud83c\udf0d caf\u00e9\\\"},\\\"finish_reason\\\":null}],\\\"created\\\":1789402815}\\n\"\nTRANSLATED \"\\n\"\nTRANSLATED \"data: {\\\"id\\\":\\\"synthetic_original\\\",\\\"model\\\":\\\"synthetic-model\\\",\\\"object\\\":\\\"chat.completion.chunk\\\",\\\"choices\\\":[{\\\"index\\\":0,\\\"delta\\\":{},\\\"finish_reason\\\":\\\"stop\\\"}],\\\"created\\\":1789402815,\\\"usage\\\":{\\\"prompt_tokens\\\":2037,\\\"completion_tokens\\\":3,\\\"total_tokens\\\":2040,\\\"estimated\\\":true}}\\n\"\nTRANSLATED \"\\n\"\nTRANSLATED \"data: [DONE]\\n\"\nTRANSLATED \"\\n\"\nTRANSLATED \"data: [DONE]\\n\\n\"\nError: ENOENT: no such file or directory, open '/work/result.json'"
+        },
+        {
+          "name": "gaffer-bridge-c01e02028317-compatible-success-worker",
+          "state": {
+            "Status": "exited",
+            "Running": false,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 0,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-09-14T16:20:15.406334878Z",
+            "FinishedAt": "2026-09-14T16:20:15.588982962Z"
+          },
+          "logs": "{\"schema\":1,\"role\":\"worker\",\"requests\":[{\"requestId\":\"72539897629347b48569f28b82034c4e\",\"status\":200,\"completed\":false,\"calls\":[],\"firstTerminalAt\":null,\"error\":\"invalid_stream\"}],\"toolEffects\":0,\"containment\":{\"inaccessible\":[\"/router-source\",\"/probe\",\"/boundary\",\"/work/router.sock\",\"/work/journal/state.json\",\"/work/approved.json\",\"/var/run/docker.sock\"],\"sharedEntries\":[\"inference.sock\"],\"directTcp\":\"blocked\",\"management\":404},\"resources\":{\"memoryPeak\":\"41029632\",\"memoryEvents\":\"low 0\\nhigh 0\\nmax 0\\noom 0\\noom_kill 0\\noom_group_kill 0\",\"pidsPeak\":\"12\"}}"
+        }
+      ]
+    },
+    {
+      "observedAt": "2026-09-14T16:22:49.872Z",
+      "runId": "gaffer-bridge-e65f752a8d9f",
+      "result": "blocked",
+      "sources": {
+        "experiments/inference-boundary/boundary.test.ts": "184fd24601e8c08d47007cd69e4d4d51b9458ee3ffb29a43ce439f2c7f386553",
+        "experiments/inference-boundary/boundary.ts": "cd488103292816d2eebca671d2ebc1b2858fcd861e89a3fc8c1f462c703816bc",
+        "experiments/inference-boundary/demo.ts": "448bef33591c5408942adb0ea4a44c6473bac90831962dcabbd339b102b91fa3",
+        "experiments/inference-boundary/fixture.ts": "acc2080543fe4bd228900bab5b0b57ccfb13aca690c1d0da27cf221bc1bd412b",
+        "experiments/inference-boundary/json.ts": "7f26eb4cf1d4544f55a7b5a7c69cb8dc41de8aaa0c8db13596f59e981944c180",
+        "experiments/inference-boundary/package-lock.json": "10a402c72fae1b535ebbe43a8cbb6ddae3e706b9a41346c2da6416a66be361ba",
+        "experiments/inference-boundary/package.json": "d7fbd0eb5deda9d574787e57b1018baef704edec2c1c0a8b0bf4843a5cb7ea6c",
+        "experiments/inference-boundary/policy.ts": "1a89244fb4a01933e661795de0466ee14cc0e6c76ab075010db9833102f9a295",
+        "experiments/inference-boundary/protocol.ts": "e9d6385b21170f96af4268c27b4b7af589d96db1de84e9abf5f651ed1691bd74",
+        "experiments/inference-boundary/prove.ts": "76bf6a73c17523e749d5389c10fcb4616708463e19e19fdba8f07a9168a7d750",
+        "experiments/inference-boundary/router-fixture.ts": "4efee902e2fe6646871074fe6b5b2e4d9b92988147280f3b83216026b4c2ce42",
+        "experiments/inference-boundary/router-gate.test.ts": "fb7a11795cbe6d3d4ff5ce9bfdf5744f8d5972264108ebcc01ea84936c7194a6",
+        "experiments/inference-boundary/router-policy.ts": "f96d412045572b935d73722e1fca3f8b5d9910a051eb504d8021af9f05bf324a",
+        "experiments/inference-boundary/tsconfig.json": "e7fdc78d6c95f978eb355c76d005733baf15e891719f85e9a001e67fb65d435d",
+        "experiments/inference-boundary/types.ts": "055ef07825d4e9ac5699db6bc205fe83d24dadc979c2c6af05bb3715f683769c",
+        "experiments/inference-boundary/wait.ts": "c56f31eb6d68762bf4d083156a69d98ea01bc4942a5a05400a0de80f2d317e1d",
+        "experiments/router-boundary-bridge/authority.ts": "7729937330a972b03c5e149eb349c1a220c19af4fd289657af00a3a9bd77a1a0",
+        "experiments/router-boundary-bridge/gateway.ts": "733aabfbdbc3be0dbb12fcdfd99513448f1dd5c04775a27e67cba37c137f5300",
+        "experiments/router-boundary-bridge/isolation.ts": "520746bf3bb55f90bf50df8c38573e000ef1e87017ea832a3c3a54908aa44894",
+        "experiments/router-boundary-bridge/package-lock.json": "339f74d15342bdb7229b56031a415487222fa4dd27cbd505ee6157951b088d5e",
+        "experiments/router-boundary-bridge/package.json": "2e68c01a535acf95652bf365b5dd11bbc919433965576946f0445de89c011c3c",
+        "experiments/router-boundary-bridge/run.ts": "7a872bda7b1e359a2ed93f029f47f0cad63ff3c02fdf0c51b08d19fd55b68b50",
+        "experiments/router-boundary-bridge/supervise.ts": "fac191039364b7f197cc8ff1738919c62e58339ab610c0d1b8014793d403e4b2",
+        "experiments/router-boundary-bridge/tsconfig.json": "894336a6d0953d006061e64ac4ae1cf7606eca0cedc1ac78df576e6bbbcf7a4e",
+        "experiments/router-boundary-bridge/worker.ts": "2fa60dadc5515ed90695b87c57c185480883e03fd069b8a1305a36afa15a7430",
+        "experiments/router-authority-extension/chat-fixtures.mjs": "120115421a09892e1288a7e0de643e3d260f49245d546dc5e94364c858f3bbab",
+        "experiments/router-authority-extension/chat-terminal.test.mjs": "8ac6b6b98cf3b2ca6b80615a3d3c8b77d99b52195a17b329fe7c2820134e4d2a",
+        "experiments/router-authority-extension/Dockerfile": "234b427b682cbcc0fea30c05e24fdc9c1b1b0028a674a9b26730d97dd25512fa",
+        "experiments/router-authority-extension/integration.mjs": "69e8508d32c991f12a14f1f305d3975581012a6d4915e58ce0ae8a6cc7c69c76",
+        "experiments/router-authority-extension/loader.mjs": "98e15a52182833efe85cbe475bc7701f02cc48f861b4a1848e3a6a4e513ec35a",
+        "experiments/router-authority-extension/native-fixtures.mjs": "f2cf11a973d0a8035830d8670ef1bed9dc9e8b6d577c3f4ba8df2aaccb68464d",
+        "experiments/router-authority-extension/native-integration.mjs": "a1bdda8cf3f4ca5936d53b221e29563e83b214484911310bac6ff5e37fe0a0f4",
+        "experiments/router-authority-extension/overlay/authority.mjs": "8e3d7e468ae5615ae11a1174f873cdb830df973b0bd2e96588b6c08da3969522",
+        "experiments/router-authority-extension/overlay/chat-terminal.mjs": "06200729149fa8930feedde594b595d4edfa5c65c9d70681ca0149fbec3b62ea",
+        "experiments/router-authority-extension/overlay/responses-terminal.mjs": "bf55c9d71cceb34825f7dec7e6160f446c79aa936c74edfa00396e824dd65ab2",
+        "experiments/router-authority-extension/package.json": "24a811a3da06a4ea3afdbcf246aa5d81095e00ce59d5ace368f4f6ea8f499b18",
+        "experiments/router-authority-extension/patches.mjs": "b88aad69c8b0b25d686f2b7c33fd535082f6049091757489419ec18dd3f3ab58",
+        "experiments/router-authority-extension/policy-regressions.mjs": "cf72e099290577f244f597ad84280a2598fd2452855e4169ff87d4bb551712b7",
+        "experiments/router-authority-extension/request-regressions.mjs": "b9c0427ece24d2febba8132d65793e50da4cc4bc152832dc9f797f6e8742081d",
+        "experiments/router-authority-extension/responses-terminal.test.mjs": "a83e1ba8edce55efa2cbf67eb9bbf42b9798210c95a4db9c0b604b7b555a268c",
+        "experiments/router-authority-extension/run-in-container.mjs": "b7238dd6dd68724b698c92c617835c429da55ebed53e7f5f57d575716f3cd295",
+        "experiments/router-authority-extension/runtime-identity.json": "ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f",
+        "experiments/router-authority-extension/source-lock.json": "681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c",
+        "experiments/router-authority-extension/transport-failures.mjs": "e4c99a65df8dcb7ef18ec1e34378c3a0b27797e5551b900b83cbc9f1b834dc8e",
+        "experiments/router-authority-extension/upstream-dependencies.lock.json": "87551d12f5d946cc1c98cf8e01cb4ec7d632f67dff0fb3554d0f556881843d05",
+        "experiments/router-authority-extension/upstream-package.json": "670515d6f190581be53f98f7e4a8764ab0a1ac3bc60858466ebfaea59fc77de7"
+      },
+      "runtime": {
+        "server": {
+          "Platform": {
+            "Name": "Docker Desktop 4.86.0 (236216)"
+          },
+          "Version": "29.7.2",
+          "ApiVersion": "1.55",
+          "MinAPIVersion": "1.40",
+          "Os": "linux",
+          "Arch": "arm64",
+          "Components": [
+            {
+              "Name": "Engine",
+              "Version": "29.7.2",
+              "Details": {
+                "ApiVersion": "1.55",
+                "Arch": "arm64",
+                "BuildTime": "Wed Aug  5 18:28:35 2026",
+                "Experimental": "false",
+                "GitCommit": "6a43e3d",
+                "GoVersion": "go1.26.5",
+                "KernelVersion": "6.12.76-linuxkit",
+                "MinAPIVersion": "1.40",
+                "Module": "github.com/moby/moby/v2",
+                "ModuleVersion": "v2.0.0+unknown",
+                "Os": "linux"
+              }
+            },
+            {
+              "Name": "containerd",
+              "Version": "v2.2.5",
+              "Details": {
+                "GitCommit": "e53c7c1516c3b2bff98eb76f1f4117477e6f4e66"
+              }
+            },
+            {
+              "Name": "runc",
+              "Version": "1.3.6",
+              "Details": {
+                "GitCommit": "v1.3.6-0-g491b69ba"
+              }
+            },
+            {
+              "Name": "docker-init",
+              "Version": "0.19.0",
+              "Details": {
+                "GitCommit": "de40ad0"
+              }
+            }
+          ],
+          "GitCommit": "6a43e3d",
+          "GoVersion": "go1.26.5",
+          "KernelVersion": "6.12.76-linuxkit",
+          "BuildTime": "2026-08-05T18:28:35.000000000+00:00"
+        },
+        "cgroupVersion": "2",
+        "securityOptions": [
+          "name=seccomp,profile=builtin",
+          "name=cgroupns"
+        ],
+        "image": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a"
+      },
+      "error": "Error: node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 404\n\n    at file:///fixture/worker.ts:32:288\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 404,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.21.0\n\n    at ChildProcess.<anonymous> (file://<gaffer-source>/experiments/router-boundary-bridge/run.ts:23:621)\n    at ChildProcess.wrapper (node:events:639:12)\n    at ChildProcess.emit (node:events:514:20)\n    at ChildProcess._handle.onexit (node:internal/child_process:294:12)",
+      "cleanup": {
+        "verified": true,
+        "containersRemaining": 0,
+        "volumesRemaining": 0,
+        "errors": []
+      },
+      "observation": "bridge-full-first",
+      "passedCasesBeforeFailure": 24,
+      "failedContainers": [
+        {
+          "name": "gaffer-bridge-e65f752a8d9f-compatible-crash-reserved-gateway",
+          "state": {
+            "Status": "exited",
+            "Running": false,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 0,
+            "ExitCode": 0,
+            "Error": "",
+            "StartedAt": "2026-09-14T16:23:17.097399588Z",
+            "FinishedAt": "2026-09-14T16:23:18.557015588Z"
+          },
+          "logs": "[DB] Driver: node:sqlite | file: /work/router-db/db/data.sqlite\n[DB][migrate] applied #1 initial\n{\"event\":\"ready\",\"token\":\"<scoped-token>\",\"role\":\"worker\",\"model\":\"gaffer-coding\",\"tools\":false}\n[DB] Driver: node:sqlite | file: /work/router-db/db/data.sqlite\n{\"event\":\"finished\",\"result\":{\"scenario\":\"crash-reserved\",\"recovery\":{\"before\":{\"schema\":2,\"generation\":\"822efb52-1a26-46ac-a695-575f57b45c0c\",\"phase\":\"active\",\"policy\":{\"schema\":2,\"routerId\":\"synthetic_router\",\"routeId\":\"coding\",\"revision\":\"policy_1\",\"epoch\":1,\"routerModel\":\"gaffer-coding\",\"profile\":\"router-chat-text-tools-synthetic-v1\",\"evidence\":\"synthetic\",\"liveAdmission\":false,\"graph\":{\"schema\":1,\"profile\":\"9router-0.5.75-synthetic-compatible-chat-v1\",\"liveAdmission\":false,\"nativeLiveAdmission\":false,\"nodes\":[{\"id\":\"openai-compatible-synthetic\",\"prefix\":\"synthetic\",\"baseUrl\":\"http://127.0.0.1:47771/v1\",\"apiType\":\"chat\"}],\"connections\":[{\"id\":\"account_1\",\"provider\":\"openai-compatible-synthetic\",\"authType\":\"apikey\",\"priority\":1,\"isActive\":true,\"endpoint\":\"http://127.0.0.1:47771/v1/chat/completions\",\"billing\":\"synthetic-api\"},{\"id\":\"account_2\",\"provider\":\"openai-compatible-synthetic\",\"authType\":\"apikey\",\"priority\":2,\"isActive\":true,\"endpoint\":\"http://127.0.0.1:47771/v1/chat/completions\",\"billing\":\"synthetic-api\"}],\"routes\":[{\"id\":\"coding\",\"name\":\"gaffer-coding\",\"strategy\":\"fallback\",\"edges\":[{\"member\":\"openai-compatible-synthetic/synthetic-model\",\"provider\":\"openai-compatible-synthetic\",\"model\":\"synthetic-model\",\"connections\":[\"account_1\",\"account_2\"]},{\"member\":\"openai-compatible-synthetic/fallback-model\",\"provider\":\"openai-compatible-synthetic\",\"model\":\"fallback-model\",\"connections\":[\"account_1\",\"account_2\"]}]}],\"settings\":{\"requireApiKey\":true,\"comboStrategy\":\"fallback\",\"accountStrategy\":\"fill-first\",\"adapters\":false,\"helpers\":false,\"remoteResources\":false,\"proxies\":false,\"autoPing\":false},\"bounds\":{\"requestBytes\":65536,\"responseBytes\":1048576,\"requestMaxTokens\":1024,\"providerOutputTokens\":1024,\"ingressMs\":3000,\"totalMs\":30000,\"subattempts\":16},\"terminals\":[\"validated-original-chat-sse\",\"validated-original-json-error\"]},\"limits\":{\"requestBytes\":65536,\"responseBytes\":65536,\"outputTokens\":64,\"concurrency\":1,\"requestCount\":3,\"totalMs\":6000,\"firstOutputMs\":4000,\"idleMs\":2000,\"attemptMs\":20000},\"authority\":{\"deploymentId\":\"synthetic_bridge\",\"boot\":\"eafe0476-84c0-42c9-8740-3e47c93d3bea\",\"generation\":2,\"revision\":\"policy_1\",\"graphDigest\":\"a5f106a9de786f9778e80304c2349a431ba2788d1f86a17db23adf680bd3410d\"},\"envelope\":{\"consumer\":\"chat-read-file-v1\",\"cap\":\"max_completion_tokens-to-max_tokens-v1\",\"replacement\":\"read-only\",\"sourceCommit\":\"17c4cc76877bd1755030a8414f8d0083f48dcccf\",\"sourceLock\":\"681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c\",\"overlay\":\"8e3d7e468ae5615ae11a1174f873cdb830df973b0bd2e96588b6c08da3969522\",\"runtime\":\"ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f\"}},\"fingerprint\":\"1538b95c8ac41a29015a470910d78bed80f01e91e7f671e992cfd2bb3aa99e2e\",\"reservations\":[{\"requestId\":\"1e7c4664c35a4cbd917681d173db5f14\",\"attemptId\":\"attempt_1\",\"taskId\":\"task_1\",\"epoch\":1,\"outcome\":\"active\",\"router\":{\"policy\":{\"schema\":2,\"routerId\":\"synthetic_router\",\"routeId\":\"coding\",\"revision\":\"policy_1\",\"epoch\":1,\"routerModel\":\"gaffer-coding\",\"profile\":\"router-chat-text-tools-synthetic-v1\",\"evidence\":\"synthetic\",\"liveAdmission\":false,\"graph\":{\"schema\":1,\"profile\":\"9router-0.5.75-synthetic-compatible-chat-v1\",\"liveAdmission\":false,\"nativeLiveAdmission\":false,\"nodes\":[{\"id\":\"openai-compatible-synthetic\",\"prefix\":\"synthetic\",\"baseUrl\":\"http://127.0.0.1:47771/v1\",\"apiType\":\"chat\"}],\"connections\":[{\"id\":\"account_1\",\"provider\":\"openai-compatible-synthetic\",\"authType\":\"apikey\",\"priority\":1,\"isActive\":true,\"endpoint\":\"http://127.0.0.1:47771/v1/chat/completions\",\"billing\":\"synthetic-api\"},{\"id\":\"account_2\",\"provider\":\"openai-compatible-synthetic\",\"authType\":\"apikey\",\"priority\":2,\"isActive\":true,\"endpoint\":\"http://127.0.0.1:47771/v1/chat/completions\",\"billing\":\"synthetic-api\"}],\"routes\":[{\"id\":\"coding\",\"name\":\"gaffer-coding\",\"strategy\":\"fallback\",\"edges\":[{\"member\":\"openai-compatible-synthetic/synthetic-model\",\"provider\":\"openai-compatible-synthetic\",\"model\":\"synthetic-model\",\"connections\":[\"account_1\",\"account_2\"]},{\"member\":\"openai-compatible-synthetic/fallback-model\",\"provider\":\"openai-compatible-synthetic\",\"model\":\"fallback-model\",\"connections\":[\"account_1\",\"account_2\"]}]}],\"settings\":{\"requireApiKey\":true,\"comboStrategy\":\"fallback\",\"accountStrategy\":\"fill-first\",\"adapters\":false,\"helpers\":false,\"remoteResources\":false,\"proxies\":false,\"autoPing\":false},\"bounds\":{\"requestBytes\":65536,\"responseBytes\":1048576,\"requestMaxTokens\":1024,\"providerOutputTokens\":1024,\"ingressMs\":3000,\"totalMs\":30000,\"subattempts\":16},\"terminals\":[\"validated-original-chat-sse\",\"validated-original-json-error\"]},\"limits\":{\"requestBytes\":65536,\"responseBytes\":65536,\"outputTokens\":64,\"concurrency\":1,\"requestCount\":3,\"totalMs\":6000,\"firstOutputMs\":4000,\"idleMs\":2000,\"attemptMs\":20000},\"authority\":{\"deploymentId\":\"synthetic_bridge\",\"boot\":\"eafe0476-84c0-42c9-8740-3e47c93d3bea\",\"generation\":2,\"revision\":\"policy_1\",\"graphDigest\":\"a5f106a9de786f9778e80304c2349a431ba2788d1f86a17db23adf680bd3410d\"},\"envelope\":{\"consumer\":\"chat-read-file-v1\",\"cap\":\"max_completion_tokens-to-max_tokens-v1\",\"replacement\":\"read-only\",\"sourceCommit\":\"17c4cc76877bd1755030a8414f8d0083f48dcccf\",\"sourceLock\":\"681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c\",\"overlay\":\"8e3d7e468ae5615ae11a1174f873cdb830df973b0bd2e96588b6c08da3969522\",\"runtime\":\"ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f\"}},\"binding\":{\"taskId\":\"task_1\",\"attemptId\":\"attempt_1\",\"grantId\":\"grant_1\",\"leaseId\":\"lease_1\",\"fence\":1,\"role\":\"worker\",\"routerId\":\"synthetic_router\",\"routeId\":\"coding\",\"revision\":\"policy_1\",\"epoch\":1,\"expiresAt\":1789403017710,\"leaseExpiresAt\":1789403017710},\"requestDigest\":\"6ceac59ff26f1050e16986f58a4eeedd931d2bd1508aca662535dbf5e7e6c174\",\"send\":\"reserved\"}}],\"counts\":{\"attempt_1\":1},\"decisions\":[]},\"after\":{\"schema\":2,\"generation\":\"fce2fc8c-9644-4369-bf5d-ef3c31d85af0\",\"phase\":\"closed\",\"policy\":{\"schema\":2,\"routerId\":\"synthetic_router\",\"routeId\":\"coding\",\"revision\":\"policy_1\",\"epoch\":1,\"routerModel\":\"gaffer-coding\",\"profile\":\"router-chat-text-tools-synthetic-v1\",\"evidence\":\"synthetic\",\"liveAdmission\":false,\"graph\":{\"schema\":1,\"profile\":\"9router-0.5.75-synthetic-compatible-chat-v1\",\"liveAdmission\":false,\"nativeLiveAdmission\":false,\"nodes\":[{\"id\":\"openai-compatible-synthetic\",\"prefix\":\"synthetic\",\"baseUrl\":\"http://127.0.0.1:47771/v1\",\"apiType\":\"chat\"}],\"connections\":[{\"id\":\"account_1\",\"provider\":\"openai-compatible-synthetic\",\"authType\":\"apikey\",\"priority\":1,\"isActive\":true,\"endpoint\":\"http://127.0.0.1:47771/v1/chat/completions\",\"billing\":\"synthetic-api\"},{\"id\":\"account_2\",\"provider\":\"openai-compatible-synthetic\",\"authType\":\"apikey\",\"priority\":2,\"isActive\":true,\"endpoint\":\"http://127.0.0.1:47771/v1/chat/completions\",\"billing\":\"synthetic-api\"}],\"routes\":[{\"id\":\"coding\",\"name\":\"gaffer-coding\",\"strategy\":\"fallback\",\"edges\":[{\"member\":\"openai-compatible-synthetic/synthetic-model\",\"provider\":\"openai-compatible-synthetic\",\"model\":\"synthetic-model\",\"connections\":[\"account_1\",\"account_2\"]},{\"member\":\"openai-compatible-synthetic/fallback-model\",\"provider\":\"openai-compatible-synthetic\",\"model\":\"fallback-model\",\"connections\":[\"account_1\",\"account_2\"]}]}],\"settings\":{\"requireApiKey\":true,\"comboStrategy\":\"fallback\",\"accountStrategy\":\"fill-first\",\"adapters\":false,\"helpers\":false,\"remoteResources\":false,\"proxies\":false,\"autoPing\":false},\"bounds\":{\"requestBytes\":65536,\"responseBytes\":1048576,\"requestMaxTokens\":1024,\"providerOutputTokens\":1024,\"ingressMs\":3000,\"totalMs\":30000,\"subattempts\":16},\"terminals\":[\"validated-original-chat-sse\",\"validated-original-json-error\"]},\"limits\":{\"requestBytes\":65536,\"responseBytes\":65536,\"outputTokens\":64,\"concurrency\":1,\"requestCount\":3,\"totalMs\":6000,\"firstOutputMs\":4000,\"idleMs\":2000,\"attemptMs\":20000},\"authority\":{\"deploymentId\":\"synthetic_bridge\",\"boot\":\"eafe0476-84c0-42c9-8740-3e47c93d3bea\",\"generation\":2,\"revision\":\"policy_1\",\"graphDigest\":\"a5f106a9de786f9778e80304c2349a431ba2788d1f86a17db23adf680bd3410d\"},\"envelope\":{\"consumer\":\"chat-read-file-v1\",\"cap\":\"max_completion_tokens-to-max_tokens-v1\",\"replacement\":\"read-only\",\"sourceCommit\":\"17c4cc76877bd1755030a8414f8d0083f48dcccf\",\"sourceLock\":\"681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c\",\"overlay\":\"8e3d7e468ae5615ae11a1174f873cdb830df973b0bd2e96588b6c08da3969522\",\"runtime\":\"ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f\"}},\"fingerprint\":\"1538b95c8ac41a29015a470910d78bed80f01e91e7f671e992cfd2bb3aa99e2e\",\"reservations\":[],\"counts\":{\"attempt_1\":1},\"decisions\":[{\"requestId\":\"1e7c4664c35a4cbd917681d173db5f14\",\"taskId\":\"task_1\",\"attemptId\":\"attempt_1\",\"router\":{\"policy\":{\"schema\":2,\"routerId\":\"synthetic_router\",\"routeId\":\"coding\",\"revision\":\"policy_1\",\"epoch\":1,\"routerModel\":\"gaffer-coding\",\"profile\":\"router-chat-text-tools-synthetic-v1\",\"evidence\":\"synthetic\",\"liveAdmission\":false,\"graph\":{\"schema\":1,\"profile\":\"9router-0.5.75-synthetic-compatible-chat-v1\",\"liveAdmission\":false,\"nativeLiveAdmission\":false,\"nodes\":[{\"id\":\"openai-compatible-synthetic\",\"prefix\":\"synthetic\",\"baseUrl\":\"http://127.0.0.1:47771/v1\",\"apiType\":\"chat\"}],\"connections\":[{\"id\":\"account_1\",\"provider\":\"openai-compatible-synthetic\",\"authType\":\"apikey\",\"priority\":1,\"isActive\":true,\"endpoint\":\"http://127.0.0.1:47771/v1/chat/completions\",\"billing\":\"synthetic-api\"},{\"id\":\"account_2\",\"provider\":\"openai-compatible-synthetic\",\"authType\":\"apikey\",\"priority\":2,\"isActive\":true,\"endpoint\":\"http://127.0.0.1:47771/v1/chat/completions\",\"billing\":\"synthetic-api\"}],\"routes\":[{\"id\":\"coding\",\"name\":\"gaffer-coding\",\"strategy\":\"fallback\",\"edges\":[{\"member\":\"openai-compatible-synthetic/synthetic-model\",\"provider\":\"openai-compatible-synthetic\",\"model\":\"synthetic-model\",\"connections\":[\"account_1\",\"account_2\"]},{\"member\":\"openai-compatible-synthetic/fallback-model\",\"provider\":\"openai-compatible-synthetic\",\"model\":\"fallback-model\",\"connections\":[\"account_1\",\"account_2\"]}]}],\"settings\":{\"requireApiKey\":true,\"comboStrategy\":\"fallback\",\"accountStrategy\":\"fill-first\",\"adapters\":false,\"helpers\":false,\"remoteResources\":false,\"proxies\":false,\"autoPing\":false},\"bounds\":{\"requestBytes\":65536,\"responseBytes\":1048576,\"requestMaxTokens\":1024,\"providerOutputTokens\":1024,\"ingressMs\":3000,\"totalMs\":30000,\"subattempts\":16},\"terminals\":[\"validated-original-chat-sse\",\"validated-original-json-error\"]},\"limits\":{\"requestBytes\":65536,\"responseBytes\":65536,\"outputTokens\":64,\"concurrency\":1,\"requestCount\":3,\"totalMs\":6000,\"firstOutputMs\":4000,\"idleMs\":2000,\"attemptMs\":20000},\"authority\":{\"deploymentId\":\"synthetic_bridge\",\"boot\":\"eafe0476-84c0-42c9-8740-3e47c93d3bea\",\"generation\":2,\"revision\":\"policy_1\",\"graphDigest\":\"a5f106a9de786f9778e80304c2349a431ba2788d1f86a17db23adf680bd3410d\"},\"envelope\":{\"consumer\":\"chat-read-file-v1\",\"cap\":\"max_completion_tokens-to-max_tokens-v1\",\"replacement\":\"read-only\",\"sourceCommit\":\"17c4cc76877bd1755030a8414f8d0083f48dcccf\",\"sourceLock\":\"681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c\",\"overlay\":\"8e3d7e468ae5615ae11a1174f873cdb830df973b0bd2e96588b6c08da3969522\",\"runtime\":\"ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f\"}},\"binding\":{\"taskId\":\"task_1\",\"attemptId\":\"attempt_1\",\"grantId\":\"grant_1\",\"leaseId\":\"lease_1\",\"fence\":1,\"role\":\"worker\",\"routerId\":\"synthetic_router\",\"routeId\":\"coding\",\"revision\":\"policy_1\",\"epoch\":1,\"expiresAt\":1789403017710,\"leaseExpiresAt\":1789403017710},\"requestDigest\":\"6ceac59ff26f1050e16986f58a4eeedd931d2bd1508aca662535dbf5e7e6c174\",\"send\":\"reserved\"},\"verdict\":\"never_sent\",\"evidence\":{\"disposition\":\"quiescent_failure\",\"receiptDigest\":null,\"operations\":[]},\"completionDigest\":null,\"delivery\":\"unobserved\"}]},\"routerPhase\":\"closed\",\"boot\":\"9543d8d5-aa00-4c39-ab39-2eb7f3888efd\",\"generation\":3,\"activated\":false,\"replayed\":false},\"resources\":{\"memory.peak\":\"121438208\",\"memory.current\":\"119705600\",\"memory.events\":\"low 0\\nhigh 0\\nmax 0\\noom 0\\noom_kill 0\\noom_group_kill 0\",\"pids.peak\":\"24\",\"cpu.stat\":\"usage_usec 962954\\nuser_usec 795530\\nsystem_usec 167423\\nnice_usec 0\\nnr_periods 13\\nnr_throttled 4\\nthrottled_usec 179748\\nnr_bursts 0\\nburst_usec 0\"},\"checkpoint\":{\"scenario\":\"crash-reserved\",\"sends\":[],\"events\":[],\"journal\":{\"schema\":2,\"generation\":\"822efb52-1a26-46ac-a695-575f57b45c0c\",\"phase\":\"active\",\"policy\":{\"schema\":2,\"routerId\":\"synthetic_router\",\"routeId\":\"coding\",\"revision\":\"policy_1\",\"epoch\":1,\"routerModel\":\"gaffer-coding\",\"profile\":\"router-chat-text-tools-synthetic-v1\",\"evidence\":\"synthetic\",\"liveAdmission\":false,\"graph\":{\"schema\":1,\"profile\":\"9router-0.5.75-synthetic-compatible-chat-v1\",\"liveAdmission\":false,\"nativeLiveAdmission\":false,\"nodes\":[{\"id\":\"openai-compatible-synthetic\",\"prefix\":\"synthetic\",\"baseUrl\":\"http://127.0.0.1:47771/v1\",\"apiType\":\"chat\"}],\"connections\":[{\"id\":\"account_1\",\"provider\":\"openai-compatible-synthetic\",\"authType\":\"apikey\",\"priority\":1,\"isActive\":true,\"endpoint\":\"http://127.0.0.1:47771/v1/chat/completions\",\"billing\":\"synthetic-api\"},{\"id\":\"account_2\",\"provider\":\"openai-compatible-synthetic\",\"authType\":\"apikey\",\"priority\":2,\"isActive\":true,\"endpoint\":\"http://127.0.0.1:47771/v1/chat/completions\",\"billing\":\"synthetic-api\"}],\"routes\":[{\"id\":\"coding\",\"name\":\"gaffer-coding\",\"strategy\":\"fallback\",\"edges\":[{\"member\":\"openai-compatible-synthetic/synthetic-model\",\"provider\":\"openai-compatible-synthetic\",\"model\":\"synthetic-model\",\"connections\":[\"account_1\",\"account_2\"]},{\"member\":\"openai-compatible-synthetic/fallback-model\",\"provider\":\"openai-compatible-synthetic\",\"model\":\"fallback-model\",\"connections\":[\"account_1\",\"account_2\"]}]}],\"settings\":{\"requireApiKey\":true,\"comboStrategy\":\"fallback\",\"accountStrategy\":\"fill-first\",\"adapters\":false,\"helpers\":false,\"remoteResources\":false,\"proxies\":false,\"autoPing\":false},\"bounds\":{\"requestBytes\":65536,\"responseBytes\":1048576,\"requestMaxTokens\":1024,\"providerOutputTokens\":1024,\"ingressMs\":3000,\"totalMs\":30000,\"subattempts\":16},\"terminals\":[\"validated-original-chat-sse\",\"validated-original-json-error\"]},\"limits\":{\"requestBytes\":65536,\"responseBytes\":65536,\"outputTokens\":64,\"concurrency\":1,\"requestCount\":3,\"totalMs\":6000,\"firstOutputMs\":4000,\"idleMs\":2000,\"attemptMs\":20000},\"authority\":{\"deploymentId\":\"synthetic_bridge\",\"boot\":\"eafe0476-84c0-42c9-8740-3e47c93d3bea\",\"generation\":2,\"revision\":\"policy_1\",\"graphDigest\":\"a5f106a9de786f9778e80304c2349a431ba2788d1f86a17db23adf680bd3410d\"},\"envelope\":{\"consumer\":\"chat-read-file-v1\",\"cap\":\"max_completion_tokens-to-max_tokens-v1\",\"replacement\":\"read-only\",\"sourceCommit\":\"17c4cc76877bd1755030a8414f8d0083f48dcccf\",\"sourceLock\":\"681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c\",\"overlay\":\"8e3d7e468ae5615ae11a1174f873cdb830df973b0bd2e96588b6c08da3969522\",\"runtime\":\"ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f\"}},\"fingerprint\":\"1538b95c8ac41a29015a470910d78bed80f01e91e7f671e992cfd2bb3aa99e2e\",\"reservations\":[{\"requestId\":\"1e7c4664c35a4cbd917681d173db5f14\",\"attemptId\":\"attempt_1\",\"taskId\":\"task_1\",\"epoch\":1,\"outcome\":\"active\",\"router\":{\"policy\":{\"schema\":2,\"routerId\":\"synthetic_router\",\"routeId\":\"coding\",\"revision\":\"policy_1\",\"epoch\":1,\"routerModel\":\"gaffer-coding\",\"profile\":\"router-chat-text-tools-synthetic-v1\",\"evidence\":\"synthetic\",\"liveAdmission\":false,\"graph\":{\"schema\":1,\"profile\":\"9router-0.5.75-synthetic-compatible-chat-v1\",\"liveAdmission\":false,\"nativeLiveAdmission\":false,\"nodes\":[{\"id\":\"openai-compatible-synthetic\",\"prefix\":\"synthetic\",\"baseUrl\":\"http://127.0.0.1:47771/v1\",\"apiType\":\"chat\"}],\"connections\":[{\"id\":\"account_1\",\"provider\":\"openai-compatible-synthetic\",\"authType\":\"apikey\",\"priority\":1,\"isActive\":true,\"endpoint\":\"http://127.0.0.1:47771/v1/chat/completions\",\"billing\":\"synthetic-api\"},{\"id\":\"account_2\",\"provider\":\"openai-compatible-synthetic\",\"authType\":\"apikey\",\"priority\":2,\"isActive\":true,\"endpoint\":\"http://127.0.0.1:47771/v1/chat/completions\",\"billing\":\"synthetic-api\"}],\"routes\":[{\"id\":\"coding\",\"name\":\"gaffer-coding\",\"strategy\":\"fallback\",\"edges\":[{\"member\":\"openai-compatible-synthetic/synthetic-model\",\"provider\":\"openai-compatible-synthetic\",\"model\":\"synthetic-model\",\"connections\":[\"account_1\",\"account_2\"]},{\"member\":\"openai-compatible-synthetic/fallback-model\",\"provider\":\"openai-compatible-synthetic\",\"model\":\"fallback-model\",\"connections\":[\"account_1\",\"account_2\"]}]}],\"settings\":{\"requireApiKey\":true,\"comboStrategy\":\"fallback\",\"accountStrategy\":\"fill-first\",\"adapters\":false,\"helpers\":false,\"remoteResources\":false,\"proxies\":false,\"autoPing\":false},\"bounds\":{\"requestBytes\":65536,\"responseBytes\":1048576,\"requestMaxTokens\":1024,\"providerOutputTokens\":1024,\"ingressMs\":3000,\"totalMs\":30000,\"subattempts\":16},\"terminals\":[\"validated-original-chat-sse\",\"validated-original-json-error\"]},\"limits\":{\"requestBytes\":65536,\"responseBytes\":65536,\"outputTokens\":64,\"concurrency\":1,\"requestCount\":3,\"totalMs\":6000,\"firstOutputMs\":4000,\"idleMs\":2000,\"attemptMs\":20000},\"authority\":{\"deploymentId\":\"synthetic_bridge\",\"boot\":\"eafe0476-84c0-42c9-8740-3e47c93d3bea\",\"generation\":2,\"revision\":\"policy_1\",\"graphDigest\":\"a5f106a9de786f9778e80304c2349a431ba2788d1f86a17db23adf680bd3410d\"},\"envelope\":{\"consumer\":\"chat-read-file-v1\",\"cap\":\"max_completion_tokens-to-max_tokens-v1\",\"replacement\":\"read-only\",\"sourceCommit\":\"17c4cc76877bd1755030a8414f8d0083f48dcccf\",\"sourceLock\":\"681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c\",\"overlay\":\"8e3d7e468ae5615ae11a1174f873cdb830df973b0bd2e96588b6c08da3969522\",\"runtime\":\"ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f\"}},\"binding\":{\"taskId\":\"task_1\",\"attemptId\":\"attempt_1\",\"grantId\":\"grant_1\",\"leaseId\":\"lease_1\",\"fence\":1,\"role\":\"worker\",\"routerId\":\"synthetic_router\",\"routeId\":\"coding\",\"revision\":\"policy_1\",\"epoch\":1,\"expiresAt\":1789403017710,\"leaseExpiresAt\":1789403017710},\"requestDigest\":\"6ceac59ff26f1050e16986f58a4eeedd931d2bd1508aca662535dbf5e7e6c174\",\"send\":\"reserved\"}}],\"counts\":{\"attempt_1\":1},\"decisions\":[]},\"receipts\":[{\"id\":\"1e7c4664c35a4cbd917681d173db5f14\",\"known\":false,\"quiescent\":false}]},\"supervisor\":{\"verifiedChildExit\":\"SIGKILL\",\"staleLockRemovedAfterExit\":true}}}\n(node:15) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:\n--import 'data:text/javascript,import { register } from \"node:module\"; import { pathToFileURL } from \"node:url\"; register(\"/probe/loader.mjs\", pathToFileURL(\"./\"));'\n(Use `node --trace-warnings ...` to show where the warning was created)\n(node:32) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:\n--import 'data:text/javascript,import { register } from \"node:module\"; import { pathToFileURL } from \"node:url\"; register(\"/probe/loader.mjs\", pathToFileURL(\"./\"));'\n(Use `node --trace-warnings ...` to show where the warning was created)"
+        },
+        {
+          "name": "gaffer-bridge-e65f752a8d9f-compatible-crash-reserved-worker",
+          "state": {
+            "Status": "exited",
+            "Running": false,
+            "Paused": false,
+            "Restarting": false,
+            "OOMKilled": false,
+            "Dead": false,
+            "Pid": 0,
+            "ExitCode": 1,
+            "Error": "",
+            "StartedAt": "2026-09-14T16:23:17.827527338Z",
+            "FinishedAt": "2026-09-14T16:23:17.993708213Z"
+          },
+          "logs": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n0 !== 404\n\n    at file:///fixture/worker.ts:32:288\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 0,\n  expected: 404,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.21.0"
+        }
+      ]
+    }
+  ]
+}
