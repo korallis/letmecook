@@ -65,10 +65,11 @@
       "desiredLabel": "GPT 5.6 Terra",
       "routeId": "cx/gpt-5.6-terra",
       "desiredEfforts": [
+        "high",
         "xhigh"
       ],
-      "effortWireEvidence": "xhigh",
-      "note": "Model-specific thinking levels include xhigh; Codex executor preserves it. Desired IDs not in saved disabled list.",
+      "effortWireEvidence": "high / xhigh (source translation)",
+      "note": "Model-specific thinking levels include high and xhigh; the Codex executor preserves both. High is requested for mid-sized features and xhigh for known-shape builds. Desired ID is not in the saved disabled list; no upstream acceptance or live conformance is claimed.",
       "discoveryStatus": "source-declared route; active provider; no live probe",
       "readiness": "unproven",
       "protocolConformance": "unproven",
