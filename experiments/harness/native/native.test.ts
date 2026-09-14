@@ -21,7 +21,7 @@ function evidence(): CandidateEvidence {
   // Retained proof did not capture adapter clocks/base/diff. These additions are
   // declared test fixtures, never presented as measured adapter runtime evidence.
   for (const r of requests) r.headers['content-length'] = String(Buffer.byteLength(r.rawBody));
-  return { policy: result.gateway.policy, binding: decisions[0].router.binding, request,
+  return { policy: result.gateway.policy, packetDigest: result.gateway.packetDigest, scope: result.gateway.scope, binding: decisions[0].router.binding, request,
     result: { outcome: 'completed_candidate', exitCode: 0, signal: null, events: parsed(), stderr: '', artifact: observedArtifact, bindingDigest: request.bindingDigest, settingsDigest: request.settingsDigest, usage: 'unverified_native_observation', localProcessExited: true, upstreamQuiescence: 'unknown' },
     requests, decisions, receipts: result.gateway.receipts, pendingReservations: result.gateway.journal.reservations, durableDecisionTimes: result.gateway.observed.decisions, observedArtifact };
 }

@@ -9,7 +9,7 @@ import { artifactMatches, validateRunRequest, type Artifact, type RunRequest, ty
 import { validateHeaders, type RequestObservation } from './relay.ts';
 const requireValue = (value: unknown, message: string) => { if (!value) throw Error(message); };
 
-export interface CandidateEvidence { policy: NativeRouterPolicy; binding: Binding; request: RunRequest; result: RunResult; requests: RequestObservation[]; decisions: any[]; receipts: unknown[]; pendingReservations: unknown[]; durableDecisionTimes: { requestId: string; at: number }[]; observedArtifact: Artifact }
+export interface CandidateEvidence { policy: NativeRouterPolicy; packetDigest: string; scope: unknown; binding: Binding; request: RunRequest; result: RunResult; requests: RequestObservation[]; decisions: any[]; receipts: unknown[]; pendingReservations: unknown[]; durableDecisionTimes: { requestId: string; at: number }[]; observedArtifact: Artifact }
 export function candidateArtifact(e: CandidateEvidence) {
   validateRunRequest(e.request);
   const p = validateRouterPolicy(e.policy); requireValue(p.schema === 3, 'native_policy_required');
@@ -52,7 +52,7 @@ export function candidateArtifact(e: CandidateEvidence) {
 }
 export function candidateEnvelope(e: CandidateEvidence) {
   const packet = candidateArtifact(e), { path, content, ...metadata } = packet;
-  return { schema: 1, consumer: e.policy.native.protocol, kind: 'repository_change', attemptId: e.binding.attemptId, bindingDigest: digest(e.binding), policyDigest: digest(e.policy), requestIds: packet.requestIds, decisionDigests: packet.decisionDigests, receiptDigests: packet.receiptDigests, artifact: { path, content, metadata } };
+  return { schema: 1, consumer: e.policy.native.protocol, kind: 'repository_change', attemptId: e.binding.attemptId, bindingDigest: digest(e.binding), policyDigest: digest(e.policy), packetDigest: e.packetDigest, scopeDigest: digest(e.scope), requestIds: packet.requestIds, decisionDigests: packet.decisionDigests, receiptDigests: packet.receiptDigests, artifact: { path, content, metadata } };
 }
 export function acknowledgeCandidate(artifact: ReturnType<typeof candidateEnvelope>, acknowledgement: any, durableArtifacts: any[]) {
   const expected = digest(artifact);

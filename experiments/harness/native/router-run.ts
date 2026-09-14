@@ -93,7 +93,7 @@ try {
           const completed = ['edit', 'delay', 'artifact-write'].includes(mode);
           if (completed) {
             assert.equal(entry.observation.result.outcome, 'completed_candidate'); assert.equal(artifact.content, CONTENT);
-            const envelope = candidateEnvelope({ policy, binding, request, result: entry.observation.result, requests: entry.observation.requests, decisions: entry.evidence.decisions, receipts: entry.evidence.receipts, pendingReservations: entry.evidence.reservations, durableDecisionTimes: entry.evidence.decisionTimes, observedArtifact: artifact }); entry.candidate = envelope;
+            const envelope = candidateEnvelope({ policy, packetDigest: entry.evidence.packetDigest, scope: entry.evidence.scope, binding, request, result: entry.observation.result, requests: entry.observation.requests, decisions: entry.evidence.decisions, receipts: entry.evidence.receipts, pendingReservations: entry.evidence.reservations, durableDecisionTimes: entry.evidence.decisionTimes, observedArtifact: artifact }); entry.candidate = envelope;
             const ack = await control(controlVolume, { command: 'candidate', value: envelope }); entry.acknowledgement = ack;
             if (mode === 'artifact-write') { assert.equal(ack.status, 403); entry.outcome = 'artifact_durability_refused'; }
             else { assert.equal(ack.status, 200); const after = await call(controlVolume, { command: 'evidence', attemptId: binding.attemptId }); entry.qualified = acknowledgeCandidate(envelope, ack.body, after.artifacts); entry.outcome = 'completed_candidate'; }
@@ -123,5 +123,5 @@ finally {
   for (const id of containers) try { await owned(id); await docker(['rm', '--force', id]); } catch { errors.push(id); }
   // Synthetic-only fixture volumes may be removed after evidence is durable.
   for (const volume of volumes) try { const v = JSON.parse(await docker(['volume', 'inspect', volume]))[0]; assert.equal(v.Labels[LABEL], run); await docker(['volume', 'rm', volume]); } catch { errors.push(volume); }
-  report.cleanup = !errors.length && !(await docker(['ps', '-aq', '--filter', LABEL + '=' + run])) && !(await docker(['volume', 'ls', '-q', '--filter', LABEL + '=' + run])); report.cleanupErrors = errors; await save(); await rm(staging, { recursive: true }); console.log(JSON.stringify({ result: report.result, cleanup: report.cleanup, output }));
+  report.cleanup = !errors.length && !(await docker(['ps', '-aq', '--filter', 'label=' + LABEL + '=' + run])) && !(await docker(['volume', 'ls', '-q', '--filter', 'label=' + LABEL + '=' + run])); report.cleanupErrors = errors; await save(); await rm(staging, { recursive: true }); console.log(JSON.stringify({ result: report.result, cleanup: report.cleanup, output }));
 }

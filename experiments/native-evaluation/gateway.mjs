@@ -42,7 +42,7 @@ router.listen('/state/router.sock');await once(router,'listening');chmodSync('/s
 let boundary=new Boundary(gate,'/state/router.sock',key);await boundary.listen('/router/inference.sock');
 const packet={schema:1,policy,profiles:a.nativeProfiles(),registryDigest:digest(a.nativeProfiles()),capabilities:{providerOutputTokens:'unavailable',providerMonetaryCap:'unavailable',refresh:'denied'},scopeStatusAtPreparation:'not_started'};
 persist('/state/deployment-packet.json',packet);const packetDigest=digest(packet);
-const evidenceApi=evidenceControls({policy:()=>policy,gate:()=>gate,authority:a,packetDigest,observed,persist});
+const evidenceApi=evidenceControls({policy:()=>policy,gate:()=>gate,authority:a,packetDigest,observed,persistCandidate:value=>persistImmutable('/state','candidate',value)});
 let stopping=false,selecting=false;
 async function stop(){
  if(stopping)return;stopping=true;

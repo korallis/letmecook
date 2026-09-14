@@ -3,10 +3,11 @@ import { mkdirSync, readFileSync } from 'node:fs';
 import { digest } from '../../router-authority-extension/overlay/native-profile.mjs';
 import { proof as persistenceProof } from '../../native-evaluation/faults.mjs';
 export const fault = { mode: process.env.GAFFER_HARNESS_NATIVE_FAULT ?? 'edit', finalizationAttempts: 0, originalEnds: [], persistence: persistenceProof };
-export async function sendFixture(res, events, frames, ordinal) {
+export async function sendFixture(res, events, frames, ordinal, body) {
   const mode = fault.mode;
   if (mode === 'router-error') { res.writeHead(503, { 'content-type': 'application/json' }).end('{"error":{"message":"synthetic router failure"}}'); return; }
-  const output = events(ordinal === 1);
+  const first = !body.input.some(item => item.type === 'function_call_output');
+  const output = events(first);
   if (mode === 'forbidden' && ordinal === 1) {
     for (const event of output) {
       if (event.item?.arguments) event.item.arguments = event.item.arguments.replace('greeting.txt', '../escape.txt');
