@@ -97,3 +97,11 @@ or [bootstrap](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414
 Treat that as a migration/cutover step with session consequences, not an inert
 copy. No credentials were inspected/exported/copied, existing settings changed,
 second service started or provider inference requested by this experiment.
+
+## Follow-up extension candidate
+
+The [#77 extension evidence](router-authority-extension.md) adds durable authority
+at the real pinned router's admission, SQLite writer and transport seams, exercised
+with synthetic HTTP upstreams. It is a separate disposable candidate; the source
+observations above remain valid for unmodified stock 0.5.75 and no live deployment
+acceptance is implied.
