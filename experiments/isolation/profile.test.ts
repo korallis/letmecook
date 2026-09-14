@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { assertRuntime, cleanupOwned, containerArgs, LABEL } from './profile.ts';
+import { assertRuntime, cleanupOwned, containerArgs, LABEL, selectedProfile } from './profile.ts';
 
-const version = { Server: { Version: '29.7.2', Os: 'linux', Arch: 'arm64', KernelVersion: '6.12.76-linuxkit' } };
+const version = { Server: { Version: selectedProfile.engineVersion, Os: 'linux', Arch: selectedProfile.architecture, KernelVersion: selectedProfile.kernelVersion } };
 const info = { CgroupVersion: '2', MemoryLimit: true, SwapLimit: true, CpuCfsQuota: true, PidsLimit: true, SecurityOptions: ['name=seccomp,profile=builtin'] };
 test('unsupported runtime or missing kernel enforcement blocks before launch', () => {
   assertRuntime(version, info);
