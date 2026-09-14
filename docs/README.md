@@ -64,6 +64,19 @@ from one provider are separate connections in that router, available to all elig
 agents through named routes. Gaffer does not duplicate provider login, refresh,
 account selection or request-level fallback.
 
+You choose the hosts for the daemon, each runner and 9Router. They can share a
+suitable machine or use separate machines. Register and explicitly enable eligible
+runners, then choose which projects they may execute; discovery of a machine never
+enrolls it or grants execution authority. A maintainer's test machine is only one
+optional environment, with no built-in hostname, address or account dependency.
+
+Connect an existing 9Router instance, set up a fresh one, or perform an
+operator-directed migration supported by that router version. Router credentials
+and provider sessions stay inside its own trust boundary and are never bundled
+with Gaffer. Tailscale is one optional private networking choice; deployments may
+use another tested transport satisfying the same authentication and TLS contract.
+See [deployment choices and migration boundaries](spec.md#12-operator-selected-deployment).
+
 Cloud harnesses still send prompts, code and tool results to their model provider.
 Self-hosted orchestration does not mean local inference, air-gapped operation or
 independence from provider policy. Provider credentials stay with 9Router; agents

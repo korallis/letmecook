@@ -4,6 +4,12 @@ Created **14 September 2026** from the reviewed v0.4 plan. The backlog contains 
 
 [GitHub issues](https://github.com/korallis/letmecook/issues) are the live work-status source of truth. This file is a navigation and traceability index, not a duplicate status tracker. Read current issue bodies and native blocked-by relationships before starting. Later milestone details may be refined by evidence without changing their single-purpose delivery rule.
 
+The initial 63-issue index is supplemented by
+[#66 operator-selected deployment](https://github.com/korallis/letmecook/issues/66).
+Daemon, runner and 9Router locations are operator configuration; no maintainer
+machine or private network is a product prerequisite. The affected setup,
+placement and packaging issues retain their milestone dependencies.
+
 ## Start here
 
 - [#1 Define representative fixtures and record the standalone baseline](https://github.com/korallis/letmecook/issues/1) — Establish the task/capture fixture and measurement method before tuning the product, so later value claims have a fair comparator.
