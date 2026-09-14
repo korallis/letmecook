@@ -10,6 +10,8 @@ import { PolicyGate } from '../inference-boundary/policy.ts';
 import { RouterAuthority } from '../router-boundary-bridge/authority.ts';
 import { digest,validateNativeProfile } from '../router-authority-extension/overlay/native-profile.mjs';
 import { events,frames } from './fixtures.mjs';
+import { plannerEvents } from './planner-fixtures.mjs';
+import { PLANNER_PROTOCOL, validatePlannerCandidate } from '../router-authority-extension/overlay/native-planner.mjs';
 import { evidenceControls } from './evidence-control.mjs';
 import { persistImmutable } from './durable-records.mjs';
 const {acquireDeploymentOwner}=await import('/router-source/gaffer-extension/deployment-owner.mjs');
@@ -41,7 +43,7 @@ let synthetic;
 if(n.evidence==='synthetic'){
  synthetic=createServer(async(req,res)=>{let text='';for await(const c of req){text+=c;if(text.length>n.local.requestBytes){res.writeHead(413).end();return;}}const body=JSON.parse(text);observed.sends.push({path:req.url,body});
   if(req.url!=='/responses')throw Error('unexpected_refresh_egress');
-  res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(continuityModule?.syntheticContinuityEvents(continuityFixture,n,body,events)??events(observed.sends.length===1)));for(let i=0;i<bytes.length;i+=17)res.write(bytes.subarray(i,i+17));res.end();
+  res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(continuityModule?.syntheticContinuityEvents(continuityFixture,n,body,events)??(n.protocol===PLANNER_PROTOCOL?plannerEvents(body,n):events(!body.input.some(x=>x.type==='function_call_output')))));for(let i=0;i<bytes.length;i+=17)res.write(bytes.subarray(i,i+17));res.end();
  });synthetic.listen(47771,'127.0.0.1');await once(synthetic,'listening');
 }
 const router=createServer(async(req,res)=>{const abort=new AbortController();res.on('close',()=>{if(!res.writableEnded)abort.abort();});try{const result=await handleChat(new Request('http://127.0.0.1'+req.url,{method:req.method,headers:req.headers,body:Readable.toWeb(req),duplex:'half',signal:abort.signal}));res.writeHead(result.status,Object.fromEntries(result.headers));if(result.body)for await(const c of result.body)res.write(c);res.end();}catch{res.destroy();}});
@@ -49,11 +51,12 @@ router.listen('/state/router.sock');await once(router,'listening');chmodSync('/s
 let boundary=new Boundary(gate,'/state/router.sock',key);await boundary.listen('/router/inference.sock');
 const packet={schema:1,policy,profiles:a.nativeProfiles(),registryDigest:digest(a.nativeProfiles()),capabilities:{providerOutputTokens:'unavailable',providerMonetaryCap:'unavailable',refresh:'denied'},scopeStatusAtPreparation:'not_started',...(continuityFixture?{continuityFixture}:{})};
 const packetRecord=persistImmutable('/state','deployment-packet',packet),packetDigest=packetRecord.digest;
-const evidenceApi=evidenceControls({policy:()=>policy,gate:()=>gate,authority:a,packetDigest,observed,persistCandidate:value=>persistImmutable('/state','candidate',value)});
+const evidenceApi=evidenceControls({policy:()=>policy,gate:()=>gate,authority:a,packetDigest,observed,persistCandidate:value=>persistImmutable('/state','candidate',value),validateProposal:validatePlannerCandidate});
 const continuity=continuityModule?.continuityControl({manifest:continuityFixture,packetDigest,policy:()=>policy,gate:()=>gate,authority:a,evidence:attempt=>evidenceApi.evidence(attempt),persist:(kind,value)=>persistImmutable('/state',kind,value),recovered:readdirSync('/state').some(name=>name.startsWith('continuity-intent-')),
  health:async id=>{const c=(await repository.getProviderConnections()).find(c=>c.id===id);if(!c)throw Error('continuity_connection_missing');return {active:c.isActive===true,status:c.testStatus,lockUntil:Date.parse(c['modelLock_gpt-6-astra'])||null,credentialsDigest:digest(Object.fromEntries(Object.entries(c).filter(([k])=>['accessToken','refreshToken','idToken','expiresAt','providerSpecificData'].includes(k))))};},
  markUnavailable:async(id,deadline)=>{const {markAccountUnavailable}=await import('/router-source/src/sse/services/auth.js');await markAccountUnavailable(id,503,'controlled_fixture_unavailability','codex','gpt-6-astra',deadline);},fence:()=>{void stop();}});
 continuity?.wrapGate(gate);
+
 let stopping=false,selecting=false;
 async function stop(){
  if(stopping)return;stopping=true;

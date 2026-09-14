@@ -1,0 +1,11 @@
+import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import assert from 'node:assert/strict';
+const child = spawn(process.execPath, ['--experimental-loader', '/probe/loader.mjs', '/planner-probe/router-gateway.ts', process.argv[2]], { env: process.env, stdio: ['ignore','pipe','pipe'] });
+child.stdout!.pipe(process.stdout); let stderr = '';
+child.stderr!.on('data', chunk => { stderr += chunk; stderr = stderr.slice(-65536); });
+for (const signal of ['SIGINT','SIGTERM'] as const) process.on(signal, () => child.kill('SIGUSR2'));
+const timer = setTimeout(() => child.kill('SIGKILL'), 15000);
+const result = await new Promise<{ code: number | null; signal: string | null }>(resolve => child.once('exit', (code, signal) => resolve({ code, signal })));
+clearTimeout(timer); process.stderr.write(stderr); assert.equal(result.code, 0, stderr);
+console.log(JSON.stringify({ event: 'finished', result: JSON.parse(await readFile('/work/result.json', 'utf8')) }));

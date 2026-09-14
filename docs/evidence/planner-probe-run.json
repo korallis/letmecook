@@ -1,0 +1,377 @@
+{
+  "schema": 1,
+  "observedAt": "2026-09-14T13:42:12.937Z",
+  "result": "synthetic_planner_passed_live_blocked",
+  "synthetic": true,
+  "liveRouterCalled": false,
+  "issueComplete": false,
+  "unattendedSupported": false,
+  "command": "npm --prefix experiments/planner-probe run prove",
+  "runtime": {
+    "node": "v26.8.2",
+    "platform": "darwin",
+    "architecture": "arm64"
+  },
+  "budgets": {
+    "assessments": 1,
+    "repairs": 1,
+    "requests": 3,
+    "files": 1,
+    "readBytes": 4096,
+    "requestBytes": 32768,
+    "responseBytes": 32768,
+    "outputTokens": 1024,
+    "totalMs": 5000
+  },
+  "sourceDigests": {
+    "experiments/planner-probe/capabilities.ts": "c754a7df01044b0c539808431b5a714605832cbab6b298c818d821389f91730c",
+    "experiments/planner-probe/demo.ts": "25d1927331fb70f0f0552bc19006bee7bbb36b63fdd315e06d6ae236538680a6",
+    "experiments/planner-probe/fixture.ts": "2781097c780b0df0326fb1339214ff3060f79fbf77eed80ab460ece5d63182fe",
+    "experiments/planner-probe/package-lock.json": "8a9a9881e0d48b3e98a52ffc56a81344b15a004c9827efc387edf733126e7237",
+    "experiments/planner-probe/package.json": "e22142c1305dc6274bbe909a79975c6a24ee5e2c92b4eca895902248082cf258",
+    "experiments/planner-probe/planner.test.ts": "6e1036e70605c83185cc771e04ee3256ed059b5d6eaa2445ac8ffc2d72d071c0",
+    "experiments/planner-probe/planner.ts": "d467bac3af806e4a5fc02b4976d10b08d713a2d3bbbbd8aea31e52aea9c47448",
+    "experiments/planner-probe/prove.ts": "5bd8c594a87e5572897605de5652391017902db1416929625d36924cc732b5b6",
+    "experiments/planner-probe/reader.ts": "de2930b80a6c0dd9336910dad74b4668019a4629540a6f91677f0ee8bff370dc",
+    "experiments/planner-probe/transport.ts": "0a482f4234cd81dd5b601fa31ef8cc88c827c006903e8d02dde321964e593ddc",
+    "experiments/planner-probe/tsconfig.json": "e7fdc78d6c95f978eb355c76d005733baf15e891719f85e9a001e67fb65d435d",
+    "experiments/inference-boundary/boundary.test.ts": "184fd24601e8c08d47007cd69e4d4d51b9458ee3ffb29a43ce439f2c7f386553",
+    "experiments/inference-boundary/boundary.ts": "aedaeb58da77ea5ff22f40addce01a8a7f7146525783856b22006d6d5b7a0b35",
+    "experiments/inference-boundary/demo.ts": "448bef33591c5408942adb0ea4a44c6473bac90831962dcabbd339b102b91fa3",
+    "experiments/inference-boundary/fixture.ts": "acc2080543fe4bd228900bab5b0b57ccfb13aca690c1d0da27cf221bc1bd412b",
+    "experiments/inference-boundary/json.ts": "7f26eb4cf1d4544f55a7b5a7c69cb8dc41de8aaa0c8db13596f59e981944c180",
+    "experiments/inference-boundary/package-lock.json": "10a402c72fae1b535ebbe43a8cbb6ddae3e706b9a41346c2da6416a66be361ba",
+    "experiments/inference-boundary/package.json": "0687f4f3e65bd81e0252ff98b699899eb3062184dc84db685a5ee5e20edc7b9d",
+    "experiments/inference-boundary/policy.ts": "6d77453009bad776abe66a55219467b00a84f53a3d38f4387cf563e02cadbf44",
+    "experiments/inference-boundary/protocol.ts": "a5e4cfac5a00d7daf7a4e03f8180af4491454a8eab4aa30650a8bd959d07e98d",
+    "experiments/inference-boundary/prove.ts": "76bf6a73c17523e749d5389c10fcb4616708463e19e19fdba8f07a9168a7d750",
+    "experiments/inference-boundary/tsconfig.json": "e7fdc78d6c95f978eb355c76d005733baf15e891719f85e9a001e67fb65d435d",
+    "experiments/inference-boundary/types.ts": "a57afcb9aa488e83692e8beaaf77fd2a0f27a6478289146f03c254a685214732",
+    "experiments/inference-boundary/wait.ts": "c56f31eb6d68762bf4d083156a69d98ea01bc4942a5a05400a0de80f2d317e1d",
+    "tests/fixtures/planner/fixture.txt": "cfbd4f521e876bf7c58582c01f8e6d79b81f8203ba2d98f8fd2258853bffe4e5",
+    "tests/fixtures/planner/plan.schema.json": "487ff8ab83fb394a68e97127c34ecfecfb8e4c304f76bea115c346f1e08d57e3"
+  },
+  "tests": [
+    {
+      "name": "failed fixture setup closes listeners and removes owned state; cleanup failures retain both errors",
+      "result": "passed"
+    },
+    {
+      "name": "actual synthetic HTTP tool continuation returns a schema-valid proposal without authority",
+      "result": "passed"
+    },
+    {
+      "name": "malformed output gets one charged repair; repeated invocation cannot replenish allowance",
+      "result": "passed"
+    },
+    {
+      "name": "one valid repair and no tools can complete the original assessment",
+      "result": "passed"
+    },
+    {
+      "name": "schema rejects duplicate keys, extra authority, stale revision, invalid references and too many questions",
+      "result": "passed"
+    },
+    {
+      "name": "a model echoing repository authority demands cannot mutate policy or dispatch work",
+      "result": "passed"
+    },
+    {
+      "name": "request_budget_exhausted",
+      "result": "passed"
+    },
+    {
+      "name": "response_budget_exhausted",
+      "result": "passed"
+    },
+    {
+      "name": "request and response byte bounds terminate without repair",
+      "result": "passed"
+    },
+    {
+      "name": "assessments=0",
+      "result": "passed"
+    },
+    {
+      "name": "requests=0",
+      "result": "passed"
+    },
+    {
+      "name": "files=0",
+      "result": "passed"
+    },
+    {
+      "name": "readBytes=1",
+      "result": "passed"
+    },
+    {
+      "name": "requests=1",
+      "result": "passed"
+    },
+    {
+      "name": "disabled assessment, repair, request and read budgets are distinct and never silently widened",
+      "result": "passed"
+    },
+    {
+      "name": "multiple reads consume one aggregate file budget",
+      "result": "passed"
+    },
+    {
+      "name": "route_unavailable",
+      "result": "passed"
+    },
+    {
+      "name": "partial_failure",
+      "result": "passed"
+    },
+    {
+      "name": "route outage and partial stream are terminal, without repair or fallback",
+      "result": "passed"
+    },
+    {
+      "name": "before dispatch",
+      "result": "passed"
+    },
+    {
+      "name": "active transport cancellation",
+      "result": "passed"
+    },
+    {
+      "name": "total time",
+      "result": "passed"
+    },
+    {
+      "name": "cancel before dispatch and during inference; total time expires without retry",
+      "result": "passed"
+    },
+    {
+      "name": "denied stream",
+      "result": "passed"
+    },
+    {
+      "name": "denied stream",
+      "result": "passed"
+    },
+    {
+      "name": "denied stream",
+      "result": "passed"
+    },
+    {
+      "name": "unregistered tools, path escape and partial tool calls never dispatch reads",
+      "result": "passed"
+    },
+    {
+      "name": "strict schema, Responses fields and reasoning effort remain unsupported by the accepted profile",
+      "result": "passed"
+    },
+    {
+      "name": "trusted reader allows only pinned regular-file bytes and rejects filesystem boundaries",
+      "result": "passed"
+    }
+  ],
+  "integration": {
+    "evidence": "synthetic_http_integration",
+    "result": {
+      "outcome": "plan_proposed",
+      "inputRevision": "61bc398b9fc923f01b7509f9c63dd22b3157741e28b8076544f8cf4f5bbd5b4e",
+      "proposal": {
+        "schema": 1,
+        "kind": "plan_proposal",
+        "input_revision": "61bc398b9fc923f01b7509f9c63dd22b3157741e28b8076544f8cf4f5bbd5b4e",
+        "outcome": "Correct the greeting spelling.",
+        "constraints": [
+          "Preserve other text."
+        ],
+        "exclusions": [
+          "Execution and delivery require separate authority."
+        ],
+        "criteria": [
+          {
+            "id": "c1",
+            "statement": "The greeting spells world correctly.",
+            "evidence_required": "Review the proposed one-word diff."
+          }
+        ],
+        "allowed_paths": [
+          "fixture.txt"
+        ],
+        "allowed_systems": [],
+        "assumptions": [],
+        "unresolved_questions": [],
+        "steps": [
+          {
+            "id": "s1",
+            "description": "Propose replacing wrld with world in the greeting.",
+            "criterion_ids": [
+              "c1"
+            ],
+            "source_refs": [
+              "capture",
+              "fixture.txt"
+            ]
+          }
+        ],
+        "assessment": {
+          "work_class": "text_edit",
+          "consequence": "low",
+          "unknowns": [],
+          "source_refs": [
+            "capture",
+            "fixture.txt"
+          ]
+        }
+      },
+      "authority": "proposal_only",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 2,
+        "files": 1,
+        "readBytes": 484
+      },
+      "routeId": "fixture_planner",
+      "settings": {
+        "profile": "chat-text-tools-v1",
+        "max_completion_tokens": 1024,
+        "stream": true
+      }
+    },
+    "requests": 2,
+    "boundaryAudit": [
+      {
+        "taskId": "planner_task",
+        "attemptId": "planner_attempt",
+        "requestId": "0a8e802ce87048aea12109ec5b9a4191",
+        "role": "planner",
+        "routeId": "fixture_planner",
+        "policyRevision": "policy_1",
+        "outcome": "completed",
+        "reason": null,
+        "source": "boundary",
+        "providerAttribution": "unavailable",
+        "quiescence": "verified"
+      },
+      {
+        "taskId": "planner_task",
+        "attemptId": "planner_attempt",
+        "requestId": "e8772aa6dbd74b7c8e03550a6f37cc64",
+        "role": "planner",
+        "routeId": "fixture_planner",
+        "policyRevision": "policy_1",
+        "outcome": "completed",
+        "reason": null,
+        "source": "boundary",
+        "providerAttribution": "unavailable",
+        "quiescence": "verified"
+      }
+    ],
+    "live": {
+      "outcome": "blocked_missing_live_boundary",
+      "liveRouterCalled": false,
+      "liveEligible": false,
+      "unattendedSupported": false,
+      "routerSource": {
+        "version": "0.5.75",
+        "commit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+        "evidence": "accepted_source_catalog_only"
+      },
+      "requiredBeforeLive": [
+        "operator-approved exact bootstrap route and complete graph",
+        "real writer fencing and upstream quiescence authority",
+        "attempt-scoped compatible Responses/tool/stream profile",
+        "verified exact effort and named strict-output support or unsupported outcome"
+      ],
+      "desiredPlannerCandidates": [
+        {
+          "model": "cx/gpt-6-astra",
+          "requestedEffort": "xhigh",
+          "outcome": "unverified_live_capability",
+          "sourceTranslation": "xhigh_preserved",
+          "nativeToolProtocol": "responses_required",
+          "outputTokenLimit": "unsupported_output_token_translation"
+        },
+        {
+          "model": "cc/claude-opus-5",
+          "requestedEffort": "xhigh",
+          "outcome": "unsupported_exact_effort_translation",
+          "sourceTranslation": "xhigh_normalized_to_high"
+        },
+        {
+          "model": "cx/gpt-5.6-sol",
+          "requestedEffort": "xhigh",
+          "outcome": "unverified_live_capability",
+          "sourceTranslation": "xhigh_preserved",
+          "outputTokenLimit": "unsupported_output_token_translation"
+        }
+      ],
+      "selectedSyntheticProfile": {
+        "route": "gaffer-planner-fixture",
+        "profile": "chat-text-tools-v1",
+        "protocol": "POST /v1/chat/completions",
+        "stream": "synthetic_pass",
+        "tools": "synthetic_fixed_read_file_pass",
+        "postGenerationSchema": "local_ajv_validation",
+        "responses": "unsupported_by_boundary",
+        "reasoningEffort": "unsupported_by_boundary",
+        "strictProviderSchema": "unsupported_by_boundary",
+        "max_completion_tokens": 1024,
+        "providerUsage": "unavailable",
+        "providerAttribution": "unavailable"
+      }
+    }
+  },
+  "live": {
+    "outcome": "blocked_missing_live_boundary",
+    "liveRouterCalled": false,
+    "liveEligible": false,
+    "unattendedSupported": false,
+    "routerSource": {
+      "version": "0.5.75",
+      "commit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+      "evidence": "accepted_source_catalog_only"
+    },
+    "requiredBeforeLive": [
+      "operator-approved exact bootstrap route and complete graph",
+      "real writer fencing and upstream quiescence authority",
+      "attempt-scoped compatible Responses/tool/stream profile",
+      "verified exact effort and named strict-output support or unsupported outcome"
+    ],
+    "desiredPlannerCandidates": [
+      {
+        "model": "cx/gpt-6-astra",
+        "requestedEffort": "xhigh",
+        "outcome": "unverified_live_capability",
+        "sourceTranslation": "xhigh_preserved",
+        "nativeToolProtocol": "responses_required",
+        "outputTokenLimit": "unsupported_output_token_translation"
+      },
+      {
+        "model": "cc/claude-opus-5",
+        "requestedEffort": "xhigh",
+        "outcome": "unsupported_exact_effort_translation",
+        "sourceTranslation": "xhigh_normalized_to_high"
+      },
+      {
+        "model": "cx/gpt-5.6-sol",
+        "requestedEffort": "xhigh",
+        "outcome": "unverified_live_capability",
+        "sourceTranslation": "xhigh_preserved",
+        "outputTokenLimit": "unsupported_output_token_translation"
+      }
+    ],
+    "selectedSyntheticProfile": {
+      "route": "gaffer-planner-fixture",
+      "profile": "chat-text-tools-v1",
+      "protocol": "POST /v1/chat/completions",
+      "stream": "synthetic_pass",
+      "tools": "synthetic_fixed_read_file_pass",
+      "postGenerationSchema": "local_ajv_validation",
+      "responses": "unsupported_by_boundary",
+      "reasoningEffort": "unsupported_by_boundary",
+      "strictProviderSchema": "unsupported_by_boundary",
+      "max_completion_tokens": 1024,
+      "providerUsage": "unavailable",
+      "providerAttribution": "unavailable"
+    }
+  }
+}
