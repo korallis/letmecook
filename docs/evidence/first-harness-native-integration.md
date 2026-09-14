@@ -7,6 +7,11 @@ No provider call, credential read, real initial scope, deployment or publication
 is part of these runs. The earlier Chat evidence and native preparation capture
 remain historical and retain their original scope.
 
+The later [legacy closure correction](first-harness-legacy-closure.md) retains a
+fresh-review Chat startup failure and the affected current-source replays. It
+extracts pure scope validation without changing authority behavior; native edit
+and active cancellation are rechecked separately from the original matrices.
+
 The native worker and gateway each use the measured 768 MiB profile. The adapter
 pins OpenCode 1.18.30, source/binary/settings, `openai/@ai-sdk/openai`, Astra xhigh,
 summary auto, store false, encrypted continuation, enabled builtins, PURE, no
