@@ -3,8 +3,9 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { canonical, keys, object, parseJSON } from './json.ts';
 import { Denial, fingerprint, ref, validateBinding, validatePolicy, type Binding, type Outcome, type Policy } from './types.ts';
-import { assertNativeBinding } from './native-policy.ts';
-import { validateNativeRequest, continuationOutput } from '../router-authority-extension/overlay/native-responses.mjs';
+import { assertNativeBinding, assertPlannerPacket } from './native-policy.ts';
+import { validateNativeRequest, continuationOutput, validateNativeOutput } from '../router-authority-extension/overlay/native-responses.mjs';
+import { PLANNER_PROTOCOL, plannerRequestState } from '../router-authority-extension/overlay/native-planner.mjs';
 import { abortable } from './wait.ts';
 import { classifyReceipt, hashDocument, sha, validateRouterPolicy, type RouterReservation, type ReceiptEvidence } from './router-policy.ts';
 
@@ -65,9 +66,19 @@ function validateJournal(value: unknown): asserts value is Journal {
       if (d.router.send !== 'send_possible' || !sha(d.evidence.receiptDigest) || classified.disposition === 'pending_or_unknown' || d.verdict === 'validated_success' && classified.disposition !== 'original_success') throw new Error();
     }
     const live = value.reservations.find((r: Reservation) => r.requestId === d.requestId);
-    if(d.router.policy.schema===3&&d.verdict==='validated_success'){continuationOutput(d.nativeOutput,d.router.policy.native);if(hashDocument(d.nativeOutput)!==d.evidence.operations.at(-1)?.output_digest)throw Error();}else if(d.nativeOutput!==undefined)throw Error();
+    if(d.router.policy.schema===3&&d.verdict==='validated_success'){validateNativeOutput(d.nativeOutput!,d.router.policy.native,d.router.nativeRequest);if(hashDocument(d.nativeOutput)!==d.evidence.operations.at(-1)?.output_digest)throw Error();}else if(d.nativeOutput!==undefined)throw Error();
     if (live && (live.taskId !== d.taskId || live.attemptId !== d.attemptId || canonical(live.router) !== canonical(d.router))) throw new Error();
     decisions.add(d.requestId);
+  }
+  // Rebuild the exact planner chain from retained accepted requests/outputs.
+  // No phase, repair allowance or replacement grant is trusted from disk alone.
+  const plannerHistory = new Map<string,Decision>();
+  for(const record of [...(value.decisions??[]),...value.reservations.filter((r:Reservation)=>!decisions.has(r.requestId))]){
+    const saved=record.router;if(saved?.policy.schema!==3||saved.policy.native.protocol!==PLANNER_PROTOCOL)continue;
+    const key=plannerRequestState(saved.nativeRequest,saved.policy.native).inputRevision,previous=plannerHistory.get(key);
+    if(previous&&(previous.verdict!=='validated_success'||previous.delivery!=='completed'||canonical(previous.router.binding)!==canonical(saved.binding)))throw Error();
+    validateNativeRequest(saved.nativeRequest,saved.policy.native,saved.policy.routerModel,previous?{request:previous.router.nativeRequest,output:previous.nativeOutput!}:null);
+    if('verdict' in record)plannerHistory.set(key,record as Decision);
   }
   object(value.counts);
   if (Object.keys(value.counts).length > 64 || Object.entries(value.counts).some(([key, count]) => !ref(key) || !Number.isSafeInteger(count) || (count as number) < 1 || (count as number) > 32)) throw new Error();
@@ -82,7 +93,7 @@ function validateJournal(value: unknown): asserts value is Journal {
 function validateSaved(saved: RouterReservation, owner: {attemptId:string;taskId:string}) {
   keys(saved,['policy','binding','requestDigest','send','nativeRequest'],['policy','binding','requestDigest','send']);
   validateRouterPolicy(saved.policy); validateBinding(saved.binding);
-  if(saved.policy.schema===3){assertNativeBinding(saved.binding,saved.policy);if(!saved.nativeRequest||hashDocument(JSON.stringify(saved.nativeRequest))!==saved.requestDigest)throw Error();}else if(saved.binding.native||saved.nativeRequest!==undefined)throw Error();
+  if(saved.policy.schema===3){assertNativeBinding(saved.binding,saved.policy);if(!saved.nativeRequest||hashDocument(JSON.stringify(saved.nativeRequest))!==saved.requestDigest)throw Error();assertPlannerPacket(saved.nativeRequest,saved.policy);}else if(saved.binding.native||saved.nativeRequest!==undefined)throw Error();
   if (!sha(saved.requestDigest) || !['reserved','send_possible'].includes(saved.send) || saved.binding.attemptId !== owner.attemptId || saved.binding.taskId !== owner.taskId || saved.binding.epoch !== saved.policy.epoch || saved.binding.revision !== saved.policy.revision || saved.binding.routeId !== saved.policy.routeId || saved.binding.routerId !== saved.policy.routerId) throw new Error();
 }
 export class PolicyGate {
@@ -219,7 +230,7 @@ export class PolicyGate {
       if (!current()) throw new Denial('cancelled',409);
       this.receipts().assertCurrent(r);
       // Validate the original/translated join before mutating decision history.
-      if(r.router.policy.schema===3){if(!nativeOutput||hashDocument(nativeOutput)!==evidence.operations.at(-1)?.output_digest)throw new Denial('invalid_stream',502);continuationOutput(nativeOutput,r.router.policy.native);}
+      if(r.router.policy.schema===3){if(!nativeOutput||hashDocument(nativeOutput)!==evidence.operations.at(-1)?.output_digest)throw new Denial('invalid_stream',502);validateNativeOutput(nativeOutput,r.router.policy.native,r.router.nativeRequest);}
       const decision=this.recordDecision(r,evidence,'validated_success',completionDigest);
       if(r.router.policy.schema===3)decision.nativeOutput=structuredClone(nativeOutput);
       await this.persist();
@@ -260,7 +271,16 @@ export class PolicyGate {
         if (!sha(requestDigest) || this.state.decisions!.length + this.state.reservations.length >= 64) throw new Denial('attempt_limit',429);
         if ((policy.schema===3 || policy.profile === 'router-native-chat-translation-synthetic-v1') && this.state.reservations.length) throw new Denial('concurrency_limit',429);
       }
-      if(policy.schema===3){assertNativeBinding(binding,policy);validateNativeRequest(nativeRequest,policy.native,policy.routerModel,this.nativePrevious(binding.attemptId));}else if(binding.native)throw new Denial('policy_denied');
+      if(policy.schema===3){
+        assertNativeBinding(binding,policy);assertPlannerPacket(nativeRequest,policy);
+        if(policy.native.protocol===PLANNER_PROTOCOL){
+          const revision=plannerRequestState(nativeRequest,policy.native).inputRevision;
+          const history=this.state.decisions!.filter(d=>d.router.policy.schema===3&&d.router.policy.native.protocol===PLANNER_PROTOCOL&&plannerRequestState(d.router.nativeRequest,d.router.policy.native).inputRevision===revision);
+          const previous=history.at(-1);
+          if(previous&&(previous.verdict!=='validated_success'||previous.delivery!=='completed'||canonical(previous.router.binding)!==canonical(binding)))throw new Denial('attempt_limit',429);
+          validateNativeRequest(nativeRequest,policy.native,policy.routerModel,previous?{request:previous.router.nativeRequest,output:previous.nativeOutput!}:null);
+        }else validateNativeRequest(nativeRequest,policy.native,policy.routerModel,this.nativePrevious(binding.attemptId));
+      }else if(binding.native)throw new Denial('policy_denied');
       const retired = this.state.reservations.filter(r => r.outcome !== 'active');
       if (policy.schema === 1 && retired.length && await this.authorityCall(s => this.authority.quiescent(retired.map(r => r.requestId), s), signal)) this.state.reservations = this.state.reservations.filter(r => r.outcome === 'active');
       this.check(signal);
