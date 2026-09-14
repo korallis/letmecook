@@ -42,11 +42,13 @@ const persist=(path,value)=>{const fd=openSync(path,'w',0o600);try{writeFileSync
 function observeDecisions(){const finalize=gate.finalize.bind(gate);gate.finalize=async(...args)=>{await finalize(...args);observed.decisions.push({requestId:args[0],at:Date.now()});};}observeDecisions();
 let synthetic;
 if(n.evidence==='synthetic'){
+ const plannerScenario=process.env.GAFFER_SYNTHETIC_PLANNER_CASE??'read';if(!['read','clarification'].includes(plannerScenario))throw Error('unknown_synthetic_planner_case');
  synthetic=createServer(async(req,res)=>{let text='';for await(const c of req){text+=c;if(text.length>n.local.requestBytes){res.writeHead(413).end();return;}}const body=JSON.parse(text);observed.sends.push({path:req.url,body});
   if(req.url!=='/responses')throw Error('unexpected_refresh_egress');
   // This synthetic-only delay exercises the explicit suite timing past old 5s defaults.
   if(initialSuite&&n.timing?.consumer==='planner')await new Promise(resolve=>setTimeout(resolve,6000));
-  res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(continuityModule?.syntheticContinuityEvents(continuityFixture,n,body,events)??(n.protocol===PLANNER_PROTOCOL?plannerEvents(body,n):events(!body.input.some(x=>x.type==='function_call_output')))));for(let i=0;i<bytes.length;i+=17)res.write(bytes.subarray(i,i+17));res.end();
+  res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(continuityModule?.syntheticContinuityEvents(continuityFixture,n,body,events)??(n.protocol===PLANNER_PROTOCOL?plannerEvents(body,n,plannerScenario):events(!body.input.some(x=>x.type==='function_call_output')))));for(let i=0;i<bytes.length;i+=17)res.write(bytes.subarray(i,i+17));res.end();
+
  });synthetic.listen(47771,'127.0.0.1');await once(synthetic,'listening');
 }
 const router=createServer(async(req,res)=>{const abort=new AbortController();res.on('close',()=>{if(!res.writableEnded)abort.abort();});try{const result=await handleChat(new Request('http://127.0.0.1'+req.url,{method:req.method,headers:req.headers,body:Readable.toWeb(req),duplex:'half',signal:abort.signal}));res.writeHead(result.status,Object.fromEntries(result.headers));if(result.body)for await(const c of result.body)res.write(c);res.end();}catch{res.destroy();}});

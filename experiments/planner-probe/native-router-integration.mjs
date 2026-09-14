@@ -56,12 +56,12 @@ const result=await planner.run();assert.deepEqual(await planner.run(),result);
 const until=Date.now()+1500;while(boundary.audit.length<requests.length){assert(Date.now()<until);await new Promise(r=>setTimeout(r,5));}
 const journal=gate.snapshot(),receipts=journal.decisions.concat(journal.reservations.filter(r=>!journal.decisions.some(d=>d.requestId===r.requestId))).map(r=>a.receipt(r.requestId)),scope=a.evaluationScope(n.scope.id);
 assert.equal(scope.spent,sends.length);assert.equal(result.authority,'proposal_only');
-const success=['read','direct','read-repair','repair','empty','role-reload'].includes(scenario);
+const success=['read','direct','clarification','read-repair','repair','empty','role-reload'].includes(scenario);
 if(success){
- assert.equal(result.outcome,'plan_proposed',JSON.stringify({result,journal,receipts,audit:boundary.audit}));
+ assert.equal(result.outcome,scenario==='clarification'?'clarification_proposed':'plan_proposed',JSON.stringify({result,journal,receipts,audit:boundary.audit}));
  assert.equal(result.completions.length,sends.length);assert.equal(journal.reservations.length,0);assert(journal.decisions.every(d=>d.verdict==='validated_success'&&d.delivery==='completed'));
  for(const completion of result.completions){assert(completion.acceptedAt>=decisionTimes.find(d=>d.requestId===completion.requestId).at);const receipt=receipts.find(r=>r.requestId===completion.requestId||r.id===completion.requestId)??receipts[result.completions.indexOf(completion)];assert.equal(receipt.operations.at(-1).terminal,'provider_completed');}
- assert.equal(result.usage.repairs,['read-repair','repair','empty'].includes(scenario)?1:0);assert.equal(result.usage.files,['direct','repair','empty'].includes(scenario)?0:1);
+ assert.equal(result.usage.repairs,['read-repair','repair','empty'].includes(scenario)?1:0);assert.equal(result.usage.files,['direct','clarification','repair','empty'].includes(scenario)?0:1);
  // A fresh grant, transport and session may not assess this unchanged input again.
  const other={...binding,attemptId:'replacement_attempt',grantId:'replacement_grant'};token=boundary.issue(other);
  const replacement=new PlannerSession(new NativePlannerTransport(new NativeBoundaryPort(boundarySocket,token,p,other)),file,BRIEF,NATIVE_PLANNER_BUDGET),retry=await replacement.run();

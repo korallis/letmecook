@@ -16,9 +16,10 @@ import { plannerProfile } from './native-profile.ts';
 import { nativePlannerCandidate,acknowledgeNativePlanner } from './native-evidence.ts';
 import { stageNativePlanner,nativeConsumerFiles } from './native-staging.ts';
 const execute=promisify(execFile),repository=resolve(import.meta.dirname,'../..'),root=resolve(process.argv[2]??'/tmp/planner-native-gateway-proof'),source=process.env.GAFFER_ROUTER_SOURCE;
+const scenario=process.argv[3]??'read';assert(['read','clarification'].includes(scenario));const expectedOutcome=scenario==='clarification'?'clarification_proposed':'plan_proposed';
 assert(source?.startsWith('/'),'pinned synthetic source required');await mkdir(root,{recursive:true});
 const context=process.env.GAFFER_DOCKER_CONTEXT??'desktop-linux',image='gaffer-router-extension-deps:0.5.75-locked',run='planner-gateway-'+randomBytes(6).toString('hex'),ids:string[]=[],volumes:string[]=[],commands:string[][]=[];
-const report:any={schema:1,run,live:false,realProviderCalled:false,syntheticOriginalHttp:true,result:'failed',sources:{},cleanup:false};
+const report:any={schema:1,run,scenario,live:false,realProviderCalled:false,syntheticOriginalHttp:true,result:'failed',sources:{},cleanup:false};
 let staging='',configuration='';
 async function docker(args:string[],timeout=15000){commands.push(args);const r=await execute('docker',['--context',context,...args],{timeout,maxBuffer:16*1024*1024});return(r.stdout+(args[0]==='logs'?r.stderr:'')).trim();}
 const inspect=async(name:string)=>JSON.parse(await docker(['inspect',name]))[0];
@@ -43,7 +44,7 @@ try{
  for(const [file,value]of Object.entries({'profiles.json':[n,worker],'config.json':config}))await writeFile(join(configuration,file),JSON.stringify(value),{mode:0o644});
  const inference=await volume('inference');controlVolume=await volume('control');const stateVolume=await volume('state',false);
  const init=run+'-init';ids.push(init);await docker(['create','--name',init,'--label',LABEL+'='+run,'--network','none','--user','0:0','--cap-drop','ALL','--cap-add','CHOWN','--security-opt','no-new-privileges=true','--read-only','--mount',`type=volume,source=${stateVolume},target=/state,volume-nocopy`,image,'chown','1000:1000','/state']);await docker(['start',init]);assert.equal(Number(await docker(['wait',init])),0);
- const gateway=run+'-gateway';ids.push(gateway);await docker([...commonArgs(gateway,run,true),'--mount',`type=bind,source=${repository},target=/gaffer,readonly`,'--mount',`type=bind,source=${source},target=/router-source,readonly`,'--mount',`type=bind,source=${configuration},target=/config,readonly`,'--mount',`type=bind,source=${configuration},target=/private,readonly`,'--mount',`type=volume,source=${stateVolume},target=/state,volume-nocopy`,'--mount',`type=volume,source=${controlVolume},target=/control,volume-nocopy`,'--mount',`type=volume,source=${inference},target=/router,volume-nocopy`,'--env','DATA_DIR=/state/router-db','--env','GAFFER_SYNTHETIC_NATIVE=1',image,'node','--experimental-loader','/gaffer/experiments/router-authority-extension/loader.mjs','/gaffer/experiments/native-evaluation/gateway.mjs']);
+ const gateway=run+'-gateway';ids.push(gateway);await docker([...commonArgs(gateway,run,true),'--mount',`type=bind,source=${repository},target=/gaffer,readonly`,'--mount',`type=bind,source=${source},target=/router-source,readonly`,'--mount',`type=bind,source=${configuration},target=/config,readonly`,'--mount',`type=bind,source=${configuration},target=/private,readonly`,'--mount',`type=volume,source=${stateVolume},target=/state,volume-nocopy`,'--mount',`type=volume,source=${controlVolume},target=/control,volume-nocopy`,'--mount',`type=volume,source=${inference},target=/router,volume-nocopy`,'--env','DATA_DIR=/state/router-db','--env','GAFFER_SYNTHETIC_NATIVE=1','--env','GAFFER_SYNTHETIC_PLANNER_CASE='+scenario,image,'node','--experimental-loader','/gaffer/experiments/router-authority-extension/loader.mjs','/gaffer/experiments/native-evaluation/gateway.mjs']);
  report.gatewayInspect=await inspect(gateway);assert.equal(report.gatewayInspect.Image,report.runtime.image);assert.equal(report.gatewayInspect.HostConfig.NetworkMode,'none');assert.equal(report.gatewayInspect.HostConfig.Privileged,false);assert.equal(report.gatewayInspect.HostConfig.ReadonlyRootfs,true);assert.deepEqual(report.gatewayInspect.HostConfig.CapDrop,['ALL']);await docker(['start',gateway]);
  const until=Date.now()+10000;while(!(await docker(['logs',gateway])).includes('"event":"gateway_ready"')){assert(Date.now()<until);assert((await inspect(gateway)).State.Running,await docker(['logs',gateway]));await new Promise(r=>setTimeout(r,30));}
  const prepared=await control({command:'inspect'});report.prepared=prepared;assert.equal(prepared.current.scope,null);assert.equal(prepared.packet.profiles.length,2);
@@ -52,7 +53,7 @@ try{
  const grant=await control({command:'grant',binding});
  const consumer=run+'-consumer';ids.push(consumer);await docker([...commonArgs(consumer,run,false),'--interactive','--mount',`type=bind,source=${staging},target=/consumer,readonly`,'--mount',`type=volume,source=${inference},target=/router,readonly,volume-nocopy`,image,'node','/consumer/experiments/planner-probe/native-consumer.ts']);
  report.consumerProfile=inspectProfile(await inspect(consumer),image,run,false,inference,{'/consumer':staging});
- const output=await input(consumer,{policy,binding,token:grant.token});report.consumer=JSON.parse(output.trim().split('\n').at(-1)!);assert.equal((await inspect(consumer)).State.ExitCode,0);assert.equal(report.consumer.result.outcome,'plan_proposed');
+ const output=await input(consumer,{policy,binding,token:grant.token});report.consumer=JSON.parse(output.trim().split('\n').at(-1)!);assert.equal((await inspect(consumer)).State.ExitCode,0);assert.equal(report.consumer.result.outcome,expectedOutcome);
  const evidence=await control({command:'evidence',attemptId:binding.attemptId});report.evidence=evidence;
  const candidate=nativePlannerCandidate(report.consumer.result,evidence,binding);report.candidate=candidate;
  report.supervisorRejections=[];
@@ -64,12 +65,18 @@ try{
   earlyRead:(x:any):any=>x.r.completions[0].acceptedAt=x.e.decisionTimes[0].at-1,
   count:(x:any):any=>x.r.usage.repairs=1,proposal:(x:any):any=>x.r.proposal.input_revision='0'.repeat(64),
   settings:(x:any):any=>x.r.settings.reasoning.effort='high',
+  outcome:(x:any):any=>x.r.outcome=expectedOutcome==='plan_proposed'?'clarification_proposed':'plan_proposed',
+  unsupportedOutcome:(x:any):any=>x.r.outcome='approved',
+  questions:(x:any):any=>{x.r.proposal.unresolved_questions=expectedOutcome==='plan_proposed'?['Forged question?']:[];x.r.outcome=expectedOutcome==='plan_proposed'?'clarification_proposed':'plan_proposed';},
  })){const x=structuredClone({r:report.consumer.result,e:evidence,b:binding});mutate(x);assert.throws(()=>nativePlannerCandidate(x.r,x.e,x.b));report.supervisorRejections.push(name);}
  for(const field of ['packetDigest','scopeDigest','bindingDigest','policyDigest'])await assert.rejects(control({command:'candidate',value:{...candidate,[field]:'0'.repeat(64)}}));
  await assert.rejects(control({command:'candidate',value:{...candidate,artifact:{...candidate.artifact,path:'fixture.txt'}}}));
- await assert.rejects(control({command:'candidate',value:{...candidate,requestIds:candidate.requestIds.slice(0,1)}}));
+ await assert.rejects(control({command:'candidate',value:{...candidate,requestIds:candidate.requestIds.slice(0,-1)}}));
+ await assert.rejects(control({command:'candidate',value:{...candidate,artifact:{...candidate.artifact,metadata:{...candidate.artifact.metadata,outcome:expectedOutcome==='plan_proposed'?'clarification_proposed':'plan_proposed'}}}}));
+ const forgedProposal=JSON.parse(candidate.artifact.content);forgedProposal.unresolved_questions=expectedOutcome==='plan_proposed'?['Forged question?']:[];
+ await assert.rejects(control({command:'candidate',value:{...candidate,artifact:{...candidate.artifact,content:JSON.stringify(forgedProposal),metadata:{...candidate.artifact.metadata,outcome:expectedOutcome==='plan_proposed'?'clarification_proposed':'plan_proposed'}}}}));report.invalidCandidateSubmissions=8;
  const ack=await control({command:'candidate',value:candidate});report.acknowledgement=ack;assert.deepEqual(await control({command:'candidate',value:candidate}),ack);
- const after=await control({command:'evidence',attemptId:binding.attemptId});report.accepted=acknowledgeNativePlanner(candidate,ack,after.artifacts);assert.equal(after.scope.spent,2);assert.equal(after.scope.started,scope.started);assert.equal(after.scope.deadline,scope.deadline);
+ const after=await control({command:'evidence',attemptId:binding.attemptId});report.accepted=acknowledgeNativePlanner(candidate,ack,after.artifacts);assert.equal(report.accepted.outcome,scenario==='clarification'?'acknowledged_clarification_proposal':'acknowledged_plan_proposal');assert.equal(after.scope.spent,scenario==='clarification'?1:2);assert.equal(after.decisions.length,scenario==='clarification'?1:2);assert.deepEqual(after.decisions,evidence.decisions);assert.equal(after.scope.started,scope.started);assert.equal(after.scope.deadline,scope.deadline);
  // Registry selection is generation-fenced and keeps the one started scope.
  const selected=await control({command:'select',packetDigest:prepared.packetDigest,profileDigest:digest(prepared.packet.profiles[1])});report.workerSelection=selected;assert.deepEqual(selected.scope,after.scope);assert.equal(selected.policy.authority.boot,policy.authority.boot);assert.equal(selected.policy.authority.generation,policy.authority.generation+1);await assert.rejects(control({command:'grant',binding}));await assert.rejects(control({command:'start',packetDigest:prepared.packetDigest}));
  await control({command:'stop'});assert.equal(Number(await docker(['wait',gateway])),0);assert.equal((await inspect(gateway)).State.Pid,0);await assert.rejects(docker(['exec',gateway,'true']));await assert.rejects(docker(['exec',consumer,'true']));
