@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 // Static validation dependencies only. In particular, evaluation-scope.mjs and
 // authority.mjs must never enter the actual-router worker's namespace.
 const overlay = 'experiments/router-authority-extension/overlay/';
-export const validationOverlayFiles = ['native-profile.mjs', 'scope-profile.mjs'].map(n => overlay + n);
+export const validationOverlayFiles = ['native-profile.mjs', 'scope-profile.mjs', 'initial-suite.mjs'].map(n => overlay + n);
 export const codecOverlayFiles = [...validationOverlayFiles, ...['native-responses.mjs', 'responses-terminal.mjs'].map(n => overlay + n)];
 export const routerWorkerFiles = [
   'experiments/harness/adapter.ts', 'experiments/harness/pins.json',

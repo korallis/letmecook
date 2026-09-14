@@ -14,3 +14,6 @@ export function plannerRequestState(body:any,profile:NativeProfile):{phase:'asse
 export function validatePlannerRequest(body:any,profile:NativeProfile,model:string,previous?:{request:any;output:any[]}|null):any;
 export function validatePlannerOutput(output:any[],profile:NativeProfile,request:any):any[];
 export function validatePlannerCandidate(value:{text:string;policy:any;binding:any;decisions:any[];artifact:any}):boolean;
+
+export function plannerBudget(profile:any):typeof PLANNER_BUDGET;
+export function plannerSettingsDigest(profile:any):string;

@@ -24,6 +24,7 @@ if(existsSync('/config/continuity.json')){
  for(const path of ['experiments/router-continuity/control.mjs','experiments/router-continuity/constants.ts'])if(sources[path]!==createHash('sha256').update(readFileSync('/gaffer/'+path)).digest('hex'))throw Error('continuity_source_unreviewed');
  continuityModule=await import('../router-continuity/control.mjs');continuityFixture=continuityModule.continuityManifest(JSON.parse(readFileSync('/config/continuity.json','utf8')),profiles);
 }
+let initialSuite=null;if(existsSync('/config/suite.json')){const {suiteManifest}=await import('../router-continuity/suite-profile.ts');initialSuite=suiteManifest(JSON.parse(readFileSync('/config/suite.json','utf8')),profiles);}if(profiles.some(p=>p.schema===2)&&!initialSuite)throw Error('suite_declaration_required');
 const {handleChat}=await import('/router-source/src/sse/handlers/chat.js');
 const {getAdapter}=await import('/router-source/src/lib/db/driver.js');
 const repository=await import('/router-source/src/lib/db/index.js');
@@ -43,13 +44,15 @@ let synthetic;
 if(n.evidence==='synthetic'){
  synthetic=createServer(async(req,res)=>{let text='';for await(const c of req){text+=c;if(text.length>n.local.requestBytes){res.writeHead(413).end();return;}}const body=JSON.parse(text);observed.sends.push({path:req.url,body});
   if(req.url!=='/responses')throw Error('unexpected_refresh_egress');
+  // This synthetic-only delay exercises the explicit suite timing past old 5s defaults.
+  if(initialSuite&&n.timing?.consumer==='planner')await new Promise(resolve=>setTimeout(resolve,6000));
   res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(continuityModule?.syntheticContinuityEvents(continuityFixture,n,body,events)??(n.protocol===PLANNER_PROTOCOL?plannerEvents(body,n):events(!body.input.some(x=>x.type==='function_call_output')))));for(let i=0;i<bytes.length;i+=17)res.write(bytes.subarray(i,i+17));res.end();
  });synthetic.listen(47771,'127.0.0.1');await once(synthetic,'listening');
 }
 const router=createServer(async(req,res)=>{const abort=new AbortController();res.on('close',()=>{if(!res.writableEnded)abort.abort();});try{const result=await handleChat(new Request('http://127.0.0.1'+req.url,{method:req.method,headers:req.headers,body:Readable.toWeb(req),duplex:'half',signal:abort.signal}));res.writeHead(result.status,Object.fromEntries(result.headers));if(result.body)for await(const c of result.body)res.write(c);res.end();}catch{res.destroy();}});
 router.listen('/state/router.sock');await once(router,'listening');chmodSync('/state/router.sock',0o600);
 let boundary=new Boundary(gate,'/state/router.sock',key);await boundary.listen('/router/inference.sock');
-const packet={schema:1,policy,profiles:a.nativeProfiles(),registryDigest:digest(a.nativeProfiles()),capabilities:{providerOutputTokens:'unavailable',providerMonetaryCap:'unavailable',refresh:'denied'},scopeStatusAtPreparation:'not_started',...(continuityFixture?{continuityFixture}:{})};
+const packet={schema:1,policy,profiles:a.nativeProfiles(),registryDigest:digest(a.nativeProfiles()),capabilities:{providerOutputTokens:'unavailable',providerMonetaryCap:'unavailable',refresh:'denied'},scopeStatusAtPreparation:'not_started',...(continuityFixture?{continuityFixture}:{}),...(initialSuite?{initialSuite}:{})};
 const packetRecord=persistImmutable('/state','deployment-packet',packet),packetDigest=packetRecord.digest;
 const evidenceApi=evidenceControls({policy:()=>policy,gate:()=>gate,authority:a,packetDigest,observed,persistCandidate:value=>persistImmutable('/state','candidate',value),validateProposal:validatePlannerCandidate});
 const continuity=continuityModule?.continuityControl({manifest:continuityFixture,packetDigest,policy:()=>policy,gate:()=>gate,authority:a,evidence:attempt=>evidenceApi.evidence(attempt),persist:(kind,value)=>persistImmutable('/state',kind,value),recovered:readdirSync('/state').some(name=>name.startsWith('continuity-intent-')),

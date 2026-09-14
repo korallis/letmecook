@@ -1,0 +1,4 @@
+// Explicit synthetic-only partial original. This loader is never normal packaging.
+import { load as original } from '../router-authority-extension/loader.mjs';
+export { resolve } from '../router-authority-extension/loader.mjs';
+export async function load(url,context,next){const result=await original(url,context,next);if(!url.endsWith('/native-evaluation/gateway.mjs'))return result;if(process.env.GAFFER_SYNTHETIC_NATIVE!=='1')throw Error('synthetic_suite_only');const anchor="  if(req.url!=='/responses')throw Error('unexpected_refresh_egress');";const source=String(result.source);if(source.split(anchor).length!==2)throw Error('suite_fault_anchor');return {...result,source:source.replace(anchor,anchor+"\n  if(n.timing?.consumer==='worker'){res.writeHead(200,{'content-type':'text/event-stream'});res.end(frames(events(false).slice(0,5)));return;}")};}

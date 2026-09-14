@@ -1,3 +1,5 @@
+import { validateNativeRouterPolicy } from '../inference-boundary/native-policy.ts';
+import { plannerBudget } from '../router-authority-extension/overlay/native-planner.mjs';
 import { readFileSync } from 'node:fs';
 import { Ajv } from 'ajv';
 import { canonical, parseJSON } from '../inference-boundary/json.ts';
@@ -40,13 +42,14 @@ export class PlannerSession {
   private readonly usage = { assessments: 0, repairs: 0, requests: 0, files: 0, readBytes: 0 };
   private result?: Promise<Result>;
   constructor(transport: PlannerTransport, file: Snapshot, brief: string, budget: PlannerBudget = DEFAULT_BUDGET) {
-    for (const [key, max] of Object.entries(DEFAULT_BUDGET)) {
+    const selected=(transport.kind==='native-responses'&&(transport.policy as any).native?.schema===2)?plannerBudget(validateNativeRouterPolicy(transport.policy as any).native):DEFAULT_BUDGET;
+    for (const [key, max] of Object.entries(selected)) {
       const number = budget[key as keyof PlannerBudget];
       if (key === 'outputTokens' && transport.kind === 'native-responses') {
         if (number !== null) throw new ProbeError('unsupported_provider_output_cap');
         continue;
       }
-      if (typeof number !== 'number' || !Number.isSafeInteger(number) || number < (['assessments', 'repairs', 'requests', 'files', 'readBytes'].includes(key) ? 0 : 1) || number > max) throw new ProbeError('invalid_budget');
+      if (typeof number !== 'number' || !Number.isSafeInteger(number) || number < (['assessments', 'repairs', 'requests', 'files', 'readBytes'].includes(key) ? 0 : 1) || number > (max as number)) throw new ProbeError('invalid_budget');
     }
     if (Object.keys(budget).length !== Object.keys(DEFAULT_BUDGET).length || brief.length > 2048) throw new ProbeError('invalid_budget');
     if (file.path !== 'fixture.txt' || Buffer.byteLength(file.text) !== file.bytes || file.bytes > 4096 || sha256(file.text) !== file.sha256) throw new ProbeError('discovery_changed');

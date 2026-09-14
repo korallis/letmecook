@@ -1,3 +1,4 @@
+import { assertSuiteRequest } from '../../router-authority-extension/overlay/initial-suite.mjs';
 import { spawn, execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, readdirSync, lstatSync, existsSync } from 'node:fs';
 import { keys } from '../../inference-boundary/json.ts';
@@ -6,16 +7,17 @@ import { PROFILE, config, environment, settingsDigest, probe, digest, NativeEven
 export const BRIEF = 'Change greeting.txt from hello to hello from probe.';
 export const CONTENT = 'hello from probe\n';
 export interface RunRequest {
-  schema: 1; profile: typeof PROFILE; bindingDigest: string; settingsDigest: string; baseSHA: string;
+  schema: 1|2; timing?:'initial-suite-v1';packetDigest?:string;profileDigest?:string;sessionDeadline?:number; profile: typeof PROFILE; bindingDigest: string; settingsDigest: string; baseSHA: string;
   brief: typeof BRIEF; approval: 'allow' | 'ask'; limits: { wallMs: number; outputBytes: number }; token: string;
 }
 export interface Artifact { baseSHA: string; headSHA: string; path: 'greeting.txt'; content: string; changedFiles: string[]; status: string; diff: string }
 export interface RunResult { outcome: Outcome; exitCode: number | null; signal: string | null; events: NativeEvent[]; stderr: string; artifact: Artifact | null; bindingDigest: string; settingsDigest: string; usage: 'unverified_native_observation'; localProcessExited: boolean; upstreamQuiescence: 'unknown'; reason?: string }
 export function validateRunRequest(r: RunRequest) {
-  keys(r, ['schema', 'profile', 'bindingDigest', 'settingsDigest', 'baseSHA', 'brief', 'approval', 'limits', 'token'], ['schema', 'profile', 'bindingDigest', 'settingsDigest', 'baseSHA', 'brief', 'approval', 'limits', 'token']);
+  const extra=r.schema===2?['timing','packetDigest','profileDigest','sessionDeadline']:[];assertSuiteRequest(r,'worker');
+  keys(r, ['schema', 'profile', 'bindingDigest', 'settingsDigest', 'baseSHA', 'brief', 'approval', 'limits', 'token',...extra], ['schema', 'profile', 'bindingDigest', 'settingsDigest', 'baseSHA', 'brief', 'approval', 'limits', 'token',...extra]);
   keys(r.limits, ['wallMs', 'outputBytes'], ['wallMs', 'outputBytes']);
-  if (r.schema !== 1 || r.profile !== PROFILE || !['allow', 'ask'].includes(r.approval) || r.brief !== BRIEF || typeof r.baseSHA !== 'string' || !/^[a-f0-9]{40}$/.test(r.baseSHA) || ![r.bindingDigest, r.settingsDigest, r.token].every(x => typeof x === 'string' && /^[a-f0-9]{64}$/.test(x)) || r.settingsDigest !== settingsDigest(r.approval)) throw Error('unsupported_native_run');
-  if (!Number.isSafeInteger(r.limits.wallMs) || r.limits.wallMs < 1 || r.limits.wallMs > 30000 || !Number.isSafeInteger(r.limits.outputBytes) || r.limits.outputBytes < 1 || r.limits.outputBytes > 262144) throw Error('unsupported_native_limits');
+  if (![1,2].includes(r.schema) || r.profile !== PROFILE || !['allow', 'ask'].includes(r.approval) || r.brief !== BRIEF || typeof r.baseSHA !== 'string' || !/^[a-f0-9]{40}$/.test(r.baseSHA) || ![r.bindingDigest, r.settingsDigest, r.token].every(x => typeof x === 'string' && /^[a-f0-9]{64}$/.test(x)) || r.settingsDigest !== settingsDigest(r.approval)) throw Error('unsupported_native_run');
+  if (!Number.isSafeInteger(r.limits.wallMs) || r.limits.wallMs < 1 || r.limits.wallMs > (r.schema===2?180000:30000) || !Number.isSafeInteger(r.limits.outputBytes) || r.limits.outputBytes < 1 || r.limits.outputBytes > 262144) throw Error('unsupported_native_limits');
 }
 export function validateInventory(files: string[], hooks: string[]) {
   if (!files.includes('.git') || !files.includes('greeting.txt') || files.some(x => !['.git', 'greeting.txt', 'AGENTS.md'].includes(x)) || hooks.some(x => !x.endsWith('.sample'))) throw Error('ambient_repository_configuration');
@@ -47,15 +49,17 @@ export function start(input: RunRequest): RunHandle {
   if (git('rev-parse', 'HEAD').trim() !== r.baseSHA || git('status', '--porcelain').trim() || readFileSync('/work/repo/greeting.txt', 'utf8') !== 'hello\n') throw Error('base_mismatch');
   writeFileSync('/work/config.json', JSON.stringify(config(r.token, r.approval)), { mode: 0o600 });
   const parsed = new NativeEvents(r.limits.outputBytes); let cancelled = false, invalid = false, reason: string | undefined, stderr = '', stderrBytes = 0;
+  if(r.schema===2&&Date.now()>=r.sessionDeadline!)throw Error('suite_session_expired');
   const child = spawn('/fixture/opencode', ['run', '--format', 'json', '--model', 'openai/gpt-6-astra', '--title', 'Fixed native fixture', r.brief], { cwd: '/work/repo', env: environment(), stdio: ['ignore', 'pipe', 'pipe'] });
   let kill: NodeJS.Timeout | undefined;
   const terminate = () => { if (child.exitCode === null && child.signalCode === null) { child.kill('SIGTERM'); kill ??= setTimeout(() => child.kill('SIGKILL'), 1000); } };
-  const timer = setTimeout(() => { cancelled = true; reason = 'wall_deadline'; terminate(); }, r.limits.wallMs);
+  const timer = setTimeout(() => { cancelled = true; reason = 'wall_deadline'; terminate(); }, Math.max(0,Math.min(r.limits.wallMs,r.sessionDeadline===undefined?Infinity:r.sessionDeadline-Date.now())));
   child.stdout.on('data', chunk => { try { parsed.push(chunk); } catch (error: any) { invalid = true; reason = error.message; terminate(); } });
   child.stderr.on('data', chunk => { stderrBytes += chunk.length; if (stderrBytes > r.limits.outputBytes) { invalid = true; reason = 'stderr_limit'; terminate(); } else stderr += chunk.toString(); });
   const done = new Promise<RunResult>(resolve => {
     child.once('error', () => { invalid = true; reason = 'spawn_failed'; });
     child.once('close', (exitCode, signal) => {
+      if(r.schema===2&&Date.now()>=r.sessionDeadline!)cancelled=true;
       clearTimeout(timer); if (kill) clearTimeout(kill);
       try { parsed.end(); } catch (error: any) { invalid = true; reason = error.message; }
       let artifact: Artifact | null = null;

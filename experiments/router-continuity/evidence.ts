@@ -10,6 +10,7 @@ export function qualify(input: { policy: any; binding: any; request: Request; ob
   const { binding,request,observation,observedArtifact,evidence } = input, policy = validateRouterPolicy(input.policy);
   if(policy.schema !== 3) throw Error('continuity_policy'); assertNativeBinding(binding,policy as any); validateRequest(request);
   check([FIRST,SECOND].includes(binding.attemptId) && request.bindingDigest === digest(binding) && request.settingsDigest === settingsDigest('ask') && canonical(policy.native) === canonical(evidence.selectedPolicy.native),'continuity_binding');
+  if(request.schema===2)check(policy.native.schema===2&&policy.native.timing?.consumer==='continuity'&&request.profileDigest===digest(policy.native)&&request.packetDigest===evidence.packetDigest&&request.sessionDeadline!<=Math.min(binding.expiresAt,binding.leaseExpiresAt),'suite_continuity_binding');else check(policy.native.schema===1,'suite_continuity_tag');
   const result = observation.result;
   check(result.bindingDigest === request.bindingDigest && result.settingsDigest === request.settingsDigest && result.outcome === 'continuity_transport_completed' && result.localProcessExited === true,'continuity_worker');
   check(classify(result.events,result.exitCode,result.signal,false,false,observedArtifact,request.baseSHA) === 'continuity_transport_completed' && unchanged(observedArtifact,request.baseSHA),'continuity_artifact');

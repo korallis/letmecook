@@ -4,7 +4,7 @@ import { resolve, dirname, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { probe } from './client.ts';
 export const workerFiles = [
-  'experiments/harness/pins.json',
+  'experiments/harness/pins.json', 'experiments/router-authority-extension/overlay/initial-suite.mjs',
   ...['client.ts', 'run.ts', 'relay.ts', 'worker.ts', 'fixture.ts', 'inspect-artifact.ts'].map(x => 'experiments/harness/native/' + x),
   'experiments/inference-boundary/json.ts', 'experiments/native-evaluation/opencode-settings.mjs',
 ];

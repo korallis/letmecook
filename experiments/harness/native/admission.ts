@@ -12,6 +12,7 @@ export function prepareRun(policy: RouterPolicy, binding: Binding, input: Omit<R
   assertNativeBinding(binding, p as NativeRouterPolicy);
   if (binding.role !== 'worker' || binding.routerId !== p.routerId || binding.routeId !== p.routeId || binding.revision !== p.revision || binding.epoch !== p.epoch || Math.min(binding.expiresAt, binding.leaseExpiresAt) < now + input.limits.wallMs) throw Error('unsupported_native_worker_binding');
   if (input.limits.wallMs > p.limits.attemptMs || input.limits.outputBytes > p.limits.responseBytes || p.native.harness.settings !== settingsDigest(input.approval)) throw Error('native_settings_or_limits_mismatch');
-  const request: RunRequest = { ...structuredClone(input), schema: 1, profile: PROFILE, bindingDigest: digest(binding), settingsDigest: p.native.harness.settings };
+  if(p.native.schema===2&&(p.native.timing?.consumer!=='worker'||input.profileDigest!==digest(p.native)||input.sessionDeadline!>Math.min(binding.expiresAt,binding.leaseExpiresAt)))throw Error('suite_worker_binding');
+  const request: RunRequest = { ...structuredClone(input), schema: p.native.schema===2?2:1, profile: PROFILE, bindingDigest: digest(binding), settingsDigest: p.native.harness.settings };
   validateRunRequest(request); return request;
 }

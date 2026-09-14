@@ -1,5 +1,5 @@
 export interface NativeProfile {
- schema:1; limitsProfile:'native-subscription-local-v1'; protocol:'opencode-1.18.30-responses-apply-patch-v1'|'planner-probe-responses-read-file-v1'; evidence:'synthetic'|'reviewed-deployment';
+ schema:1|2; timing?:{variant:'initial-suite-v1';consumer:'worker'|'planner'|'continuity'}; limitsProfile:'native-subscription-local-v1'; protocol:'opencode-1.18.30-responses-apply-patch-v1'|'planner-probe-responses-read-file-v1'; evidence:'synthetic'|'reviewed-deployment';
  deployment:{id:string;sourceCommit:string;sourceLock:string;overlay:string;runtime:string;isolation:string;writerFence:string;credentialOwnershipRef:string;endpoint:string};
  authorization:{id:string;approved:true;model:'gpt-6-astra';effort:'xhigh';providerOutput:{requirement:'not_required';capability:'unavailable'};providerMonetaryCap:{requirement:'not_required';capability:'unavailable'};subscriptionEnvelopeRef:string;refresh:'denied';caseRef:string};
  scope:{id:string;caseRef:string;phase:'initial'|'baseline';authorizationDigest:string;maxInferenceAttempts:number;maxRefreshOperations:0;elapsedMs:number};
