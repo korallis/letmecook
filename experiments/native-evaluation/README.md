@@ -37,7 +37,10 @@ containers, a private inference socket and separate control/state volumes. A
 second gateway must fail before changing the first gateway's database identity.
 The default run captures two Responses requests and the resulting file; disabling
 built-in hooks serializes max_output_tokens=128 and is rejected before a provider
-send. An earlier 512 MiB worker failed from OOM before any request; that profile
+send. The `artifact-restart` mode exercises two clean gateway boots without
+inference: a new approved baseline starts without incidental profile selection,
+acknowledgement retries remain idempotent and both earlier/later artifacts survive.
+An earlier 512 MiB worker failed from OOM before any request; that profile
 is not a passing binary result. Host evidence is fsynced before state cleanup.
 
 `run-egress.ts` uses an internal Docker network and synthetic destinations only.
@@ -59,6 +62,10 @@ explicit private `start` command bound to that packet's digest; preparing the
 consumers must happen before that command. A private `grant` binds each request
 series to its profile, graph, task/lease and shared scope. Stop saves receipts,
 reservations and artifact acknowledgements; unknown work retains ownership.
+Native `PrivateControl.assertNativeCurrent(record, admission?)` remains required
+after transport drain, including post-persistence and per-frame release checks.
+It retains the request clock under the same boot and checks scope/token/lease
+limits; the boundary separately checks its earlier request start synchronously.
 
 `deployment.ts` provides the trusted prepare/inspect/select/start/grant/stop
 supervisor. `bootstrap.mjs` verifies its source/runtime manifest before gateway
@@ -103,7 +110,13 @@ requires a separately reviewed implementation; it is not enabled by this registr
 
 Stop consumer trees through their owning supervisor, then stop the shared gateway
 and relay. The gateway fsyncs receipts, budgets and acknowledged artifacts before
-its normal exit. The host supervisor preserves all state volumes and records;
+its normal exit. `persistImmutable(directory, kind, value)` in
+`durable-records.mjs` returns `{digest, file, created}` after a no-replace atomic
+link and directory fsync; consumers can use the same primitive for acknowledged
+candidate envelopes. Existing same-digest records are verified and re-synced,
+and malformed/symlink collisions are refused. Gateway revisions derive from the
+fenced boot generation so a separately approved later baseline can reuse the
+preserved store without reopening an earlier scope. The host supervisor preserves all state volumes and records;
 there is no automatic deletion or stale-lock recovery. After a crash or unknown
 send, verify every old process is dead and reconcile original receipts before
 any manual owner-lock recovery. Restart closes the elapsed scope and cannot renew

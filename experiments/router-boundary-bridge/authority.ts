@@ -11,6 +11,7 @@ export interface PrivateControl {
   snapshot(): unknown; receipt(id:string): unknown;
   quiescent(ids:string[]): boolean; cancel(id:string): unknown;
   prepareNative?(record:Reservation):void;
+  assertNativeCurrent?(record:Reservation,admission?:boolean):void;
 }
 export class RouterAuthority implements ReceiptAuthority {
   readonly kind = 'router-receipts-v1' as const;
@@ -37,6 +38,7 @@ export class RouterAuthority implements ReceiptAuthority {
     if(record.router.policy.schema===3)assertNativeBinding(record.router.binding,record.router.policy);
     const observation = this.read(admission ? undefined : record.requestId);
     this.current(record.router.policy,observation,admission);
+    if(record.router.policy.schema===3){if(!this.control.assertNativeCurrent)throw new Denial('boundary_closed',503);try{this.control.assertNativeCurrent(record,admission);}catch{throw new Denial('deadline',408);}}
     if (!admission && (!(observation.receipt as any)?.known || (observation.receipt as any).handler_done !== 1 || (observation.receipt as any).local_stop !== 'local_eof')) throw new Denial('cancelled',409);
   }
   async inspect(record: Reservation, signal: AbortSignal, recovery = false) {
