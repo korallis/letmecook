@@ -1,0 +1,28 @@
+name: Inference boundary experiment
+on:
+  pull_request:
+    paths:
+      - 'experiments/inference-boundary/**'
+      - 'tests/fixtures/9router/**'
+      - '.github/workflows/inference-boundary.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'experiments/inference-boundary/**'
+      - 'tests/fixtures/9router/**'
+      - '.github/workflows/inference-boundary.yml'
+permissions:
+  contents: read
+jobs:
+  boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: experiments/inference-boundary/package-lock.json
+      - run: npm ci --prefix experiments/inference-boundary
+      - run: npm --prefix experiments/inference-boundary run check
+      - run: npm --prefix experiments/inference-boundary test
