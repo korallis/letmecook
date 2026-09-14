@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { validateScope } from './evaluation-scope.mjs';
 export const NATIVE_LIMITS = 'native-subscription-local-v1';
 export const NATIVE_PROTOCOL = 'opencode-1.18.30-responses-apply-patch-v1';
+export function nativeConsumerRole(profile){if(profile.protocol===NATIVE_PROTOCOL)return 'worker';throw Error('unsupported_native_consumer');}
 export const canonical = x => JSON.stringify(x, (_, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(k => [k,v[k]])) : v);
 export const digest = x => createHash('sha256').update(canonical(x)).digest('hex');
 const check = (v, why='invalid_native_profile') => { if(!v)throw Error(why); };
@@ -33,4 +34,11 @@ export function validateNativeProfile(p) {
  check(canonical(tool.parameters)===canonical({type:'object',properties:{patchText:{type:'string',description:'The full patch text that describes all changes to be made'}},required:['patchText']}),'unsupported_tool_schema');
  check(digest(tool)==='399421a670d0826ce774a6556e18657499ce86afaf0c22cefc6908e7b8a0b128','native_tool_profile_mismatch');
  return structuredClone(p);
+}
+
+export function validateNativeRegistry(input){
+ const supplied=Array.isArray(input)?input:[input];check(supplied.length>0&&supplied.length<=8,'native_registry_size');
+ const profiles=supplied.map(validateNativeProfile),first=profiles[0];check(new Set(profiles.map(digest)).size===profiles.length,'native_registry_duplicate');
+ for(const candidate of profiles)for(const key of ['deployment','authorization','scope','connections','evidence'])check(canonical(candidate[key])===canonical(first[key]),'native_registry_scope_mismatch');
+ return profiles;
 }

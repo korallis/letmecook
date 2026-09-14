@@ -14,3 +14,7 @@ export function digest(value:unknown):string;
 export function safePath(value:unknown):boolean;
 export const NATIVE_LIMITS:'native-subscription-local-v1';
 export const NATIVE_PROTOCOL:'opencode-1.18.30-responses-apply-patch-v1';
+
+export function nativeConsumerRole(profile:NativeProfile):'worker';
+
+export function validateNativeRegistry(input:unknown):NativeProfile[];

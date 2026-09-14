@@ -1,3 +1,4 @@
+import { assertNativeBinding } from './native-policy.ts';
 import { createServer, request, type IncomingMessage, type ServerResponse } from 'node:http';
 import { chmod } from 'node:fs/promises';
 import { createHash, randomBytes } from 'node:crypto';
@@ -47,6 +48,7 @@ export class Boundary {
   async listen(socket: string) { this.server.listen(socket); await once(this.server, 'listening'); await chmod(socket, 0o600); }
   issue(binding: Binding): string {
     validateBinding(binding);
+    const policy=this.gate.snapshot().policy;if(policy?.schema===3)assertNativeBinding(binding,policy);
     if (this.closed || this.scopes.size >= 64 || this.attempts.has(binding.attemptId) || Object.hasOwn(this.gate.snapshot().counts, binding.attemptId)) throw new Denial('policy_denied');
     const token = randomBytes(32).toString('hex');
     this.scopes.set(hash(token), { binding: structuredClone(binding), born: Date.now(), revoked: false });

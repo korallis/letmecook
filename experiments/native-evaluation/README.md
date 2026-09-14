@@ -1,9 +1,8 @@
 # Native subscription evaluation experiment
 
 Issue #83 implements shared prerequisites for the initial local-limits trial.
-This directory remains an offline implementation milestone until the complete
-review packet and issue acceptance matrix have been reviewed. It is not evidence
-of a deployed provider request or of the durable application foundation (#9).
+All retained measurements are offline. They do not establish a deployed provider
+request or the durable application foundation (#9).
 
 The native profile admits the captured OpenCode 1.18.30 Responses apply_patch
 subset, exact Astra/xhigh, existing Codex subscriptions, access-token-only state,
@@ -61,12 +60,71 @@ consumers must happen before that command. A private `grant` binds each request
 series to its profile, graph, task/lease and shared scope. Stop saves receipts,
 reservations and artifact acknowledgements; unknown work retains ownership.
 
-The live deployment supervisor and its complete source/egress/ownership packet
-still require integration and review. Changing a Boolean or endpoint does not
-turn synthetic evidence into deployed evidence. This milestone never imports
-real credentials or calls a provider.
+`deployment.ts` provides the trusted prepare/inspect/select/start/grant/stop
+supervisor. `bootstrap.mjs` verifies its source/runtime manifest before gateway
+or database evaluation. A private configuration volume supplies only the gateway;
+the relay and nftables helper receive only their destination/rules files. Host
+records require a private directory and use exclusive random temporary files.
+Persistent record open/fsync failure fences owned containers independently of
+record saving and retains SQLite plus the owner lock for supervised recovery.
+Changing a Boolean or endpoint does not turn synthetic evidence into deployed
+evidence. This implementation has been exercised only with synthetic credentials.
+
+Prepare a mode-0700 directory containing `profile.json`, `config.json` and
+`relay.json`. The exact profile schema is in `native-profile.mjs`; the private
+router config contains only the selected access tokens with verified expiry and
+no refresh or ID tokens. Optional `profiles.json` predeclares up to eight closed
+consumer variants, with `profile.json` equal to its first entry. Every variant
+shares one authorization, scope, deployment and classified connection set. The
+supervisor fills source/runtime/isolation hashes and the gateway supplies its
+actual owner fence. A live profile selects a reviewed public provider IPv4 and
+the fixed HTTPS Codex endpoint; DNS and refresh are denied.
+
+```sh
+mkdir -m 700 /absolute/private/deployment-records
+node experiments/native-evaluation/deployment.ts prepare /absolute/private/deployment-records/run.json /absolute/private/inputs /absolute/public/router
+node experiments/native-evaluation/deployment.ts inspect /absolute/private/deployment-records/run.json
+# Review the concrete packet and finish all consumer preparation before start.
+node experiments/native-evaluation/deployment.ts start /absolute/private/deployment-records/run.json REVIEWED_PACKET_DIGEST
+node experiments/native-evaluation/deployment.ts select /absolute/private/deployment-records/run.json PREDECLARED_PROFILE_DIGEST
+node experiments/native-evaluation/deployment.ts grant /absolute/private/deployment-records/run.json /absolute/private/binding.json
+node experiments/native-evaluation/deployment.ts stop /absolute/private/deployment-records/run.json
+```
+
+Selection stays in the same running authority. It requires quiescence, advances
+its generation and creates a fresh boundary policy; old grants cannot be reused.
+It preserves the existing scope row, start/deadline and spent count. Worker,
+planner and other consumers must not restart the deployment or create separate
+stores to split the initial allowance. A worker protocol requires a worker role
+at issuance, admission, reload and release. A read-only planner descriptor still
+requires a separately reviewed implementation; it is not enabled by this registry.
+
+Stop consumer trees through their owning supervisor, then stop the shared gateway
+and relay. The gateway fsyncs receipts, budgets and acknowledged artifacts before
+its normal exit. The host supervisor preserves all state volumes and records;
+there is no automatic deletion or stale-lock recovery. After a crash or unknown
+send, verify every old process is dead and reconcile original receipts before
+any manual owner-lock recovery. Restart closes the elapsed scope and cannot renew
+an initial allowance or the same baseline case. A copied local state volume has
+one owner; these controls do not require changing an optional source host.
+
+`run-deployment.ts` exercises prepare/start/selection/stop without inference. Its
+`open` and `sync` variants inject host-record persistence failure after scope
+start and verify physical fencing, unchanged SQLite scope and retained ownership.
+`portable-run.mjs` executes source regressions on CI's reported runtime without
+claiming that it matches the measured Docker Desktop/Linux ARM64 profile.
 
 The apply_patch profile is a worker consumer profile. A future read-only planner
 must add its own explicitly versioned codec/tool/profile identity through the
 same receipt authority and aggregate scope machinery. It must not impersonate
 OpenCode, gain apply_patch authority or create a second routing authority.
+
+## Demonstrated fallback limit
+
+The aggregate test includes an original-JSON account rejection, classified-account
+fallback and later requests, stopping at ten physical sends. A complete
+response.failed event can make stock Codex retry after cancelling its reader;
+the first receipt then says provider_failed/original_cancel. Both physical sends
+are charged, but strict boundary EOF classification withholds the later candidate.
+That charged, quiescent-but-unreleased case is retained explicitly. It does not
+relax the separate rule that unknown prior work prevents any second send.

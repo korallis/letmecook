@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { profile,request,events,frames,patch } from './fixtures.mjs';
-import { validateNativeProfile, digest } from '../router-authority-extension/overlay/native-profile.mjs';
+import { validateNativeProfile, validateNativeRegistry,nativeConsumerRole,digest } from '../router-authority-extension/overlay/native-profile.mjs';
 import { NativeResponsesStream,validateNativeRequest,continuationOutput,validatePatch } from '../router-authority-extension/overlay/native-responses.mjs';
 test('exact pinned native profile, initial request and stateless encrypted continuation',()=>{
  const p=validateNativeProfile(profile()),r=request(),output=events(true).at(-1).response.output;validateNativeRequest(r,p,r.model);
@@ -33,4 +33,10 @@ test('invalid, contradictory, fabricated, missing EOF and incomplete terminals r
 
 test('CR-only and split CRLF framing preserve validation and semantic deadlines',()=>{
  for(const separator of ['\r','\r\n']){const wire=Buffer.from(frames(events(true)).replace(/\n/g,separator));const codec=new NativeResponsesStream(profile());for(const byte of wire)assert.deepEqual(codec.push(Buffer.from([byte])).output,[]);assert.equal(codec.end().join(''),wire.toString());assert.equal(codec.nativeOutput.length,2);}
+});
+
+test('closed consumer registry shares exact authority, scope, deployment and connections',()=>{
+ const first=profile(),second=structuredClone(first);second.toolPaths.push('second.txt');assert.equal(validateNativeRegistry([first,second]).length,2);assert.equal(nativeConsumerRole(first),'worker');assert.throws(()=>nativeConsumerRole({...first,protocol:'planner-placeholder'}));
+ assert.throws(()=>validateNativeRegistry([first,first]));for(const field of ['id','caseRef','elapsedMs']){const changed=structuredClone(second);changed.scope[field]=field==='elapsedMs'?599999:'different';assert.throws(()=>validateNativeRegistry([first,changed]));}
+ const changed=structuredClone(second);changed.connections[0].credentialRef='different';assert.throws(()=>validateNativeRegistry([first,changed]));
 });

@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import { createServer, request as httpRequest } from 'node:http';
 import { Readable } from 'node:stream';
+import { readFileSync,writeFileSync } from 'node:fs';
 import { once } from 'node:events';
 import { profile,request,events,frames } from '/gaffer/experiments/native-evaluation/fixtures.mjs';
 import { Boundary } from '/gaffer/experiments/inference-boundary/boundary.ts';
 import { PolicyGate } from '/gaffer/experiments/inference-boundary/policy.ts';
 import { RouterAuthority } from '/gaffer/experiments/router-boundary-bridge/authority.ts';
 import { continuationOutput } from './overlay/native-responses.mjs';
+import { failed,created } from './native-fixtures.mjs';
 import { digest } from './overlay/native-profile.mjs';
 const scenario=process.argv[2]??'roundtrip';
 const fault=await import('/gaffer/experiments/native-evaluation/faults.mjs');
@@ -15,27 +17,61 @@ const {getAdapter}=await import('/router-source/src/lib/db/driver.js');
 const repository=await import('/router-source/src/lib/db/index.js');
 const {authority,project}=await import('/router-source/gaffer-extension/authority.mjs');
 await getAdapter();const a=authority(),n=profile();
+if(scenario==='aggregate10')n.local.idleMs=4000;if(scenario==='charged-unreleased-retry')Object.assign(n.local,{totalMs:4000,firstOutputMs:3000,idleMs:3000});
+if(scenario==='baseline32'){n.scope.phase='baseline';n.scope.maxInferenceAttempts=32;n.scope.elapsedMs=900000;n.local.attemptMs=900000;}
+if(scenario==='retry-deadline'){Object.assign(n.local,{totalMs:500,firstOutputMs:500,idleMs:500});}
 if(scenario==='slow-request'){n.local.totalMs=1000;n.local.firstOutputMs=1000;n.local.idleMs=1000;}
 if(scenario==='slow-scope'){n.scope.elapsedMs=1500;Object.assign(n.local,{totalMs:1500,firstOutputMs:1500,idleMs:1500,attemptMs:1500});}
 if(scenario==='slow-token')for(const c of n.connections){c.skewMs=1000;c.expiresAt=Date.now()+2500;}
-a.configureNative(n);
+const variant=structuredClone(n);variant.toolPaths.push('second.txt');a.configureNative(['registry','registry-unknown'].includes(scenario)?[n,variant]:n);
 const config={settings:{requireApiKey:true,rtkEnabled:false,headroomEnabled:false,pxpipeEnabled:false,cavemanEnabled:false,ponytailEnabled:false,ccFilterNaming:false,capacityAdapter:Object.fromEntries(['vision','pdf','audioInput','videoInput'].map(k=>[k,{enabled:false,models:[]}]))},providerConnections:n.connections.map((c,i)=>({id:c.id,provider:'codex',authType:'oauth',name:'synthetic native',priority:i+1,isActive:true,accessToken:'synthetic_access_'+i,expiresAt:new Date(c.expiresAt).toISOString(),providerSpecificData:{chatgptAccountId:'synthetic_workspace_'+i}})),apiKeys:[{id:'synthetic_ingress',key:'synthetic_gateway_key',name:'synthetic ingress',isActive:true}],combos:[{id:'native_route',name:'gaffer_native',models:['cx/gpt-6-astra']}]};
 assert.equal(await a.replace(a.state().generation,'native_revision',project(config),()=>repository.importDb(config)),true);a.startEvaluation();
 const state=a.state(),p={schema:3,routerId:'native_router',routeId:'native_route',revision:state.revision,epoch:1,routerModel:'gaffer_native',profile:'router-native-responses-local-v1',evidence:n.evidence,liveAdmission:false,graph:a.snapshot(),limits:{...n.local,outputTokens:null},authority:{deploymentId:n.deployment.id,boot:state.boot,generation:state.generation,revision:state.revision,graphDigest:digest(a.snapshot())},native:n};
-const bridge=new RouterAuthority(a,p),gate=await PolicyGate.open('/tmp/native-boundary-journal',bridge,1000);await gate.activate();
-const sends=[],decisions=[],translated=[];const finalize=gate.finalize.bind(gate);gate.finalize=async(...args)=>{if(scenario==='altered-translation')args[4]=events(false).at(-1).response.output;await finalize(...args);decisions.push({id:args[0],at:Date.now()});};
+const bridge=new RouterAuthority(a,p);let gate=await PolicyGate.open('/tmp/native-boundary-journal',bridge,1000);await gate.activate();
+const sends=[],decisions=[],translated=[];const finalize=gate.finalize.bind(gate);gate.finalize=async(...args)=>{if(scenario==='decision-write')gate.syncDirectory=async()=>{throw Error('injected_native_decision_sync_failure');};if(scenario==='altered-translation')args[4]=events(false).at(-1).response.output;await finalize(...args);decisions.push({id:args[0],at:Date.now()});};
 const backend=createServer(async(req,res)=>{
  let text='';for await(const c of req)text+=c;const body=JSON.parse(text);sends.push({path:req.url,body});
  assert.equal(req.url,'/responses');assert.equal(body.model,'gpt-6-astra');assert.deepEqual(body.reasoning,{effort:'xhigh',summary:'auto'});assert.equal(body.store,false);assert(['max_tokens','max_output_tokens','max_completion_tokens'].every(k=>!Object.hasOwn(body,k)));
- res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(events(sends.length===1)));for(let i=0;i<bytes.length;i+=13)res.write(bytes.subarray(i,i+13));res.end();
+ if(scenario==='aggregate10'&&sends.length===1){res.writeHead(429,{'content-type':'application/json'}).end(JSON.stringify({error:{message:'synthetic account exhausted'}}));return;}
+ if(['unauthorized401','unauthorized403'].includes(scenario)){res.writeHead(Number(scenario.slice(-3)),{'content-type':'application/json'});res.end(JSON.stringify({error:{message:'synthetic denied token'}}));return;}
+ if(scenario==='redirect'){res.writeHead(307,{location:'http://127.0.0.1:47772/unapproved'}).end();return;}
+ res.writeHead(200,{'content-type':'text/event-stream'});
+ if(['unknown-retry','registry-unknown'].includes(scenario)){res.write(frames(events(true).slice(0,1))+': server_is_overloaded\n\n');return;}
+ let output=events(sends.length===1&&!['aggregate10','baseline32','registry'].includes(scenario));
+ if(['retry-deadline','retry-cancel'].includes(scenario)||(scenario==='charged-unreleased-retry'&&sends.length===1)){const failure=failed();failure.response.error.message='server_is_overloaded';output=[created(),failure];}
+ const bytes=Buffer.from(frames(output));for(let i=0;i<bytes.length;i+=13)res.write(bytes.subarray(i,i+13));if(scenario!=='terminal-no-eof')res.end();
 });backend.listen(47771,'127.0.0.1');await once(backend,'listening');
 const upstream=createServer(async(req,res)=>{const signal=new AbortController();res.on('close',()=>{if(!res.writableEnded)signal.abort();});try{const result=await handleChat(new Request('http://127.0.0.1'+req.url,{method:'POST',headers:req.headers,body:Readable.toWeb(req),duplex:'half',signal:signal.signal}));res.writeHead(result.status,Object.fromEntries(result.headers));if(result.body)for await(const c of result.body){translated.push(Buffer.from(c).toString());res.write(c);}res.end();}catch{res.destroy();}});upstream.listen('/tmp/native-router.sock');await once(upstream,'listening');
-const boundary=new Boundary(gate,'/tmp/native-router.sock','synthetic_gateway_key');await boundary.listen('/tmp/native-boundary.sock');
-const binding={attemptId:'native_attempt',grantId:'native_grant',taskId:'native_task',leaseId:'native_lease',fence:1,role:'worker',routerId:p.routerId,routeId:p.routeId,revision:p.revision,epoch:1,expiresAt:Date.now()+20000,leaseExpiresAt:Date.now()+20000,native:{profileDigest:digest(n),scopeId:n.scope.id,authorizationDigest:n.scope.authorizationDigest}};if(scenario==='slow-grant')binding.expiresAt=Date.now()+1500;const token=boundary.issue(binding);
+let boundary=new Boundary(gate,'/tmp/native-router.sock','synthetic_gateway_key');await boundary.listen('/tmp/native-boundary.sock');
+const binding={attemptId:'native_attempt',grantId:'native_grant',taskId:'native_task',leaseId:'native_lease',fence:1,role:'worker',routerId:p.routerId,routeId:p.routeId,revision:p.revision,epoch:1,expiresAt:Date.now()+20000,leaseExpiresAt:Date.now()+20000,native:{profileDigest:digest(n),scopeId:n.scope.id,authorizationDigest:n.scope.authorizationDigest}};if(scenario==='slow-grant')binding.expiresAt=Date.now()+1500;let token=boundary.issue(binding);
 async function send(body){const bytes=JSON.stringify(body),call=httpRequest({socketPath:'/tmp/native-boundary.sock',path:'/v1/responses',method:'POST',headers:{host:'localhost',authorization:'Bearer '+token,'content-type':'application/json','content-length':Buffer.byteLength(bytes)}});const result=once(call,'response');call.end(bytes);const [r]=await result;let text='',firstAt=null;for await(const c of r){firstAt??=Date.now();text+=c;}return {status:r.statusCode,text,firstAt,id:r.headers['x-gaffer-request-id']};}
-const first=request(),r1=await send(first);
+for(const role of ['planner','reviewer']){assert.throws(()=>boundary.issue({...binding,attemptId:'role_'+role,role}));await assert.rejects(gate.admit({...binding,attemptId:'admit_'+role,role},()=>true,undefined,digest(JSON.stringify(request())),request()));}
+const first=request();
+if(scenario==='retry-cancel')setTimeout(()=>{for(const r of gate.snapshot().reservations)a.cancel(r.requestId);},200);
+const r1=await send(first);
+if(scenario==='role-reload'){
+ assert.match(r1.text,/response.completed/);const until=Date.now()+1500;while(!boundary.audit.length){assert(Date.now()<until);await new Promise(r=>setTimeout(r,5));}await boundary.close();const path='/tmp/native-boundary-journal/state.json',saved=readFileSync(path,'utf8'),journal=JSON.parse(saved);journal.decisions[0].router.binding.role='planner';writeFileSync(path,JSON.stringify(journal));await assert.rejects(PolicyGate.open('/tmp/native-boundary-journal',bridge,1000));writeFileSync(path,saved);const reopened=await PolicyGate.open('/tmp/native-boundary-journal',bridge,1000);await reopened.close();assert.equal(sends.length,1);console.log(JSON.stringify({scenario,result:'passed',live:false,physicalSends:sends,roleReloadDenied:true}));upstream.closeAllConnections();backend.closeAllConnections();process.exit(0);
+}
+if(scenario==='registry'){
+ assert.match(r1.text,/Completed/);const until=Date.now()+1500;while(!boundary.audit.length){assert(Date.now()<until);await new Promise(r=>setTimeout(r,5));}
+ const originalScope=a.evaluationScope(n.scope.id),oldState=a.state();assert.throws(()=>a.selectNativeProfile('0'.repeat(64),oldState.generation));assert.throws(()=>a.selectNativeProfile(digest(variant),oldState.generation-1));
+ await boundary.close();const selected=a.selectNativeProfile(digest(variant),oldState.generation);assert.equal(selected.state.boot,oldState.boot);assert.equal(selected.state.generation,oldState.generation+1);assert.deepEqual(a.evaluationScope(n.scope.id),originalScope);assert.throws(()=>a.startEvaluation());
+ const policy={...p,native:variant,epoch:2,revision:selected.state.revision,graph:selected.graph,authority:{...p.authority,generation:selected.state.generation,revision:selected.state.revision,graphDigest:digest(selected.graph)}};
+ gate=await PolicyGate.open('/tmp/native-boundary-journal',new RouterAuthority(a,policy),1000);await gate.activate();boundary=new Boundary(gate,'/tmp/native-router.sock','synthetic_gateway_key');await boundary.listen('/tmp/native-boundary.sock');
+ assert.throws(()=>boundary.issue({...binding,attemptId:'stale_registry'}));token=boundary.issue({...binding,attemptId:'selected_attempt',grantId:'selected_grant',revision:policy.revision,epoch:2,native:{...binding.native,profileDigest:digest(variant)}});const r2=await send(first);assert.match(r2.text,/Completed/);assert.equal(sends.length,2);const scope=a.evaluationScope(n.scope.id);assert.equal(scope.started,originalScope.started);assert.equal(scope.deadline,originalScope.deadline);assert.equal(scope.spent,2);
+ console.log(JSON.stringify({scenario,result:'passed',live:false,physicalSends:sends,originalScope,scope,registry:a.nativeProfiles(),oldState,selected,decisions:gate.snapshot().decisions}));await boundary.close();upstream.closeAllConnections();backend.closeAllConnections();process.exit(0);
+}
+if(['aggregate10','baseline32'].includes(scenario)){
+ const requests=scenario==='aggregate10'?9:32;assert.equal(r1.status,200);assert.match(r1.text,/Completed/,JSON.stringify({receipts:gate.snapshot().reservations.map(r=>a.receipt(r.requestId)),audit:boundary.audit}));
+ for(let i=1;i<requests;i++){token=boundary.issue({...binding,attemptId:'native_attempt_'+i,grantId:'native_grant_'+i});const result=await send(first);assert.equal(result.status,200);assert.match(result.text,/Completed/);}
+ const expected=scenario==='aggregate10'?10:32;assert.equal(sends.length,expected);assert.equal(a.evaluationScope(n.scope.id).spent,expected);
+ token=boundary.issue({...binding,attemptId:'native_exhausted',grantId:'native_exhausted'});const exhausted=await send(first);assert(!exhausted.text.includes('event: response.'));assert.equal(sends.length,expected);
+ const until=Date.now()+1500;while(boundary.audit.length<requests+1){assert(Date.now()<until);await new Promise(r=>setTimeout(r,5));}
+ const journal=gate.snapshot(),receipts=journal.decisions.map(r=>a.receipt(r.requestId));if(scenario==='aggregate10'){assert.equal(receipts[0].operations.length,2);assert.equal(receipts[0].operations[0].terminal,'provider_rejected');assert.notEqual(receipts[0].operations[0].connection_id,receipts[0].operations[1].connection_id);};
+ console.log(JSON.stringify({scenario,result:'passed',live:false,physicalSends:sends,scope:a.evaluationScope(n.scope.id),receipts,journal}));await boundary.close();upstream.closeAllConnections();backend.closeAllConnections();process.exit(0);
+}
 if(scenario!=='roundtrip'){
- if(!['receipt-write','altered-translation'].includes(scenario))assert.notEqual(r1.status,200);assert(!r1.text.includes('event: response.'));
+ if(scenario.startsWith('slow-')||['admission-write','debit-write'].includes(scenario)||scenario.startsWith('override-'))assert.notEqual(r1.status,200);assert(!r1.text.includes('event: response.'));
  const auditDeadline=Date.now()+1500;while(!boundary.audit.length){assert(Date.now()<auditDeadline);await new Promise(r=>setTimeout(r,5));}assert.equal(decisions.length,0);
  const journal=gate.snapshot();assert(!journal.decisions.some(d=>d.verdict==='validated_success'));
  const scope=a.evaluationScope(n.scope.id);const receipts=[...journal.reservations,...journal.decisions].map(r=>a.receipt(r.requestId));
@@ -43,10 +79,15 @@ if(scenario!=='roundtrip'){
  else if(['admission-write','debit-write'].includes(scenario)){assert(fault.proof.triggered>0);assert.equal(sends.length,0);assert.equal(scope.spent,0);}
  else if(scenario.startsWith('override-')){assert.equal(sends.length,0);assert.equal(scope.spent,0);}
  else if(scenario==='receipt-write'){assert(fault.proof.triggered>0);assert.equal(sends.length,1);assert.equal(scope.spent,1);assert.equal(receipts[0].operations[0].terminal,'unknown');}
+ else if(scenario==='decision-write'){assert.equal(sends.length,1);assert.equal(scope.spent,1);assert.equal(journal.reservations.length,1);const disk=JSON.parse(readFileSync('/tmp/native-boundary-journal/state.json','utf8'));assert.equal(disk.decisions[0].verdict,'validated_success');assert.equal(disk.decisions[0].delivery,'unobserved');}
  else if(scenario==='altered-translation'){assert.equal(sends.length,1);assert.equal(journal.reservations.length,0);assert.equal(journal.decisions[0].verdict,'quiescent_failure');}
+ else if(['unknown-retry','registry-unknown','terminal-no-eof','redirect'].includes(scenario)){assert.equal(sends.length,1);assert.equal(receipts[0].operations[0].terminal,'unknown');assert.equal(journal.reservations.length,1);assert.equal(await a.replace(a.state().generation,'forbidden',a.snapshot(),()=>{}),false);if(scenario==='registry-unknown')assert.throws(()=>a.selectNativeProfile(digest(variant),a.state().generation));}
+ else if(scenario==='charged-unreleased-retry'){assert.equal(sends.length,2);assert.equal(scope.spent,2);assert.equal(receipts[0].quiescent,true);assert.deepEqual(receipts[0].operations.map(o=>[o.terminal,o.local_stop]),[['provider_failed','original_cancel'],['provider_completed','original_eof']]);}
+ else if(['retry-deadline','retry-cancel'].includes(scenario)){assert.equal(sends.length,1);assert.equal(scope.spent,1);}
+ else if(['unauthorized401','unauthorized403'].includes(scenario)){assert(sends.length>=1&&sends.length<=2);assert(receipts.every(r=>r.operations.every(o=>o.model==='gpt-6-astra')));assert.equal(scope.spent,sends.length);}
  else throw Error('unknown_scenario');
  console.log(JSON.stringify({scenario,evidence:'isolated-pinned-router-native-failure',live:false,physicalSends:sends,scope,receipts,journal,fault:fault.proof,result:'passed'}));
- await boundary.close();upstream.closeAllConnections();backend.closeAllConnections();process.exit(0);
+ if(scenario==='decision-write')await assert.rejects(boundary.close());else await boundary.close();upstream.closeAllConnections();backend.closeAllConnections();process.exit(0);
 }
 assert.equal(r1.status,200);assert.match(r1.text,/response.completed/);assert(r1.firstAt>=decisions[0].at);
 const output=events(true).at(-1).response.output,next={...first,input:[...first.input,...continuationOutput(output,n),{type:'function_call_output',call_id:'call_synthetic',output:'Success. Updated greeting.txt'}]};

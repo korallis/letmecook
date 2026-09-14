@@ -1,3 +1,4 @@
+import { assertNativeBinding } from '../inference-boundary/native-policy.ts';
 import { setTimeout as delay } from 'node:timers/promises';
 import { canonical } from '../inference-boundary/json.ts';
 import { Denial, type Policy } from '../inference-boundary/types.ts';
@@ -33,6 +34,7 @@ export class RouterAuthority implements ReceiptAuthority {
   async readFrozenPolicy(signal: AbortSignal) { signal.throwIfAborted(); this.current(this.approved,this.read(),true); return structuredClone(this.approved); }
   assertCurrent(record: Reservation, admission = false) {
     if (!record.router) throw new Denial('boundary_closed',503);
+    if(record.router.policy.schema===3)assertNativeBinding(record.router.binding,record.router.policy);
     const observation = this.read(admission ? undefined : record.requestId);
     this.current(record.router.policy,observation,admission);
     if (!admission && (!(observation.receipt as any)?.known || (observation.receipt as any).handler_done !== 1 || (observation.receipt as any).local_stop !== 'local_eof')) throw new Denial('cancelled',409);

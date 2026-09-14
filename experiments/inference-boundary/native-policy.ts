@@ -1,7 +1,7 @@
 import { canonical, keys } from './json.ts';
 import { Denial, ref, type Binding, type Limits } from './types.ts';
 import { hashDocument, validateIdentity, type AuthorityIdentity } from './router-policy.ts';
-import { validateNativeProfile, type NativeProfile } from '../router-authority-extension/overlay/native-profile.mjs';
+import { validateNativeProfile, nativeConsumerRole, type NativeProfile } from '../router-authority-extension/overlay/native-profile.mjs';
 export interface NativeRouterPolicy {
  schema:3;routerId:string;routeId:string;revision:string;epoch:number;routerModel:string;
  profile:'router-native-responses-local-v1';evidence:'synthetic'|'reviewed-deployment';liveAdmission:boolean;
@@ -29,5 +29,5 @@ export function validateNativeRouterPolicy(p:NativeRouterPolicy):NativeRouterPol
  }catch{throw new Denial('policy_denied');}
 }
 export function assertNativeBinding(binding:Binding,p:NativeRouterPolicy){
- if(canonical(binding.native)!==canonical({profileDigest:hashDocument(p.native),scopeId:p.native.scope.id,authorizationDigest:p.native.scope.authorizationDigest}))throw new Denial('policy_denied');
+ if(binding.role!==nativeConsumerRole(p.native)||canonical(binding.native)!==canonical({profileDigest:hashDocument(p.native),scopeId:p.native.scope.id,authorizationDigest:p.native.scope.authorizationDigest}))throw new Denial('policy_denied');
 }

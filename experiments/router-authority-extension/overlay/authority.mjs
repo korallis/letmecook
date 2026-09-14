@@ -7,7 +7,7 @@ import { createChatTerminalObserver } from './chat-terminal.mjs';
 import { stripCodexUnsupportedPatterns } from 'open-sse/utils/codexToolSchema.js';
 import { CODEX_DEFAULT_INSTRUCTIONS } from 'open-sse/config/codexInstructions.js';
 import { evaluationScopes } from './evaluation-scope.mjs';
-import { validateNativeProfile } from './native-profile.mjs';
+import { validateNativeProfile,validateNativeRegistry,nativeConsumerRole } from './native-profile.mjs';
 import { validateNativeRequest, expectedPhysicalRequest, NativeResponsesStream } from './native-responses.mjs';
 import { deploymentOwner } from './deployment-owner.mjs';
 import { nativeDispatcher } from './native-transport.mjs';
@@ -208,7 +208,7 @@ function payloadFromDb(db) {
 export function installAuthority(db) {
   requireThat(!instance && db.driver === 'node:sqlite', 'unsupported_runtime');
   const ownerAtBoot=process.env.GAFFER_NATIVE_DEPLOYMENT==='1'?deploymentOwner():null;
-  let dispatcher;
+  let dispatcher,nativeRegistry=[];
   for (const key of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy','HEADROOM_URL']) requireThat(!process.env[key], 'unsupported_environment');
   db.exec(`PRAGMA synchronous=FULL;
     CREATE TABLE IF NOT EXISTS gaffer_authority (id INTEGER PRIMARY KEY CHECK(id=1), boot TEXT NOT NULL, generation INTEGER NOT NULL, phase TEXT NOT NULL, revision TEXT, policy TEXT);
@@ -217,7 +217,8 @@ export function installAuthority(db) {
     CREATE TABLE IF NOT EXISTS gaffer_operations (request_id TEXT NOT NULL, ordinal INTEGER NOT NULL, boot TEXT NOT NULL, generation INTEGER NOT NULL, revision TEXT NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL, connection_id TEXT NOT NULL, terminal TEXT NOT NULL, local_stop TEXT NOT NULL, PRIMARY KEY(request_id, ordinal));`);
   const boot = randomUUID();
   const scopes=evaluationScopes(db,boot);
-  db.exec(`CREATE TABLE IF NOT EXISTS gaffer_native_authorizations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, record TEXT NOT NULL);
+  db.exec(`CREATE TABLE IF NOT EXISTS gaffer_native_registry(authorization_id TEXT PRIMARY KEY, digest TEXT NOT NULL, profiles TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS gaffer_native_authorizations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, record TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS gaffer_native_admissions(id TEXT PRIMARY KEY, binding TEXT NOT NULL, request_digest TEXT NOT NULL, request TEXT NOT NULL, profile_digest TEXT NOT NULL, scope_id TEXT NOT NULL, authorization_digest TEXT NOT NULL);`);
   db.transaction(() => {
     const previous = db.get('SELECT * FROM gaffer_authority WHERE id=1');
@@ -240,7 +241,7 @@ export function installAuthority(db) {
   const allQuiet = () => db.get('SELECT COUNT(*) AS n FROM gaffer_missing').n===0 && db.all('SELECT id FROM gaffer_receipts').every(r => receipt(r.id).quiescent);
   const nativeTime=ctx=>{
     if(!ctx.native)return Infinity;
-    const binding=JSON.parse(ctx.native.binding),limit=scopes.assertCurrent(ctx.native.scope_id,ctx.native.authorization_digest,ctx.tokenDeadline);
+    const binding=JSON.parse(ctx.native.binding);requireThat(binding.role===nativeConsumerRole(nativeProfile),'native_role_mismatch');const limit=scopes.assertCurrent(ctx.native.scope_id,ctx.native.authorization_digest,ctx.tokenDeadline);
     const remaining=Math.min(limit.remainingMs,ctx.requestDeadline-performance.now(),binding.expiresAt-Date.now(),binding.leaseExpiresAt-Date.now());
     requireThat(remaining>0,'native_deadline');return remaining;
   };
@@ -274,17 +275,27 @@ export function installAuthority(db) {
     state: () => ({...state(), policy: state().policy ? JSON.parse(state().policy) : null}), snapshot, project, receipt,
     configureNative(profile){
       requireThat(state().phase==='closed'&&allQuiet()&&!nativeProfile,'native_configuration_closed');
-      const next=validateNativeProfile(profile);
+      const profiles=validateNativeRegistry(profile),next=profiles[0];
       requireThat(next.evidence!=='synthetic'||nativeSynthetic,'native_synthetic_transport_required');
       if(next.evidence==='reviewed-deployment'){
         requireThat(ownerAtBoot&&ownerAtBoot.digest===next.deployment.writerFence&&!nativeSynthetic,'native_deployment_owner_required');
         dispatcher=nativeDispatcher('/egress/provider.sock');
       }
       db.transaction(()=>{
+        const registry=db.get('SELECT digest FROM gaffer_native_registry WHERE authorization_id=?',[next.authorization.id]);requireThat(!registry||registry.digest===digest(profiles),'native_registry_changed');db.run('INSERT OR IGNORE INTO gaffer_native_registry VALUES(?,?,?)',[next.authorization.id,digest(profiles),canonical(profiles)]);
         const previous=db.get('SELECT digest FROM gaffer_native_authorizations WHERE id=?',[next.authorization.id]);
         requireThat(!previous||previous.digest===digest(next.authorization),'native_authorization_changed');
         db.run('INSERT OR IGNORE INTO gaffer_native_authorizations VALUES(?,?,?)',[next.authorization.id,digest(next.authorization),canonical(next.authorization)]);
-      });nativeProfile=next;return digest(next);
+      });nativeRegistry=profiles;nativeProfile=next;return digest(next);
+    },
+    nativeProfiles:()=>structuredClone(nativeRegistry),
+    selectNativeProfile(profileDigest,expectedGeneration){
+      const s=state(),next=nativeRegistry.find(p=>digest(p)===profileDigest);requireThat(next&&s.phase==='active'&&s.generation===expectedGeneration&&active.size===0&&allQuiet(),'native_selection_denied');
+      requireThat(next!==nativeProfile,'native_selection_unchanged');
+      const scope=scopes.read(next.scope.id);if(scope)scopes.assertCurrent(next.scope.id,next.scope.authorizationDigest,Math.min(...next.connections.map(c=>c.expiresAt-c.skewMs)));
+      const previous=nativeProfile;
+      try{return db.transaction(()=>{nativeProfile=next;const policy=snapshot(),generation=s.generation+1,revision='native_selection_'+generation;db.run("UPDATE gaffer_authority SET generation=?,revision=?,policy=? WHERE id=1",[generation,revision,canonical(policy)]);return {profile:structuredClone(next),state:{...state(),policy},graph:policy};});}
+      catch(error){nativeProfile=previous;throw error;}
     },
     startEvaluation(){requireThat(nativeProfile&&state().phase==='active','native_configuration_closed');return scopes.register(nativeProfile.scope,allQuiet);},
     evaluationScope:id=>scopes.read(id),
@@ -293,7 +304,7 @@ export function installAuthority(db) {
       requireThat(nativeProfile&&record?.router?.policy?.schema===3&&record.router.send==='send_possible'&&ref(record.requestId),'native_preparation_required');
       const {policy,binding,requestDigest,nativeRequest}=record.router;
       requireThat(canonical(policy.native)===canonical(nativeProfile)&&policy.authority.boot===boot&&policy.authority.generation===state().generation&&policy.revision===state().revision&&policy.authority.graphDigest===digest(snapshot()),'native_preparation_mismatch');
-      requireThat(canonical(binding.native)===canonical({profileDigest:digest(nativeProfile),scopeId:nativeProfile.scope.id,authorizationDigest:nativeProfile.scope.authorizationDigest})&&digest(JSON.stringify(nativeRequest))===requestDigest,'native_preparation_mismatch');
+      requireThat(binding.role===nativeConsumerRole(nativeProfile)&&canonical(binding.native)===canonical({profileDigest:digest(nativeProfile),scopeId:nativeProfile.scope.id,authorizationDigest:nativeProfile.scope.authorizationDigest})&&digest(JSON.stringify(nativeRequest))===requestDigest,'native_preparation_mismatch');
       const tokenDeadline=Math.min(...nativeProfile.connections.map(c=>c.expiresAt-c.skewMs));requireThat(Number.isSafeInteger(tokenDeadline)&&binding.expiresAt>Date.now()&&binding.leaseExpiresAt>Date.now(),'native_expired');
       scopes.assertCurrent(nativeProfile.scope.id,nativeProfile.scope.authorizationDigest,tokenDeadline);
       db.run('INSERT INTO gaffer_native_admissions VALUES(?,?,?,?,?,?,?)',[record.requestId,canonical(binding),requestDigest,JSON.stringify(nativeRequest),digest(nativeProfile),nativeProfile.scope.id,nativeProfile.scope.authorizationDigest]);
