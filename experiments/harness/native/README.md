@@ -120,3 +120,10 @@ start that scope. Separately approved baseline scopes have at most 32 attempts
 and 900,000 ms; they cannot replenish initial checks. No live command, provider
 credential, deployment, source-host operation, publication or merge is performed
 by this preparation.
+
+The current worker binary wall ceiling is 30,000 ms. Synthetic gateway fixtures
+use request/first-output/idle limits of 6,000/4,000/2,000 ms; these are deterministic
+fault-test timings, not measured live Astra xhigh thresholds. The exact reviewed
+live suite must declare suitable finite request and consumer bounds within its
+shared 600,000 ms scope before admission. No limits were widened or calibrated
+through model calls in this integration.

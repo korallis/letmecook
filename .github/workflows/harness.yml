@@ -4,6 +4,8 @@ on:
     paths:
       - 'experiments/harness/**'
       - 'experiments/inference-boundary/**'
+      - 'experiments/native-evaluation/**'
+      - 'experiments/router-authority-extension/overlay/**'
       - 'experiments/isolation/**'
       - 'tests/fixtures/harness/**'
       - '.github/workflows/harness.yml'
@@ -12,6 +14,8 @@ on:
     paths:
       - 'experiments/harness/**'
       - 'experiments/inference-boundary/**'
+      - 'experiments/native-evaluation/**'
+      - 'experiments/router-authority-extension/overlay/**'
       - 'experiments/isolation/**'
       - 'tests/fixtures/harness/**'
       - '.github/workflows/harness.yml'
@@ -30,3 +34,5 @@ jobs:
       - run: npm ci --prefix experiments/harness --ignore-scripts
       - run: npm --prefix experiments/harness run check
       - run: npm --prefix experiments/harness test
+      - run: npm --prefix experiments/harness run check:native
+      - run: npm --prefix experiments/harness run test:native
