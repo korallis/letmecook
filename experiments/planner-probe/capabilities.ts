@@ -17,6 +17,15 @@ export function livePreflight() {
       consumerResponsesCodec: 'unsupported', providerOutputBound: { compatible: 'synthetic_1024_cap_mapping', native: 'unsupported_output_token_translation' },
       deployedConformance: 'unverified', liveModelSettings: 'unverified', strictProviderSchema: 'unsupported',
     },
+    nativeConsumerPreparation: {
+      protocol: 'planner-probe-responses-read-file-v1', evidence: 'in_memory_consumer_contract_only',
+      consumerRequestBuilder: 'prepared', productionBoundaryPort: 'not_implemented',
+      sharedPlannerProfileAndCodec: 'blocked_pending_accepted_integration',
+      originalStreamAndReceiptConformance: 'not_exercised_by_preparation',
+      providerOutputTokens: null, providerMonetaryCap: null,
+      strictProviderSchema: 'unsupported', localSchema: 'ajv_plan_validation',
+      physicalInferenceAttempts: 0, liveEligible: false, issueComplete: false,
+    },
     selectedSyntheticProfile: {
       route: 'gaffer-planner-fixture', profile: 'chat-text-tools-v1', protocol: 'POST /v1/chat/completions',
       stream: 'synthetic_pass', tools: 'synthetic_fixed_read_file_pass', postGenerationSchema: 'local_ajv_validation',

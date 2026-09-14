@@ -4,6 +4,8 @@ on:
     paths:
       - 'experiments/planner-probe/**'
       - 'experiments/inference-boundary/**'
+      - 'experiments/router-boundary-bridge/**'
+      - 'experiments/router-authority-extension/overlay/**'
       - 'tests/fixtures/planner/**'
       - '.github/workflows/planner-probe.yml'
   push:
@@ -11,6 +13,8 @@ on:
     paths:
       - 'experiments/planner-probe/**'
       - 'experiments/inference-boundary/**'
+      - 'experiments/router-boundary-bridge/**'
+      - 'experiments/router-authority-extension/overlay/**'
       - 'tests/fixtures/planner/**'
       - '.github/workflows/planner-probe.yml'
 permissions:
@@ -28,12 +32,16 @@ jobs:
       - run: npm ci --prefix experiments/planner-probe
       - run: npm --prefix experiments/planner-probe run check
       - run: npm --prefix experiments/planner-probe test
+      - run: npm --prefix experiments/planner-probe run check:native
       - run: node experiments/planner-probe/prove.ts /tmp/planner-probe-run.json
+      - run: node experiments/planner-probe/native-prove.ts /tmp/planner-native-preparation-run.json
       - name: Retain the redacted proof even after failure
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: planner-proof-${{ github.sha }}
-          path: /tmp/planner-probe-run.json
+          path: |
+            /tmp/planner-probe-run.json
+            /tmp/planner-native-preparation-run.json
           if-no-files-found: warn
           retention-days: 14
