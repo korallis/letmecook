@@ -19,7 +19,7 @@ const TEXT_EVENTS = new Map([
   ['response.reasoning_text.delta', 'delta'], ['response.reasoning_text.done', 'text'],
 ]);
 
-function parseUnambiguousJSON(text) {
+export function parseUnambiguousJSON(text) {
   let parsed; try { parsed = JSON.parse(text); } catch { throw new Error('malformed_json'); }
   // JSON.parse silently accepts duplicate keys; they cannot establish authority.
   let at = 0;

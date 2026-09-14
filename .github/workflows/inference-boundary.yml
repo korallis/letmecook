@@ -4,6 +4,8 @@ on:
     paths:
       - 'experiments/inference-boundary/**'
       - 'experiments/router-boundary-bridge/**'
+      - 'experiments/native-evaluation/**'
+      - 'experiments/router-authority-extension/overlay/**'
       - 'tests/fixtures/9router/**'
       - '.github/workflows/inference-boundary.yml'
   push:
@@ -11,6 +13,8 @@ on:
     paths:
       - 'experiments/inference-boundary/**'
       - 'experiments/router-boundary-bridge/**'
+      - 'experiments/native-evaluation/**'
+      - 'experiments/router-authority-extension/overlay/**'
       - 'tests/fixtures/9router/**'
       - '.github/workflows/inference-boundary.yml'
 permissions:
@@ -31,3 +35,7 @@ jobs:
       - run: npm ci --prefix experiments/router-boundary-bridge --ignore-scripts
       - run: npm --prefix experiments/router-boundary-bridge run check
       - run: npm --prefix experiments/router-boundary-bridge test
+
+      - run: npm ci --prefix experiments/native-evaluation --ignore-scripts
+      - run: npm --prefix experiments/native-evaluation run check
+      - run: npm --prefix experiments/native-evaluation test

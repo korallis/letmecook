@@ -50,6 +50,12 @@ When a prerequisite lands, review its evidence and update dependent readiness la
 | M0-09 | [#9 Choose build, adopt or extend from measured foundation evidence](https://github.com/korallis/letmecook/issues/9) | specification | [#1](https://github.com/korallis/letmecook/issues/1), [#8](https://github.com/korallis/letmecook/issues/8), [#71](https://github.com/korallis/letmecook/issues/71) |
 | M0-10 | [#71 Specify task-aware selection of approved 9Router routes](https://github.com/korallis/letmecook/issues/71) | specification | [#2](https://github.com/korallis/letmecook/issues/2) |
 
+The optional native subscription prerequisite is tracked in
+[#81](https://github.com/korallis/letmecook/issues/81) and
+[#83](https://github.com/korallis/letmecook/issues/83). Read the
+[shared native evaluation evidence and deployment controls](evidence/native-evaluation.md)
+before integrating the separate #6/#7 consumers.
+
 ## M1 — Durable bounded execution
 
 [Milestone on GitHub](https://github.com/korallis/letmecook/milestone/2) · 15 issues.

@@ -16,6 +16,15 @@
     "policy_revision": "policy_1",
     "epoch": 1,
     "router_model": "gaffer-coding",
+    "router_build_ref": "build_fixture_strict",
+    "graph_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "protocol_harness_settings_ref": "strict_harness_settings_fixture_1",
+    "capability_evidence_ref": "synthetic_capability_fixture_strict_1",
+    "authorization_policy_ref": "operator_authority_fixture_strict_1",
+    "limits_profile": {
+      "kind": "strict-provider-output-v1",
+      "providerOutput": { "requirement": "hard", "maxTokens": 4096 }
+    },
     "protocols": [
       "chat_completions",
       "messages",
@@ -44,9 +53,13 @@
       "response_bytes": 8388608,
       "in_flight": 1,
       "request_count": 32,
+      "inference_subattempt_count": 32,
       "total_ms": 120000,
       "first_output_ms": 30000,
       "semantic_idle_ms": 15000,
+      "attempt_ms": 600000,
+      "router_retries_per_request": 1,
+      "harness_retries_per_attempt": 1,
       "boundary_retries": 0
     },
     "policy_write_mode": "freeze_and_drain",
@@ -61,6 +74,15 @@
     "route_id": "coding",
     "policy_revision": "policy_1",
     "epoch": 1,
+    "router_build_ref": "build_fixture_strict",
+    "graph_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "protocol_harness_settings_ref": "strict_harness_settings_fixture_1",
+    "capability_evidence_ref": "synthetic_capability_fixture_strict_1",
+    "authorization_policy_ref": "operator_authority_fixture_strict_1",
+    "limits_profile": {
+      "kind": "strict-provider-output-v1",
+      "providerOutput": { "requirement": "hard", "maxTokens": 4096 }
+    },
     "expires_at": "2026-09-14T10:02:00Z",
     "credential": "opaque token delivered separately; never a router key"
   },

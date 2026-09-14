@@ -7,6 +7,7 @@ function argumentsForTool(text: unknown) {
 }
 export function validateRequest(value: unknown, policy: Policy): string {
   try {
+    if(policy.schema===3)throw new Denial('unsupported_request',400);
     if (policy.schema === 2) {
       object(value);
       if (Object.hasOwn(value, 'tool_choice')) throw new Denial('unsupported_request', 400);

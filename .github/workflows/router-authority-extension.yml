@@ -3,12 +3,18 @@ on:
   pull_request:
     paths:
       - 'experiments/router-authority-extension/**'
+      - 'experiments/native-evaluation/**'
+      - 'experiments/inference-boundary/**'
+      - 'experiments/router-boundary-bridge/**'
       - 'docs/evidence/router-authority-extension*'
       - '.github/workflows/router-authority-extension.yml'
   push:
     branches: [main]
     paths:
       - 'experiments/router-authority-extension/**'
+      - 'experiments/native-evaluation/**'
+      - 'experiments/inference-boundary/**'
+      - 'experiments/router-boundary-bridge/**'
       - 'docs/evidence/router-authority-extension*'
       - '.github/workflows/router-authority-extension.yml'
 permissions:
@@ -43,6 +49,23 @@ jobs:
             --env HOME=/nonexistent --env NODE_OPTIONS= --pull never \
             gaffer-router-authority-proof timeout --signal=TERM --kill-after=1s 180s \
             node /probe/run-in-container.mjs > "$RUNNER_TEMP/authority-extension.json"
+      - name: Portable native Responses and durable-scope regressions
+        run: |
+          docker run --rm --name "gaffer-native-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            --network none --user 1000:1000 --cap-drop ALL \
+            --security-opt no-new-privileges=true --read-only --init \
+            --cgroupns private --ipc private --cpus 1 \
+            --memory 768m --memory-swap 768m --pids-limit 64 \
+            --ulimit nofile=256:256 --ulimit core=0:0 \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/experiments/router-authority-extension,target=/probe,readonly" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/.router-source,target=/router-source,readonly" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/gaffer,readonly" \
+            --tmpfs /tmp:rw,nosuid,nodev,size=180m,uid=1000,gid=1000 \
+            --tmpfs /config:rw,nosuid,nodev,size=1m,uid=1000,gid=1000 \
+            --tmpfs /egress:rw,nosuid,nodev,size=1m,uid=1000,gid=1000 \
+            --env HOME=/nonexistent --env NODE_OPTIONS= --pull never \
+            gaffer-router-authority-proof timeout --signal=TERM --kill-after=1s 180s \
+            node /gaffer/experiments/native-evaluation/portable-run.mjs > "$RUNNER_TEMP/native-source-regressions.json"
       - name: Original terminal observer regressions
         run: |
           docker run --rm --network none --user 1000:1000 --cap-drop ALL \
@@ -56,4 +79,8 @@ jobs:
         run: |
           if docker container inspect "gaffer-extension-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >/dev/null 2>&1; then
             docker rm --force "gaffer-extension-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          fi
+
+          if docker container inspect "gaffer-native-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >/dev/null 2>&1; then
+            docker rm --force "gaffer-native-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           fi

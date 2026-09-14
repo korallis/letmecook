@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Illustrative limits-profile contract shape; not a runtime admission API",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "providerOutput"],
+      "properties": {
+        "kind": { "const": "strict-provider-output-v1" },
+        "providerOutput": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["requirement", "maxTokens"],
+          "properties": {
+            "requirement": { "const": "hard" },
+            "maxTokens": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "providerOutput", "providerMonetaryCap", "subscriptionEnvelopeRef", "authorizationPolicyRef"],
+      "properties": {
+        "kind": { "const": "native-subscription-local-v1" },
+        "providerOutput": { "$ref": "#/definitions/unavailable" },
+        "providerMonetaryCap": { "$ref": "#/definitions/unavailable" },
+        "subscriptionEnvelopeRef": { "$ref": "#/definitions/reference" },
+        "authorizationPolicyRef": { "$ref": "#/definitions/reference" }
+      }
+    }
+  ],
+  "definitions": {
+    "unavailable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requirement", "capability"],
+      "properties": {
+        "requirement": { "const": "not_required" },
+        "capability": { "const": "unavailable" }
+      }
+    },
+    "reference": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,127}$"
+    }
+  }
+}
