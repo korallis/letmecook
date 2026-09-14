@@ -1,0 +1,1736 @@
+{
+  "schema": 1,
+  "evidence": "retained synthetic pinned OpenCode/shared-router capture; not this adapter runtime",
+  "sharedSource": "70bacc54cce839e5d0b6e168dceee10977a4eecb",
+  "sourceSHA256": "307c02f9319f750fac39af5633ae6c324af1f2d0faef273fe2bb208209a29a74",
+  "sourceDigests": {
+    "experiments/inference-boundary/boundary.test.ts": "184fd24601e8c08d47007cd69e4d4d51b9458ee3ffb29a43ce439f2c7f386553",
+    "experiments/inference-boundary/boundary.ts": "6b75882c5c231497859fdea3dafb85f7e72693651f215cbedab5a1f5b695da86",
+    "experiments/inference-boundary/demo.ts": "448bef33591c5408942adb0ea4a44c6473bac90831962dcabbd339b102b91fa3",
+    "experiments/inference-boundary/fixture.ts": "acc2080543fe4bd228900bab5b0b57ccfb13aca690c1d0da27cf221bc1bd412b",
+    "experiments/inference-boundary/json.ts": "7f26eb4cf1d4544f55a7b5a7c69cb8dc41de8aaa0c8db13596f59e981944c180",
+    "experiments/inference-boundary/native-policy.ts": "8aaff2923d056e01f43bcdd9488767af8c1eeaed9950113936dba3f99d7b0fb5",
+    "experiments/inference-boundary/package-lock.json": "10a402c72fae1b535ebbe43a8cbb6ddae3e706b9a41346c2da6416a66be361ba",
+    "experiments/inference-boundary/package.json": "d7fbd0eb5deda9d574787e57b1018baef704edec2c1c0a8b0bf4843a5cb7ea6c",
+    "experiments/inference-boundary/policy.ts": "b46d88eaf66161549ec94c981a938460bab0fafec7b753158fbd59d3765f62da",
+    "experiments/inference-boundary/protocol.ts": "1f400302c160c5057feef21439ffe811d346817d5f8e88c754c9810d85324717",
+    "experiments/inference-boundary/prove.ts": "76bf6a73c17523e749d5389c10fcb4616708463e19e19fdba8f07a9168a7d750",
+    "experiments/inference-boundary/router-fixture.ts": "4efee902e2fe6646871074fe6b5b2e4d9b92988147280f3b83216026b4c2ce42",
+    "experiments/inference-boundary/router-gate.test.ts": "e2b65d7ccdad99c73f0cd34959558e499efed07eb6ee9d33938fc249b493b14c",
+    "experiments/inference-boundary/router-policy.ts": "ec0dfd8ffa5ee503740705846146edb2be7ab07e23ef3fd0c8a09cb7cfdbb049",
+    "experiments/inference-boundary/tsconfig.json": "e7fdc78d6c95f978eb355c76d005733baf15e891719f85e9a001e67fb65d435d",
+    "experiments/inference-boundary/types.ts": "adc3d0e81a1d47cd330af3ca56b41d49c297cf7166729d29a28f476bc59c23f9",
+    "experiments/inference-boundary/wait.ts": "c56f31eb6d68762bf4d083156a69d98ea01bc4942a5a05400a0de80f2d317e1d",
+    "experiments/router-authority-extension/chat-fixtures.mjs": "120115421a09892e1288a7e0de643e3d260f49245d546dc5e94364c858f3bbab",
+    "experiments/router-authority-extension/chat-terminal.test.mjs": "8ac6b6b98cf3b2ca6b80615a3d3c8b77d99b52195a17b329fe7c2820134e4d2a",
+    "experiments/router-authority-extension/evaluation-scope.test.mjs": "a29387a0fbbaea3e33c74b3c49d099b9fe8d4dbae779835f0f05fa7a5e2662a3",
+    "experiments/router-authority-extension/integration.mjs": "69e8508d32c991f12a14f1f305d3975581012a6d4915e58ce0ae8a6cc7c69c76",
+    "experiments/router-authority-extension/loader.mjs": "98e15a52182833efe85cbe475bc7701f02cc48f861b4a1848e3a6a4e513ec35a",
+    "experiments/router-authority-extension/native-fixtures.mjs": "f2cf11a973d0a8035830d8670ef1bed9dc9e8b6d577c3f4ba8df2aaccb68464d",
+    "experiments/router-authority-extension/native-integration.mjs": "c56a040002fadceec597efddf86397339af960f2c08864fa6c34a50f49122057",
+    "experiments/router-authority-extension/native-local-integration.mjs": "f99f1ff8f08204cbd78a0bf24060231fa23e82915e98e43806a8a987a9c1ff7b",
+    "experiments/router-authority-extension/overlay/authority.mjs": "7366145236535d11002734b8e3f4363f62a4c86de7dca736f5e011a70a1d369c",
+    "experiments/router-authority-extension/overlay/chat-terminal.mjs": "06200729149fa8930feedde594b595d4edfa5c65c9d70681ca0149fbec3b62ea",
+    "experiments/router-authority-extension/overlay/deployment-owner.mjs": "a3ef177075816bc6c4de14b943864e72a56a4bde12b8021b48032a7b4ed8e6d2",
+    "experiments/router-authority-extension/overlay/evaluation-scope.mjs": "01708987b54a7fc95e1a6839c87e88382f10a811ef2e6793730702ec1cdb5c4d",
+    "experiments/router-authority-extension/overlay/native-profile.mjs": "1f778a76a9c50e5d53f451aa235c9b7ffbc54094c300c4a767b724b5fa19ad30",
+    "experiments/router-authority-extension/overlay/native-responses.mjs": "7934314730bd353b700d90f52687efaf9c33add87238d2f9d8bf9131908f13f7",
+    "experiments/router-authority-extension/overlay/native-transport.mjs": "f151b6363016e5edff5273b9a16aea4eb6f1b8cc86c7dbff4e7ea562f76d8f6c",
+    "experiments/router-authority-extension/overlay/responses-terminal.mjs": "d4e2e792b631f4101db6dc7c0d679f3ace4aee428a2c70d386a34cf56bc415f1",
+    "experiments/router-authority-extension/package.json": "fdb85a11763c95e4ef2659e42fd33a7ac07736470eac2a36f023ecc407cb8983",
+    "experiments/router-authority-extension/patches.mjs": "0eeb206a3b22ffaf921e04277a8aeec271d21eb860a6f70c9dfcf9be7a69e168",
+    "experiments/router-authority-extension/policy-regressions.mjs": "cf72e099290577f244f597ad84280a2598fd2452855e4169ff87d4bb551712b7",
+    "experiments/router-authority-extension/request-regressions.mjs": "b9c0427ece24d2febba8132d65793e50da4cc4bc152832dc9f797f6e8742081d",
+    "experiments/router-authority-extension/responses-terminal.test.mjs": "a83e1ba8edce55efa2cbf67eb9bbf42b9798210c95a4db9c0b604b7b555a268c",
+    "experiments/router-authority-extension/run-in-container.mjs": "65d7b62d619030333ac92f5cbd820bc4fb2e1d74966c135b18a15f63f2856203",
+    "experiments/router-authority-extension/runtime-identity.json": "ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f",
+    "experiments/router-authority-extension/source-lock.json": "681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c",
+    "experiments/router-authority-extension/transport-failures.mjs": "e4c99a65df8dcb7ef18ec1e34378c3a0b27797e5551b900b83cbc9f1b834dc8e",
+    "experiments/router-authority-extension/upstream-dependencies.lock.json": "87551d12f5d946cc1c98cf8e01cb4ec7d632f67dff0fb3554d0f556881843d05",
+    "experiments/router-authority-extension/upstream-package.json": "670515d6f190581be53f98f7e4a8764ab0a1ac3bc60858466ebfaea59fc77de7",
+    "experiments/router-boundary-bridge/authority.ts": "82ed8513f5fc365dcf97758e7a0101657d8168e3f5899479bdd3722033ffe09c",
+    "experiments/router-boundary-bridge/gateway.ts": "2f41bc5cf3451f0f64990adfcecbd09e9db0ffb991f5b0e1d144558f26ba0a75",
+    "experiments/router-boundary-bridge/isolation.ts": "b246a46a4fc01c0edf744d68203f714ed51e6f7e9cbe221343bff9ab69c6f7da",
+    "experiments/router-boundary-bridge/lifecycle.test.ts": "b82d6e1efb971a7cb95a8f2f7529a4445eda99d13313c5806cba0209583a2a0f",
+    "experiments/router-boundary-bridge/lifecycle.ts": "fdf049ca8e7c7822ea5fcedbbd5b9aa1169160808224a837b4ddf5f77157942c",
+    "experiments/router-boundary-bridge/package-lock.json": "339f74d15342bdb7229b56031a415487222fa4dd27cbd505ee6157951b088d5e",
+    "experiments/router-boundary-bridge/package.json": "a0f80f8a760c8722abdbc0c5091a96f97ff93e26eb92c942906d237cecfeadef",
+    "experiments/router-boundary-bridge/run.ts": "051c823d28b545c50655bcbb3ddec97d7c98f32cbe12aa8ac4e48619a1fa7d62",
+    "experiments/router-boundary-bridge/supervise.ts": "fac191039364b7f197cc8ff1738919c62e58339ab610c0d1b8014793d403e4b2",
+    "experiments/router-boundary-bridge/tsconfig.json": "894336a6d0953d006061e64ac4ae1cf7606eca0cedc1ac78df576e6bbbcf7a4e",
+    "experiments/router-boundary-bridge/worker.ts": "8e5574feabab1ee2775526c373a89c48a2475235fb7666709dcfb1038b19941a",
+    "experiments/native-evaluation/deployment.test.mjs": "f016fb86eefb6d330d4488766c3729757acdb535528b28597cc89c9156e23dc2",
+    "experiments/native-evaluation/egress-helper/extract-payloads.ts": "8b425c75508b686b919271b13d69eb1015d1ca87ba14f5bd9c444091affc8b8d",
+    "experiments/native-evaluation/egress-helper/fetch-inputs.ts": "f66e00c1d86a244dd07e31a161fd344e471d2e0a3617db67f9260ed92c11012c",
+    "experiments/native-evaluation/egress-helper/manifest.json": "47fde9cb1a7919fb0d21b0b08d20745444249bf964418b8b3f2a3c9fbe4e4e64",
+    "experiments/native-evaluation/egress-helper/verify-dependencies.ts": "29b08bb141e6b821e7f9131785e3e1041a8a3994653a9c4c2467c5aa12fbe011",
+    "experiments/native-evaluation/egress.mjs": "f21ba7e8f052e3199e3bbd6b7093a70beb5cd916a566c87d53d3aac0ebe228bd",
+    "experiments/native-evaluation/fault-loader.mjs": "109d6f2166e9e73817e622cdf7bcede4803453f70a8b5999fefcd558c049f91e",
+    "experiments/native-evaluation/faults.mjs": "b4758bf9306a34c741ee72d4b4a3673681917a9b0e28d78df1f54b1b93aa61c6",
+    "experiments/native-evaluation/fixtures.mjs": "29770cf1b73f2f511dfec990397d92ac399b1b9a53f2e082babbc3fe35526928",
+    "experiments/native-evaluation/gateway.mjs": "ddc20962b75e03342008228e900f832a4c3e7ef55ef6e94a2b6cb377abfacb49",
+    "experiments/native-evaluation/kernel-probes.mjs": "f7277541b763b4ad975dd9c8e7ebd67e06b89d2b87f5c3fc2123f561737f8acd",
+    "experiments/native-evaluation/native.test.mjs": "4d2d491a0550a183de9a9eef46505e75721bebe11cfc72e5f8639ec2a422819a",
+    "experiments/native-evaluation/opencode-apply-patch.json": "f032f3b268ad95c8c2b541fb36d37378245e678389355fea64daf5e2aaa505b5",
+    "experiments/native-evaluation/opencode-settings.mjs": "e5aa410873e60f6b4d9376ce3fd9839c40ba9e3c95cc3019ea91966a2b2bf42f",
+    "experiments/native-evaluation/relay.mjs": "472c19e53713fe39f354f9d92822a18b6979d66da73e0fab63cde2d7cf6bca0b",
+    "experiments/native-evaluation/run-binary.ts": "5b1cebeb89a05e4525c52e87bfeb9987184e09a8ddb7ba023dac49912367f0e3",
+    "experiments/native-evaluation/run-egress.ts": "1bbdaf3cfc09d547e5f40acb1b54a2cde771c497796be87ab8395d04f00d65cd",
+    "experiments/native-evaluation/run-router.ts": "f5f6000e5ca37a367c5175ddd0199959a6e4ddb1acbca17b21323017c7598a52",
+    "experiments/native-evaluation/transport-proof.mjs": "cd66862ee26ee4feb00a26cea572ed8b658949d8cc4afb5c523729f4d47fae05",
+    "experiments/native-evaluation/worker.mjs": "2eea64455ba703833ec91d71dc24d9889dfc9d9913114d159984447b16687ccc"
+  },
+  "consumer": {
+    "event": "worker_finished",
+    "exit": {
+      "code": 0,
+      "signal": null
+    },
+    "captures": [
+      {
+        "path": "/v1/responses",
+        "headers": {
+          "content-type": "application/json",
+          "user-agent": "opencode/1.18.30 (linux 6.12.76-linuxkit; arm64) ai-sdk/provider-utils/4.0.40 runtime/bun/1.3.14",
+          "originator": "opencode",
+          "session-id": "ses_f5e703074ffePODkgivJQR5tAf",
+          "x-session-affinity": "ses_f5e703074ffePODkgivJQR5tAf",
+          "x-session-id": "ses_f5e703074ffePODkgivJQR5tAf",
+          "connection": "keep-alive",
+          "accept": "*/*",
+          "host": "127.0.0.1:8765",
+          "accept-encoding": "gzip, deflate, br, zstd",
+          "content-length": "6240"
+        },
+        "body": {
+          "model": "gpt-6-astra",
+          "input": [
+            {
+              "role": "developer",
+              "content": "You are an AI agent powered by OpenCode, a coding agent harness. Help the user accomplish their goals using the tools you have available.\n\n# Harness\n- Responses are rendered as GitHub-flavored Markdown.\n- `<system-reminder>` blocks are harness instructions, not user-authored content. Read and follow them.\n- Prefer parallelizing independent tool calls.\n- Do not use a skill based solely on keywords, superficial relevance, or its availability. Avoid re-reading skills already available in the conversation unless needed.\n- Prefer dedicated tools over shell commands; fall back to the shell when a tool cannot do what you need.\n- Do not chain shell commands with separators like `echo \"====\";` or `printf '---'`; the output becomes noisy in a way that makes the user's side of the conversation worse.\n\n# Communication\n\nState the main point clearly and early. Keep responses clear and concise, and avoid unnecessary technical jargon. Use only as much structure as needed, and include technical detail only when it helps the conversation. Use clear file paths when referring to files.\n\nWhen describing your work, avoid adding what you won't do, what will remain unchanged, or how you'll separate or categorize results. Do not introduce unprompted alternatives through framing such as \"X, not Y\" or \"This isn't about X. It's about Y.\"\n\n## Autonomy\n\nInfer the user's intent and your task scope from their instructions and the prior conversation context. You should bias towards action and carry out the user's intended task until it is completed. If the intent is unclear, progress towards the goal using the available information and ask for clarification while continuing independent work when possible.\n\nWhen the user's prompt indicates a request for action, such as \"can you...\", \"I want to...\", \"help me...\" and similar expressions, treat these as instructions to take action. Do not stop at acknowledging capability (e.g. \"Yes…\"), proposing a plan, or offering to continue. Do not settle for a partial or \"helpful enough\" solution to save time, effort, or tokens. Continue until the user's intended goal is fulfilled, even when it requires sustained work.\n\n## Intermediate Commentary\n\nAs you work, you send messages to the commentary channel. These are how you collaborate with the user while you work: stating assumptions and providing updates. Keep them concise and quickly scannable, and send them only when they add real information, such as a discovery, a tradeoff, or a blocker. Do not narrate routine reads, searches, or edits.\n\nBy default, treat new messages received during ongoing work as steering the active task rather than replacing it. Incorporate corrections and constraints, and answer questions briefly in commentary before continuing. Replace the task only when the user clearly cancels it or requests an incompatible objective.\n\nDo not put a final response, such as a blocking or clarifying question, in the commentary channel. The final answer must always be fully self-contained.\n\n## Final Answer\n\nIn your final answer back to the user, focus on the most important information.\n\n# Working in codebases\n\n- Keep changes consistent with the structure, naming, style, and patterns of the surrounding code.\n- Treat unfamiliar files or changes as potential user work and investigate before deleting or overwriting them.\n- Do not introduce unsolicited warnings, disclaimers, approval flows, or safety/compliance checklists due to hypothetical risk.\n- Do not write tests for reversible, low-impact changes or that mirror the implementation. If you do choose to verify your work with tests, make sure that the tests are meaningful and necessary to verify implementation.\n- Run tests appropriate to the change and complete required checks. Once those pass, broaden or repeat testing only when new changes, failures, or unresolved concerns justify it; otherwise, continue toward completing the task.\n\n\n# Delegation\n\nDo not spawn subagents unless the user or applicable AGENTS.md/skill instructions explicitly ask for subagents, delegation, or parallel agent work.\n\nYou are powered by the model named gpt-6-astra. The exact model ID is openai/gpt-6-astra\nHere is some useful information about the environment you are running in:\n<env>\n  Working directory: /work/repo\n  Workspace root folder: /work/repo\n  Is directory a git repo: yes\n  Platform: linux\n  Today's date: Mon Sep 14 2026\n</env>"
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "\"Change greeting.txt from hello to hello from probe.\""
+                }
+              ]
+            }
+          ],
+          "store": false,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "prompt_cache_key": "ses_f5e703074ffePODkgivJQR5tAf",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "tools": [
+            {
+              "type": "function",
+              "name": "apply_patch",
+              "description": "Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:\n\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n\nWithin that envelope, you get a sequence of file operations.\nYou MUST include a header to specify the action you are taking.\nEach operation starts with one of three headers:\n\n*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).\n*** Delete File: <path> - remove an existing file. Nothing follows.\n*** Update File: <path> - patch an existing file in place (optionally with a rename).\n\nExample patch:\n\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nIt is important to remember:\n\n- You must include a header with your intended action (Add/Delete/Update)\n- You must prefix new lines with `+` even when creating a new file\n",
+              "parameters": {
+                "properties": {
+                  "patchText": {
+                    "description": "The full patch text that describes all changes to be made",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "patchText"
+                ],
+                "type": "object"
+              },
+              "strict": false
+            }
+          ],
+          "tool_choice": "auto",
+          "stream": true
+        }
+      },
+      {
+        "path": "/v1/responses",
+        "headers": {
+          "content-type": "application/json",
+          "user-agent": "opencode/1.18.30 (linux 6.12.76-linuxkit; arm64) ai-sdk/provider-utils/4.0.40 runtime/bun/1.3.14",
+          "originator": "opencode",
+          "session-id": "ses_f5e703074ffePODkgivJQR5tAf",
+          "x-session-affinity": "ses_f5e703074ffePODkgivJQR5tAf",
+          "x-session-id": "ses_f5e703074ffePODkgivJQR5tAf",
+          "connection": "keep-alive",
+          "accept": "*/*",
+          "host": "127.0.0.1:8765",
+          "accept-encoding": "gzip, deflate, br, zstd",
+          "content-length": "6652"
+        },
+        "body": {
+          "model": "gpt-6-astra",
+          "input": [
+            {
+              "role": "developer",
+              "content": "You are an AI agent powered by OpenCode, a coding agent harness. Help the user accomplish their goals using the tools you have available.\n\n# Harness\n- Responses are rendered as GitHub-flavored Markdown.\n- `<system-reminder>` blocks are harness instructions, not user-authored content. Read and follow them.\n- Prefer parallelizing independent tool calls.\n- Do not use a skill based solely on keywords, superficial relevance, or its availability. Avoid re-reading skills already available in the conversation unless needed.\n- Prefer dedicated tools over shell commands; fall back to the shell when a tool cannot do what you need.\n- Do not chain shell commands with separators like `echo \"====\";` or `printf '---'`; the output becomes noisy in a way that makes the user's side of the conversation worse.\n\n# Communication\n\nState the main point clearly and early. Keep responses clear and concise, and avoid unnecessary technical jargon. Use only as much structure as needed, and include technical detail only when it helps the conversation. Use clear file paths when referring to files.\n\nWhen describing your work, avoid adding what you won't do, what will remain unchanged, or how you'll separate or categorize results. Do not introduce unprompted alternatives through framing such as \"X, not Y\" or \"This isn't about X. It's about Y.\"\n\n## Autonomy\n\nInfer the user's intent and your task scope from their instructions and the prior conversation context. You should bias towards action and carry out the user's intended task until it is completed. If the intent is unclear, progress towards the goal using the available information and ask for clarification while continuing independent work when possible.\n\nWhen the user's prompt indicates a request for action, such as \"can you...\", \"I want to...\", \"help me...\" and similar expressions, treat these as instructions to take action. Do not stop at acknowledging capability (e.g. \"Yes…\"), proposing a plan, or offering to continue. Do not settle for a partial or \"helpful enough\" solution to save time, effort, or tokens. Continue until the user's intended goal is fulfilled, even when it requires sustained work.\n\n## Intermediate Commentary\n\nAs you work, you send messages to the commentary channel. These are how you collaborate with the user while you work: stating assumptions and providing updates. Keep them concise and quickly scannable, and send them only when they add real information, such as a discovery, a tradeoff, or a blocker. Do not narrate routine reads, searches, or edits.\n\nBy default, treat new messages received during ongoing work as steering the active task rather than replacing it. Incorporate corrections and constraints, and answer questions briefly in commentary before continuing. Replace the task only when the user clearly cancels it or requests an incompatible objective.\n\nDo not put a final response, such as a blocking or clarifying question, in the commentary channel. The final answer must always be fully self-contained.\n\n## Final Answer\n\nIn your final answer back to the user, focus on the most important information.\n\n# Working in codebases\n\n- Keep changes consistent with the structure, naming, style, and patterns of the surrounding code.\n- Treat unfamiliar files or changes as potential user work and investigate before deleting or overwriting them.\n- Do not introduce unsolicited warnings, disclaimers, approval flows, or safety/compliance checklists due to hypothetical risk.\n- Do not write tests for reversible, low-impact changes or that mirror the implementation. If you do choose to verify your work with tests, make sure that the tests are meaningful and necessary to verify implementation.\n- Run tests appropriate to the change and complete required checks. Once those pass, broaden or repeat testing only when new changes, failures, or unresolved concerns justify it; otherwise, continue toward completing the task.\n\n\n# Delegation\n\nDo not spawn subagents unless the user or applicable AGENTS.md/skill instructions explicitly ask for subagents, delegation, or parallel agent work.\n\nYou are powered by the model named gpt-6-astra. The exact model ID is openai/gpt-6-astra\nHere is some useful information about the environment you are running in:\n<env>\n  Working directory: /work/repo\n  Workspace root folder: /work/repo\n  Is directory a git repo: yes\n  Platform: linux\n  Today's date: Mon Sep 14 2026\n</env>"
+            },
+            {
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "\"Change greeting.txt from hello to hello from probe.\""
+                }
+              ]
+            },
+            {
+              "type": "reasoning",
+              "encrypted_content": "synthetic-opaque-reasoning",
+              "summary": []
+            },
+            {
+              "type": "function_call",
+              "call_id": "call_synthetic",
+              "name": "apply_patch",
+              "arguments": "{\"patchText\":\"*** Begin Patch\\n*** Update File: greeting.txt\\n@@\\n-hello\\n+hello from probe\\n*** End Patch\"}"
+            },
+            {
+              "type": "function_call_output",
+              "call_id": "call_synthetic",
+              "output": "Success. Updated the following files:\nM greeting.txt"
+            }
+          ],
+          "store": false,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "prompt_cache_key": "ses_f5e703074ffePODkgivJQR5tAf",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "tools": [
+            {
+              "type": "function",
+              "name": "apply_patch",
+              "description": "Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:\n\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n\nWithin that envelope, you get a sequence of file operations.\nYou MUST include a header to specify the action you are taking.\nEach operation starts with one of three headers:\n\n*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).\n*** Delete File: <path> - remove an existing file. Nothing follows.\n*** Update File: <path> - patch an existing file in place (optionally with a rename).\n\nExample patch:\n\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nIt is important to remember:\n\n- You must include a header with your intended action (Add/Delete/Update)\n- You must prefix new lines with `+` even when creating a new file\n",
+              "parameters": {
+                "properties": {
+                  "patchText": {
+                    "description": "The full patch text that describes all changes to be made",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "patchText"
+                ],
+                "type": "object"
+              },
+              "strict": false
+            }
+          ],
+          "tool_choice": "auto",
+          "stream": true
+        }
+      }
+    ],
+    "output": "{\"type\":\"step_start\",\"timestamp\":1789416953764,\"sessionID\":\"ses_f5e703074ffePODkgivJQR5tAf\",\"part\":{\"id\":\"prt_0a18fd79b001rxPiGOmypBY4Or\",\"messageID\":\"msg_0a18fd43a001sdDCUio0whWkoF\",\"sessionID\":\"ses_f5e703074ffePODkgivJQR5tAf\",\"type\":\"step-start\"}}\n{\"type\":\"tool_use\",\"timestamp\":1789416953774,\"sessionID\":\"ses_f5e703074ffePODkgivJQR5tAf\",\"part\":{\"type\":\"tool\",\"tool\":\"apply_patch\",\"callID\":\"call_synthetic\",\"state\":{\"status\":\"completed\",\"input\":{\"patchText\":\"*** Begin Patch\\n*** Update File: greeting.txt\\n@@\\n-hello\\n+hello from probe\\n*** End Patch\"},\"output\":\"Success. Updated the following files:\\nM greeting.txt\",\"metadata\":{\"diff\":\"Index: /work/repo/greeting.txt\\n===================================================================\\n--- /work/repo/greeting.txt\\n+++ /work/repo/greeting.txt\\n@@ -1,1 +1,1 @@\\n-hello\\n+hello from probe\\n\\n\",\"files\":[{\"filePath\":\"/work/repo/greeting.txt\",\"relativePath\":\"greeting.txt\",\"type\":\"update\",\"patch\":\"Index: /work/repo/greeting.txt\\n===================================================================\\n--- /work/repo/greeting.txt\\n+++ /work/repo/greeting.txt\\n@@ -1,1 +1,1 @@\\n-hello\\n+hello from probe\\n\",\"additions\":1,\"deletions\":1}],\"diagnostics\":{},\"truncated\":false},\"title\":\"Success. Updated the following files:\\nM greeting.txt\",\"time\":{\"start\":1789416953762,\"end\":1789416953768}},\"metadata\":{\"openai\":{\"itemId\":\"fc_synthetic\"}},\"id\":\"prt_0a18fd79e001TQxq46xtOSw4HZ\",\"sessionID\":\"ses_f5e703074ffePODkgivJQR5tAf\",\"messageID\":\"msg_0a18fd43a001sdDCUio0whWkoF\"}}\n{\"type\":\"step_finish\",\"timestamp\":1789416953774,\"sessionID\":\"ses_f5e703074ffePODkgivJQR5tAf\",\"part\":{\"id\":\"prt_0a18fd7a9001iICJAQ5ROTEX16\",\"reason\":\"tool-calls\",\"messageID\":\"msg_0a18fd43a001sdDCUio0whWkoF\",\"sessionID\":\"ses_f5e703074ffePODkgivJQR5tAf\",\"type\":\"step-finish\",\"tokens\":{\"total\":2,\"input\":1,\"output\":1,\"reasoning\":0,\"cache\":{\"write\":0,\"read\":0}},\"cost\":0.00006}}\n{\"type\":\"step_start\",\"timestamp\":1789416953866,\"sessionID\":\"ses_f5e703074ffePODkgivJQR5tAf\",\"part\":{\"id\":\"prt_0a18fd7cf001M4kcXVeGTyoGzP\",\"messageID\":\"msg_0a18fd7ad001BojznLONw5akTx\",\"sessionID\":\"ses_f5e703074ffePODkgivJQR5tAf\",\"type\":\"step-start\"}}\n{\"type\":\"text\",\"timestamp\":1789416953866,\"sessionID\":\"ses_f5e703074ffePODkgivJQR5tAf\",\"part\":{\"id\":\"prt_0a18fd7d2001WvbaXxrnrjb7HI\",\"messageID\":\"msg_0a18fd7ad001BojznLONw5akTx\",\"sessionID\":\"ses_f5e703074ffePODkgivJQR5tAf\",\"type\":\"text\",\"text\":\"Completed 🌍 café.\",\"time\":{\"start\":1789416953810,\"end\":1789416953859},\"metadata\":{\"openai\":{\"itemId\":\"msg_synthetic\"}}}}\n{\"type\":\"step_finish\",\"timestamp\":1789416953866,\"sessionID\":\"ses_f5e703074ffePODkgivJQR5tAf\",\"part\":{\"id\":\"prt_0a18fd805001fxM3EnhRVz0RtO\",\"reason\":\"stop\",\"messageID\":\"msg_0a18fd7ad001BojznLONw5akTx\",\"sessionID\":\"ses_f5e703074ffePODkgivJQR5tAf\",\"type\":\"step-finish\",\"tokens\":{\"total\":2,\"input\":1,\"output\":1,\"reasoning\":0,\"cache\":{\"write\":0,\"read\":0}},\"cost\":0.00006}}\n",
+    "artifact": {
+      "path": "greeting.txt",
+      "content": "hello from probe\n"
+    },
+    "containment": {
+      "tcpDenied": true,
+      "deniedPaths": [
+        "/state",
+        "/control/gateway.sock",
+        "/egress/provider.sock",
+        "/private/config.json",
+        "/router-source",
+        "/probe",
+        "/var/run/docker.sock",
+        "/root/.codex/auth.json",
+        "/Users"
+      ],
+      "workerOAuth": false,
+      "providerCredentials": false
+    },
+    "config": {
+      "enabled_providers": [
+        "openai"
+      ],
+      "model": "openai/gpt-6-astra",
+      "small_model": "openai/gpt-6-astra",
+      "share": "disabled",
+      "autoupdate": false,
+      "snapshot": false,
+      "formatter": false,
+      "lsp": false,
+      "mcp": {},
+      "plugin": [],
+      "instructions": [],
+      "permission": {
+        "*": "deny",
+        "edit": "allow"
+      },
+      "provider": {
+        "openai": {
+          "npm": "@ai-sdk/openai",
+          "name": "Native boundary",
+          "options": {
+            "experimentalWebSockets": false,
+            "baseURL": "http://127.0.0.1:8765/v1",
+            "apiKey": "<boundary-grant>"
+          },
+          "models": {
+            "gpt-6-astra": {
+              "name": "Astra",
+              "reasoning": true,
+              "options": {
+                "reasoningEffort": "xhigh",
+                "reasoningSummary": "auto",
+                "include": [
+                  "reasoning.encrypted_content"
+                ],
+                "store": false
+              },
+              "tool_call": true,
+              "limit": {
+                "context": 8192,
+                "output": 128
+              },
+              "modalities": {
+                "input": [
+                  "text"
+                ],
+                "output": [
+                  "text"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "experimental": {
+        "openTelemetry": false
+      }
+    },
+    "environment": {
+      "PATH": "/usr/local/bin:/usr/bin:/bin",
+      "HOME": "/work",
+      "XDG_CONFIG_HOME": "/work/config",
+      "XDG_DATA_HOME": "/work/data",
+      "XDG_CACHE_HOME": "/work/cache",
+      "XDG_STATE_HOME": "/work/state",
+      "OPENCODE_CONFIG": "/work/config.json",
+      "OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX": "128",
+      "OPENCODE_EXPERIMENTAL_NATIVE_LLM": "false",
+      "OPENCODE_DISABLE_PROJECT_CONFIG": "1",
+      "OPENCODE_PURE": "1",
+      "OPENCODE_DISABLE_EXTERNAL_SKILLS": "1",
+      "OPENCODE_DISABLE_CLAUDE_CODE": "1",
+      "OPENCODE_DISABLE_LSP_DOWNLOAD": "1",
+      "OPENCODE_DISABLE_MODELS_FETCH": "1",
+      "OPENCODE_DISABLE_AUTOUPDATE": "1",
+      "OPENCODE_DISABLE_AUTOCOMPACT": "1",
+      "OPENCODE_EXPERIMENTAL_DISABLE_FILEWATCHER": "1"
+    }
+  },
+  "gateway": {
+    "schema": 1,
+    "packetDigest": "ae7e4f0672c524ba1345a084206ccfade5471bc70c89383ba80093b071d0ec0a",
+    "evidence": "synthetic",
+    "observed": {
+      "sends": [
+        {
+          "path": "/responses",
+          "body": {
+            "model": "gpt-6-astra",
+            "input": [
+              {
+                "role": "developer",
+                "content": "You are an AI agent powered by OpenCode, a coding agent harness. Help the user accomplish their goals using the tools you have available.\n\n# Harness\n- Responses are rendered as GitHub-flavored Markdown.\n- `<system-reminder>` blocks are harness instructions, not user-authored content. Read and follow them.\n- Prefer parallelizing independent tool calls.\n- Do not use a skill based solely on keywords, superficial relevance, or its availability. Avoid re-reading skills already available in the conversation unless needed.\n- Prefer dedicated tools over shell commands; fall back to the shell when a tool cannot do what you need.\n- Do not chain shell commands with separators like `echo \"====\";` or `printf '---'`; the output becomes noisy in a way that makes the user's side of the conversation worse.\n\n# Communication\n\nState the main point clearly and early. Keep responses clear and concise, and avoid unnecessary technical jargon. Use only as much structure as needed, and include technical detail only when it helps the conversation. Use clear file paths when referring to files.\n\nWhen describing your work, avoid adding what you won't do, what will remain unchanged, or how you'll separate or categorize results. Do not introduce unprompted alternatives through framing such as \"X, not Y\" or \"This isn't about X. It's about Y.\"\n\n## Autonomy\n\nInfer the user's intent and your task scope from their instructions and the prior conversation context. You should bias towards action and carry out the user's intended task until it is completed. If the intent is unclear, progress towards the goal using the available information and ask for clarification while continuing independent work when possible.\n\nWhen the user's prompt indicates a request for action, such as \"can you...\", \"I want to...\", \"help me...\" and similar expressions, treat these as instructions to take action. Do not stop at acknowledging capability (e.g. \"Yes…\"), proposing a plan, or offering to continue. Do not settle for a partial or \"helpful enough\" solution to save time, effort, or tokens. Continue until the user's intended goal is fulfilled, even when it requires sustained work.\n\n## Intermediate Commentary\n\nAs you work, you send messages to the commentary channel. These are how you collaborate with the user while you work: stating assumptions and providing updates. Keep them concise and quickly scannable, and send them only when they add real information, such as a discovery, a tradeoff, or a blocker. Do not narrate routine reads, searches, or edits.\n\nBy default, treat new messages received during ongoing work as steering the active task rather than replacing it. Incorporate corrections and constraints, and answer questions briefly in commentary before continuing. Replace the task only when the user clearly cancels it or requests an incompatible objective.\n\nDo not put a final response, such as a blocking or clarifying question, in the commentary channel. The final answer must always be fully self-contained.\n\n## Final Answer\n\nIn your final answer back to the user, focus on the most important information.\n\n# Working in codebases\n\n- Keep changes consistent with the structure, naming, style, and patterns of the surrounding code.\n- Treat unfamiliar files or changes as potential user work and investigate before deleting or overwriting them.\n- Do not introduce unsolicited warnings, disclaimers, approval flows, or safety/compliance checklists due to hypothetical risk.\n- Do not write tests for reversible, low-impact changes or that mirror the implementation. If you do choose to verify your work with tests, make sure that the tests are meaningful and necessary to verify implementation.\n- Run tests appropriate to the change and complete required checks. Once those pass, broaden or repeat testing only when new changes, failures, or unresolved concerns justify it; otherwise, continue toward completing the task.\n\n\n# Delegation\n\nDo not spawn subagents unless the user or applicable AGENTS.md/skill instructions explicitly ask for subagents, delegation, or parallel agent work.\n\nYou are powered by the model named gpt-6-astra. The exact model ID is openai/gpt-6-astra\nHere is some useful information about the environment you are running in:\n<env>\n  Working directory: /work/repo\n  Workspace root folder: /work/repo\n  Is directory a git repo: yes\n  Platform: linux\n  Today's date: Mon Sep 14 2026\n</env>"
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "\"Change greeting.txt from hello to hello from probe.\""
+                  }
+                ]
+              }
+            ],
+            "store": false,
+            "include": [
+              "reasoning.encrypted_content"
+            ],
+            "prompt_cache_key": "ses_f5e703074ffePODkgivJQR5tAf",
+            "tools": [
+              {
+                "type": "function",
+                "name": "apply_patch",
+                "description": "Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:\n\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n\nWithin that envelope, you get a sequence of file operations.\nYou MUST include a header to specify the action you are taking.\nEach operation starts with one of three headers:\n\n*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).\n*** Delete File: <path> - remove an existing file. Nothing follows.\n*** Update File: <path> - patch an existing file in place (optionally with a rename).\n\nExample patch:\n\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nIt is important to remember:\n\n- You must include a header with your intended action (Add/Delete/Update)\n- You must prefix new lines with `+` even when creating a new file\n",
+                "parameters": {
+                  "properties": {
+                    "patchText": {
+                      "description": "The full patch text that describes all changes to be made",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "patchText"
+                  ],
+                  "type": "object"
+                }
+              }
+            ],
+            "tool_choice": "auto",
+            "stream": true,
+            "instructions": "You are Codex, based on GPT-5. You are running as a coding agent in the Codex CLI on a user's computer.\n\n## General\n\n- When searching for text or files, prefer using `rg` or `rg --files` respectively because `rg` is much faster than alternatives like `grep`. (If the `rg` command is not found, then use alternatives.)\n\n## Editing constraints\n\n- Default to ASCII when editing or creating files. Only introduce non-ASCII or other Unicode characters when there is a clear justification and the file already uses them.\n- Add succinct code comments that explain what is going on if code is not self-explanatory. You should not add comments like \"Assigns the value to the variable\", but a brief comment might be useful ahead of a complex code block that the user would otherwise have to spend time parsing out. Usage of these comments should be rare.\n- Try to use apply_patch for single file edits, but it is fine to explore other options to make the edit if it does not work well. Do not use apply_patch for changes that are auto-generated (i.e. generating package.json or running a lint or format command like gofmt) or when scripting is more efficient (such as search and replacing a string across a codebase).\n- You may be in a dirty git worktree.\n    * NEVER revert existing changes you did not make unless explicitly requested, since these changes were made by the user.\n    * If asked to make a commit or code edits and there are unrelated changes to your work or changes that you didn't make in those files, don't revert those changes.\n    * If the changes are in files you've touched recently, you should read carefully and understand how you can work with the changes rather than reverting them.\n    * If the changes are in unrelated files, just ignore them and don't revert them.\n- Do not amend a commit unless explicitly requested to do so.\n- While you are working, you might notice unexpected changes that you didn't make. If this happens, STOP IMMEDIATELY and ask the user how they would like to proceed.\n- **NEVER** use destructive commands like `git reset --hard` or `git checkout --` unless specifically requested or approved by the user.\n\n## Plan tool\n\nWhen using the planning tool:\n- Skip using the planning tool for straightforward tasks (roughly the easiest 25%).\n- Do not make single-step plans.\n- When you made a plan, update it after having performed one of the sub-tasks that you shared on the plan.\n\n## Codex CLI harness, sandboxing, and approvals\n\nThe Codex CLI harness supports several different configurations for sandboxing and escalation approvals that the user can choose from.\n\nFilesystem sandboxing defines which files can be read or written. The options for `sandbox_mode` are:\n- **read-only**: The sandbox only permits reading files.\n- **workspace-write**: The sandbox permits reading files, and editing files in `cwd` and `writable_roots`. Editing files in other directories requires approval.\n- **danger-full-access**: No filesystem sandboxing - all commands are permitted.\n\nNetwork sandboxing defines whether network can be accessed without approval. Options for `network_access` are:\n- **restricted**: Requires approval\n- **enabled**: No approval needed\n\nApprovals are your mechanism to get user consent to run shell commands without the sandbox. Possible configuration options for `approval_policy` are\n- **untrusted**: The harness will escalate most commands for user approval, apart from a limited allowlist of safe \"read\" commands.\n- **on-failure**: The harness will allow all commands to run in the sandbox (if enabled), and failures will be escalated to the user for approval to run again without the sandbox.\n- **on-request**: Commands will be run in the sandbox by default, and you can specify in your tool call if you want to escalate a command to run without sandboxing. (Note that this mode is not always available. If it is, you'll see parameters for it in the `shell` command description.)\n- **never**: This is a non-interactive mode where you may NEVER ask the user for approval to run commands. Instead, you must always persist and work around constraints to solve the task for the user. You MUST do your utmost best to finish the task and validate your work before yielding. If this mode is paired with `danger-full-access`, take advantage of it to deliver the best outcome for the user. Further, in this mode, your default testing philosophy is overridden: Even if you don't see local patterns for testing, you may add tests and scripts to validate your work. Just remove them before yielding.\n\nWhen you are running with `approval_policy == on-request`, and sandboxing enabled, here are scenarios where you'll need to request approval:\n- You need to run a command that writes to a directory that requires it (e.g. running tests that write to /var)\n- You need to run a GUI app (e.g., open/xdg-open/osascript) to open browsers or files.\n- You are running sandboxed and need to run a command that requires network access (e.g. installing packages)\n- If you run a command that is important to solving the user's query, but it fails because of sandboxing, rerun the command with approval. ALWAYS proceed to use the `sandbox_permissions` and `justification` parameters - do not message the user before requesting approval for the command.\n- You are about to take a potentially destructive action such as an `rm` or `git reset` that the user did not explicitly ask for\n- (for all of these, you should weigh alternative paths that do not require approval)\n\nWhen `sandbox_mode` is set to read-only, you'll need to request approval for any command that isn't a read.\n\nYou will be told what filesystem sandboxing, network sandboxing, and approval mode are active in a developer or user message. If you are not told about this, assume that you are running with workspace-write, network sandboxing enabled, and approval on-failure.\n\nAlthough they introduce friction to the user because your work is paused until the user responds, you should leverage them when necessary to accomplish important work. If the completing the task requires escalated permissions, Do not let these settings or the sandbox deter you from attempting to accomplish the user's task unless it is set to \"never\", in which case never ask for approvals.\n\nWhen requesting approval to execute a command that will require escalated privileges:\n  - Provide the `sandbox_permissions` parameter with the value `\"require_escalated\"`\n  - Include a short, 1 sentence explanation for why you need escalated permissions in the justification parameter\n\n## Special user requests\n\n- If the user makes a simple request (such as asking for the time) which you can fulfill by running a terminal command (such as `date`), you should do so.\n- If the user asks for a \"review\", default to a code review mindset: prioritise identifying bugs, risks, behavioural regressions, and missing tests. Findings must be the primary focus of the response - keep summaries or overviews brief and only after enumerating the issues. Present findings first (ordered by severity with file/line references), follow with open questions or assumptions, and offer a change-summary only as a secondary detail. If no findings are discovered, state that explicitly and mention any residual risks or testing gaps.\n\n## Frontend tasks\nWhen doing frontend design tasks, avoid collapsing into \"AI slop\" or safe, average-looking layouts.\nAim for interfaces that feel intentional, bold, and a bit surprising.\n- Typography: Use expressive, purposeful fonts and avoid default stacks (Inter, Roboto, Arial, system).\n- Color & Look: Choose a clear visual direction; define CSS variables; avoid purple-on-white defaults. No purple bias or dark mode bias.\n- Motion: Use a few meaningful animations (page-load, staggered reveals) instead of generic micro-motions.\n- Background: Don't rely on flat, single-color backgrounds; use gradients, shapes, or subtle patterns to build atmosphere.\n- Overall: Avoid boilerplate layouts and interchangeable UI patterns. Vary themes, type families, and visual languages across outputs.\n- Ensure the page loads properly on both desktop and mobile\n\nException: If working within an existing website or design system, preserve the established patterns, structure, and visual language.\n\n## Presenting your work and final message\n\nYou are producing plain text that will later be styled by the CLI. Follow these rules exactly. Formatting should make results easy to scan, but not feel mechanical. Use judgment to decide how much structure adds value.\n\n- Default: be very concise; friendly coding teammate tone.\n- Ask only when needed; suggest ideas; mirror the user's style.\n- For substantial work, summarize clearly; follow final‑answer formatting.\n- Skip heavy formatting for simple confirmations.\n- Don't dump large files you've written; reference paths only.\n- No \"save/copy this file\" - User is on the same machine.\n- Offer logical next steps (tests, commits, build) briefly; add verify steps if you couldn't do something.\n- For code changes:\n  * Lead with a quick explanation of the change, and then give more details on the context covering where and why a change was made. Do not start this explanation with \"summary\", just jump right in.\n  * If there are natural next steps the user may want to take, suggest them at the end of your response. Do not make suggestions if there are no natural next steps.\n  * When suggesting multiple options, use numeric lists for the suggestions so the user can quickly respond with a single number.\n- The user does not command execution outputs. When asked to show the output of a command (e.g. `git show`), relay the important details in your answer or summarize the key lines so the user understands the result.\n\n### Final answer structure and style guidelines\n\n- Plain text; CLI handles styling. Use structure only when it helps scanability.\n- Headers: optional; short Title Case (1-3 words) wrapped in **…**; no blank line before the first bullet; add only if they truly help.\n- Bullets: use - ; merge related points; keep to one line when possible; 4–6 per list ordered by importance; keep phrasing consistent.\n- Monospace: backticks for commands/paths/env vars/code ids and inline examples; use for literal keyword bullets; never combine with **.\n- Code samples or multi-line snippets should be wrapped in fenced code blocks; include an info string as often as possible.\n- Structure: group related bullets; order sections general → specific → supporting; for subsections, start with a bolded keyword bullet, then items; match complexity to the task.\n- Tone: collaborative, concise, factual; present tense, active voice; self‑contained; no \"above/below\"; parallel wording.\n- Don'ts: no nested bullets/hierarchies; no ANSI codes; don't cram unrelated keywords; keep keyword lists short—wrap/reformat if long; avoid naming formatting styles in answers.\n- Adaptation: code explanations → precise, structured with code refs; simple tasks → lead with outcome; big changes → logical walkthrough + rationale + next actions; casual one-offs → plain sentences, no headers/bullets.\n- File References: When referencing files in your response follow the below rules:\n  * Use inline code to make file paths clickable.\n  * Each reference should have a stand alone path. Even if it's the same file.\n  * Accepted: absolute, workspace‑relative, a/ or b/ diff prefixes, or bare filename/suffix.\n  * Optionally include line/column (1‑based): :line[:column] or #Lline[Ccolumn] (column defaults to 1).\n  * Do not use URIs like file://, vscode://, or https://.\n  * Do not provide range of lines\n  * Examples: src/app.ts, src/app.ts:42, b/server/index.js#L10, C:\\repo\\project\\main.rs:12:5",
+            "reasoning": {
+              "effort": "xhigh",
+              "summary": "auto"
+            }
+          }
+        },
+        {
+          "path": "/responses",
+          "body": {
+            "model": "gpt-6-astra",
+            "input": [
+              {
+                "role": "developer",
+                "content": "You are an AI agent powered by OpenCode, a coding agent harness. Help the user accomplish their goals using the tools you have available.\n\n# Harness\n- Responses are rendered as GitHub-flavored Markdown.\n- `<system-reminder>` blocks are harness instructions, not user-authored content. Read and follow them.\n- Prefer parallelizing independent tool calls.\n- Do not use a skill based solely on keywords, superficial relevance, or its availability. Avoid re-reading skills already available in the conversation unless needed.\n- Prefer dedicated tools over shell commands; fall back to the shell when a tool cannot do what you need.\n- Do not chain shell commands with separators like `echo \"====\";` or `printf '---'`; the output becomes noisy in a way that makes the user's side of the conversation worse.\n\n# Communication\n\nState the main point clearly and early. Keep responses clear and concise, and avoid unnecessary technical jargon. Use only as much structure as needed, and include technical detail only when it helps the conversation. Use clear file paths when referring to files.\n\nWhen describing your work, avoid adding what you won't do, what will remain unchanged, or how you'll separate or categorize results. Do not introduce unprompted alternatives through framing such as \"X, not Y\" or \"This isn't about X. It's about Y.\"\n\n## Autonomy\n\nInfer the user's intent and your task scope from their instructions and the prior conversation context. You should bias towards action and carry out the user's intended task until it is completed. If the intent is unclear, progress towards the goal using the available information and ask for clarification while continuing independent work when possible.\n\nWhen the user's prompt indicates a request for action, such as \"can you...\", \"I want to...\", \"help me...\" and similar expressions, treat these as instructions to take action. Do not stop at acknowledging capability (e.g. \"Yes…\"), proposing a plan, or offering to continue. Do not settle for a partial or \"helpful enough\" solution to save time, effort, or tokens. Continue until the user's intended goal is fulfilled, even when it requires sustained work.\n\n## Intermediate Commentary\n\nAs you work, you send messages to the commentary channel. These are how you collaborate with the user while you work: stating assumptions and providing updates. Keep them concise and quickly scannable, and send them only when they add real information, such as a discovery, a tradeoff, or a blocker. Do not narrate routine reads, searches, or edits.\n\nBy default, treat new messages received during ongoing work as steering the active task rather than replacing it. Incorporate corrections and constraints, and answer questions briefly in commentary before continuing. Replace the task only when the user clearly cancels it or requests an incompatible objective.\n\nDo not put a final response, such as a blocking or clarifying question, in the commentary channel. The final answer must always be fully self-contained.\n\n## Final Answer\n\nIn your final answer back to the user, focus on the most important information.\n\n# Working in codebases\n\n- Keep changes consistent with the structure, naming, style, and patterns of the surrounding code.\n- Treat unfamiliar files or changes as potential user work and investigate before deleting or overwriting them.\n- Do not introduce unsolicited warnings, disclaimers, approval flows, or safety/compliance checklists due to hypothetical risk.\n- Do not write tests for reversible, low-impact changes or that mirror the implementation. If you do choose to verify your work with tests, make sure that the tests are meaningful and necessary to verify implementation.\n- Run tests appropriate to the change and complete required checks. Once those pass, broaden or repeat testing only when new changes, failures, or unresolved concerns justify it; otherwise, continue toward completing the task.\n\n\n# Delegation\n\nDo not spawn subagents unless the user or applicable AGENTS.md/skill instructions explicitly ask for subagents, delegation, or parallel agent work.\n\nYou are powered by the model named gpt-6-astra. The exact model ID is openai/gpt-6-astra\nHere is some useful information about the environment you are running in:\n<env>\n  Working directory: /work/repo\n  Workspace root folder: /work/repo\n  Is directory a git repo: yes\n  Platform: linux\n  Today's date: Mon Sep 14 2026\n</env>"
+              },
+              {
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "\"Change greeting.txt from hello to hello from probe.\""
+                  }
+                ]
+              },
+              {
+                "type": "reasoning",
+                "encrypted_content": "synthetic-opaque-reasoning",
+                "summary": []
+              },
+              {
+                "type": "function_call",
+                "call_id": "call_synthetic",
+                "name": "apply_patch",
+                "arguments": "{\"patchText\":\"*** Begin Patch\\n*** Update File: greeting.txt\\n@@\\n-hello\\n+hello from probe\\n*** End Patch\"}"
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call_synthetic",
+                "output": "Success. Updated the following files:\nM greeting.txt"
+              }
+            ],
+            "store": false,
+            "include": [
+              "reasoning.encrypted_content"
+            ],
+            "prompt_cache_key": "ses_f5e703074ffePODkgivJQR5tAf",
+            "tools": [
+              {
+                "type": "function",
+                "name": "apply_patch",
+                "description": "Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:\n\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n\nWithin that envelope, you get a sequence of file operations.\nYou MUST include a header to specify the action you are taking.\nEach operation starts with one of three headers:\n\n*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).\n*** Delete File: <path> - remove an existing file. Nothing follows.\n*** Update File: <path> - patch an existing file in place (optionally with a rename).\n\nExample patch:\n\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nIt is important to remember:\n\n- You must include a header with your intended action (Add/Delete/Update)\n- You must prefix new lines with `+` even when creating a new file\n",
+                "parameters": {
+                  "properties": {
+                    "patchText": {
+                      "description": "The full patch text that describes all changes to be made",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "patchText"
+                  ],
+                  "type": "object"
+                }
+              }
+            ],
+            "tool_choice": "auto",
+            "stream": true,
+            "instructions": "You are Codex, based on GPT-5. You are running as a coding agent in the Codex CLI on a user's computer.\n\n## General\n\n- When searching for text or files, prefer using `rg` or `rg --files` respectively because `rg` is much faster than alternatives like `grep`. (If the `rg` command is not found, then use alternatives.)\n\n## Editing constraints\n\n- Default to ASCII when editing or creating files. Only introduce non-ASCII or other Unicode characters when there is a clear justification and the file already uses them.\n- Add succinct code comments that explain what is going on if code is not self-explanatory. You should not add comments like \"Assigns the value to the variable\", but a brief comment might be useful ahead of a complex code block that the user would otherwise have to spend time parsing out. Usage of these comments should be rare.\n- Try to use apply_patch for single file edits, but it is fine to explore other options to make the edit if it does not work well. Do not use apply_patch for changes that are auto-generated (i.e. generating package.json or running a lint or format command like gofmt) or when scripting is more efficient (such as search and replacing a string across a codebase).\n- You may be in a dirty git worktree.\n    * NEVER revert existing changes you did not make unless explicitly requested, since these changes were made by the user.\n    * If asked to make a commit or code edits and there are unrelated changes to your work or changes that you didn't make in those files, don't revert those changes.\n    * If the changes are in files you've touched recently, you should read carefully and understand how you can work with the changes rather than reverting them.\n    * If the changes are in unrelated files, just ignore them and don't revert them.\n- Do not amend a commit unless explicitly requested to do so.\n- While you are working, you might notice unexpected changes that you didn't make. If this happens, STOP IMMEDIATELY and ask the user how they would like to proceed.\n- **NEVER** use destructive commands like `git reset --hard` or `git checkout --` unless specifically requested or approved by the user.\n\n## Plan tool\n\nWhen using the planning tool:\n- Skip using the planning tool for straightforward tasks (roughly the easiest 25%).\n- Do not make single-step plans.\n- When you made a plan, update it after having performed one of the sub-tasks that you shared on the plan.\n\n## Codex CLI harness, sandboxing, and approvals\n\nThe Codex CLI harness supports several different configurations for sandboxing and escalation approvals that the user can choose from.\n\nFilesystem sandboxing defines which files can be read or written. The options for `sandbox_mode` are:\n- **read-only**: The sandbox only permits reading files.\n- **workspace-write**: The sandbox permits reading files, and editing files in `cwd` and `writable_roots`. Editing files in other directories requires approval.\n- **danger-full-access**: No filesystem sandboxing - all commands are permitted.\n\nNetwork sandboxing defines whether network can be accessed without approval. Options for `network_access` are:\n- **restricted**: Requires approval\n- **enabled**: No approval needed\n\nApprovals are your mechanism to get user consent to run shell commands without the sandbox. Possible configuration options for `approval_policy` are\n- **untrusted**: The harness will escalate most commands for user approval, apart from a limited allowlist of safe \"read\" commands.\n- **on-failure**: The harness will allow all commands to run in the sandbox (if enabled), and failures will be escalated to the user for approval to run again without the sandbox.\n- **on-request**: Commands will be run in the sandbox by default, and you can specify in your tool call if you want to escalate a command to run without sandboxing. (Note that this mode is not always available. If it is, you'll see parameters for it in the `shell` command description.)\n- **never**: This is a non-interactive mode where you may NEVER ask the user for approval to run commands. Instead, you must always persist and work around constraints to solve the task for the user. You MUST do your utmost best to finish the task and validate your work before yielding. If this mode is paired with `danger-full-access`, take advantage of it to deliver the best outcome for the user. Further, in this mode, your default testing philosophy is overridden: Even if you don't see local patterns for testing, you may add tests and scripts to validate your work. Just remove them before yielding.\n\nWhen you are running with `approval_policy == on-request`, and sandboxing enabled, here are scenarios where you'll need to request approval:\n- You need to run a command that writes to a directory that requires it (e.g. running tests that write to /var)\n- You need to run a GUI app (e.g., open/xdg-open/osascript) to open browsers or files.\n- You are running sandboxed and need to run a command that requires network access (e.g. installing packages)\n- If you run a command that is important to solving the user's query, but it fails because of sandboxing, rerun the command with approval. ALWAYS proceed to use the `sandbox_permissions` and `justification` parameters - do not message the user before requesting approval for the command.\n- You are about to take a potentially destructive action such as an `rm` or `git reset` that the user did not explicitly ask for\n- (for all of these, you should weigh alternative paths that do not require approval)\n\nWhen `sandbox_mode` is set to read-only, you'll need to request approval for any command that isn't a read.\n\nYou will be told what filesystem sandboxing, network sandboxing, and approval mode are active in a developer or user message. If you are not told about this, assume that you are running with workspace-write, network sandboxing enabled, and approval on-failure.\n\nAlthough they introduce friction to the user because your work is paused until the user responds, you should leverage them when necessary to accomplish important work. If the completing the task requires escalated permissions, Do not let these settings or the sandbox deter you from attempting to accomplish the user's task unless it is set to \"never\", in which case never ask for approvals.\n\nWhen requesting approval to execute a command that will require escalated privileges:\n  - Provide the `sandbox_permissions` parameter with the value `\"require_escalated\"`\n  - Include a short, 1 sentence explanation for why you need escalated permissions in the justification parameter\n\n## Special user requests\n\n- If the user makes a simple request (such as asking for the time) which you can fulfill by running a terminal command (such as `date`), you should do so.\n- If the user asks for a \"review\", default to a code review mindset: prioritise identifying bugs, risks, behavioural regressions, and missing tests. Findings must be the primary focus of the response - keep summaries or overviews brief and only after enumerating the issues. Present findings first (ordered by severity with file/line references), follow with open questions or assumptions, and offer a change-summary only as a secondary detail. If no findings are discovered, state that explicitly and mention any residual risks or testing gaps.\n\n## Frontend tasks\nWhen doing frontend design tasks, avoid collapsing into \"AI slop\" or safe, average-looking layouts.\nAim for interfaces that feel intentional, bold, and a bit surprising.\n- Typography: Use expressive, purposeful fonts and avoid default stacks (Inter, Roboto, Arial, system).\n- Color & Look: Choose a clear visual direction; define CSS variables; avoid purple-on-white defaults. No purple bias or dark mode bias.\n- Motion: Use a few meaningful animations (page-load, staggered reveals) instead of generic micro-motions.\n- Background: Don't rely on flat, single-color backgrounds; use gradients, shapes, or subtle patterns to build atmosphere.\n- Overall: Avoid boilerplate layouts and interchangeable UI patterns. Vary themes, type families, and visual languages across outputs.\n- Ensure the page loads properly on both desktop and mobile\n\nException: If working within an existing website or design system, preserve the established patterns, structure, and visual language.\n\n## Presenting your work and final message\n\nYou are producing plain text that will later be styled by the CLI. Follow these rules exactly. Formatting should make results easy to scan, but not feel mechanical. Use judgment to decide how much structure adds value.\n\n- Default: be very concise; friendly coding teammate tone.\n- Ask only when needed; suggest ideas; mirror the user's style.\n- For substantial work, summarize clearly; follow final‑answer formatting.\n- Skip heavy formatting for simple confirmations.\n- Don't dump large files you've written; reference paths only.\n- No \"save/copy this file\" - User is on the same machine.\n- Offer logical next steps (tests, commits, build) briefly; add verify steps if you couldn't do something.\n- For code changes:\n  * Lead with a quick explanation of the change, and then give more details on the context covering where and why a change was made. Do not start this explanation with \"summary\", just jump right in.\n  * If there are natural next steps the user may want to take, suggest them at the end of your response. Do not make suggestions if there are no natural next steps.\n  * When suggesting multiple options, use numeric lists for the suggestions so the user can quickly respond with a single number.\n- The user does not command execution outputs. When asked to show the output of a command (e.g. `git show`), relay the important details in your answer or summarize the key lines so the user understands the result.\n\n### Final answer structure and style guidelines\n\n- Plain text; CLI handles styling. Use structure only when it helps scanability.\n- Headers: optional; short Title Case (1-3 words) wrapped in **…**; no blank line before the first bullet; add only if they truly help.\n- Bullets: use - ; merge related points; keep to one line when possible; 4–6 per list ordered by importance; keep phrasing consistent.\n- Monospace: backticks for commands/paths/env vars/code ids and inline examples; use for literal keyword bullets; never combine with **.\n- Code samples or multi-line snippets should be wrapped in fenced code blocks; include an info string as often as possible.\n- Structure: group related bullets; order sections general → specific → supporting; for subsections, start with a bolded keyword bullet, then items; match complexity to the task.\n- Tone: collaborative, concise, factual; present tense, active voice; self‑contained; no \"above/below\"; parallel wording.\n- Don'ts: no nested bullets/hierarchies; no ANSI codes; don't cram unrelated keywords; keep keyword lists short—wrap/reformat if long; avoid naming formatting styles in answers.\n- Adaptation: code explanations → precise, structured with code refs; simple tasks → lead with outcome; big changes → logical walkthrough + rationale + next actions; casual one-offs → plain sentences, no headers/bullets.\n- File References: When referencing files in your response follow the below rules:\n  * Use inline code to make file paths clickable.\n  * Each reference should have a stand alone path. Even if it's the same file.\n  * Accepted: absolute, workspace‑relative, a/ or b/ diff prefixes, or bare filename/suffix.\n  * Optionally include line/column (1‑based): :line[:column] or #Lline[Ccolumn] (column defaults to 1).\n  * Do not use URIs like file://, vscode://, or https://.\n  * Do not provide range of lines\n  * Examples: src/app.ts, src/app.ts:42, b/server/index.js#L10, C:\\repo\\project\\main.rs:12:5",
+            "reasoning": {
+              "effort": "xhigh",
+              "summary": "auto"
+            }
+          }
+        }
+      ],
+      "decisions": [
+        {
+          "requestId": "b73f37e0c5464c7e8ce8bdcae6b2cfcb",
+          "at": 1789416953734
+        },
+        {
+          "requestId": "e9f8db2304b047e991f6917727efe00d",
+          "at": 1789416953803
+        }
+      ],
+      "artifacts": [
+        {
+          "path": "greeting.txt",
+          "digest": "fc89162fedb6f9f43c458f1c6514daac0c07ca6a11c2b8cf0d023828a4d520b3"
+        }
+      ]
+    },
+    "policy": {
+      "schema": 3,
+      "routerId": "native_router",
+      "routeId": "native_route",
+      "revision": "native_revision",
+      "epoch": 1,
+      "routerModel": "gpt-6-astra",
+      "profile": "router-native-responses-local-v1",
+      "evidence": "synthetic",
+      "liveAdmission": false,
+      "graph": {
+        "schema": 2,
+        "profile": "9router-0.5.75-native-local-v1",
+        "profileDigest": "d56e1d9d4c6dd654581116dce87e42c38f8cd2a3c6d3efb718fb462445303a9a",
+        "nodes": [],
+        "connections": [
+          {
+            "id": "native_account_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_0"
+            },
+            "billing": "existing-codex-subscription",
+            "providerOutputBound": false,
+            "credentialRef": "synthetic_credential_1",
+            "expiresAt": 1789420547301,
+            "skewMs": 30000,
+            "refresh": false
+          },
+          {
+            "id": "native_account_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "existing-codex-subscription",
+            "providerOutputBound": false,
+            "credentialRef": "synthetic_credential_2",
+            "expiresAt": 1789420547301,
+            "skewMs": 30000,
+            "refresh": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gpt-6-astra",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "native_account_1",
+                  "native_account_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false,
+          "refresh": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "concurrency": 1,
+          "requestCount": 32,
+          "totalMs": 6000,
+          "firstOutputMs": 4000,
+          "idleMs": 2000,
+          "attemptMs": 600000,
+          "providerOutputTokens": null,
+          "providerMonetaryCap": null,
+          "scope": {
+            "id": "initial_checks",
+            "caseRef": "initial_checks",
+            "phase": "initial",
+            "authorizationDigest": "8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3",
+            "maxInferenceAttempts": 10,
+            "maxRefreshOperations": 0,
+            "elapsedMs": 600000
+          }
+        },
+        "terminals": [
+          "validated-original-responses-sse",
+          "validated-original-json-error"
+        ]
+      },
+      "limits": {
+        "requestBytes": 65536,
+        "responseBytes": 1048576,
+        "concurrency": 1,
+        "requestCount": 32,
+        "totalMs": 6000,
+        "firstOutputMs": 4000,
+        "idleMs": 2000,
+        "attemptMs": 600000,
+        "outputTokens": null
+      },
+      "authority": {
+        "deploymentId": "synthetic_native_deployment",
+        "boot": "33a4415d-a3bd-4f16-af26-558d4a5dd1a8",
+        "generation": 2,
+        "revision": "native_revision",
+        "graphDigest": "c77f133df528b9d45c81ec8d99f5f3e9c20c5a1acb94d8090293ef83c6ac8548"
+      },
+      "native": {
+        "schema": 1,
+        "limitsProfile": "native-subscription-local-v1",
+        "protocol": "opencode-1.18.30-responses-apply-patch-v1",
+        "evidence": "synthetic",
+        "deployment": {
+          "id": "synthetic_native_deployment",
+          "sourceCommit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+          "sourceLock": "681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c",
+          "overlay": "af18e19f3991e42f4ed370b77c8ac251c2f13c670ac3c77d907142755567eaf6",
+          "runtime": "06901bddd1795c38a57bc195f0ced7d5ac7a901f7d51e0894c7d724ee291a004",
+          "isolation": "964bae79619b0c2d15ac0e10284fb31ca233697ab10b72e0a977ab03afbc7efe",
+          "writerFence": "1e3b41cc8225e91168152e552acd52502db48b2280fc887f39b7337d274c6180",
+          "credentialOwnershipRef": "synthetic_access_only",
+          "endpoint": "http://127.0.0.1:47771/responses"
+        },
+        "authorization": {
+          "id": "synthetic_native_authorization",
+          "approved": true,
+          "model": "gpt-6-astra",
+          "effort": "xhigh",
+          "providerOutput": {
+            "requirement": "not_required",
+            "capability": "unavailable"
+          },
+          "providerMonetaryCap": {
+            "requirement": "not_required",
+            "capability": "unavailable"
+          },
+          "subscriptionEnvelopeRef": "synthetic_existing_subscription",
+          "refresh": "denied",
+          "caseRef": "initial_checks"
+        },
+        "scope": {
+          "id": "initial_checks",
+          "caseRef": "initial_checks",
+          "phase": "initial",
+          "authorizationDigest": "8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3",
+          "maxInferenceAttempts": 10,
+          "maxRefreshOperations": 0,
+          "elapsedMs": 600000
+        },
+        "connections": [
+          {
+            "id": "native_account_1",
+            "credentialRef": "synthetic_credential_1",
+            "billing": "existing-codex-subscription",
+            "expiresAt": 1789420547301,
+            "skewMs": 30000
+          },
+          {
+            "id": "native_account_2",
+            "credentialRef": "synthetic_credential_2",
+            "billing": "existing-codex-subscription",
+            "expiresAt": 1789420547301,
+            "skewMs": 30000
+          }
+        ],
+        "local": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "concurrency": 1,
+          "requestCount": 32,
+          "totalMs": 6000,
+          "firstOutputMs": 4000,
+          "idleMs": 2000,
+          "attemptMs": 600000
+        },
+        "tools": [
+          {
+            "type": "function",
+            "name": "apply_patch",
+            "description": "Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:\n\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n\nWithin that envelope, you get a sequence of file operations.\nYou MUST include a header to specify the action you are taking.\nEach operation starts with one of three headers:\n\n*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).\n*** Delete File: <path> - remove an existing file. Nothing follows.\n*** Update File: <path> - patch an existing file in place (optionally with a rename).\n\nExample patch:\n\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nIt is important to remember:\n\n- You must include a header with your intended action (Add/Delete/Update)\n- You must prefix new lines with `+` even when creating a new file\n",
+            "parameters": {
+              "properties": {
+                "patchText": {
+                  "description": "The full patch text that describes all changes to be made",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "patchText"
+              ],
+              "type": "object"
+            },
+            "strict": false
+          }
+        ],
+        "toolPaths": [
+          "greeting.txt"
+        ],
+        "harness": {
+          "binary": "01edb5839aa10d5b09133fedcb335a062ecad6e82552933bb14f71756f2b296b",
+          "source": "3104c1428ec91f809e5ab86631300de41eb6952e",
+          "settings": "59227de8b19e243c8720cb521961725b2d55831533d5da8132b8d511ee7e29bb",
+          "builtins": "enabled",
+          "nativeLLM": false,
+          "oauth": false,
+          "websockets": false
+        }
+      }
+    },
+    "journal": {
+      "schema": 2,
+      "generation": "0d572716-48b4-461c-80ec-ee7f40134fa9",
+      "phase": "closed",
+      "policy": {
+        "schema": 3,
+        "routerId": "native_router",
+        "routeId": "native_route",
+        "revision": "native_revision",
+        "epoch": 1,
+        "routerModel": "gpt-6-astra",
+        "profile": "router-native-responses-local-v1",
+        "evidence": "synthetic",
+        "liveAdmission": false,
+        "graph": {
+          "schema": 2,
+          "profile": "9router-0.5.75-native-local-v1",
+          "profileDigest": "d56e1d9d4c6dd654581116dce87e42c38f8cd2a3c6d3efb718fb462445303a9a",
+          "nodes": [],
+          "connections": [
+            {
+              "id": "native_account_1",
+              "provider": "codex",
+              "authType": "oauth",
+              "priority": 1,
+              "isActive": true,
+              "endpoint": "http://127.0.0.1:47771/responses",
+              "workspace": {
+                "chatgptAccountId": "synthetic_workspace_0"
+              },
+              "billing": "existing-codex-subscription",
+              "providerOutputBound": false,
+              "credentialRef": "synthetic_credential_1",
+              "expiresAt": 1789420547301,
+              "skewMs": 30000,
+              "refresh": false
+            },
+            {
+              "id": "native_account_2",
+              "provider": "codex",
+              "authType": "oauth",
+              "priority": 2,
+              "isActive": true,
+              "endpoint": "http://127.0.0.1:47771/responses",
+              "workspace": {
+                "chatgptAccountId": "synthetic_workspace_1"
+              },
+              "billing": "existing-codex-subscription",
+              "providerOutputBound": false,
+              "credentialRef": "synthetic_credential_2",
+              "expiresAt": 1789420547301,
+              "skewMs": 30000,
+              "refresh": false
+            }
+          ],
+          "routes": [
+            {
+              "id": "native_route",
+              "name": "gpt-6-astra",
+              "strategy": "fallback",
+              "edges": [
+                {
+                  "member": "cx/gpt-6-astra",
+                  "provider": "codex",
+                  "model": "gpt-6-astra",
+                  "connections": [
+                    "native_account_1",
+                    "native_account_2"
+                  ]
+                }
+              ]
+            }
+          ],
+          "settings": {
+            "requireApiKey": true,
+            "comboStrategy": "fallback",
+            "accountStrategy": "fill-first",
+            "adapters": false,
+            "helpers": false,
+            "remoteResources": false,
+            "proxies": false,
+            "autoPing": false,
+            "refresh": false
+          },
+          "bounds": {
+            "requestBytes": 65536,
+            "responseBytes": 1048576,
+            "concurrency": 1,
+            "requestCount": 32,
+            "totalMs": 6000,
+            "firstOutputMs": 4000,
+            "idleMs": 2000,
+            "attemptMs": 600000,
+            "providerOutputTokens": null,
+            "providerMonetaryCap": null,
+            "scope": {
+              "id": "initial_checks",
+              "caseRef": "initial_checks",
+              "phase": "initial",
+              "authorizationDigest": "8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3",
+              "maxInferenceAttempts": 10,
+              "maxRefreshOperations": 0,
+              "elapsedMs": 600000
+            }
+          },
+          "terminals": [
+            "validated-original-responses-sse",
+            "validated-original-json-error"
+          ]
+        },
+        "limits": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "concurrency": 1,
+          "requestCount": 32,
+          "totalMs": 6000,
+          "firstOutputMs": 4000,
+          "idleMs": 2000,
+          "attemptMs": 600000,
+          "outputTokens": null
+        },
+        "authority": {
+          "deploymentId": "synthetic_native_deployment",
+          "boot": "33a4415d-a3bd-4f16-af26-558d4a5dd1a8",
+          "generation": 2,
+          "revision": "native_revision",
+          "graphDigest": "c77f133df528b9d45c81ec8d99f5f3e9c20c5a1acb94d8090293ef83c6ac8548"
+        },
+        "native": {
+          "schema": 1,
+          "limitsProfile": "native-subscription-local-v1",
+          "protocol": "opencode-1.18.30-responses-apply-patch-v1",
+          "evidence": "synthetic",
+          "deployment": {
+            "id": "synthetic_native_deployment",
+            "sourceCommit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+            "sourceLock": "681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c",
+            "overlay": "af18e19f3991e42f4ed370b77c8ac251c2f13c670ac3c77d907142755567eaf6",
+            "runtime": "06901bddd1795c38a57bc195f0ced7d5ac7a901f7d51e0894c7d724ee291a004",
+            "isolation": "964bae79619b0c2d15ac0e10284fb31ca233697ab10b72e0a977ab03afbc7efe",
+            "writerFence": "1e3b41cc8225e91168152e552acd52502db48b2280fc887f39b7337d274c6180",
+            "credentialOwnershipRef": "synthetic_access_only",
+            "endpoint": "http://127.0.0.1:47771/responses"
+          },
+          "authorization": {
+            "id": "synthetic_native_authorization",
+            "approved": true,
+            "model": "gpt-6-astra",
+            "effort": "xhigh",
+            "providerOutput": {
+              "requirement": "not_required",
+              "capability": "unavailable"
+            },
+            "providerMonetaryCap": {
+              "requirement": "not_required",
+              "capability": "unavailable"
+            },
+            "subscriptionEnvelopeRef": "synthetic_existing_subscription",
+            "refresh": "denied",
+            "caseRef": "initial_checks"
+          },
+          "scope": {
+            "id": "initial_checks",
+            "caseRef": "initial_checks",
+            "phase": "initial",
+            "authorizationDigest": "8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3",
+            "maxInferenceAttempts": 10,
+            "maxRefreshOperations": 0,
+            "elapsedMs": 600000
+          },
+          "connections": [
+            {
+              "id": "native_account_1",
+              "credentialRef": "synthetic_credential_1",
+              "billing": "existing-codex-subscription",
+              "expiresAt": 1789420547301,
+              "skewMs": 30000
+            },
+            {
+              "id": "native_account_2",
+              "credentialRef": "synthetic_credential_2",
+              "billing": "existing-codex-subscription",
+              "expiresAt": 1789420547301,
+              "skewMs": 30000
+            }
+          ],
+          "local": {
+            "requestBytes": 65536,
+            "responseBytes": 1048576,
+            "concurrency": 1,
+            "requestCount": 32,
+            "totalMs": 6000,
+            "firstOutputMs": 4000,
+            "idleMs": 2000,
+            "attemptMs": 600000
+          },
+          "tools": [
+            {
+              "type": "function",
+              "name": "apply_patch",
+              "description": "Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:\n\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n\nWithin that envelope, you get a sequence of file operations.\nYou MUST include a header to specify the action you are taking.\nEach operation starts with one of three headers:\n\n*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).\n*** Delete File: <path> - remove an existing file. Nothing follows.\n*** Update File: <path> - patch an existing file in place (optionally with a rename).\n\nExample patch:\n\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nIt is important to remember:\n\n- You must include a header with your intended action (Add/Delete/Update)\n- You must prefix new lines with `+` even when creating a new file\n",
+              "parameters": {
+                "properties": {
+                  "patchText": {
+                    "description": "The full patch text that describes all changes to be made",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "patchText"
+                ],
+                "type": "object"
+              },
+              "strict": false
+            }
+          ],
+          "toolPaths": [
+            "greeting.txt"
+          ],
+          "harness": {
+            "binary": "01edb5839aa10d5b09133fedcb335a062ecad6e82552933bb14f71756f2b296b",
+            "source": "3104c1428ec91f809e5ab86631300de41eb6952e",
+            "settings": "59227de8b19e243c8720cb521961725b2d55831533d5da8132b8d511ee7e29bb",
+            "builtins": "enabled",
+            "nativeLLM": false,
+            "oauth": false,
+            "websockets": false
+          }
+        }
+      },
+      "fingerprint": "e55338f3e4d34a7a9838312c80b7f3893c881ebe536eb193aa44e02418ff8315",
+      "reservations": [],
+      "counts": {
+        "native_attempt": 2
+      },
+      "decisions": [
+        {
+          "requestId": "b73f37e0c5464c7e8ce8bdcae6b2cfcb",
+          "taskId": "native_task",
+          "attemptId": "native_attempt",
+          "router": {
+            "policy": {
+              "schema": 3,
+              "routerId": "native_router",
+              "routeId": "native_route",
+              "revision": "native_revision",
+              "epoch": 1,
+              "routerModel": "gpt-6-astra",
+              "profile": "router-native-responses-local-v1",
+              "evidence": "synthetic",
+              "liveAdmission": false,
+              "graph": {
+                "schema": 2,
+                "profile": "9router-0.5.75-native-local-v1",
+                "profileDigest": "d56e1d9d4c6dd654581116dce87e42c38f8cd2a3c6d3efb718fb462445303a9a",
+                "nodes": [],
+                "connections": [
+                  {
+                    "id": "native_account_1",
+                    "provider": "codex",
+                    "authType": "oauth",
+                    "priority": 1,
+                    "isActive": true,
+                    "endpoint": "http://127.0.0.1:47771/responses",
+                    "workspace": {
+                      "chatgptAccountId": "synthetic_workspace_0"
+                    },
+                    "billing": "existing-codex-subscription",
+                    "providerOutputBound": false,
+                    "credentialRef": "synthetic_credential_1",
+                    "expiresAt": 1789420547301,
+                    "skewMs": 30000,
+                    "refresh": false
+                  },
+                  {
+                    "id": "native_account_2",
+                    "provider": "codex",
+                    "authType": "oauth",
+                    "priority": 2,
+                    "isActive": true,
+                    "endpoint": "http://127.0.0.1:47771/responses",
+                    "workspace": {
+                      "chatgptAccountId": "synthetic_workspace_1"
+                    },
+                    "billing": "existing-codex-subscription",
+                    "providerOutputBound": false,
+                    "credentialRef": "synthetic_credential_2",
+                    "expiresAt": 1789420547301,
+                    "skewMs": 30000,
+                    "refresh": false
+                  }
+                ],
+                "routes": [
+                  {
+                    "id": "native_route",
+                    "name": "gpt-6-astra",
+                    "strategy": "fallback",
+                    "edges": [
+                      {
+                        "member": "cx/gpt-6-astra",
+                        "provider": "codex",
+                        "model": "gpt-6-astra",
+                        "connections": [
+                          "native_account_1",
+                          "native_account_2"
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "settings": {
+                  "requireApiKey": true,
+                  "comboStrategy": "fallback",
+                  "accountStrategy": "fill-first",
+                  "adapters": false,
+                  "helpers": false,
+                  "remoteResources": false,
+                  "proxies": false,
+                  "autoPing": false,
+                  "refresh": false
+                },
+                "bounds": {
+                  "requestBytes": 65536,
+                  "responseBytes": 1048576,
+                  "concurrency": 1,
+                  "requestCount": 32,
+                  "totalMs": 6000,
+                  "firstOutputMs": 4000,
+                  "idleMs": 2000,
+                  "attemptMs": 600000,
+                  "providerOutputTokens": null,
+                  "providerMonetaryCap": null,
+                  "scope": {
+                    "id": "initial_checks",
+                    "caseRef": "initial_checks",
+                    "phase": "initial",
+                    "authorizationDigest": "8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3",
+                    "maxInferenceAttempts": 10,
+                    "maxRefreshOperations": 0,
+                    "elapsedMs": 600000
+                  }
+                },
+                "terminals": [
+                  "validated-original-responses-sse",
+                  "validated-original-json-error"
+                ]
+              },
+              "limits": {
+                "requestBytes": 65536,
+                "responseBytes": 1048576,
+                "concurrency": 1,
+                "requestCount": 32,
+                "totalMs": 6000,
+                "firstOutputMs": 4000,
+                "idleMs": 2000,
+                "attemptMs": 600000,
+                "outputTokens": null
+              },
+              "authority": {
+                "deploymentId": "synthetic_native_deployment",
+                "boot": "33a4415d-a3bd-4f16-af26-558d4a5dd1a8",
+                "generation": 2,
+                "revision": "native_revision",
+                "graphDigest": "c77f133df528b9d45c81ec8d99f5f3e9c20c5a1acb94d8090293ef83c6ac8548"
+              },
+              "native": {
+                "schema": 1,
+                "limitsProfile": "native-subscription-local-v1",
+                "protocol": "opencode-1.18.30-responses-apply-patch-v1",
+                "evidence": "synthetic",
+                "deployment": {
+                  "id": "synthetic_native_deployment",
+                  "sourceCommit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+                  "sourceLock": "681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c",
+                  "overlay": "af18e19f3991e42f4ed370b77c8ac251c2f13c670ac3c77d907142755567eaf6",
+                  "runtime": "06901bddd1795c38a57bc195f0ced7d5ac7a901f7d51e0894c7d724ee291a004",
+                  "isolation": "964bae79619b0c2d15ac0e10284fb31ca233697ab10b72e0a977ab03afbc7efe",
+                  "writerFence": "1e3b41cc8225e91168152e552acd52502db48b2280fc887f39b7337d274c6180",
+                  "credentialOwnershipRef": "synthetic_access_only",
+                  "endpoint": "http://127.0.0.1:47771/responses"
+                },
+                "authorization": {
+                  "id": "synthetic_native_authorization",
+                  "approved": true,
+                  "model": "gpt-6-astra",
+                  "effort": "xhigh",
+                  "providerOutput": {
+                    "requirement": "not_required",
+                    "capability": "unavailable"
+                  },
+                  "providerMonetaryCap": {
+                    "requirement": "not_required",
+                    "capability": "unavailable"
+                  },
+                  "subscriptionEnvelopeRef": "synthetic_existing_subscription",
+                  "refresh": "denied",
+                  "caseRef": "initial_checks"
+                },
+                "scope": {
+                  "id": "initial_checks",
+                  "caseRef": "initial_checks",
+                  "phase": "initial",
+                  "authorizationDigest": "8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3",
+                  "maxInferenceAttempts": 10,
+                  "maxRefreshOperations": 0,
+                  "elapsedMs": 600000
+                },
+                "connections": [
+                  {
+                    "id": "native_account_1",
+                    "credentialRef": "synthetic_credential_1",
+                    "billing": "existing-codex-subscription",
+                    "expiresAt": 1789420547301,
+                    "skewMs": 30000
+                  },
+                  {
+                    "id": "native_account_2",
+                    "credentialRef": "synthetic_credential_2",
+                    "billing": "existing-codex-subscription",
+                    "expiresAt": 1789420547301,
+                    "skewMs": 30000
+                  }
+                ],
+                "local": {
+                  "requestBytes": 65536,
+                  "responseBytes": 1048576,
+                  "concurrency": 1,
+                  "requestCount": 32,
+                  "totalMs": 6000,
+                  "firstOutputMs": 4000,
+                  "idleMs": 2000,
+                  "attemptMs": 600000
+                },
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "apply_patch",
+                    "description": "Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:\n\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n\nWithin that envelope, you get a sequence of file operations.\nYou MUST include a header to specify the action you are taking.\nEach operation starts with one of three headers:\n\n*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).\n*** Delete File: <path> - remove an existing file. Nothing follows.\n*** Update File: <path> - patch an existing file in place (optionally with a rename).\n\nExample patch:\n\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nIt is important to remember:\n\n- You must include a header with your intended action (Add/Delete/Update)\n- You must prefix new lines with `+` even when creating a new file\n",
+                    "parameters": {
+                      "properties": {
+                        "patchText": {
+                          "description": "The full patch text that describes all changes to be made",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "patchText"
+                      ],
+                      "type": "object"
+                    },
+                    "strict": false
+                  }
+                ],
+                "toolPaths": [
+                  "greeting.txt"
+                ],
+                "harness": {
+                  "binary": "01edb5839aa10d5b09133fedcb335a062ecad6e82552933bb14f71756f2b296b",
+                  "source": "3104c1428ec91f809e5ab86631300de41eb6952e",
+                  "settings": "59227de8b19e243c8720cb521961725b2d55831533d5da8132b8d511ee7e29bb",
+                  "builtins": "enabled",
+                  "nativeLLM": false,
+                  "oauth": false,
+                  "websockets": false
+                }
+              }
+            },
+            "binding": {
+              "attemptId": "native_attempt",
+              "grantId": "native_grant",
+              "taskId": "native_task",
+              "leaseId": "native_lease",
+              "fence": 1,
+              "role": "worker",
+              "routerId": "native_router",
+              "routeId": "native_route",
+              "revision": "native_revision",
+              "epoch": 1,
+              "expiresAt": 1789416989187,
+              "leaseExpiresAt": 1789416989187,
+              "native": {
+                "profileDigest": "d56e1d9d4c6dd654581116dce87e42c38f8cd2a3c6d3efb718fb462445303a9a",
+                "scopeId": "initial_checks",
+                "authorizationDigest": "8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3"
+              }
+            },
+            "requestDigest": "3cf83395ff6868ef943630616a3e5602cdc0222102428d86455ed50be73aead4",
+            "send": "send_possible",
+            "nativeRequest": {
+              "model": "gpt-6-astra",
+              "input": [
+                {
+                  "role": "developer",
+                  "content": "You are an AI agent powered by OpenCode, a coding agent harness. Help the user accomplish their goals using the tools you have available.\n\n# Harness\n- Responses are rendered as GitHub-flavored Markdown.\n- `<system-reminder>` blocks are harness instructions, not user-authored content. Read and follow them.\n- Prefer parallelizing independent tool calls.\n- Do not use a skill based solely on keywords, superficial relevance, or its availability. Avoid re-reading skills already available in the conversation unless needed.\n- Prefer dedicated tools over shell commands; fall back to the shell when a tool cannot do what you need.\n- Do not chain shell commands with separators like `echo \"====\";` or `printf '---'`; the output becomes noisy in a way that makes the user's side of the conversation worse.\n\n# Communication\n\nState the main point clearly and early. Keep responses clear and concise, and avoid unnecessary technical jargon. Use only as much structure as needed, and include technical detail only when it helps the conversation. Use clear file paths when referring to files.\n\nWhen describing your work, avoid adding what you won't do, what will remain unchanged, or how you'll separate or categorize results. Do not introduce unprompted alternatives through framing such as \"X, not Y\" or \"This isn't about X. It's about Y.\"\n\n## Autonomy\n\nInfer the user's intent and your task scope from their instructions and the prior conversation context. You should bias towards action and carry out the user's intended task until it is completed. If the intent is unclear, progress towards the goal using the available information and ask for clarification while continuing independent work when possible.\n\nWhen the user's prompt indicates a request for action, such as \"can you...\", \"I want to...\", \"help me...\" and similar expressions, treat these as instructions to take action. Do not stop at acknowledging capability (e.g. \"Yes…\"), proposing a plan, or offering to continue. Do not settle for a partial or \"helpful enough\" solution to save time, effort, or tokens. Continue until the user's intended goal is fulfilled, even when it requires sustained work.\n\n## Intermediate Commentary\n\nAs you work, you send messages to the commentary channel. These are how you collaborate with the user while you work: stating assumptions and providing updates. Keep them concise and quickly scannable, and send them only when they add real information, such as a discovery, a tradeoff, or a blocker. Do not narrate routine reads, searches, or edits.\n\nBy default, treat new messages received during ongoing work as steering the active task rather than replacing it. Incorporate corrections and constraints, and answer questions briefly in commentary before continuing. Replace the task only when the user clearly cancels it or requests an incompatible objective.\n\nDo not put a final response, such as a blocking or clarifying question, in the commentary channel. The final answer must always be fully self-contained.\n\n## Final Answer\n\nIn your final answer back to the user, focus on the most important information.\n\n# Working in codebases\n\n- Keep changes consistent with the structure, naming, style, and patterns of the surrounding code.\n- Treat unfamiliar files or changes as potential user work and investigate before deleting or overwriting them.\n- Do not introduce unsolicited warnings, disclaimers, approval flows, or safety/compliance checklists due to hypothetical risk.\n- Do not write tests for reversible, low-impact changes or that mirror the implementation. If you do choose to verify your work with tests, make sure that the tests are meaningful and necessary to verify implementation.\n- Run tests appropriate to the change and complete required checks. Once those pass, broaden or repeat testing only when new changes, failures, or unresolved concerns justify it; otherwise, continue toward completing the task.\n\n\n# Delegation\n\nDo not spawn subagents unless the user or applicable AGENTS.md/skill instructions explicitly ask for subagents, delegation, or parallel agent work.\n\nYou are powered by the model named gpt-6-astra. The exact model ID is openai/gpt-6-astra\nHere is some useful information about the environment you are running in:\n<env>\n  Working directory: /work/repo\n  Workspace root folder: /work/repo\n  Is directory a git repo: yes\n  Platform: linux\n  Today's date: Mon Sep 14 2026\n</env>"
+                },
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "\"Change greeting.txt from hello to hello from probe.\""
+                    }
+                  ]
+                }
+              ],
+              "store": false,
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "prompt_cache_key": "ses_f5e703074ffePODkgivJQR5tAf",
+              "reasoning": {
+                "effort": "xhigh",
+                "summary": "auto"
+              },
+              "tools": [
+                {
+                  "type": "function",
+                  "name": "apply_patch",
+                  "description": "Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:\n\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n\nWithin that envelope, you get a sequence of file operations.\nYou MUST include a header to specify the action you are taking.\nEach operation starts with one of three headers:\n\n*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).\n*** Delete File: <path> - remove an existing file. Nothing follows.\n*** Update File: <path> - patch an existing file in place (optionally with a rename).\n\nExample patch:\n\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nIt is important to remember:\n\n- You must include a header with your intended action (Add/Delete/Update)\n- You must prefix new lines with `+` even when creating a new file\n",
+                  "parameters": {
+                    "properties": {
+                      "patchText": {
+                        "description": "The full patch text that describes all changes to be made",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "patchText"
+                    ],
+                    "type": "object"
+                  },
+                  "strict": false
+                }
+              ],
+              "tool_choice": "auto",
+              "stream": true
+            }
+          },
+          "verdict": "validated_success",
+          "evidence": {
+            "disposition": "original_success",
+            "receiptDigest": "04a6524ca1ee3e08c53c19c5accd70d2fc5bec3998ae41adf28cd0b27e52f4de",
+            "operations": [
+              {
+                "request_id": "b73f37e0c5464c7e8ce8bdcae6b2cfcb",
+                "ordinal": 1,
+                "boot": "33a4415d-a3bd-4f16-af26-558d4a5dd1a8",
+                "generation": 2,
+                "revision": "native_revision",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "native_account_1",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof",
+                "scope_id": "initial_checks",
+                "body_digest": "294f66295d07261944f7502cfa86ed3de70220b9ceaed79d5793342da94b14a6",
+                "output_digest": "84c00eee5631e6aad3f0bd06f06d749ba975a836e6d5bdec99ae6dc2d53707c6"
+              }
+            ]
+          },
+          "completionDigest": "4ec6b1b4c03a21d825b7086fdf6f25b76eb67977268264d2e2f5019bdea1bf3d",
+          "delivery": "completed",
+          "nativeOutput": [
+            {
+              "id": "rs_synthetic",
+              "type": "reasoning",
+              "summary": [],
+              "encrypted_content": "synthetic-opaque-reasoning"
+            },
+            {
+              "id": "fc_synthetic",
+              "type": "function_call",
+              "call_id": "call_synthetic",
+              "name": "apply_patch",
+              "arguments": "{\"patchText\":\"*** Begin Patch\\n*** Update File: greeting.txt\\n@@\\n-hello\\n+hello from probe\\n*** End Patch\"}",
+              "status": "completed"
+            }
+          ]
+        },
+        {
+          "requestId": "e9f8db2304b047e991f6917727efe00d",
+          "taskId": "native_task",
+          "attemptId": "native_attempt",
+          "router": {
+            "policy": {
+              "schema": 3,
+              "routerId": "native_router",
+              "routeId": "native_route",
+              "revision": "native_revision",
+              "epoch": 1,
+              "routerModel": "gpt-6-astra",
+              "profile": "router-native-responses-local-v1",
+              "evidence": "synthetic",
+              "liveAdmission": false,
+              "graph": {
+                "schema": 2,
+                "profile": "9router-0.5.75-native-local-v1",
+                "profileDigest": "d56e1d9d4c6dd654581116dce87e42c38f8cd2a3c6d3efb718fb462445303a9a",
+                "nodes": [],
+                "connections": [
+                  {
+                    "id": "native_account_1",
+                    "provider": "codex",
+                    "authType": "oauth",
+                    "priority": 1,
+                    "isActive": true,
+                    "endpoint": "http://127.0.0.1:47771/responses",
+                    "workspace": {
+                      "chatgptAccountId": "synthetic_workspace_0"
+                    },
+                    "billing": "existing-codex-subscription",
+                    "providerOutputBound": false,
+                    "credentialRef": "synthetic_credential_1",
+                    "expiresAt": 1789420547301,
+                    "skewMs": 30000,
+                    "refresh": false
+                  },
+                  {
+                    "id": "native_account_2",
+                    "provider": "codex",
+                    "authType": "oauth",
+                    "priority": 2,
+                    "isActive": true,
+                    "endpoint": "http://127.0.0.1:47771/responses",
+                    "workspace": {
+                      "chatgptAccountId": "synthetic_workspace_1"
+                    },
+                    "billing": "existing-codex-subscription",
+                    "providerOutputBound": false,
+                    "credentialRef": "synthetic_credential_2",
+                    "expiresAt": 1789420547301,
+                    "skewMs": 30000,
+                    "refresh": false
+                  }
+                ],
+                "routes": [
+                  {
+                    "id": "native_route",
+                    "name": "gpt-6-astra",
+                    "strategy": "fallback",
+                    "edges": [
+                      {
+                        "member": "cx/gpt-6-astra",
+                        "provider": "codex",
+                        "model": "gpt-6-astra",
+                        "connections": [
+                          "native_account_1",
+                          "native_account_2"
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "settings": {
+                  "requireApiKey": true,
+                  "comboStrategy": "fallback",
+                  "accountStrategy": "fill-first",
+                  "adapters": false,
+                  "helpers": false,
+                  "remoteResources": false,
+                  "proxies": false,
+                  "autoPing": false,
+                  "refresh": false
+                },
+                "bounds": {
+                  "requestBytes": 65536,
+                  "responseBytes": 1048576,
+                  "concurrency": 1,
+                  "requestCount": 32,
+                  "totalMs": 6000,
+                  "firstOutputMs": 4000,
+                  "idleMs": 2000,
+                  "attemptMs": 600000,
+                  "providerOutputTokens": null,
+                  "providerMonetaryCap": null,
+                  "scope": {
+                    "id": "initial_checks",
+                    "caseRef": "initial_checks",
+                    "phase": "initial",
+                    "authorizationDigest": "8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3",
+                    "maxInferenceAttempts": 10,
+                    "maxRefreshOperations": 0,
+                    "elapsedMs": 600000
+                  }
+                },
+                "terminals": [
+                  "validated-original-responses-sse",
+                  "validated-original-json-error"
+                ]
+              },
+              "limits": {
+                "requestBytes": 65536,
+                "responseBytes": 1048576,
+                "concurrency": 1,
+                "requestCount": 32,
+                "totalMs": 6000,
+                "firstOutputMs": 4000,
+                "idleMs": 2000,
+                "attemptMs": 600000,
+                "outputTokens": null
+              },
+              "authority": {
+                "deploymentId": "synthetic_native_deployment",
+                "boot": "33a4415d-a3bd-4f16-af26-558d4a5dd1a8",
+                "generation": 2,
+                "revision": "native_revision",
+                "graphDigest": "c77f133df528b9d45c81ec8d99f5f3e9c20c5a1acb94d8090293ef83c6ac8548"
+              },
+              "native": {
+                "schema": 1,
+                "limitsProfile": "native-subscription-local-v1",
+                "protocol": "opencode-1.18.30-responses-apply-patch-v1",
+                "evidence": "synthetic",
+                "deployment": {
+                  "id": "synthetic_native_deployment",
+                  "sourceCommit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+                  "sourceLock": "681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c",
+                  "overlay": "af18e19f3991e42f4ed370b77c8ac251c2f13c670ac3c77d907142755567eaf6",
+                  "runtime": "06901bddd1795c38a57bc195f0ced7d5ac7a901f7d51e0894c7d724ee291a004",
+                  "isolation": "964bae79619b0c2d15ac0e10284fb31ca233697ab10b72e0a977ab03afbc7efe",
+                  "writerFence": "1e3b41cc8225e91168152e552acd52502db48b2280fc887f39b7337d274c6180",
+                  "credentialOwnershipRef": "synthetic_access_only",
+                  "endpoint": "http://127.0.0.1:47771/responses"
+                },
+                "authorization": {
+                  "id": "synthetic_native_authorization",
+                  "approved": true,
+                  "model": "gpt-6-astra",
+                  "effort": "xhigh",
+                  "providerOutput": {
+                    "requirement": "not_required",
+                    "capability": "unavailable"
+                  },
+                  "providerMonetaryCap": {
+                    "requirement": "not_required",
+                    "capability": "unavailable"
+                  },
+                  "subscriptionEnvelopeRef": "synthetic_existing_subscription",
+                  "refresh": "denied",
+                  "caseRef": "initial_checks"
+                },
+                "scope": {
+                  "id": "initial_checks",
+                  "caseRef": "initial_checks",
+                  "phase": "initial",
+                  "authorizationDigest": "8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3",
+                  "maxInferenceAttempts": 10,
+                  "maxRefreshOperations": 0,
+                  "elapsedMs": 600000
+                },
+                "connections": [
+                  {
+                    "id": "native_account_1",
+                    "credentialRef": "synthetic_credential_1",
+                    "billing": "existing-codex-subscription",
+                    "expiresAt": 1789420547301,
+                    "skewMs": 30000
+                  },
+                  {
+                    "id": "native_account_2",
+                    "credentialRef": "synthetic_credential_2",
+                    "billing": "existing-codex-subscription",
+                    "expiresAt": 1789420547301,
+                    "skewMs": 30000
+                  }
+                ],
+                "local": {
+                  "requestBytes": 65536,
+                  "responseBytes": 1048576,
+                  "concurrency": 1,
+                  "requestCount": 32,
+                  "totalMs": 6000,
+                  "firstOutputMs": 4000,
+                  "idleMs": 2000,
+                  "attemptMs": 600000
+                },
+                "tools": [
+                  {
+                    "type": "function",
+                    "name": "apply_patch",
+                    "description": "Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:\n\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n\nWithin that envelope, you get a sequence of file operations.\nYou MUST include a header to specify the action you are taking.\nEach operation starts with one of three headers:\n\n*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).\n*** Delete File: <path> - remove an existing file. Nothing follows.\n*** Update File: <path> - patch an existing file in place (optionally with a rename).\n\nExample patch:\n\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nIt is important to remember:\n\n- You must include a header with your intended action (Add/Delete/Update)\n- You must prefix new lines with `+` even when creating a new file\n",
+                    "parameters": {
+                      "properties": {
+                        "patchText": {
+                          "description": "The full patch text that describes all changes to be made",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "patchText"
+                      ],
+                      "type": "object"
+                    },
+                    "strict": false
+                  }
+                ],
+                "toolPaths": [
+                  "greeting.txt"
+                ],
+                "harness": {
+                  "binary": "01edb5839aa10d5b09133fedcb335a062ecad6e82552933bb14f71756f2b296b",
+                  "source": "3104c1428ec91f809e5ab86631300de41eb6952e",
+                  "settings": "59227de8b19e243c8720cb521961725b2d55831533d5da8132b8d511ee7e29bb",
+                  "builtins": "enabled",
+                  "nativeLLM": false,
+                  "oauth": false,
+                  "websockets": false
+                }
+              }
+            },
+            "binding": {
+              "attemptId": "native_attempt",
+              "grantId": "native_grant",
+              "taskId": "native_task",
+              "leaseId": "native_lease",
+              "fence": 1,
+              "role": "worker",
+              "routerId": "native_router",
+              "routeId": "native_route",
+              "revision": "native_revision",
+              "epoch": 1,
+              "expiresAt": 1789416989187,
+              "leaseExpiresAt": 1789416989187,
+              "native": {
+                "profileDigest": "d56e1d9d4c6dd654581116dce87e42c38f8cd2a3c6d3efb718fb462445303a9a",
+                "scopeId": "initial_checks",
+                "authorizationDigest": "8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3"
+              }
+            },
+            "requestDigest": "d79cdc6202ca03bf4900e6035f9e091a867f954f3c3279d964c2f20cf39c291b",
+            "send": "send_possible",
+            "nativeRequest": {
+              "model": "gpt-6-astra",
+              "input": [
+                {
+                  "role": "developer",
+                  "content": "You are an AI agent powered by OpenCode, a coding agent harness. Help the user accomplish their goals using the tools you have available.\n\n# Harness\n- Responses are rendered as GitHub-flavored Markdown.\n- `<system-reminder>` blocks are harness instructions, not user-authored content. Read and follow them.\n- Prefer parallelizing independent tool calls.\n- Do not use a skill based solely on keywords, superficial relevance, or its availability. Avoid re-reading skills already available in the conversation unless needed.\n- Prefer dedicated tools over shell commands; fall back to the shell when a tool cannot do what you need.\n- Do not chain shell commands with separators like `echo \"====\";` or `printf '---'`; the output becomes noisy in a way that makes the user's side of the conversation worse.\n\n# Communication\n\nState the main point clearly and early. Keep responses clear and concise, and avoid unnecessary technical jargon. Use only as much structure as needed, and include technical detail only when it helps the conversation. Use clear file paths when referring to files.\n\nWhen describing your work, avoid adding what you won't do, what will remain unchanged, or how you'll separate or categorize results. Do not introduce unprompted alternatives through framing such as \"X, not Y\" or \"This isn't about X. It's about Y.\"\n\n## Autonomy\n\nInfer the user's intent and your task scope from their instructions and the prior conversation context. You should bias towards action and carry out the user's intended task until it is completed. If the intent is unclear, progress towards the goal using the available information and ask for clarification while continuing independent work when possible.\n\nWhen the user's prompt indicates a request for action, such as \"can you...\", \"I want to...\", \"help me...\" and similar expressions, treat these as instructions to take action. Do not stop at acknowledging capability (e.g. \"Yes…\"), proposing a plan, or offering to continue. Do not settle for a partial or \"helpful enough\" solution to save time, effort, or tokens. Continue until the user's intended goal is fulfilled, even when it requires sustained work.\n\n## Intermediate Commentary\n\nAs you work, you send messages to the commentary channel. These are how you collaborate with the user while you work: stating assumptions and providing updates. Keep them concise and quickly scannable, and send them only when they add real information, such as a discovery, a tradeoff, or a blocker. Do not narrate routine reads, searches, or edits.\n\nBy default, treat new messages received during ongoing work as steering the active task rather than replacing it. Incorporate corrections and constraints, and answer questions briefly in commentary before continuing. Replace the task only when the user clearly cancels it or requests an incompatible objective.\n\nDo not put a final response, such as a blocking or clarifying question, in the commentary channel. The final answer must always be fully self-contained.\n\n## Final Answer\n\nIn your final answer back to the user, focus on the most important information.\n\n# Working in codebases\n\n- Keep changes consistent with the structure, naming, style, and patterns of the surrounding code.\n- Treat unfamiliar files or changes as potential user work and investigate before deleting or overwriting them.\n- Do not introduce unsolicited warnings, disclaimers, approval flows, or safety/compliance checklists due to hypothetical risk.\n- Do not write tests for reversible, low-impact changes or that mirror the implementation. If you do choose to verify your work with tests, make sure that the tests are meaningful and necessary to verify implementation.\n- Run tests appropriate to the change and complete required checks. Once those pass, broaden or repeat testing only when new changes, failures, or unresolved concerns justify it; otherwise, continue toward completing the task.\n\n\n# Delegation\n\nDo not spawn subagents unless the user or applicable AGENTS.md/skill instructions explicitly ask for subagents, delegation, or parallel agent work.\n\nYou are powered by the model named gpt-6-astra. The exact model ID is openai/gpt-6-astra\nHere is some useful information about the environment you are running in:\n<env>\n  Working directory: /work/repo\n  Workspace root folder: /work/repo\n  Is directory a git repo: yes\n  Platform: linux\n  Today's date: Mon Sep 14 2026\n</env>"
+                },
+                {
+                  "role": "user",
+                  "content": [
+                    {
+                      "type": "input_text",
+                      "text": "\"Change greeting.txt from hello to hello from probe.\""
+                    }
+                  ]
+                },
+                {
+                  "type": "reasoning",
+                  "encrypted_content": "synthetic-opaque-reasoning",
+                  "summary": []
+                },
+                {
+                  "type": "function_call",
+                  "call_id": "call_synthetic",
+                  "name": "apply_patch",
+                  "arguments": "{\"patchText\":\"*** Begin Patch\\n*** Update File: greeting.txt\\n@@\\n-hello\\n+hello from probe\\n*** End Patch\"}"
+                },
+                {
+                  "type": "function_call_output",
+                  "call_id": "call_synthetic",
+                  "output": "Success. Updated the following files:\nM greeting.txt"
+                }
+              ],
+              "store": false,
+              "include": [
+                "reasoning.encrypted_content"
+              ],
+              "prompt_cache_key": "ses_f5e703074ffePODkgivJQR5tAf",
+              "reasoning": {
+                "effort": "xhigh",
+                "summary": "auto"
+              },
+              "tools": [
+                {
+                  "type": "function",
+                  "name": "apply_patch",
+                  "description": "Use the `apply_patch` tool to edit files. Your patch language is a stripped‑down, file‑oriented diff format designed to be easy to parse and safe to apply. You can think of it as a high‑level envelope:\n\n*** Begin Patch\n[ one or more file sections ]\n*** End Patch\n\nWithin that envelope, you get a sequence of file operations.\nYou MUST include a header to specify the action you are taking.\nEach operation starts with one of three headers:\n\n*** Add File: <path> - create a new file. Every following line is a + line (the initial contents).\n*** Delete File: <path> - remove an existing file. Nothing follows.\n*** Update File: <path> - patch an existing file in place (optionally with a rename).\n\nExample patch:\n\n```\n*** Begin Patch\n*** Add File: hello.txt\n+Hello world\n*** Update File: src/app.py\n*** Move to: src/main.py\n@@ def greet():\n-print(\"Hi\")\n+print(\"Hello, world!\")\n*** Delete File: obsolete.txt\n*** End Patch\n```\n\nIt is important to remember:\n\n- You must include a header with your intended action (Add/Delete/Update)\n- You must prefix new lines with `+` even when creating a new file\n",
+                  "parameters": {
+                    "properties": {
+                      "patchText": {
+                        "description": "The full patch text that describes all changes to be made",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "patchText"
+                    ],
+                    "type": "object"
+                  },
+                  "strict": false
+                }
+              ],
+              "tool_choice": "auto",
+              "stream": true
+            }
+          },
+          "verdict": "validated_success",
+          "evidence": {
+            "disposition": "original_success",
+            "receiptDigest": "94fb34a57c5e3ab978f56cebc29937f3410a3a3364a8717998a4622fa813e685",
+            "operations": [
+              {
+                "request_id": "e9f8db2304b047e991f6917727efe00d",
+                "ordinal": 1,
+                "boot": "33a4415d-a3bd-4f16-af26-558d4a5dd1a8",
+                "generation": 2,
+                "revision": "native_revision",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "native_account_1",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof",
+                "scope_id": "initial_checks",
+                "body_digest": "e7365d201e19fd8ebb805cd22f84a7d302ce0988daa7968c76b8ac173a45279b",
+                "output_digest": "7e8d54ff9dbe09c43e5668f800007b5018e27944e25f056e6bf54739c0914cab"
+              }
+            ]
+          },
+          "completionDigest": "1094db3d320c063a236e4551101d2c2d226962858561125454bedbfda7b47a0e",
+          "delivery": "completed",
+          "nativeOutput": [
+            {
+              "id": "msg_synthetic",
+              "type": "message",
+              "role": "assistant",
+              "status": "completed",
+              "content": [
+                {
+                  "type": "output_text",
+                  "text": "Completed 🌍 café.",
+                  "annotations": [],
+                  "logprobs": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "receipts": [
+      {
+        "id": "b73f37e0c5464c7e8ce8bdcae6b2cfcb",
+        "boot": "33a4415d-a3bd-4f16-af26-558d4a5dd1a8",
+        "generation": 2,
+        "revision": "native_revision",
+        "route": "gpt-6-astra",
+        "local_stop": "local_eof",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "b73f37e0c5464c7e8ce8bdcae6b2cfcb",
+            "ordinal": 1,
+            "boot": "33a4415d-a3bd-4f16-af26-558d4a5dd1a8",
+            "generation": 2,
+            "revision": "native_revision",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "native_account_1",
+            "terminal": "provider_completed",
+            "local_stop": "original_eof",
+            "scope_id": "initial_checks",
+            "body_digest": "294f66295d07261944f7502cfa86ed3de70220b9ceaed79d5793342da94b14a6",
+            "output_digest": "84c00eee5631e6aad3f0bd06f06d749ba975a836e6d5bdec99ae6dc2d53707c6"
+          }
+        ],
+        "quiescent": true,
+        "native": {
+          "profileDigest": "d56e1d9d4c6dd654581116dce87e42c38f8cd2a3c6d3efb718fb462445303a9a",
+          "scopeId": "initial_checks",
+          "authorizationDigest": "8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3",
+          "bindingDigest": "481d4a5891175396e4073dde22ee8852800755b0021700ca4b2df2eb84c4345d",
+          "requestDigest": "3cf83395ff6868ef943630616a3e5602cdc0222102428d86455ed50be73aead4"
+        }
+      },
+      {
+        "id": "e9f8db2304b047e991f6917727efe00d",
+        "boot": "33a4415d-a3bd-4f16-af26-558d4a5dd1a8",
+        "generation": 2,
+        "revision": "native_revision",
+        "route": "gpt-6-astra",
+        "local_stop": "local_eof",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "e9f8db2304b047e991f6917727efe00d",
+            "ordinal": 1,
+            "boot": "33a4415d-a3bd-4f16-af26-558d4a5dd1a8",
+            "generation": 2,
+            "revision": "native_revision",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "native_account_1",
+            "terminal": "provider_completed",
+            "local_stop": "original_eof",
+            "scope_id": "initial_checks",
+            "body_digest": "e7365d201e19fd8ebb805cd22f84a7d302ce0988daa7968c76b8ac173a45279b",
+            "output_digest": "7e8d54ff9dbe09c43e5668f800007b5018e27944e25f056e6bf54739c0914cab"
+          }
+        ],
+        "quiescent": true,
+        "native": {
+          "profileDigest": "d56e1d9d4c6dd654581116dce87e42c38f8cd2a3c6d3efb718fb462445303a9a",
+          "scopeId": "initial_checks",
+          "authorizationDigest": "8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3",
+          "bindingDigest": "481d4a5891175396e4073dde22ee8852800755b0021700ca4b2df2eb84c4345d",
+          "requestDigest": "d79cdc6202ca03bf4900e6035f9e091a867f954f3c3279d964c2f20cf39c291b"
+        }
+      }
+    ],
+    "scope": {
+      "id": "initial_checks",
+      "phase": "initial",
+      "spec": "{\"authorizationDigest\":\"8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3\",\"caseRef\":\"initial_checks\",\"elapsedMs\":600000,\"id\":\"initial_checks\",\"maxInferenceAttempts\":10,\"maxRefreshOperations\":0,\"phase\":\"initial\"}",
+      "boot": "33a4415d-a3bd-4f16-af26-558d4a5dd1a8",
+      "started": 1789416949132,
+      "deadline": 1789417549132,
+      "spent": 2,
+      "state": "active"
+    }
+  },
+  "artifactAcknowledgement": {
+    "acknowledged": true,
+    "digest": "fc89162fedb6f9f43c458f1c6514daac0c07ca6a11c2b8cf0d023828a4d520b3"
+  }
+}

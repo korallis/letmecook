@@ -6,6 +6,11 @@ attempt-scoped boundary and a **synthetic** router authority. It cannot launch a
 live route, accept arbitrary repositories, resume sessions or publish changes.
 See [the evidence and remaining criteria](../../docs/evidence/first-harness.md).
 
+A separately named native Responses adapter is prepared under
+[`native/`](native/README.md). It depends on issue #83, remains offline/draft,
+and preserves this compatible Chat profile and its evidence. Its preparation
+checks do not establish execution or live readiness.
+
 ## Actual-router synthetic proof
 
 `router-run.ts` runs the pinned OpenCode binary through the shared schema-2

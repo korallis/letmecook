@@ -9,7 +9,9 @@
     "check": "tsc --noEmit",
     "test": "node --test adapter.test.ts protocol.test.ts router-profile.test.ts",
     "prove": "node run.ts",
-    "prove:router": "node router-run.ts"
+    "prove:router": "node router-run.ts",
+    "check:native": "tsc -p native/tsconfig.json",
+    "test:native": "node --test native/native.test.ts"
   },
   "devDependencies": {
     "@types/node": "24.3.0",

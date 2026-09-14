@@ -42,3 +42,9 @@ test('ambient repository config, plugins and active Git hooks are refused before
   for (const extra of ['opencode.json', '.opencode', '.claude', '.mcp.json', 'unexpected.txt']) assert.throws(() => validateWorkspaceInventory(['.git', 'greeting.txt', extra], []));
   assert.throws(() => validateWorkspaceInventory(['.git', 'greeting.txt'], ['pre-commit']));
 });
+test('compatible adapter retains its edit/write-only native events when the Responses profile is added separately', () => {
+  const capture = JSON.parse(readFileSync(new URL('../../tests/fixtures/harness/native/captured.json', import.meta.url), 'utf8'));
+  assert.throws(() => new NativeEvents().push(Buffer.from(capture.consumer.output)), /invalid_tool_event/);
+  assert.equal(config('f'.repeat(64), 'allow').provider.scoped.npm, '@ai-sdk/openai-compatible');
+  assert.equal(environment().OPENCODE_DISABLE_DEFAULT_PLUGINS, '1');
+});
