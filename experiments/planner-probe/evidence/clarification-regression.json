@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "evidence": "offline-clarification-proposal-regression",
+  "live": false,
+  "priorHead": "952c7ba96845f5c82d4a14d1914ce12fe8519b60",
+  "priorReviewReproduction": {
+    "name": "gaffer-pr73-review-clarification-952c7ba.json",
+    "sha256": "b058e083d2c50c06b2f94243a2efa944914ff1390032f18816898b00ea6dddae",
+    "observation": {
+      "nativePlannerValidClarification": {
+        "outcome": "clarification_proposed",
+        "unresolved_questions": [
+          "Should this greeting retain its punctuation?"
+        ],
+        "requests": 1,
+        "schemaAndReferencesValid": true
+      },
+      "productionHelper": {
+        "originalGatewayResultAccepted": true,
+        "identicalResultWithClarificationOutcomeDenied": true
+      },
+      "note": "The outcome-only helper probe isolates its explicit status guard; source inspection establishes it rejects every clarification_proposed result, including the valid native result above."
+    }
+  },
+  "runtimeCommit": "cbd977c1b3ad33fd3627f084e4a71efc41e4f552",
+  "correctedProductionGateway": {
+    "name": "gaffer-planner-clarification-gateway-20260914/run.json",
+    "sha256": "874aea0c579c2457e4edddb6ac964a18e301eafcbbaebd160998792e57646c1b",
+    "result": "passed",
+    "plannerOutcome": "clarification_proposed",
+    "usage": {
+      "assessments": 1,
+      "repairs": 0,
+      "requests": 1,
+      "files": 0,
+      "readBytes": 0
+    },
+    "metadata": {
+      "inputRevision": "8591ecfaa4032e37d9bea7c292b9f6f766c52a87ca971007df96cbc3c211b788",
+      "authority": "proposal_only",
+      "outcome": "clarification_proposed"
+    },
+    "acknowledgement": {
+      "outcome": "acknowledged_clarification_proposal",
+      "artifactDigest": "993812fe73f90028caef08868df2d8b3e604403a822a52b49d5a5733fe651cca",
+      "requestIds": [
+        "e8bc7c9ca68b4d288ff34805e6f41f6d"
+      ],
+      "authority": "proposal_only",
+      "independentlyAccepted": false,
+      "published": false
+    },
+    "immutableAfterGatewayStop": true,
+    "supervisorRejections": [
+      "missingReceipt",
+      "receiptDigest",
+      "missingDecision",
+      "pendingReservation",
+      "outputDrift",
+      "role",
+      "policy",
+      "earlyRead",
+      "count",
+      "proposal",
+      "settings",
+      "outcome",
+      "unsupportedOutcome",
+      "questions"
+    ],
+    "invalidCandidateSubmissions": 8,
+    "physicalAttempts": 1,
+    "cleanup": true
+  },
+  "authority": "proposal_only",
+  "budgetChange": false,
+  "timingChange": false,
+  "unattendedExecution": false,
+  "liveScopeStarted": false
+}

@@ -92,6 +92,10 @@ reads the gateway's complete `evidence(attemptId)` response and builds a closed
 output digests, binding, packet, policy and current scope independently, validates
 the final plan and fsyncs the immutable candidate before acknowledgement.
 
+The [clarification regression](evidence/clarification-regression.json) retains the
+fresh-review finding that valid clarification output was previously refused by
+the supervisor, plus its corrected one-request production gateway observation.
+
 The named artifact is `plan-proposal.json`, with closed metadata
 `{inputRevision,authority:"proposal_only",outcome}`. A schema-valid proposal with
 no unresolved questions must carry `plan_proposed`; one to three questions must
