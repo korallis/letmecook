@@ -87,7 +87,10 @@ cancellation, binary crash, detached/TERM-ignoring descendants, receipt and
 boundary journal failures, immutable candidate write failure, incomplete/forbidden
 output, router retries, disabled builtin hooks, ambient plugins/auth/Git hooks,
 network/filesystem/process containment, native transport bypass and cgroup OOM.
-Every retry is an actual counted original attempt. Failures are saved before
+The default worker reports only after relay closure and holds its tmpfs for at
+most ten seconds; a requested active stop skips that hold. The delayed-start and
+active-container-stop regressions exercise these lifecycle boundaries. Every
+retry is an actual counted original attempt. Failures are saved before
 cleanup, including a failed gateway stop: read-only retention saves the journal
 and immutable records when the final result file is absent, and records unknown
 quiescence. An OOM child is measured through kernel cgroup memory.events and
