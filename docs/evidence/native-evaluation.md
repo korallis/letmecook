@@ -7,6 +7,37 @@ use the actual pinned 9Router modules, SQLite and OpenCode binary with synthetic
 credentials and responses. No provider was called. This does not close the live
 harness, planner, continuity or foundation gates in #6, #7, #8 and #9.
 
+## Retained packet and reproduction
+
+The [public measurement packet](native-evaluation-run.json) retains the concrete
+synthetic deployment policy, all 86 runtime file hashes, original receipt and
+budget projections, actual wire identities, containment settings, kernel probes,
+control failure results and the failed 512 MiB observation. Runtime sources match
+commit `ab27fc2e181fefee4687540e022d058a65fda540`; subsequent changes only package
+this evidence. Input hashes identify the retained raw records. The
+[collector](collect-native-evaluation.ts) checks committed/current source bytes,
+paired binary manifests, exits, budgets and cleanup before projecting them.
+It excludes host paths, configuration credentials and complete logs.
+
+| Measurement | Observed result |
+| --- | --- |
+| Actual pinned router/SQLite native matrix | 33 cases, all exited 0 without OOM; owned containers removed |
+| Existing router authority integration | All 41 cases pass |
+| Portable source runner | Same 33 cases; explicitly no local-containment claim |
+| Actual OpenCode, enabled / disabled hook | Two admitted physical sends / zero provider sends |
+| Kernel egress and TLS | Selected synthetic route works; forbidden routes and untrusted certificate refused |
+| Deployment controls | Normal, host open/fsync failure and gateway stop failure; collision/overlap regressions pass |
+| Worker process tree | Signal-ignoring parent/child/grandchild terminated; no OOM or post-stop execution |
+
+The [process-tree producer](native-process-stop.ts) uses the same native worker
+resource and namespace settings with a deliberately uncooperative synthetic
+process tree. Its forced stop is separate from the successful actual OpenCode
+exit. Run it with `node docs/evidence/native-process-stop.ts /tmp/tree.json`.
+The collector accepts a local JSON manifest naming the outputs from the documented
+runners (`binary`, `disabledHook`, `router`, `portable`, `egress`, `processTree`,
+`oom512`, `legacy` and four `deployment` modes) plus the exact `sourceCommit`. No retained
+private path is required by a public installation.
+
 ## Explicit authority and wire identity
 
 The new schema-3 policy selects `native-subscription-local-v1` and
