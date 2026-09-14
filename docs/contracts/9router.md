@@ -262,6 +262,11 @@ admitted for policies needing this guarantee. A preflight hash plus polling is n
 an acceptable substitute. A future upstream immutable-version API needs separate
 evidence and must not silently change this contract.
 
+The pinned 0.5.75 [executable authority experiment](../evidence/router-authority.md)
+demonstrates counter expiry without completion, disconnect accounting before local
+abort and combo mutation while a request remains pending. It records the required
+live integration; it is not a working live authority adapter or provider test.
+
 ## Private management and status projection
 
 Use a private authenticated ingress independent of dashboard login/Host headers.

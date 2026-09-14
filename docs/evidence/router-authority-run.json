@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "sourceCommit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+  "sourceDigests": {
+    "src/lib/db/repos/usageRepo.js": "10f8c72512dd4344d2b2a67e4dbe987114d737ae5ed36bb2e0908f01da9bcd8a",
+    "open-sse/utils/streamHandler.js": "a4fe07ca274f932d0bc75822951b3811243bb66f4524d5e3b4331a5962ac2d43",
+    "src/lib/db/repos/combosRepo.js": "9895b83480aed3e2b78be71574a95791430d37585c87a43c4178d526fe4ceda0",
+    "src/app/api/combos/[id]/route.js": "cc2c500a11303038d072fadcd75694b8003a343e62a132dbc3cc5b1394f1c036"
+  },
+  "runtime": {
+    "node": "24.21.0",
+    "platform": "linux",
+    "arch": "arm64"
+  },
+  "evidence": "executed_pinned_public_modules_with_fake_clock_and_isolated_imports",
+  "inferencePerformed": false,
+  "completionMarkSent": false,
+  "liveAuthorityProven": false,
+  "counters": {
+    "at0ms": 1,
+    "at59999ms": 1,
+    "at60000ms": 0
+  },
+  "disconnect": {
+    "activeImmediately": 0,
+    "abortedImmediately": false,
+    "abortedAt499ms": false,
+    "abortedAt500ms": true
+  },
+  "writeWhilePending": {
+    "status": 200,
+    "models": [
+      "fixture_new"
+    ],
+    "activeAfterWrite": 1
+  },
+  "integrationLimits": "Synthetic clock, in-memory database and isolated imports; no real HTTP/authentication/deployment/provider-cancellation test",
+  "conclusion": "zero_active_counter_is_not_authoritative_quiescence"
+}
