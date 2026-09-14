@@ -5,7 +5,7 @@
   "engines": {"node": ">=24"},
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "node --test native.test.mjs deployment.test.mjs ../router-authority-extension/evaluation-scope.test.mjs"
+    "test": "node --test native.test.mjs deployment.test.mjs portable-output.test.mjs ../router-authority-extension/evaluation-scope.test.mjs"
   },
   "devDependencies": {"@types/node": "24.3.0", "typescript": "5.9.3"}
 }

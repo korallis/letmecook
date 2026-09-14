@@ -18,7 +18,10 @@ The native and legacy consumer staging lists include only the pure
 `scope-profile.mjs` shape/limit validator. The stateful `evaluation-scope.mjs`
 authority stays in the gateway, and both actual staged consumers verify that
 module is absent. This follows the shared dependency's validator extraction;
-the scope rules, planner limits and live authorization are unchanged.
+the scope rules, planner limits and live authorization are unchanged. The
+inherited worker and legacy harness staging lists also include the pure planner
+validator, pinned schema and terminal parser imported by native profile validation;
+they still exclude scope authority and storage.
 
 The complete private policy participates in `input_revision`. The model sees a
 small proposal-only projection. The durable gate derives assessment, read and
