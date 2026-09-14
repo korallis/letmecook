@@ -6,6 +6,7 @@ import { frames, created, completed, failed, incomplete, nativeToolEvents } from
 const nativeFetch=globalThis.fetch;
 assert.ok(existsSync('/.dockerenv') && process.env.GAFFER_SYNTHETIC_NATIVE==='1');
 const scenario=process.argv[2] || 'success';
+const invalidTools=scenario.startsWith('tools-');
 const {handleChat}=await import('/router-source/src/sse/handlers/chat.js');
 const {getAdapter}=await import('/router-source/src/lib/db/driver.js');
 const repository=await import('/router-source/src/lib/db/index.js');
@@ -28,7 +29,13 @@ const backend=createServer(async(req,res)=>{
   res.writeHead(200,{'content-type':'text/event-stream'});
   if(scenario==='oversized'){res.end(frames([created()])+':'+ 'x'.repeat(1100000)+'\n\n');return;}
   let events=[created(),completed()];
-  if(scenario==='tools')events=nativeToolEvents();
+  if(scenario==='tools' || invalidTools) {
+    events=nativeToolEvents();
+    // Exact first-review false-settlement inputs, through the original Codex stream.
+    if(scenario==='tools-identity-drift')events=events.map(e=>e.type==='response.output_item.added' && e.item.id==='fc_01' ? {...e,item:{...e.item,call_id:'call_previous',name:'previous_tool'}} : e);
+    if(scenario==='tools-delta-drift')events=events.map(e=>e.type==='response.function_call_arguments.delta' && e.item_id==='fc_01' && e.delta.includes('one.txt') ? {...e,delta:'"different.txt"}'} : e);
+    if(scenario==='tools-duplicate-argument-keys')events=events.map(e=>e.type==='response.completed' ? {...e,response:{...e.response,output:e.response.output.map(item=>item.id==='fc_01'?{...item,arguments:'{"path":"one.txt","path":"different.txt"}'}:item)}} : e);
+  }
   if(scenario==='failed')events=[created(),failed()];
   if(scenario==='incomplete')events=[created(),incomplete()];
   if(scenario==='partial')events=[created()];
@@ -56,7 +63,7 @@ const gateway=createServer(async(req,res)=>{
 await new Promise(resolve=>gateway.listen(0,'127.0.0.1',resolve));
 const id=`native_${scenario.replaceAll('-','_')}`;
 const controller=new AbortController();
-const pending=nativeFetch(`http://127.0.0.1:${gateway.address().port}/v1/chat/completions`,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer synthetic_gateway_key','x-gaffer-request-id':id,'x-gaffer-generation':String(a.state().generation),'x-gaffer-revision':a.state().revision},body:JSON.stringify({model:'gaffer-native',stream:true,max_tokens:64,messages:[{role:'user',content:'synthetic native authority'}],...(scenario==='tools' ? {tools:[{type:'function',function:{name:'read_file',parameters:{type:'object',properties:{path:{type:'string'}}}}}]} : {})}),signal:controller.signal}).then(async r=>({status:r.status,text:await r.text()})).catch(error=>({error:error.name}));
+const pending=nativeFetch(`http://127.0.0.1:${gateway.address().port}/v1/chat/completions`,{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer synthetic_gateway_key','x-gaffer-request-id':id,'x-gaffer-generation':String(a.state().generation),'x-gaffer-revision':a.state().revision},body:JSON.stringify({model:'gaffer-native',stream:true,max_tokens:64,messages:[{role:'user',content:'synthetic native authority'}],...((scenario==='tools'||invalidTools) ? {tools:[{type:'function',function:{name:'read_file',parameters:{type:'object',properties:{path:{type:'string'}}}}}]} : {})}),signal:controller.signal}).then(async r=>({status:r.status,text:await r.text()})).catch(error=>({error:error.name}));
 const waiting=['retry-cancel','fence-retry','preheaders-cancel','fence-preheaders','refresh-cancel'].includes(scenario);
 if(waiting) {
   const until=Date.now()+5000;while(sends.length===0){assert.ok(Date.now()<until,'upstream admission timeout');await new Promise(resolve=>setTimeout(resolve,5));}
@@ -70,10 +77,11 @@ if(waiting) {
   assert.equal(a.receipt(id).quiescent,scenario.endsWith('retry') || scenario==='retry-cancel');
 } else {
   const reply=await pending;
-  if(!['oversized','contradictory'].includes(scenario))assert.equal(reply.status,200);
+  if(!invalidTools && !['oversized','contradictory'].includes(scenario))assert.equal(reply.status,200);
   const r=a.receipt(id);
-  if(['partial','contradictory','oversized'].includes(scenario)){assert.equal(r.quiescent,false);assert.equal(await a.replace(a.state().generation,'forbidden',originalPolicy,()=>{}),false);}
+  if(invalidTools || ['partial','contradictory','oversized'].includes(scenario)){assert.equal(r.quiescent,false);assert.equal(await a.replace(a.state().generation,'forbidden',originalPolicy,()=>{}),false);}
   else assert.equal(r.quiescent,true);
+  if(invalidTools){assert.equal(reply.status,503);assert.equal(sends.length,1);assert.equal(r.operations.length,1);assert.equal(r.operations[0].terminal,'unknown');assert.equal(r.handler_done,1);assert.ok(!reply.text.includes('previous_tool')&&!reply.text.includes('different.txt'),'invalid original tool content must not be accepted');}
   if(scenario==='refresh'){assert.deepEqual(r.operations.map(o=>o.model),['gpt-6-astra','credential_refresh','gpt-6-astra']);assert.ok(r.operations.some(o=>o.terminal==='provider_refresh_terminal'));}
   if(scenario==='account-fallback')assert.equal(r.operations.length,2);
   if(scenario==='model-fallback')assert.deepEqual(r.operations.map(o=>o.model),['gpt-6-astra','gpt-6-astra','gpt-5.6-sol']);

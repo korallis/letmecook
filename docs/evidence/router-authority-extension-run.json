@@ -42,7 +42,7 @@
           "result": "passed",
           "receipt": {
             "id": "complete_request",
-            "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
             "generation": 2,
             "revision": "revision_1",
             "route": "gaffer-synthetic",
@@ -53,7 +53,7 @@
               {
                 "request_id": "complete_request",
                 "ordinal": 1,
-                "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
                 "generation": 2,
                 "revision": "revision_1",
                 "provider": "openai-compatible-synthetic",
@@ -93,7 +93,7 @@
           "result": "passed",
           "receipt": {
             "id": "fallback_request",
-            "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
             "generation": 3,
             "revision": "revision_2",
             "route": "gaffer-synthetic",
@@ -104,7 +104,7 @@
               {
                 "request_id": "fallback_request",
                 "ordinal": 1,
-                "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
                 "generation": 3,
                 "revision": "revision_2",
                 "provider": "openai-compatible-synthetic",
@@ -116,7 +116,7 @@
               {
                 "request_id": "fallback_request",
                 "ordinal": 2,
-                "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
                 "generation": 3,
                 "revision": "revision_2",
                 "provider": "openai-compatible-synthetic",
@@ -134,7 +134,7 @@
           "result": "passed",
           "receipt": {
             "id": "retry_cancel",
-            "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
             "generation": 3,
             "revision": "revision_2",
             "route": "gaffer-synthetic",
@@ -145,7 +145,7 @@
               {
                 "request_id": "retry_cancel",
                 "ordinal": 1,
-                "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
                 "generation": 3,
                 "revision": "revision_2",
                 "provider": "openai-compatible-synthetic",
@@ -190,7 +190,7 @@
           "result": "passed",
           "receipt": {
             "id": "identity_drift",
-            "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
             "generation": 10,
             "revision": "revision_5",
             "route": "gaffer-synthetic",
@@ -201,7 +201,7 @@
               {
                 "request_id": "identity_drift",
                 "ordinal": 1,
-                "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
                 "generation": 10,
                 "revision": "revision_5",
                 "provider": "openai-compatible-synthetic",
@@ -219,7 +219,7 @@
           "result": "passed",
           "receipt": {
             "id": "error_with_finish",
-            "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
             "generation": 10,
             "revision": "revision_5",
             "route": "gaffer-synthetic",
@@ -230,7 +230,7 @@
               {
                 "request_id": "error_with_finish",
                 "ordinal": 1,
-                "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
                 "generation": 10,
                 "revision": "revision_5",
                 "provider": "openai-compatible-synthetic",
@@ -248,7 +248,7 @@
           "result": "passed",
           "receipt": {
             "id": "incomplete_tool",
-            "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
             "generation": 10,
             "revision": "revision_5",
             "route": "gaffer-synthetic",
@@ -259,7 +259,7 @@
               {
                 "request_id": "incomplete_tool",
                 "ordinal": 1,
-                "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
                 "generation": 10,
                 "revision": "revision_5",
                 "provider": "openai-compatible-synthetic",
@@ -277,7 +277,7 @@
           "result": "passed",
           "receipt": {
             "id": "partial_request",
-            "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
             "generation": 10,
             "revision": "revision_5",
             "route": "gaffer-synthetic",
@@ -288,7 +288,7 @@
               {
                 "request_id": "partial_request",
                 "ordinal": 1,
-                "boot": "d24b72c8-7d3c-4d81-8804-d60f6968d520",
+                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
                 "generation": 10,
                 "revision": "revision_5",
                 "provider": "openai-compatible-synthetic",
@@ -333,7 +333,7 @@
       "scenario": "crash",
       "receipt": {
         "id": "crash_request",
-        "boot": "c8c8f9ab-bbe5-471c-8ba9-df369a72b449",
+        "boot": "bcb93879-9bd4-4486-b575-83243a5e3569",
         "generation": 3,
         "revision": "revision_2",
         "route": "gaffer-synthetic",
@@ -344,7 +344,7 @@
           {
             "request_id": "crash_request",
             "ordinal": 1,
-            "boot": "c8c8f9ab-bbe5-471c-8ba9-df369a72b449",
+            "boot": "bcb93879-9bd4-4486-b575-83243a5e3569",
             "generation": 3,
             "revision": "revision_2",
             "provider": "openai-compatible-synthetic",
@@ -362,7 +362,7 @@
       "phase": "closed",
       "crashReceipt": {
         "id": "crash_request",
-        "boot": "c8c8f9ab-bbe5-471c-8ba9-df369a72b449",
+        "boot": "bcb93879-9bd4-4486-b575-83243a5e3569",
         "generation": 3,
         "revision": "revision_2",
         "route": "gaffer-synthetic",
@@ -373,7 +373,7 @@
           {
             "request_id": "crash_request",
             "ordinal": 1,
-            "boot": "c8c8f9ab-bbe5-471c-8ba9-df369a72b449",
+            "boot": "bcb93879-9bd4-4486-b575-83243a5e3569",
             "generation": 3,
             "revision": "revision_2",
             "provider": "openai-compatible-synthetic",
@@ -402,7 +402,7 @@
       ],
       "receipt": {
         "id": "native_success",
-        "boot": "b677cfe9-39c1-49d8-81cf-a1738360095e",
+        "boot": "0160c2cc-a88d-4799-912a-58d25f8a3cb4",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -413,7 +413,7 @@
           {
             "request_id": "native_success",
             "ordinal": 1,
-            "boot": "b677cfe9-39c1-49d8-81cf-a1738360095e",
+            "boot": "0160c2cc-a88d-4799-912a-58d25f8a3cb4",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -540,7 +540,7 @@
       ],
       "receipt": {
         "id": "native_tools",
-        "boot": "adf02731-af16-4e7f-8eb8-97842e56127c",
+        "boot": "5502530f-4659-4eaa-878d-b041c0d94c8a",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -551,7 +551,7 @@
           {
             "request_id": "native_tools",
             "ordinal": 1,
-            "boot": "adf02731-af16-4e7f-8eb8-97842e56127c",
+            "boot": "5502530f-4659-4eaa-878d-b041c0d94c8a",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -562,6 +562,420 @@
           }
         ],
         "quiescent": true
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "tools-identity-drift",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_tools_identity_drift",
+        "boot": "0be9cbf9-a19d-4542-a786-d498eb3efc7e",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_tools_identity_drift",
+            "ordinal": 1,
+            "boot": "0be9cbf9-a19d-4542-a786-d498eb3efc7e",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "unknown",
+            "local_stop": "original_error"
+          }
+        ],
+        "quiescent": false
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "tools-delta-drift",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_tools_delta_drift",
+        "boot": "e72d1ff3-0f62-427a-a707-7c3eaf0a2022",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_tools_delta_drift",
+            "ordinal": 1,
+            "boot": "e72d1ff3-0f62-427a-a707-7c3eaf0a2022",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "unknown",
+            "local_stop": "original_error"
+          }
+        ],
+        "quiescent": false
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "tools-duplicate-argument-keys",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_tools_duplicate_argument_keys",
+        "boot": "fc0589ad-b7ec-4edb-ad85-42bc91fc20ab",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_tools_duplicate_argument_keys",
+            "ordinal": 1,
+            "boot": "fc0589ad-b7ec-4edb-ad85-42bc91fc20ab",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "unknown",
+            "local_stop": "original_error"
+          }
+        ],
+        "quiescent": false
       },
       "policy": {
         "schema": 1,
@@ -684,7 +1098,7 @@
       ],
       "receipt": {
         "id": "native_account_fallback",
-        "boot": "f6e246dc-17e4-4df5-92b3-3e0f6ebd123a",
+        "boot": "10b87bda-e731-42dc-a28b-0da15a40e985",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -695,7 +1109,7 @@
           {
             "request_id": "native_account_fallback",
             "ordinal": 1,
-            "boot": "f6e246dc-17e4-4df5-92b3-3e0f6ebd123a",
+            "boot": "10b87bda-e731-42dc-a28b-0da15a40e985",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -707,7 +1121,7 @@
           {
             "request_id": "native_account_fallback",
             "ordinal": 2,
-            "boot": "f6e246dc-17e4-4df5-92b3-3e0f6ebd123a",
+            "boot": "10b87bda-e731-42dc-a28b-0da15a40e985",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -846,7 +1260,7 @@
       ],
       "receipt": {
         "id": "native_model_fallback",
-        "boot": "c7cf8cfe-0754-4ff5-b12c-8268dc82089b",
+        "boot": "2c1070c6-7beb-4f1b-80d2-420d515a74a1",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -857,7 +1271,7 @@
           {
             "request_id": "native_model_fallback",
             "ordinal": 1,
-            "boot": "c7cf8cfe-0754-4ff5-b12c-8268dc82089b",
+            "boot": "2c1070c6-7beb-4f1b-80d2-420d515a74a1",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -869,7 +1283,7 @@
           {
             "request_id": "native_model_fallback",
             "ordinal": 2,
-            "boot": "c7cf8cfe-0754-4ff5-b12c-8268dc82089b",
+            "boot": "2c1070c6-7beb-4f1b-80d2-420d515a74a1",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -881,7 +1295,7 @@
           {
             "request_id": "native_model_fallback",
             "ordinal": 3,
-            "boot": "c7cf8cfe-0754-4ff5-b12c-8268dc82089b",
+            "boot": "2c1070c6-7beb-4f1b-80d2-420d515a74a1",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1020,7 +1434,7 @@
       ],
       "receipt": {
         "id": "native_refresh",
-        "boot": "77e0d76a-b3f6-43f1-9a64-85d642883e28",
+        "boot": "0cfaeab7-1e17-43d4-907c-bc0248e66d5a",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1031,7 +1445,7 @@
           {
             "request_id": "native_refresh",
             "ordinal": 1,
-            "boot": "77e0d76a-b3f6-43f1-9a64-85d642883e28",
+            "boot": "0cfaeab7-1e17-43d4-907c-bc0248e66d5a",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1043,7 +1457,7 @@
           {
             "request_id": "native_refresh",
             "ordinal": 2,
-            "boot": "77e0d76a-b3f6-43f1-9a64-85d642883e28",
+            "boot": "0cfaeab7-1e17-43d4-907c-bc0248e66d5a",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1055,7 +1469,7 @@
           {
             "request_id": "native_refresh",
             "ordinal": 3,
-            "boot": "77e0d76a-b3f6-43f1-9a64-85d642883e28",
+            "boot": "0cfaeab7-1e17-43d4-907c-bc0248e66d5a",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1188,7 +1602,7 @@
       ],
       "receipt": {
         "id": "native_proactive_refresh",
-        "boot": "205a6775-daf7-4af8-a4a4-d3487af912f6",
+        "boot": "da49895f-59fa-4278-a77d-47973a79a64f",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1199,7 +1613,7 @@
           {
             "request_id": "native_proactive_refresh",
             "ordinal": 1,
-            "boot": "205a6775-daf7-4af8-a4a4-d3487af912f6",
+            "boot": "da49895f-59fa-4278-a77d-47973a79a64f",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1211,7 +1625,7 @@
           {
             "request_id": "native_proactive_refresh",
             "ordinal": 2,
-            "boot": "205a6775-daf7-4af8-a4a4-d3487af912f6",
+            "boot": "da49895f-59fa-4278-a77d-47973a79a64f",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1344,7 +1758,7 @@
       ],
       "receipt": {
         "id": "native_sse_retry",
-        "boot": "997b0f5b-e096-425e-ad29-a1db9de4f398",
+        "boot": "322e4f8c-2ddc-4c0c-81c4-524e79a29d69",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1355,7 +1769,7 @@
           {
             "request_id": "native_sse_retry",
             "ordinal": 1,
-            "boot": "997b0f5b-e096-425e-ad29-a1db9de4f398",
+            "boot": "322e4f8c-2ddc-4c0c-81c4-524e79a29d69",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1367,7 +1781,7 @@
           {
             "request_id": "native_sse_retry",
             "ordinal": 2,
-            "boot": "997b0f5b-e096-425e-ad29-a1db9de4f398",
+            "boot": "322e4f8c-2ddc-4c0c-81c4-524e79a29d69",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1494,7 +1908,7 @@
       ],
       "receipt": {
         "id": "native_retry_cancel",
-        "boot": "bec2b6de-6718-4aaf-9893-08ab36c36633",
+        "boot": "242cb54a-1fb0-4288-9aea-6b881eafd350",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1505,7 +1919,7 @@
           {
             "request_id": "native_retry_cancel",
             "ordinal": 1,
-            "boot": "bec2b6de-6718-4aaf-9893-08ab36c36633",
+            "boot": "242cb54a-1fb0-4288-9aea-6b881eafd350",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1632,7 +2046,7 @@
       ],
       "receipt": {
         "id": "native_fence_retry",
-        "boot": "3be54b0a-48cf-474d-8988-82486c5dd93d",
+        "boot": "910e049d-9673-480b-ad7d-ba669aa8c04d",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1643,7 +2057,7 @@
           {
             "request_id": "native_fence_retry",
             "ordinal": 1,
-            "boot": "3be54b0a-48cf-474d-8988-82486c5dd93d",
+            "boot": "910e049d-9673-480b-ad7d-ba669aa8c04d",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1770,7 +2184,7 @@
       ],
       "receipt": {
         "id": "native_preheaders_cancel",
-        "boot": "bb3a1c72-5462-4ab2-81d1-067853cd5cad",
+        "boot": "6b185253-14b4-40e8-a03b-f4dbba8262f2",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1781,7 +2195,7 @@
           {
             "request_id": "native_preheaders_cancel",
             "ordinal": 1,
-            "boot": "bb3a1c72-5462-4ab2-81d1-067853cd5cad",
+            "boot": "6b185253-14b4-40e8-a03b-f4dbba8262f2",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1908,7 +2322,7 @@
       ],
       "receipt": {
         "id": "native_fence_preheaders",
-        "boot": "a1baa6e7-1a6d-4746-9c98-c84c01c52def",
+        "boot": "c6d59852-bf87-4587-a4a5-dbecb384da27",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1919,7 +2333,7 @@
           {
             "request_id": "native_fence_preheaders",
             "ordinal": 1,
-            "boot": "a1baa6e7-1a6d-4746-9c98-c84c01c52def",
+            "boot": "c6d59852-bf87-4587-a4a5-dbecb384da27",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2046,7 +2460,7 @@
       ],
       "receipt": {
         "id": "native_refresh_cancel",
-        "boot": "95347390-7cbc-4276-bf17-3c612f988c16",
+        "boot": "356639f6-0792-467e-9b7b-a78414a34c5e",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2057,7 +2471,7 @@
           {
             "request_id": "native_refresh_cancel",
             "ordinal": 1,
-            "boot": "95347390-7cbc-4276-bf17-3c612f988c16",
+            "boot": "356639f6-0792-467e-9b7b-a78414a34c5e",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2184,7 +2598,7 @@
       ],
       "receipt": {
         "id": "native_failed",
-        "boot": "e59a4afa-1735-49bd-a244-2154cf6a3696",
+        "boot": "7530b659-4c23-4aea-bf4a-ed909f12aecb",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2195,7 +2609,7 @@
           {
             "request_id": "native_failed",
             "ordinal": 1,
-            "boot": "e59a4afa-1735-49bd-a244-2154cf6a3696",
+            "boot": "7530b659-4c23-4aea-bf4a-ed909f12aecb",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2322,7 +2736,7 @@
       ],
       "receipt": {
         "id": "native_incomplete",
-        "boot": "c91ef4ef-89ee-4824-9028-0b8dad1b9216",
+        "boot": "4995413b-cd01-4ccd-abab-6f3d55ecc09d",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2333,7 +2747,7 @@
           {
             "request_id": "native_incomplete",
             "ordinal": 1,
-            "boot": "c91ef4ef-89ee-4824-9028-0b8dad1b9216",
+            "boot": "4995413b-cd01-4ccd-abab-6f3d55ecc09d",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2460,7 +2874,7 @@
       ],
       "receipt": {
         "id": "native_partial",
-        "boot": "34ef9a37-27e8-4ce9-9749-7e1ffaae266b",
+        "boot": "3394dd12-e222-47fd-aa55-af6dc52f98a2",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2471,7 +2885,7 @@
           {
             "request_id": "native_partial",
             "ordinal": 1,
-            "boot": "34ef9a37-27e8-4ce9-9749-7e1ffaae266b",
+            "boot": "3394dd12-e222-47fd-aa55-af6dc52f98a2",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2598,7 +3012,7 @@
       ],
       "receipt": {
         "id": "native_contradictory",
-        "boot": "661f3f5e-ae4b-4964-9af8-5530411ed5f6",
+        "boot": "2fc08d09-b8c6-4f64-9911-e21af7edf2f4",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2609,7 +3023,7 @@
           {
             "request_id": "native_contradictory",
             "ordinal": 1,
-            "boot": "661f3f5e-ae4b-4964-9af8-5530411ed5f6",
+            "boot": "2fc08d09-b8c6-4f64-9911-e21af7edf2f4",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2736,7 +3150,7 @@
       ],
       "receipt": {
         "id": "native_oversized",
-        "boot": "45f8eb9e-f076-4ef7-a2e0-4da58cc0b95d",
+        "boot": "c84549fb-fa76-4e0f-883e-a9dd5e5417fc",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2747,7 +3161,7 @@
           {
             "request_id": "native_oversized",
             "ordinal": 1,
-            "boot": "45f8eb9e-f076-4ef7-a2e0-4da58cc0b95d",
+            "boot": "c84549fb-fa76-4e0f-883e-a9dd5e5417fc",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2856,6 +3270,414 @@
           "validated-original-responses-sse",
           "validated-original-refresh-json"
         ]
+      }
+    },
+    {
+      "scenario": "error-oversized-open",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 27,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "error_oversized_open",
+        "boot": "abbbba8e-2c40-4b08-a919-80a7654de577",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "error_oversized_open",
+            "ordinal": 1,
+            "boot": "abbbba8e-2c40-4b08-a919-80a7654de577",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "error-invalid-utf8",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 27,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "error_invalid_utf8",
+        "boot": "f9b4d1a2-f559-41ab-bcf3-d331f3bb8668",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "error_invalid_utf8",
+            "ordinal": 1,
+            "boot": "f9b4d1a2-f559-41ab-bcf3-d331f3bb8668",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "error-invalid-json",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 25,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "error_invalid_json",
+        "boot": "865f8dfe-a859-4673-ba12-4faab3389300",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "error_invalid_json",
+            "ordinal": 1,
+            "boot": "865f8dfe-a859-4673-ba12-4faab3389300",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "success-wrong-content-type-open",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 27,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "success_wrong_content_type_open",
+        "boot": "9bb938d5-195c-4ec5-9ccb-6583d3a8e958",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "success_wrong_content_type_open",
+            "ordinal": 1,
+            "boot": "9bb938d5-195c-4ec5-9ccb-6583d3a8e958",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "refresh-oversized-open",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 21,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "refresh_oversized_open",
+        "boot": "6e6c846c-b543-45be-8ba9-9f8f22912d71",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "refresh_oversized_open",
+            "ordinal": 1,
+            "boot": "6e6c846c-b543-45be-8ba9-9f8f22912d71",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "refresh-error-oversized-open",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 36,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "refresh_error_oversized_open",
+        "boot": "02a2dbf0-b04c-4666-a8c6-693ba3663341",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "refresh_error_oversized_open",
+            "ordinal": 1,
+            "boot": "02a2dbf0-b04c-4666-a8c6-693ba3663341",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "refresh-invalid-utf8",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 20,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "refresh_invalid_utf8",
+        "boot": "c8607566-d4a1-4d84-892b-4cbc1b3be801",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "refresh_invalid_utf8",
+            "ordinal": 1,
+            "boot": "c8607566-d4a1-4d84-892b-4cbc1b3be801",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "refresh-invalid-schema",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 23,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "refresh_invalid_schema",
+        "boot": "e5c448ff-dcf5-4ab0-b9f9-8204bbd1ddcd",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "refresh_invalid_schema",
+            "ordinal": 1,
+            "boot": "e5c448ff-dcf5-4ab0-b9f9-8204bbd1ddcd",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "error-cancel-complete-json",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 133,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "error_cancel_complete_json",
+        "boot": "8f04e982-148c-41fc-8b07-706792d78451",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "cancelled_unknown",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "error_cancel_complete_json",
+            "ordinal": 1,
+            "boot": "8f04e982-148c-41fc-8b07-706792d78451",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "refresh-cancel-complete-json",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 128,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "refresh_cancel_complete_json",
+        "boot": "669c7287-f39f-4251-bb55-450dc95187ee",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "cancelled_unknown",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "refresh_cancel_complete_json",
+            "ordinal": 1,
+            "boot": "669c7287-f39f-4251-bb55-450dc95187ee",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "error-deadline",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 30011,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "error_deadline",
+        "boot": "2af136de-cf17-4e7e-93ae-1bf03c1326ec",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "cancelled_unknown",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "error_deadline",
+            "ordinal": 1,
+            "boot": "2af136de-cf17-4e7e-93ae-1bf03c1326ec",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "native-peek-deadline",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 30023,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "native_peek_deadline",
+        "boot": "44bcf38d-4fa7-4475-9b3f-0ca131a81e81",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "cancelled_unknown",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_peek_deadline",
+            "ordinal": 1,
+            "boot": "44bcf38d-4fa7-4475-9b3f-0ca131a81e81",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "original_cancel"
+          }
+        ],
+        "quiescent": false
       }
     },
     {

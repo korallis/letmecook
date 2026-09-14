@@ -79,8 +79,74 @@ export function createResponsesTerminalObserver(options = {}) {
     invalidReason ??= reason;
     line = []; data = []; eventName = null; hasFields = false;
     terminalCandidate = null;
+    items.clear(); indexes.clear(); doneItems.clear();
+    closedChannels.clear(); addedParts.clear(); closedParts.clear();
   }
   function assert(condition, reason) { if (!condition) throw new Error(reason); }
+  function bindIdentity(record, fields) {
+    for (const key of ['call_id', 'name', 'namespace', 'role', 'phase']) {
+      if (fields[key] === undefined) continue;
+      assert(typeof fields[key] === 'string', 'invalid_item_identity');
+      if (Object.hasOwn(record.identity, key)) {
+        assert(record.identity[key] === fields[key], 'item_identity_mismatch');
+      } else record.identity[key] = fields[key];
+    }
+  }
+  function recordFor(item, index) {
+    let record = items.get(item.id);
+    if (!record) {
+      assert(items.size < limits.maxOutputItems, 'output_item_limit');
+      const identity = ['function_call', 'custom_tool_call'].includes(item.type) ? { namespace: item.namespace ?? '' } : {};
+      record = { index, type: item.type, identity, channels: new Map(), parts: new Map() };
+      items.set(item.id, record);
+    }
+    bindIdentity(record, ['function_call', 'custom_tool_call'].includes(item.type)
+      ? { ...item, namespace: item.namespace ?? '' } : item);
+    return record;
+  }
+  function channelKey(record, family, index, partType) {
+    const key = JSON.stringify([family, index]);
+    if (partType !== undefined) {
+      if (record.parts.has(key)) assert(record.parts.get(key) === partType, 'content_part_type_mismatch');
+      else record.parts.set(key, partType);
+    }
+    return key;
+  }
+  function snapshot(record, key, value, complete) {
+    const channel = record.channels.get(key);
+    if (!channel) record.channels.set(key, { text: value, streamed: false, complete });
+    else {
+      // Added snapshots may contain an initial prefix. Repeated full snapshots
+      // corroborate it; they are never appended as another delta.
+      assert(channel.streamed || channel.complete ? value === channel.text : value.startsWith(channel.text), 'streamed_content_mismatch');
+      channel.text = value;
+      channel.complete ||= complete;
+    }
+  }
+  function appendDelta(record, key, value) {
+    let channel = record.channels.get(key);
+    if (!channel) { channel = { text: '', streamed: false, complete: false }; record.channels.set(key, channel); }
+    assert(!channel.complete, 'delta_after_complete_snapshot');
+    // All retained prefixes/deltas originated inside maxBytes; concatenation
+    // cannot grow beyond that bound, even across many individually small events.
+    channel.text += value; channel.streamed = true;
+  }
+  function itemContent(record, item, complete) {
+    const present = new Set();
+    const take = (family, index, type, value) => {
+      const key = channelKey(record, family, index, type); present.add(key); snapshot(record, key, value, complete);
+    };
+    if (item.type === 'function_call') take('arguments', 0, undefined, item.arguments);
+    else if (item.type === 'custom_tool_call') take('input', 0, undefined, item.input);
+    else {
+      if (item.type === 'message') item.content.forEach((part, index) => take('content', index, part.type, part.type === 'refusal' ? part.refusal : part.text));
+      else {
+        item.summary.forEach((part, index) => take('summary', index, 'summary_text', part.text));
+        (item.content || []).forEach((part, index) => take('content', index, 'reasoning_text', part.text));
+      }
+    }
+    if (complete) for (const key of record.channels.keys()) assert(present.has(key), 'missing_output_channel');
+  }
   function itemSummary(item, complete) {
     assert(object(item) && identifier(item.id) && typeof item.type === 'string', 'invalid_output_item');
     assert(['message', 'function_call', 'custom_tool_call', 'reasoning'].includes(item.type), 'unsupported_output_item');
@@ -108,7 +174,10 @@ export function createResponsesTerminalObserver(options = {}) {
       assert(typeof value === 'string', 'invalid_tool_arguments');
       // Full tool-schema validation and dispatch authority belong to the caller.
       if (complete && item.type === 'function_call') {
-        let args; try { args = JSON.parse(value); } catch { throw new Error('invalid_tool_arguments'); }
+        let args; try { args = parseUnambiguousJSON(value); } catch (error) {
+          if (error.message === 'malformed_json') throw new Error('invalid_tool_arguments');
+          throw error;
+        }
         assert(object(args), 'invalid_tool_arguments');
       }
       Object.assign(result, { callId: item.call_id, name: item.name, value });
@@ -122,6 +191,13 @@ export function createResponsesTerminalObserver(options = {}) {
         assert(object(part) && part.type === 'summary_text' && typeof part.text === 'string', 'invalid_reasoning_summary');
         return part.text;
       });
+      if (item.content !== undefined && item.content !== null) {
+        assert(Array.isArray(item.content), 'invalid_reasoning_content');
+        result.content = item.content.map(part => {
+          assert(object(part) && ['reasoning_text', 'text'].includes(part.type) && typeof part.text === 'string', 'invalid_reasoning_content');
+          return { type: 'reasoning_text', text: part.text };
+        });
+      }
       if (item.encrypted_content !== undefined && item.encrypted_content !== null) {
         assert(typeof item.encrypted_content === 'string', 'invalid_reasoning_content');
         result.encryptedContent = item.encrypted_content;
@@ -180,31 +256,53 @@ export function createResponsesTerminalObserver(options = {}) {
       if (type.endsWith('.added')) assert(!previous, 'duplicate_or_reordered_item');
       else assert(!doneItems.has(item.id), 'duplicate_done_item');
       assert(items.has(item.id) || items.size < limits.maxOutputItems, 'output_item_limit');
-      items.set(item.id, { index: payload.output_index, type: item.type });
+      if (payload.item_id !== undefined) assert(payload.item_id === item.id, 'conflicting_output_item');
+      const record = recordFor(item, payload.output_index);
+      bindIdentity(record, payload);
+      itemContent(record, item, type.endsWith('.done'));
       indexes.set(payload.output_index, item.id);
       if (type.endsWith('.done')) doneItems.set(item.id, summary);
     } else if (payload.item_id !== undefined) {
       assert(identifier(payload.item_id) && items.has(payload.item_id), 'unknown_item_id');
       assert(!doneItems.has(payload.item_id), 'event_after_item_done');
       if (payload.output_index !== undefined) assert(payload.output_index === items.get(payload.item_id).index, 'conflicting_output_index');
-      const itemType = items.get(payload.item_id).type;
+      const record = items.get(payload.item_id);
+      bindIdentity(record, payload);
+      const itemType = record.type;
       const expected = type.startsWith('response.function_call_arguments.') ? 'function_call'
         : type.startsWith('response.custom_tool_call_input.') ? 'custom_tool_call'
           : type.startsWith('response.reasoning_') ? 'reasoning' : 'message';
       assert(itemType === expected, 'item_event_type_mismatch');
-      const partIndex = payload.content_index ?? payload.summary_index ?? 0;
+      const family = type.startsWith('response.function_call_arguments.') ? 'arguments'
+        : type.startsWith('response.custom_tool_call_input.') ? 'input'
+          : type.startsWith('response.reasoning_summary_') ? 'summary' : 'content';
+      assert(family === 'summary' ? payload.content_index === undefined
+        : family === 'content' ? payload.summary_index === undefined
+          : payload.content_index === undefined && payload.summary_index === undefined, 'conflicting_channel_index');
+      const partIndex = family === 'summary' ? payload.summary_index : family === 'content' ? payload.content_index : 0;
       assert(partIndex < limits.maxEvents, 'part_index_limit');
-      const partKey = `${payload.item_id}:${partIndex}`;
+      const partType = PART_EVENTS.has(type) ? payload.part.type
+        : family === 'summary' ? 'summary_text' : family === 'content'
+          ? type.startsWith('response.refusal.') ? 'refusal' : itemType === 'reasoning' ? 'reasoning_text' : 'output_text' : undefined;
+      if (PART_EVENTS.has(type)) {
+        assert(family === 'summary' ? partType === 'summary_text'
+          : itemType === 'message' && ['output_text', 'refusal'].includes(partType), 'invalid_content_part');
+      }
+      const key = channelKey(record, family, partIndex, partType);
+      const partKey = JSON.stringify([payload.item_id, family, partIndex]);
       if (PART_EVENTS.has(type)) {
         assert(!closedParts.has(partKey), 'event_after_part_done');
         if (type.endsWith('.added')) {
           assert(!addedParts.has(partKey), 'duplicate_part_added'); addedParts.add(partKey);
         } else closedParts.add(partKey);
+        snapshot(record, key, payload.part.type === 'refusal' ? payload.part.refusal : payload.part.text, type.endsWith('.done'));
       } else if (TEXT_EVENTS.has(type)) {
         assert(!closedParts.has(partKey), 'event_after_part_done');
         const channel = `${partKey}:${type.slice(0, type.lastIndexOf('.'))}`;
         assert(!closedChannels.has(channel), 'event_after_channel_done');
         if (type.endsWith('.done')) closedChannels.add(channel);
+        if (type.endsWith('.delta')) appendDelta(record, key, payload.delta);
+        else snapshot(record, key, payload[TEXT_EVENTS.get(type)], true);
       }
     }
     if (!TERMINALS.has(type)) return;
@@ -225,6 +323,8 @@ export function createResponsesTerminalObserver(options = {}) {
         if (items.has(item.id)) assert(items.get(item.id).index === index && items.get(item.id).type === item.type, 'terminal_item_mismatch');
         if (doneItems.has(item.id)) assert(doneItems.get(item.id) === summary, 'terminal_item_mismatch');
         if (item.type === 'reasoning' && item.status === undefined) assert(doneItems.has(item.id), 'reasoning_completion_unproved');
+        const record = recordFor(item, index);
+        itemContent(record, item, true);
       });
       for (const id of items.keys()) assert(seen.has(id), 'missing_terminal_item');
     } else if (kind === 'failed') {

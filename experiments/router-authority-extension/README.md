@@ -83,6 +83,21 @@ recovery that discards such uncertainty.
 `quiescent(ids)` also checks the whole router. A failed/partial operation is never
 settled merely because a later fallback succeeds.
 
+Each original physical transport registers a disposer shared across executor and
+refresh contexts. Size, UTF-8, JSON/schema, content-type or stream-validation failure
+aborts the request and cancels the original reader/body before releasing ownership;
+later retries cannot send. Handler completion aborts any remaining physical work
+and retains its deadline/cancellation bookkeeping until local disposal settles.
+An abort-induced reader completion is not original EOF evidence. Unknown operations
+remain unknown even after the synthetic HTTP server observes connection closure.
+
+The native observer retains immutable item/tool identity and accumulates content
+by item and content/summary index. Explicit channel/part/item completion and final
+snapshots must agree with all observed deltas. Repeated matching snapshots validate
+existing content without appending it. Changed call IDs/names/namespaces, conflicting
+tool arguments, duplicate JSON argument keys and dropped/moved content channels
+fail closed. Consumers still withhold final/tool acceptance until original success.
+
 The trusted in-process API is exported by `overlay/authority.mjs`:
 
 ```js
@@ -151,11 +166,18 @@ it does not prove a remote provider stopped after a router crash.
 
 `FrozenAuthority` in the earlier boundary experiment intentionally accepts only
 its original synthetic policy schema. This new authority has a richer real-router
-graph and is not silently plugged into that validator. Follow-up #6/#7 integration
-must version that trusted policy type, bind boundary IDs/headers and exact request
-shape, authenticate exclusive ingress, consume correlated original receipts, and
-withhold final/tool acceptance until **successful** original provider terminal
-evidence. Quiescence alone also includes provider failure/incomplete outcomes.
+graph and is not silently plugged into that validator. Shared follow-up
+[#79](https://github.com/korallis/letmecook/issues/79) must version that trusted
+policy type, bind boundary IDs/headers and exact request shape, authenticate
+exclusive ingress, consume correlated original receipts, and withhold final/tool
+acceptance until **successful** original provider terminal evidence. #6/#7 then
+consume that integration. Quiescence alone also includes provider failure/incomplete
+outcomes.
+
+The [evidence record](../../docs/evidence/router-authority-extension.md) preserves
+two blocking defects found in independent review of the first candidate commit,
+alongside their corrected actual-router HTTP regressions. Passing a previous suite
+did not establish conformance; the corrected commit requires a fresh final review.
 
 No deployment was selected, configuration/credentials copied, provider inference
 sent, package published, upstream repository changed, or human baseline invented.

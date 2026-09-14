@@ -182,3 +182,98 @@ test('observer finalization is idempotent; invalid evidence cannot recover', () 
   assert.throws(() => subject.push(encode('')), /observer_finished/);
   assert.throws(() => observer().push('text'), TypeError);
 });
+
+test('PR78 regression: added call ID/name cannot change in done/completed', () => {
+  for (const patch of [{ call_id: 'call_previous' }, { name: 'previous_tool' }, { namespace: 'previous_namespace' }]) {
+    const events = nativeToolEvents().map(event => event.type === 'response.output_item.added' && event.item.id === functionOne.id
+      ? { ...event, item: { ...event.item, ...patch } } : event);
+    unknown(frames(events), 'item_identity_mismatch');
+  }
+  // A namespace introduced only in a completed item also changes the declared root namespace.
+  unknown(frames([created(), itemAdded(functionOne, 0), completed([{ ...functionOne, namespace: 'other' }])]), 'item_identity_mismatch');
+});
+test('PR78 regression: streamed different.txt cannot be laundered by one.txt done/final snapshots', () => {
+  const events = nativeToolEvents().map(event => event.type === 'response.function_call_arguments.delta'
+    && event.item_id === functionOne.id && event.delta.includes('one.txt')
+    ? { ...event, delta: '"different.txt"}' } : event);
+  unknown(frames(events), 'streamed_content_mismatch');
+  unknown(frames(events.filter(event => event.type !== 'response.output_item.done')), 'streamed_content_mismatch');
+});
+test('function channel done and optional identity fields must corroborate accumulated deltas', () => {
+  const prefix = [created(), itemAdded(functionOne, 0), delta(functionOne, 0, functionOne.arguments)];
+  const done = { type: 'response.function_call_arguments.done', item_id: functionOne.id, output_index: 0,
+    arguments: functionOne.arguments, call_id: functionOne.call_id, name: functionOne.name };
+  terminal(frames([...prefix, done, itemDone(functionOne, 0), completed([functionOne])]));
+  unknown(frames([...prefix, { ...done, arguments: '{"path":"different.txt"}' }]), 'streamed_content_mismatch');
+  unknown(frames([...prefix, { ...done, call_id: 'call_wrong' }]), 'item_identity_mismatch');
+  unknown(frames([...prefix, { ...done, name: 'wrong_tool' }]), 'item_identity_mismatch');
+  unknown(frames([...prefix, done, completed([{ ...functionOne, arguments: '{}' }])]), 'streamed_content_mismatch');
+});
+test('matching repeated metadata and snapshots do not duplicate incremental tool arguments', () => {
+  const added = itemAdded(functionOne, 0); added.item.arguments = '{"path":';
+  const part = { ...delta(functionOne, 0, '"one.txt"}'), call_id: functionOne.call_id, name: functionOne.name };
+  const done = { type: 'response.function_call_arguments.done', item_id: functionOne.id, output_index: 0,
+    arguments: functionOne.arguments, name: functionOne.name };
+  terminal(frames([created(), added, part, done, itemDone(functionOne, 0), completed([functionOne])]));
+  // Authoritative complete items without deltas may extend a declared initial prefix.
+  terminal(frames([created(), added, itemDone(functionOne, 0), completed([functionOne])]));
+});
+test('message delta and part-done text must match item-done and final completed text', () => {
+  const added = itemAdded({ ...message, content: [] }, 0);
+  const text = { type: 'response.output_text.delta', item_id: message.id, output_index: 0, content_index: 0, delta: 'different' };
+  unknown(frames([created(), added, text, itemDone(message, 0), completed()]), 'streamed_content_mismatch');
+  unknown(frames([created(), added, text, completed()]), 'streamed_content_mismatch');
+  const partDone = { type: 'response.content_part.done', item_id: message.id, output_index: 0, content_index: 0,
+    part: { type: 'output_text', text: 'different' } };
+  unknown(frames([created(), added, partDone, itemDone(message, 0)]), 'streamed_content_mismatch');
+  unknown(frames([created(), added, text, { ...partDone, part: { type: 'output_text', text: 'other' } }]), 'streamed_content_mismatch');
+});
+test('message initial prefix and repeated part snapshots support legitimate incremental content', () => {
+  const initial = { ...message, content: [{ type: 'output_text', text: 'Hello ' }] };
+  const partAdded = { type: 'response.content_part.added', item_id: message.id, output_index: 0, content_index: 0,
+    part: { type: 'output_text', text: 'Hello ' } };
+  const text = { type: 'response.output_text.delta', item_id: message.id, output_index: 0, content_index: 0, delta: '🌍 café' };
+  terminal(frames([created(), itemAdded(initial, 0), partAdded, text, itemDone(message, 0), completed()]));
+  unknown(frames([created(), itemAdded(initial, 0), completed([{ ...message, phase: 'commentary' }])]), 'item_identity_mismatch');
+});
+test('custom-tool and refusal streamed channels cannot disagree with complete snapshots', () => {
+  const custom = { id: 'ct_01', type: 'custom_tool_call', status: 'completed', call_id: 'call_ct', name: 'patch', input: 'expected patch' };
+  const added = itemAdded({ ...custom, input: '' }, 0);
+  const text = { type: 'response.custom_tool_call_input.delta', item_id: custom.id, output_index: 0, delta: 'wrong patch' };
+  unknown(frames([created(), added, text, itemDone(custom, 0), completed([custom])]), 'streamed_content_mismatch');
+  terminal(frames([created(), added, { ...text, delta: custom.input }, itemDone(custom, 0), completed([custom])]));
+  const refusal = { ...message, content: [{ type: 'refusal', refusal: 'declined' }] };
+  const refusalDelta = { type: 'response.refusal.delta', item_id: message.id, output_index: 0, content_index: 0, delta: 'different refusal' };
+  unknown(frames([created(), itemAdded({ ...refusal, content: [] }, 0), refusalDelta, completed([refusal])]), 'streamed_content_mismatch');
+});
+test('reasoning summary/content have distinct channels and must appear consistently at completion', () => {
+  const reasoning = { id: 'rs_01', type: 'reasoning', status: 'completed',
+    summary: [{ type: 'summary_text', text: 'summary' }], content: [{ type: 'reasoning_text', text: 'thinking' }] };
+  const added = itemAdded({ ...reasoning, summary: [], content: [] }, 0);
+  const summary = { type: 'response.reasoning_summary_text.delta', item_id: reasoning.id, output_index: 0, summary_index: 0, delta: 'summary' };
+  const content = { type: 'response.reasoning_text.delta', item_id: reasoning.id, output_index: 0, content_index: 0, delta: 'thinking' };
+  terminal(frames([created(), added, summary, content, itemDone(reasoning, 0), completed([reasoning])]));
+  unknown(frames([created(), added, { ...summary, delta: 'wrong' }, itemDone(reasoning, 0)]), 'streamed_content_mismatch');
+  unknown(frames([created(), added, content, completed([{ ...reasoning, content: undefined }])]), 'missing_output_channel');
+  unknown(frames([created(), added, { ...summary, content_index: 0, summary_index: 1 }, completed([reasoning])]), 'conflicting_channel_index');
+});
+test('content part type switches and dropped streamed parts cannot establish completion', () => {
+  const added = itemAdded({ ...message, content: [] }, 0);
+  const text = { type: 'response.output_text.delta', item_id: message.id, output_index: 0, content_index: 0, delta: 'text' };
+  unknown(frames([created(), added, text, completed([{ ...message, content: [] }])]), 'missing_output_channel');
+  unknown(frames([created(), added, text, completed([{ ...message, content: [{ type: 'refusal', refusal: 'text' }] }])]), 'content_part_type_mismatch');
+});
+test('new accumulated channels preserve byte bounds and strict complete-argument parsing', () => {
+  const subject = observer({ maxBytes: 700, maxEventBytes: 600 });
+  for (const event of [created(), itemAdded(functionOne, 0), ...Array.from({ length: 10 }, () => delta(functionOne, 0, 'x'.repeat(80)))]) {
+    subject.push(encode(frame(event)));
+  }
+  assert.equal(subject.finish().invalidReason, 'byte_limit');
+  unknown(frames([created(), completed([{ ...functionOne, arguments: '{"path":"one","path":"other"}' }])]), 'duplicate_json_key');
+  // Interleaved tool regression stream retains reconciliation at every binary boundary.
+  const input = encode(frames(nativeToolEvents(), { newline: '\r\n' }));
+  for (let at = 0; at <= input.length; at++) {
+    const subject = observer(); subject.push(input.subarray(0, at)); subject.push(input.subarray(at));
+    assert.equal(subject.finish().disposition, 'provider_terminal', `split=${at}`);
+  }
+});

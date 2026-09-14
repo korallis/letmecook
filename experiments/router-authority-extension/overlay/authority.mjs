@@ -232,7 +232,7 @@ export function installAuthority(db) {
       const generation = Number(request.headers.get('x-gaffer-generation')); const revision = request.headers.get('x-gaffer-revision');
       requireThat(ref(id), 'invalid_request_id');
       const cancel = new AbortController();
-      const ctx = {id, boot, generation, revision, cancel, policy: null, route: body.model};
+      const ctx = {id, boot, generation, revision, cancel, policy: null, route: body.model, transports:new Set()};
       db.transaction(() => {
         const s = state();requireThat(s.phase==='active','admission_closed'); assertContext(ctx); requireThat(!db.get('SELECT id FROM gaffer_receipts WHERE id=?', [id]), 'duplicate_request_id');
         // Serial native admission prevents cross-request refresh dedup dependencies.
@@ -247,10 +247,17 @@ export function installAuthority(db) {
       const timer = setTimeout(onAbort, 30000); timer.unref();
       let done = false;
       let onOutputAbort;
+      ctx.onTransportsDrained=()=>{
+        if(!done || ctx.transports.size)return;
+        clearTimeout(timer);request.signal.removeEventListener('abort',onAbort);active.delete(id);
+      };
       const finish = kind => {
-        if (done) return; done = true; clearTimeout(timer); request.signal.removeEventListener('abort',onAbort); active.delete(id);
+        if (done) return; done = true;
         if(onOutputAbort)ctx.cancel.signal.removeEventListener('abort',onOutputAbort);
         db.run("UPDATE gaffer_receipts SET handler_done=1, local_stop=CASE WHEN local_stop='running' THEN ? ELSE local_stop END WHERE id=?", [kind,id]);
+        // A handler returning does not release ownership of still-open physical work.
+        if(ctx.transports.size)ctx.cancel.abort(new Error('handler_finished_with_open_transport'));
+        ctx.onTransportsDrained();
       };
       try {
         return await context.run(ctx, async () => {
@@ -304,21 +311,43 @@ export function installAuthority(db) {
         db.run("INSERT INTO gaffer_operations VALUES(?, ?, ?, ?, ?, ?, ?, ?, 'unknown', 'running')", [ctx.id,ordinal,boot,ctx.generation,ctx.revision,ctx.executor.provider,ctx.executor.model,ctx.executor.connection]);
       });
       const stop = (terminal, local) => db.run('UPDATE gaffer_operations SET terminal=?, local_stop=? WHERE request_id=? AND ordinal=?', [terminal,local,ctx.id,ordinal]);
+      const transportAbort=new AbortController();
+      let response, reader, cancelObservation;
+      let released=false, disposing;
+      const release=()=>{
+        if(released)return;released=true;
+        ctx.cancel.signal.removeEventListener('abort',onAbort);
+        ctx.transports.delete(dispose);ctx.onTransportsDrained();
+      };
+      const dispose=reason=>{
+        if(disposing)return disposing;
+        cancelObservation?.();transportAbort.abort(reason);
+        disposing=(async()=>{
+          try {if(reader)await reader.cancel(reason);else if(response?.body)await response.body.cancel(reason);}
+          catch { /* The abort signal still owns the supported native fetch. */ }
+          finally {release();}
+        })();
+        return disposing;
+      };
+      const onAbort=()=>{void dispose(ctx.cancel.signal.reason);};
+      ctx.transports.add(dispose);ctx.cancel.signal.addEventListener('abort',onAbort,{once:true});
       try {
-        const response = await call(url, {...options, signal: AbortSignal.any([ctx.cancel.signal, ...(options.signal ? [options.signal] : [])]), redirect:'error'}, proxyOptions);
+        response = await call(url, {...options, signal: AbortSignal.any([ctx.cancel.signal,transportAbort.signal,...(options.signal ? [options.signal] : [])]), redirect:'error'}, proxyOptions);
+        assertContext(ctx);
         if (!response.ok || ctx.executor.kind==='refresh') {
-          const reader = response.body?.getReader(); let bytes = 0; const chunks = [];
-          if (reader) while (true) { const part = await reader.read(); if (part.done) break; bytes += part.value.byteLength; requireThat(bytes <= 1048576, 'response_bytes'); chunks.push(Buffer.from(part.value)); }
-          const text = Buffer.concat(chunks).toString(); let rejection = false;
+          reader = response.body?.getReader(); let bytes = 0; const chunks = [];
+          if (reader) while (true) { const part = await reader.read(); assertContext(ctx);if (part.done) break; bytes += part.value.byteLength; requireThat(bytes <= 1048576, 'response_bytes'); chunks.push(Buffer.from(part.value)); }
+          const text = new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)); let rejection = false;
           let refreshed=false;
           try { const json = JSON.parse(text); rejection = response.status >= 400 && (typeof json.error?.message === 'string' || typeof json.error === 'string'); refreshed=ctx.executor.kind==='refresh' && response.ok && typeof json.access_token==='string' && typeof json.refresh_token==='string'; } catch {}
-          stop(refreshed ? 'provider_refresh_terminal' : rejection ? 'provider_rejected' : 'unknown', 'original_eof');
+          requireThat(response.headers.get('content-type')?.includes('application/json') && (refreshed || rejection),'unsupported_original_json');
+          stop(refreshed ? 'provider_refresh_terminal' : 'provider_rejected', 'original_eof');release();
           return new Response(text, {status:response.status,headers:response.headers});
         }
         requireThat(response.headers.get('content-type')?.includes('text/event-stream') && response.body, 'unsupported_provider_response');
         const native=ctx.executor.provider==='codex';
         const observer=native ? createResponsesTerminalObserver({maxBytes:1048576}) : createChatTerminalObserver({maxBytes:1048576,expectedModel:ctx.executor.model});
-        const reader=response.body.getReader();
+        reader=response.body.getReader();
         let transportClosed=false;let responseBytes=0;
         const finalize=reason=>{
           const result=observer.finish({reason});
@@ -329,17 +358,18 @@ export function installAuthority(db) {
           async pull(controller) {
             try {
               const part=await reader.read();if(transportClosed)return;
-              if(part.done){transportClosed=true;finalize('eof');controller.close();return;}
+              if(part.done){transportClosed=true;finalize('eof');release();controller.close();return;}
               responseBytes+=part.value.byteLength;requireThat(responseBytes<=1048576,'response_bytes');
               const observed=observer.push(part.value);requireThat(!observed.invalidReason,'unsupported_original_stream');controller.enqueue(part.value);
             }catch(error){
               if(transportClosed)return;transportClosed=true;finalize('error');ctx.cancel.abort(error);
-              void reader.cancel(error).catch(()=>{});controller.error(error);
+              void dispose(error);controller.error(error);
             }
           },
-          async cancel(){transportClosed=true;finalize('cancel');await reader.cancel();}
+          start(controller){cancelObservation=()=>{if(transportClosed)return;transportClosed=true;finalize('cancel');controller.error(ctx.cancel.signal.reason||new Error('original_transport_cancelled'));};},
+          async cancel(reason){cancelObservation();await dispose(reason);}
         }),{status:response.status,headers:response.headers});
-      } catch (error) { stop('unknown','transport_error'); throw error; }
+      } catch (error) { stop('unknown','transport_error');ctx.cancel.abort(error);await dispose(error);throw error; }
     },
     // Deliberately private-process API; the HTTP service never exposes writer callbacks.
     close: () => { instance.fence(); db.close(); }
