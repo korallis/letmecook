@@ -9,12 +9,14 @@ harness, planner, continuity or foundation gates in #6, #7, #8 and #9.
 
 ## Retained packet and reproduction
 
-The [public measurement packet](native-evaluation-run.json) retains the concrete
+The [first measurement packet](native-evaluation-run.json) retains the concrete
 synthetic deployment policy, all 86 runtime file hashes, original receipt and
 budget projections, actual wire identities, containment settings, kernel probes,
-control failure results and the failed 512 MiB observation. Runtime sources match
-commit `ab27fc2e181fefee4687540e022d058a65fda540`; subsequent changes only package
-this evidence. Input hashes identify the retained raw records. The
+control failure results and the failed 512 MiB observation. That historical packet binds runtime commit
+`ab27fc2e181fefee4687540e022d058a65fda540`. Review subsequently found and fixed
+release-time expiry and restart/artifact defects; its passing cases do not prove
+those previously missing failures. The [review-fix packet](native-evaluation-review-fixes.json)
+records the corrected runtime and new regressions. Input hashes identify the retained raw records. The
 [collector](collect-native-evaluation.ts) checks committed/current source bytes,
 paired binary manifests, exits, budgets and cleanup before projecting them.
 It excludes host paths, configuration credentials and complete logs.
@@ -80,7 +82,12 @@ identities, deltas, complete snapshots, paths and terminal status are validated.
 Created events and heartbeats do not satisfy first-output or semantic-idle timers.
 A complete original response/output digest, trustworthy receipt, current scope
 and persisted success decision are required before any tool or final candidate
-is released. Altered translation and failed decision persistence release none.
+is released. The same private authority checks scope, token and retained request
+clocks after decision persistence and before each output frame. The boundary also
+checks absolute and monotonic request elapsed time synchronously, so a blocked
+fsync cannot race an overdue timer. Expiry withholds delivery without refunding
+the send or erasing the durable decision. Altered translation and failed decision
+persistence release none.
 
 ## Aggregate scope and serial consumers
 
@@ -171,7 +178,13 @@ Host records require a private directory and use exclusive random temporary
 files, fsync and rename. An exclusive command lock is acquired before reading
 the record; duplicate preparation preserves the incumbent bytes and processes,
 and overlapping commands cannot overwrite state with an older snapshot. The gateway stores budgets, receipts, journal decisions
-and acknowledged artifacts outside disposable tmpfs. Normal stop persists state;
+and acknowledged artifacts outside disposable tmpfs. Artifacts use immutable
+content-addressed files: exclusive temporary write, file fsync, atomic no-replace
+link, content verification and directory fsync precede acknowledgement. Retrying
+the same payload after restart returns its original identity; later content never
+overwrites it. A fresh fenced boot uses a new startup revision, allowing a new
+approved baseline on the same preserved store while earlier scopes stay closed.
+Normal stop persists state;
 container/process-tree checks verify exit, no OOM and denied post-stop execution.
 Injected persistent host-record open and fsync failures after start still fence
 the owned containers independently of record writing, retaining the unchanged

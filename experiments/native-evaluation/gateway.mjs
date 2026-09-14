@@ -10,6 +10,7 @@ import { PolicyGate } from '../inference-boundary/policy.ts';
 import { RouterAuthority } from '../router-boundary-bridge/authority.ts';
 import { digest,validateNativeProfile } from '../router-authority-extension/overlay/native-profile.mjs';
 import { events,frames } from './fixtures.mjs';
+import { persistImmutable } from './durable-records.mjs';
 const {acquireDeploymentOwner}=await import('/router-source/gaffer-extension/deployment-owner.mjs');
 const owner=acquireDeploymentOwner('/state');process.env.GAFFER_NATIVE_DEPLOYMENT='1';
 const profiles=existsSync('/config/profiles.json')?JSON.parse(readFileSync('/config/profiles.json','utf8')):[JSON.parse(readFileSync('/config/profile.json','utf8'))];for(const p of profiles){p.deployment.writerFence=owner.digest;validateNativeProfile(p);}let n=profiles[0];
@@ -20,7 +21,8 @@ const {authority,project}=await import('/router-source/gaffer-extension/authorit
 await getAdapter();const a=authority();a.configureNative(profiles);
 const config=JSON.parse(readFileSync('/private/config.json','utf8')),key=randomBytes(32).toString('hex');
 config.apiKeys=[{id:'native_private_ingress',key,name:'Private native boundary',isActive:true}];
-if(!await a.replace(a.state().generation,'native_revision',project(config),()=>repository.importDb(config)))throw Error('native_initial_policy_refused');
+const startupRevision='native_boot_'+a.state().generation;
+if(!await a.replace(a.state().generation,startupRevision,project(config),()=>repository.importDb(config)))throw Error('native_initial_policy_refused');
 const state=a.state(),route=a.snapshot().routes[0];
 let policy={schema:3,routerId:'native_router',routeId:route.id,revision:state.revision,epoch:1,routerModel:route.name,profile:'router-native-responses-local-v1',evidence:n.evidence,liveAdmission:n.evidence==='reviewed-deployment',graph:a.snapshot(),limits:{...n.local,outputTokens:null},authority:{deploymentId:n.deployment.id,boot:state.boot,generation:state.generation,revision:state.revision,graphDigest:digest(a.snapshot())},native:n};
 let gate=await PolicyGate.open('/state/boundary',new RouterAuthority(a,policy),1000);await gate.activate();
@@ -59,7 +61,7 @@ const control=createServer(async(req,res)=>{
    try{const generation=a.state().generation;await boundary.close();const selected=a.selectNativeProfile(message.profileDigest,generation);n=selected.profile;policy={...policy,native:n,revision:selected.state.revision,epoch:policy.epoch+1,graph:selected.graph,limits:{...n.local,outputTokens:null},authority:{...policy.authority,generation:selected.state.generation,revision:selected.state.revision,graphDigest:digest(selected.graph)}};gate=await PolicyGate.open('/state/boundary',new RouterAuthority(a,policy),1000);await gate.activate();observeDecisions();boundary=new Boundary(gate,'/state/router.sock',key);await boundary.listen('/router/inference.sock');result={policy,scope:a.evaluationScope(n.scope.id)??null};selecting=false;}catch(error){void stop();throw error;}
   }
   else if(message.command==='grant'&&Object.keys(message).length===2){const binding=message.binding;if(!a.evaluationScope(n.scope.id))throw Error('evaluation_not_started');result={token:boundary.issue(binding),model:policy.routerModel};}
-  else if(message.command==='artifact'&&Object.keys(message).length===2){const value=message.value;if(!value||typeof value.path!=='string'||!n.toolPaths.includes(value.path)||typeof value.content!=='string'||Buffer.byteLength(value.content)>1048576)throw Error('unsupported_artifact');const artifact={...value,digest:digest(value)};persist('/state/artifact-'+observed.artifacts.length+'.json',artifact);observed.artifacts.push({path:value.path,digest:artifact.digest});result={acknowledged:true,digest:artifact.digest};}
+  else if(message.command==='artifact'&&Object.keys(message).length===2){const value=message.value;if(!value||typeof value.path!=='string'||!n.toolPaths.includes(value.path)||typeof value.content!=='string'||Buffer.byteLength(value.content)>1048576)throw Error('unsupported_artifact');const saved=persistImmutable('/state','artifact',value);observed.artifacts.push({path:value.path,digest:saved.digest,file:saved.file});result={acknowledged:true,digest:saved.digest,file:saved.file};}
   else if(message.command==='stop'&&Object.keys(message).length===1){res.writeHead(200,{'content-type':'application/json'}).end('{}');void stop();return;}
   else throw Error('unsupported_control');
   res.writeHead(200,{'content-type':'application/json'}).end(JSON.stringify(result));
