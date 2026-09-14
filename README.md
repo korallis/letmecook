@@ -35,6 +35,7 @@ See [operator-selected deployment](docs/spec.md#12-operator-selected-deployment)
 | [GitHub issues](https://github.com/korallis/letmecook/issues) | Assignable specification, implementation and validation work |
 | [Implementation index](docs/implementation-plan.md) | Issue sequence, entry points and PRD traceability |
 | [Milestones](https://github.com/korallis/letmecook/milestones) | Delivery sequence |
+| [Baseline measurement contract](docs/evidence/baseline.md) | Fixture design, collection procedure and missing M0 evidence |
 | [Astra playbook](docs/astra-playbook.md) | How GPT-6 Astra should execute an issue |
 | [Contributing](CONTRIBUTING.md) | One issue, one branch, one pull request |
 

@@ -1,0 +1,66 @@
+{
+  "contractVersion": 1,
+  "status": "blocked-awaiting-operator-input",
+  "recordedAt": "2026-09-14",
+  "source": "No operator-labelled cases supplied for this baseline",
+  "missingInputs": [
+    "Three real captures and their operator-defined intended outcomes",
+    "Repository references and immutable starting commits",
+    "Acceptance criteria and required check commands",
+    "Declared data, model exposure, execution and external-effect permissions",
+    "Human labels and their source/time"
+  ],
+  "cases": [
+    {
+      "id": "operator-01",
+      "origin": "operator",
+      "partition": "development",
+      "capture": null,
+      "taskClass": null,
+      "intendedOutcome": null,
+      "scope": null,
+      "acceptanceCriteria": null,
+      "requiredChecks": null,
+      "repository": { "reference": null, "startingCommit": null, "prerequisites": null },
+      "dataPermissions": null,
+      "feasibility": null,
+      "feasibilityReason": null,
+      "expectedResponse": null,
+      "operatorLabel": null
+    },
+    {
+      "id": "operator-02",
+      "origin": "operator",
+      "partition": "development",
+      "capture": null,
+      "taskClass": null,
+      "intendedOutcome": null,
+      "scope": null,
+      "acceptanceCriteria": null,
+      "requiredChecks": null,
+      "repository": { "reference": null, "startingCommit": null, "prerequisites": null },
+      "dataPermissions": null,
+      "feasibility": null,
+      "feasibilityReason": null,
+      "expectedResponse": null,
+      "operatorLabel": null
+    },
+    {
+      "id": "operator-03",
+      "origin": "operator",
+      "partition": "development",
+      "capture": null,
+      "taskClass": null,
+      "intendedOutcome": null,
+      "scope": null,
+      "acceptanceCriteria": null,
+      "requiredChecks": null,
+      "repository": { "reference": null, "startingCommit": null, "prerequisites": null },
+      "dataPermissions": null,
+      "feasibility": null,
+      "feasibilityReason": null,
+      "expectedResponse": null,
+      "operatorLabel": null
+    }
+  ]
+}
