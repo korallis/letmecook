@@ -6439,5 +6439,39 @@
         }
       }
     ]
+  },
+  "ciAndDeadlineRegression": {
+    "head": "eca0a1e3784afa5aa0744384caf5b67cf39904c6",
+    "ciRun": "https://github.com/korallis/letmecook/actions/runs/34874242949",
+    "ciObserved": {
+      "typecheck": "passed",
+      "unitTests": 34,
+      "unitTestResult": "passed",
+      "proof": "blocked_with_34_results",
+      "originalFailingTest": "unknown_no_artifact_uploaded"
+    },
+    "exactHeadLinuxReproduction": {
+      "node": "v24.21.0",
+      "image": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a",
+      "cpuQuota": 0.5,
+      "memoryMiB": 512,
+      "unthrottledProofRuns": 20,
+      "unthrottledResult": "passed",
+      "throttledProofFailureRun": 9,
+      "failedTests": [
+        "total time",
+        "cancel before dispatch and during inference; total time expires without retry"
+      ],
+      "targetedFailureRun": 22,
+      "assertion": {
+        "file": "experiments/planner-probe/planner.test.ts",
+        "line": 178,
+        "actual": 0,
+        "expected": 1,
+        "operator": "strictEqual"
+      },
+      "plannerOutcome": "time_budget_exhausted_unknown"
+    },
+    "explanation": "A 50ms total deadline can correctly expire before durable admission or send. The existing assertion incorrectly required one physical upstream call. This reproduced defect does not prove which test failed in the opaque original CI run. The regression now controls timer advancement separately before dispatch and after observed dispatch, preserving charged request/no-retry assertions. Safe failing names/runtime and always-uploaded redacted proof make future CI failures inspectable."
   }
 }

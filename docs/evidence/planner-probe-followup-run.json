@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "observedAt": "2026-09-14T17:19:13.476Z",
+  "observedAt": "2026-09-14T17:28:38.350Z",
   "result": "synthetic_planner_passed_live_blocked",
   "synthetic": true,
   "liveRouterCalled": false,
@@ -29,9 +29,9 @@
     "experiments/planner-probe/fixture.ts": "45aa35907e1c8c4c6b4d16e6d83ff54c841fc32bb62cdf89c1034812509d0860",
     "experiments/planner-probe/package-lock.json": "8a9a9881e0d48b3e98a52ffc56a81344b15a004c9827efc387edf733126e7237",
     "experiments/planner-probe/package.json": "5a7d5f0b0f84d7bd65f9cf6ae480a55b9195f7e1711dfa78f83ac6f4ae5a934b",
-    "experiments/planner-probe/planner.test.ts": "82b2454ab421ad47702d4c0a79c830c611ef20fc6d0ca30f31e7d625fd391e2a",
+    "experiments/planner-probe/planner.test.ts": "545ab70ff3f190a4328438a7bd5f0b6abedec53c34a013d68a860d69530393e3",
     "experiments/planner-probe/planner.ts": "b7b49e525e571b7026b3bd1daad2fefc5d183a1d8011067a5d9b32fa6d62e374",
-    "experiments/planner-probe/prove.ts": "5bd8c594a87e5572897605de5652391017902db1416929625d36924cc732b5b6",
+    "experiments/planner-probe/prove.ts": "756086a5101c958434e57685323bbd009db469fa9458b48b659584a13d531902",
     "experiments/planner-probe/public-fixture.ts": "017a70154c329347744e3303c5d55d9d669d751647b5f5d2d87d2c1329e8b85c",
     "experiments/planner-probe/reader.ts": "de2930b80a6c0dd9336910dad74b4668019a4629540a6f91677f0ee8bff370dc",
     "experiments/planner-probe/router-consumer.ts": "b5cdb384760b1e8c0b15c22ebc2acc95dec640d89aa29f5bcb19dcccc2d6a78e",
@@ -145,7 +145,11 @@
       "result": "passed"
     },
     {
-      "name": "total time",
+      "name": "total time before dispatch",
+      "result": "passed"
+    },
+    {
+      "name": "total time after observed dispatch",
       "result": "passed"
     },
     {
@@ -259,15 +263,15 @@
       },
       "completions": [
         {
-          "requestId": "5b9b60ceace84a44befba2381ae535fc",
-          "acceptedAt": 1789406354987,
+          "requestId": "22b4828a560a4db78183cff564ef110e",
+          "acceptedAt": 1789406919820,
           "calls": [
-            "call_5b9b60ceace84a44befba2381ae535fc_0"
+            "call_22b4828a560a4db78183cff564ef110e_0"
           ]
         },
         {
-          "requestId": "34615e2175a64feaa3cde94a46fe806c",
-          "acceptedAt": 1789406355006,
+          "requestId": "1975a905c5484c1798bfef309afc6aa2",
+          "acceptedAt": 1789406919840,
           "calls": []
         }
       ],
@@ -283,7 +287,7 @@
       {
         "taskId": "planner_task",
         "attemptId": "planner_attempt",
-        "requestId": "5b9b60ceace84a44befba2381ae535fc",
+        "requestId": "22b4828a560a4db78183cff564ef110e",
         "role": "planner",
         "routeId": "fixture_planner",
         "policyRevision": "policy_1",
@@ -296,7 +300,7 @@
       {
         "taskId": "planner_task",
         "attemptId": "planner_attempt",
-        "requestId": "34615e2175a64feaa3cde94a46fe806c",
+        "requestId": "1975a905c5484c1798bfef309afc6aa2",
         "role": "planner",
         "routeId": "fixture_planner",
         "policyRevision": "policy_1",

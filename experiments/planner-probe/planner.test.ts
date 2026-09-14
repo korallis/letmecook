@@ -173,10 +173,26 @@ test('cancel before dispatch and during inference; total time expires without re
       assert.equal((await pending).outcome, 'cancelled_unknown'); assert.equal(f.calls.length, 1);
     } finally { await f.close(); }
   });
-  await t.test('total time', async () => {
+  for (const active of [false, true]) await t.test(active ? 'total time after observed dispatch' : 'total time before dispatch', async context => {
     const f = await setup(['hold'], { ...DEFAULT_BUDGET, totalMs: 50 });
-    try { assert.equal((await f.planner.run()).outcome, 'time_budget_exhausted_unknown'); assert.equal(f.calls.length, 1); }
-    finally { await f.close(); }
+    // Advance the planner's actual deadline deterministically. An elapsed
+    // wall-clock deadline does not guarantee that durable admission sent bytes.
+    context.mock.timers.enable({ apis: ['setTimeout'] });
+    let sent!: () => void;
+    const observed = new Promise<void>(resolve => { sent = resolve; });
+    const push = f.calls.push.bind(f.calls);
+    f.calls.push = (...calls) => { const count = push(...calls); sent(); return count; };
+    try {
+      const pending = f.planner.run();
+      if (active) await observed;
+      context.mock.timers.tick(50);
+      const result = await pending;
+      assert.equal(result.outcome, 'time_budget_exhausted_unknown');
+      assert.deepEqual(result.usage, { assessments: 1, repairs: 0, requests: 1, files: 0, readBytes: 0 });
+      assert.equal(f.calls.length, active ? 1 : 0);
+      assert.deepEqual(await f.planner.run(), result);
+      assert.equal(f.calls.length, active ? 1 : 0);
+    } finally { await f.close(); context.mock.timers.reset(); }
   });
 });
 

@@ -38,5 +38,5 @@ if (success && evidence.tests.length && evidence.tests.every(test => test.result
   evidence.integration = await demonstrate(); evidence.result = 'synthetic_planner_passed_live_blocked';
 }
 await write();
-console.log(JSON.stringify({ result: evidence.result, tests: evidence.tests.length, evidence: output, issueComplete: false, liveRouterCalled: false }));
+console.log(JSON.stringify({ result: evidence.result, tests: evidence.tests.length, failedTests: evidence.tests.filter(test => test.result === 'failed').map(test => test.name), runtime: evidence.runtime, evidence: output, issueComplete: false, liveRouterCalled: false }));
 if (evidence.result === 'blocked') process.exitCode = 1;

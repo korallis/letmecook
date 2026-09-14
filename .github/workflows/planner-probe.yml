@@ -29,3 +29,11 @@ jobs:
       - run: npm --prefix experiments/planner-probe run check
       - run: npm --prefix experiments/planner-probe test
       - run: node experiments/planner-probe/prove.ts /tmp/planner-probe-run.json
+      - name: Retain the redacted proof even after failure
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: planner-proof-${{ github.sha }}
+          path: /tmp/planner-probe-run.json
+          if-no-files-found: warn
+          retention-days: 14

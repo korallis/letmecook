@@ -273,3 +273,16 @@ Remaining mandatory criteria are the bounded request through the operator-select
 9Router, exact approved bootstrap/settings and Responses/tool/stream observations,
 and corresponding redacted live evidence. This draft completes the independent
 restriction tooling and synthetic fixtures; it does not close those live gates.
+
+The first follow-up CI head `eca0a1e` passed typecheck and 34 unit tests but failed
+its second test execution inside `prove.ts`; the old log omitted failing names and
+uploaded no artifact, so that original CI failure's exact identity remains unknown.
+On the unchanged head, a Linux replay with a 0.5 CPU quota reproduced the `total
+time` test expecting one physical send after a 50 ms deadline when the correct
+observed count was zero. Deadline expiry does not guarantee completed admission.
+The regression now advances the actual planner timer explicitly before dispatch
+and after a request is observed, preserving exact charged-request, no-repair and
+no-retry assertions. Proof logs include safe failing test names/runtime, and CI
+retains its redacted JSON on failure. The original failure and reproduction are
+recorded in the retained observations; a later green check does not identify the
+original opaque failure retroactively.
