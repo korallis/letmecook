@@ -1,0 +1,13 @@
+{
+  "name": "gaffer-inference-boundary-experiment",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test boundary.test.ts",
+    "prove": "node prove.ts",
+    "demo": "node demo.ts"
+  },
+  "devDependencies": { "@types/node": "24.3.0", "typescript": "5.9.3" }
+}

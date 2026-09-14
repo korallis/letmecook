@@ -1,0 +1,170 @@
+{
+  "schema": 1,
+  "observedAt": "2026-09-14T12:46:54.283Z",
+  "result": "synthetic-boundary-passed",
+  "synthetic": true,
+  "liveRouterCalled": false,
+  "unattendedSupported": false,
+  "profile": "chat-text-tools-v1",
+  "transport": "task-owned Unix-domain HTTP sockets",
+  "command": "npm --prefix experiments/inference-boundary run prove",
+  "runtime": {
+    "node": "v26.8.2",
+    "platform": "darwin",
+    "architecture": "arm64"
+  },
+  "sourceDigests": {
+    "boundary.test.ts": "184fd24601e8c08d47007cd69e4d4d51b9458ee3ffb29a43ce439f2c7f386553",
+    "boundary.ts": "aedaeb58da77ea5ff22f40addce01a8a7f7146525783856b22006d6d5b7a0b35",
+    "demo.ts": "448bef33591c5408942adb0ea4a44c6473bac90831962dcabbd339b102b91fa3",
+    "fixture.ts": "acc2080543fe4bd228900bab5b0b57ccfb13aca690c1d0da27cf221bc1bd412b",
+    "json.ts": "7f26eb4cf1d4544f55a7b5a7c69cb8dc41de8aaa0c8db13596f59e981944c180",
+    "package-lock.json": "10a402c72fae1b535ebbe43a8cbb6ddae3e706b9a41346c2da6416a66be361ba",
+    "package.json": "0687f4f3e65bd81e0252ff98b699899eb3062184dc84db685a5ee5e20edc7b9d",
+    "policy.ts": "6d77453009bad776abe66a55219467b00a84f53a3d38f4387cf563e02cadbf44",
+    "protocol.ts": "a5e4cfac5a00d7daf7a4e03f8180af4491454a8eab4aa30650a8bd959d07e98d",
+    "prove.ts": "76bf6a73c17523e749d5389c10fcb4616708463e19e19fdba8f07a9168a7d750",
+    "tsconfig.json": "e7fdc78d6c95f978eb355c76d005733baf15e891719f85e9a001e67fb65d435d",
+    "types.ts": "a57afcb9aa488e83692e8beaaf77fd2a0f27a6478289146f03c254a685214732",
+    "wait.ts": "c56f31eb6d68762bf4d083156a69d98ea01bc4942a5a05400a0de80f2d317e1d"
+  },
+  "tests": [
+    {
+      "name": "strict JSON rejects duplicate/escaped duplicate keys, nonfinite numbers and depth abuse",
+      "result": "passed"
+    },
+    {
+      "name": "worker/planner calls stream through one authenticated route with safe attribution",
+      "result": "passed"
+    },
+    {
+      "name": "missing, wrong, expired and lease-expired tokens never reach the router",
+      "result": "passed"
+    },
+    {
+      "name": "noncanonical paths, other protocols, management and methods are denied",
+      "result": "passed"
+    },
+    {
+      "name": "route identity, model, strict-schema, media, account and header overrides are denied",
+      "result": "passed"
+    },
+    {
+      "name": "request bytes, output tokens, duplicate keys and unsupported fields reject before forwarding",
+      "result": "passed"
+    },
+    {
+      "name": "complete tools are withheld until valid terminal/EOF and support tool-result continuation",
+      "result": "passed"
+    },
+    {
+      "name": "each UTF-8/SSE split boundary preserves text/tools and refuses trailing data or false DONE",
+      "result": "passed"
+    },
+    {
+      "name": "partial tool and error streams never emit executable tools or raw errors",
+      "result": "passed"
+    },
+    {
+      "name": "response byte limits abort without forwarding an oversized chunk",
+      "result": "passed"
+    },
+    {
+      "name": "request count and concurrency reservations bound each attempt with no router retries",
+      "result": "passed"
+    },
+    {
+      "name": "heartbeats do not extend first-output or semantic-idle deadlines",
+      "result": "passed"
+    },
+    {
+      "name": "total deadline and attempt-wide expiry terminate active transport",
+      "result": "passed"
+    },
+    {
+      "name": "revocation during durable admission forwards zero requests",
+      "result": "passed"
+    },
+    {
+      "name": "client cancellation and stop abort upstream but hidden work keeps the drain blocked",
+      "result": "passed"
+    },
+    {
+      "name": "freeze/drain serializes active requests, blocks admission, increments epoch and needs fresh grants",
+      "result": "passed"
+    },
+    {
+      "name": "failed policy readback stays closed and unsupported graph widening is rejected",
+      "result": "passed"
+    },
+    {
+      "name": "journal persists uncertainty, rejects a second writer and restart requires quiescence",
+      "result": "passed"
+    },
+    {
+      "name": "accepted Chat corpus fixtures distinguish complete tools, partial output and synthetic DONE",
+      "result": "passed"
+    },
+    {
+      "name": "multiple tool IDs are assembled independently and duplicate/invalid calls never complete",
+      "result": "passed"
+    },
+    {
+      "name": "stop and lease expiry cancel midstream without a successful terminal",
+      "result": "passed"
+    },
+    {
+      "name": "abrupt supervisor exit leaves a lock and durable reservation; offline recovery remains closed",
+      "result": "passed"
+    },
+    {
+      "name": "OpenCode-style max_tokens/stream_options are denied by this explicitly narrower profile",
+      "result": "passed"
+    },
+    {
+      "name": "transport loss before headers retains unknown work and does not retry or refund the reservation",
+      "result": "passed"
+    },
+    {
+      "name": "closed owners are terminal/idempotent and cannot modify or unlock a newer owner",
+      "result": "passed"
+    },
+    {
+      "name": "an owner whose lock identity changed cannot write the journal or remove that lock",
+      "result": "passed"
+    },
+    {
+      "name": "reserved JavaScript property IDs have numeric own counters and remain bounded after reopening",
+      "result": "passed"
+    },
+    {
+      "name": "journal reservations require a matching own request counter",
+      "result": "passed"
+    },
+    {
+      "name": "stalled admission honors the caller deadline and its late read cannot change a newer owner",
+      "result": "passed"
+    },
+    {
+      "name": "stop and shutdown interrupt a stalled completion authority without losing unknown reservations",
+      "result": "passed"
+    },
+    {
+      "name": "authority deadline bounds trusted policy reads even without an HTTP caller",
+      "result": "passed"
+    },
+    {
+      "name": "a cancelled non-cooperative policy writer keeps its lock quarantined across late completion",
+      "result": "passed"
+    },
+    {
+      "name": "a timed-out policy writer poisons its existing owner before shutdown or late completion",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "No live 9Router, provider or harness conformance; only the synthetic authority proves fixture quiescence.",
+    "No inference credential, provider credential, caller token, raw response/error or private origin is written to this report.",
+    "Chat Completions text/tools with max_completion_tokens only. Other protocols/features need a separate tested profile."
+  ]
+}

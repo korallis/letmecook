@@ -6,9 +6,13 @@ Gaffer is the working product name for letmecook: a proposed self-hosted coordin
 for coding agents. Capture an idea, approve a bounded plan, run it on an eligible
 machine, and review the exact changes with verification evidence.
 
-**Pre-code planning baseline v0.4.** This repository currently contains the reviewed
-design, documentation reader and issue-based delivery workflow. The application
-does not exist yet. Milestone gates determine what gets built next.
+**M0 experiments are in progress.** The reviewed v0.4 design, documentation reader
+and issue-based workflow now sit alongside isolated feasibility experiments. The
+application is not implemented yet; milestone evidence determines what gets built
+next. See the [inference boundary proof](docs/evidence/inference-boundary.md),
+[passive status experiment](experiments/router-status/README.md),
+[Linux isolation proof](docs/evidence/linux-profile.md), and the
+[9Router integration contract](docs/contracts/9router.md).
 
 All worker, planner and reviewer model calls go through **9Router**. It owns provider
 authentication, multiple subscriptions from the same provider, account rotation and
