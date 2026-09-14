@@ -1,0 +1,17 @@
+{
+  "name": "gaffer-linux-isolation-experiment",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test profile.test.ts",
+    "prove": "node run.ts"
+  },
+  "devDependencies": {
+    "@types/node": "24.3.0",
+    "typescript": "5.9.3"
+  }
+}
