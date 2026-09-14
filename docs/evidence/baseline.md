@@ -2,10 +2,12 @@
 
 Contract version **1** · recorded **14 September 2026** · issue [#1](https://github.com/korallis/letmecook/issues/1).
 
-**Status: three real candidate briefs prepared; evaluated baseline blocked.**
-The user delegated selection from an existing private repository. The agent has
-prepared bounded candidates and retained exact starting commits and check evidence
-privately. Case-specific human labels and live baseline observations remain absent.
+**Status: three intended outcomes approved; executable registration and baseline blocked.**
+The session user approved the prepared case outcomes and conditional model exposure.
+The approval was observed at `2026-09-14T18:58:37Z`; this is the assistant's recording
+time, not an asserted user-message timestamp. Exact starting commits, source evidence
+and the approval record remain private. No completed outputs have been accepted,
+and no baseline attempts or operator-minute observations have been collected.
 This document does not establish a product benefit or satisfy the M0 live-baseline gate.
 
 This is an isolated measurement contract for the [PRD validation measures](../PRD.md#6-validation-and-success-measures),
@@ -17,11 +19,11 @@ Gaffer runtime, intent engine, account router or harness adapter.
 
 | Input | Observed state | Required to unblock |
 | --- | --- | --- |
-| First three real operator cases | Three agent-proposed candidates selected under user delegation in `operator-intake.json` | Case-specific human outcome labels and final registration before evaluation |
+| First three real operator cases | Three prepared intended outcomes explicitly approved by the session user in `operator-intake.json` | Final executable fixture registration before evaluation |
 | Repository fixture for each case | Exact repository/base/candidate commits and existing check snapshots retained in a private manifest | Freeze permitted source/data, executable prerequisites and private manifest reference for the run |
-| Harness and 9Router route | No harness/route configuration registered for these cases | Pinned harness/router versions, authorized named route, private-source exposure policy, model/config identity, isolation and a permitted access mechanism |
-| Baseline budgets | Proposed defaults below, no run registration yet | Record explicit bounds and any task-specific overrides before dispatch |
-| Raw live observations | None | Redacted brief, progress notes, attempt/check evidence, operator timers and human outcome labels |
+| Harness and 9Router route | Necessary source/diffs approved for existing Codex subscriptions through 9Router; no eligible live path recorded | Approved native profile/deployment controls pass review, then pinned harness/router, named route, execution/isolation profile and successful preflight |
+| Baseline budgets | 32 inference attempts and 15 minutes per case approved, including retries; one case at a time | Register enforcement and stop mechanism; these declarations are not runtime enforcement |
+| Raw live observations | None | Redacted brief, progress notes, attempt/check evidence, operator timers and final human output acceptance |
 | Real baseline cohort | 0 registered, 0 started, 0 accepted | Three real cases, then a bounded standalone run per case, including failures |
 
 The repository used to prepare this contract was `korallis/letmecook` at
@@ -32,18 +34,22 @@ discovery, subscription changes, provider-direct inference or live probes.
 
 The committed [fixture examples](../../tests/fixtures/tasks/development-examples.json)
 are synthetic and never enter reported denominators. The
-[operator intake](../../tests/fixtures/tasks/operator-intake.json) records exactly
-the proposed briefs, their private mapping reference and which labels remain
-unavailable. The [run template](../../tests/fixtures/tasks/run-template.json) is an unstarted, non-observational record; its null values mean unknown or not yet
-recorded, never zero. There are no fabricated raw observations in this change.
+[operator intake](../../tests/fixtures/tasks/operator-intake.json) revision 2 records
+the unchanged prepared briefs, approval source reference/digest and remaining
+registration blockers. The [historical proposal](../../tests/fixtures/tasks/history/operator-intake-20260914-proposed.json)
+preserves the earlier null labels byte for byte. The
+[run template](../../tests/fixtures/tasks/run-template.json) is preserved as an
+unstarted, non-observational record; its older blocker text describes preparation
+before the approval. Its null values mean unknown or not yet recorded, never zero.
+Use the current intake's blockers when preparing a new run record.
 
 ## First real candidates and private evidence boundary
 
-The selected cases are genuine work candidates from the user's delegated task,
-not completed operator-labelled fixtures. Selection authority does not fabricate
-an intended-outcome label, acceptance decision or measurement interval.
+The selected cases are genuine work candidates from the user's delegated task.
+Their intended outcomes now have explicit human approval. That approval does not
+establish executable eligibility, completed-output acceptance or measured effort.
 
-| Case | Proposed outcome | Scope and first-run suitability |
+| Case | Approved intended outcome | Scope and first-run suitability |
 | --- | --- | --- |
 | `operator-01` | Evaluate a narrowly scoped package-manager CI action update and separate inherited audit failures from regressions | Recommended first harness case: immutable action pins, unchanged toolchain/dependency graph, bounded verification and explicit unresolved gates |
 | `operator-02` | Prepare a Swift runtime patch while preserving unrelated platform lock entries | Requires platform-aware resolution and native checks; an unsupported host cannot establish native compatibility |
@@ -56,8 +62,9 @@ nor permission to suppress a gate. Compare the exact starting/candidate dependen
 graph and audit evidence before assigning cause. Unresolved required checks keep
 an update from being called ready for merge.
 
-The public repository contains only redacted briefs, stable case IDs and the digest
-of an operator-owned private manifest. That manifest holds repository identity,
+The public repository contains redacted briefs, stable case IDs, conditional
+permission declarations and opaque references/digests for the private fixture and
+approval records. The fixture manifest holds repository identity,
 full starting/candidate commits, exact commands, toolchain requirements and private
 CI evidence. Private source, diffs, logs, URLs and commit mappings must not enter
 this repository, public issues/PRs, generated reader output or shareable artifacts.
@@ -76,9 +83,15 @@ checks are outside this offline scan's evidence.
 
 Register the operator-selected router endpoint and execution profile independently
 of the private source location. No named machine is required by these fixtures.
-Authorization to inspect a private repository does not establish permission to
-send it to a particular model route. Keep execution blocked until that exposure
-policy and the named route are recorded. The current Codex research and static
+The recorded model-exposure permission covers necessary source and diffs sent to
+existing Codex subscriptions through 9Router. Secrets and production/user data are
+excluded. Paid API fallback, public disclosure of private artifacts, merging and
+deployment of case outputs are outside this approval. Keep execution blocked until
+the approved native profile and deployment controls pass review and the named
+route, harness, execution/isolation profile and exact fixture pass preflight.
+Approval of `native-subscription-local-v1` retains the strict default and acknowledges unavailable provider output
+and monetary caps; it does not claim those caps are enforced. Unknown remote work
+must block replacement execution. The current Codex research and static
 preflight are not represented as 9Router inference, operator minutes or an
 accepted baseline result. There are still zero registered or started live cases.
 
@@ -87,8 +100,11 @@ accepted baseline result. There are still zero registered or started live cases.
 Assign each capture a stable ID and record its source, capture text, task class,
 intended outcome, permitted scope, objective acceptance criteria, required checks,
 full repository starting SHA (in the private manifest when required) and declared
-data permissions. A human operator owns the intended-outcome label. Record who labelled it and when; an agent's guess
-cannot fill that field. Data permissions name approved data, prohibited data,
+data permissions. A human operator owns the intended-outcome label. Record its
+author and source; distinguish an observed recording time from a known message
+timestamp. Current labels use `operatorId: session-user`, the private authority
+reference and `recordedAt`; `messageTimestamp` remains null. An agent's guess
+cannot fill the label. Data permissions name approved data, prohibited data,
 allowed route/provider exposure, execution and network access, and any separately
 authorized external effects. Omitted permissions grant no authority.
 
@@ -134,16 +150,30 @@ the outcome, scope, constraints, checks and stop conditions, plus a progress-not
 file it can update. Include discovery and brief-preparation effort in measurement.
 This comparison does not require Gaffer to exist and does not implement it.
 
-Register these default **task-level** bounds, or a written override, before work:
+The approved trial bounds are recorded in the current intake. They become usable
+only after the profile/deployment review and executable registration:
 
-- Maximum elapsed execution: 60 minutes across all attempts.
-- Maximum attempts: 2, including the initial attempt; recovery does not reset this.
-- Maximum active operator effort: 30 minutes, including brief preparation,
+| Trial | Inference-attempt limit | Elapsed limit | Scope |
+| --- | --- | --- | --- |
+| Initial public checks | 10 | 10 minutes | Aggregate across the initial checks, including retries |
+| Each baseline case | 32 | 15 minutes | Per case across all attempts and retries; one case at a time |
+
+These bounds supersede the initial planning proposal of 60 minutes and two harness
+attempts for these trials. Inference attempts and harness process attempts are
+different counters; register both and enforce the approved inference-attempt total.
+Use Astra at xhigh effort on existing Codex subscriptions through an isolated local
+copy of the existing 9Router setup. No eligible live path is asserted here.
+
+Register the remaining measurement and enforcement details before dispatch:
+
+- The original maximum active operator effort proposal is 30 minutes, including brief preparation,
   approvals, initial review, correction and recovery up to the terminal result.
   Subsequent seven-day follow-up effort is recorded separately and included in
-  all-in comparison totals; it does not retroactively change this execution bound.
-- Paid overflow: disabled. If a paid route is expressly selected, predeclare its
-  currency, incremental cash cap and enforcement mechanism instead.
+  all-in comparison totals. This operator-effort limit still needs run registration;
+  no measured or estimated operator minutes have been supplied.
+- Paid API fallback: prohibited for these approved trials. Provider monetary/output
+  caps are unavailable under the approved native profile; a zero monetary cap must
+  not be fabricated from the absence of paid fallback.
 - Token/cost reporting: best available observations with confidence/source;
   unavailable counters remain unknown. A token budget is used only when the
   harness/router can enforce it and its exact value is recorded in advance.
@@ -165,7 +195,7 @@ No provider credentials or management credentials belong in a worker fixture.
 
 ## Reproducible collection procedure
 
-1. Register the three proposed operator cases, including their human labels.
+1. Register the three approved intended outcomes and their private authority source.
    Classify eligibility and freeze the permitted labelled fixture manifest or its
    immutable private reference in git. Record prerequisites and exact setup/check
    commands; confirm the starting SHA exists before initializing a fresh workspace.
@@ -209,11 +239,14 @@ npm --prefix docs run build
 npm --prefix docs run check
 ```
 
-These commands check the design-record semantics and existing documentation reader.
-The fixture checker verifies that the proposed cases remain unregistered, synthetic
-examples remain excluded from measurement, and the template contains no run or
-acceptance observations; thirteen invalid-claim mutations exercise those checks. It does
-not collect live evidence, authenticate operator labels, establish route readiness
+These commands check the declaration semantics and existing documentation reader.
+The fixture checker verifies that intended-outcome approvals retain the prepared
+scope, private authority references, conditional permissions and approved bounds.
+It also verifies that cases remain unregistered, the historical proposal stays
+unchanged, synthetic examples remain excluded and the template contains no run or
+acceptance observations. Fifty-seven invalid-claim mutations exercise these checks,
+including expanded authority, premature eligibility and invented acceptance/time.
+It does not collect live evidence, authenticate the private approval, establish route readiness
 or validate future run records. No application test suite is introduced.
 
 ## Active operator minutes and total overhead
@@ -289,9 +322,12 @@ follow-up pass. M0's three-case baseline is not this beta study.
 
 - Fixture partition, contamination policy, severity rules and operator-minute
   method: specified here, ready for review before data collection.
-- Three real candidate briefs and private starting-commit/check mapping: prepared
-  under user-delegated selection. Case-specific human labels, route exposure
-  permissions and run registration remain incomplete.
+- Three real candidate briefs and private starting-commit/check mapping: prepared;
+  all three intended outcomes and conditional private-source exposure explicitly
+  approved. Approval source retained privately with an opaque public reference/digest.
+- Executable fixture registration: incomplete pending reviewed native profile and
+  deployment controls, pinned runtime/route, isolation, exact prerequisites and
+  verified enforcement of the approved per-case bounds. No eligible live path yet.
 - Bounded standalone baseline through intended 9Router routes: not run; blocked on
   fixture registration plus authorized pinned environment/route details.
 - Reproducible collection instructions and redacted record formats: committed.
