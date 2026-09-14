@@ -26,7 +26,7 @@ const cases = r.cases.map(c => {
     staleGrantStatus: c.staleGrantStatus, staleBindingGrantStatus: c.staleBindingGrantStatus,
     gateway: { measured: c.gatewayMeasured, state: state(c.gatewayState), closure: c.closure ?? 'stopped', scope: c.gateway?.scope ?? null, physicalSyntheticSends: c.gateway?.observed.sends.length ?? null, fault: c.gateway?.observed.harnessFault ?? null },
     workers: c.workers.map(w => ({ mode: w.mode, outcome: w.outcome, binding: w.binding, policy: w.policy, measured: w.measured, state: state(w.state),
-      observation: w.observation, observedArtifact: w.observedArtifact, evidence: w.evidence, candidate: w.candidate, acknowledgement: w.acknowledgement, retryAcknowledgement: w.retryAcknowledgement, qualified: w.qualified, treeBeforeStop: w.treeBeforeStop })),
+      observation: w.observation, observedArtifact: w.observedArtifact, evidence: w.evidence, candidate: w.candidate, acknowledgement: w.acknowledgement, retryAcknowledgement: w.retryAcknowledgement, qualified: w.qualified, treeBeforeStop: w.treeBeforeStop, beforeSignal: w.beforeSignal, signalAt: w.signalAt, stopMs: w.stopMs, artifactObservation: w.artifactObservation })),
     retainedRecords: records, retainedInventory: c.retained.inventory };
 });
 const packet = { schema: 1, evidence: 'actual-native-adapter-shared-router-synthetic', live: false, issueComplete: false, sourceCommit: commit,
