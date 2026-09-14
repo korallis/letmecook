@@ -4,5 +4,5 @@
   "private": true,
   "type": "module",
   "engines": {"node": ">=24"},
-  "scripts": {"check": "node --check overlay/authority.mjs && node --check overlay/chat-terminal.mjs && node --check overlay/responses-terminal.mjs && node --check loader.mjs && node --check patches.mjs && node --check integration.mjs && node --check native-integration.mjs && node --check transport-failures.mjs && node --check policy-regressions.mjs && node --check request-regressions.mjs && node --check run-in-container.mjs"}
+  "scripts": {"check": "node --check overlay/evaluation-scope.mjs && node --check overlay/native-profile.mjs && node --check overlay/native-responses.mjs && node --check overlay/authority.mjs && node --check overlay/chat-terminal.mjs && node --check overlay/responses-terminal.mjs && node --check loader.mjs && node --check patches.mjs && node --check integration.mjs && node --check native-integration.mjs && node --check transport-failures.mjs && node --check policy-regressions.mjs && node --check request-regressions.mjs && node --check run-in-container.mjs"}
 }

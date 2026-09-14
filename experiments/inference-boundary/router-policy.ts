@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { canonical, keys, object } from './json.ts';
 import { Denial, ref, type Binding, type Limits } from './types.ts';
+import { validateNativeRouterPolicy, type NativeRouterPolicy } from './native-policy.ts';
 
 export const hashDocument = (value: unknown) => createHash('sha256').update(canonical(value)).digest('hex');
 export const sha = (s: unknown): s is string => typeof s === 'string' && /^[a-f0-9]{64}$/.test(s);
@@ -9,7 +10,8 @@ const exact = (value: unknown, names: string[]) => keys(value, names, names);
 const requireValue = (value: unknown): void => { if (!value) throw new Denial('policy_denied'); };
 const routerRef = (s: unknown) => typeof s === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(s);
 export interface AuthorityIdentity { deploymentId: string; boot: string; generation: number; revision: string; graphDigest: string }
-export interface RouterPolicy {
+export type RouterPolicy = StrictRouterPolicy | NativeRouterPolicy;
+export interface StrictRouterPolicy {
   schema: 2; routerId: string; routeId: string; revision: string; epoch: number; routerModel: string;
   profile: 'router-chat-text-tools-synthetic-v1' | 'router-native-chat-translation-synthetic-v1';
   evidence: 'synthetic'; liveAdmission: false; graph: Record<string, any>; limits: Limits;
@@ -18,10 +20,12 @@ export interface RouterPolicy {
 }
 export interface RouterReservation {
   policy: RouterPolicy; binding: Binding; requestDigest: string; send: 'reserved' | 'send_possible';
+  nativeRequest?: any;
 }
 export interface Operation {
   request_id: string; ordinal: number; boot: string; generation: number; revision: string;
   provider: string; model: string; connection_id: string; terminal: string; local_stop: string;
+  scope_id?:string;body_digest?:string;output_digest?:string|null;
 }
 export interface ReceiptEvidence {
   disposition: 'pending_or_unknown' | 'quiescent_failure' | 'original_success';
@@ -32,6 +36,7 @@ export function validateIdentity(value: AuthorityIdentity) {
   requireValue(ref(value.deploymentId) && uuid(value.boot) && Number.isSafeInteger(value.generation) && value.generation > 0 && ref(value.revision) && sha(value.graphDigest));
 }
 export function validateRouterPolicy(p: RouterPolicy): RouterPolicy {
+  if(p.schema===3)return validateNativeRouterPolicy(p);
   try {
     exact(p, ['schema','routerId','routeId','revision','epoch','routerModel','profile','evidence','liveAdmission','graph','limits','authority','envelope']);
     const native = p.profile === 'router-native-chat-translation-synthetic-v1';
@@ -92,13 +97,15 @@ export function classifyReceipt(raw: unknown, id: string, saved: RouterReservati
   try {
     object(raw);
     if (raw.known === false) { exact(raw,['id','known','quiescent']); return pending; }
-    exact(raw,['id','boot','generation','revision','route','local_stop','handler_done','known','operations','quiescent']);
     const p = saved.policy;
+    exact(raw,['id','boot','generation','revision','route','local_stop','handler_done','known','operations','quiescent',...(p.schema===3?['native']:[])]);
+    if(p.schema===3)requireValue(canonical(raw.native)===canonical({profileDigest:hashDocument(p.native),scopeId:p.native.scope.id,authorizationDigest:p.native.scope.authorizationDigest,bindingDigest:hashDocument(saved.binding),requestDigest:saved.requestDigest}));
     requireValue(raw.known === true && raw.id === id && raw.boot === p.authority.boot && raw.generation === p.authority.generation && raw.revision === p.revision && raw.route === p.routerModel);
-    requireValue(['running','local_eof','local_error','local_cancel','cancelled_unknown','crash_unknown'].includes(raw.local_stop) && [0,1].includes(raw.handler_done) && typeof raw.quiescent === 'boolean' && Array.isArray(raw.operations) && raw.operations.length <= 16);
+    requireValue(['running','local_eof','local_error','local_cancel','cancelled_unknown','crash_unknown'].includes(raw.local_stop) && [0,1].includes(raw.handler_done) && typeof raw.quiescent === 'boolean' && Array.isArray(raw.operations) && raw.operations.length <= (p.schema===3?p.native.scope.maxInferenceAttempts:16));
     const route = p.graph.routes.find((r: any) => r.id === p.routeId && r.name === p.routerModel);
     for (const [i,o] of raw.operations.entries()) {
-      exact(o,['request_id','ordinal','boot','generation','revision','provider','model','connection_id','terminal','local_stop']);
+      exact(o,['request_id','ordinal','boot','generation','revision','provider','model','connection_id','terminal','local_stop',...(p.schema===3?['scope_id','body_digest','output_digest']:[])]);
+      if(p.schema===3)requireValue(o.scope_id===p.native.scope.id&&sha(o.body_digest)&&(o.output_digest===null||sha(o.output_digest))&&(o.terminal!=='provider_completed'||sha(o.output_digest)));
       requireValue(o.request_id === id && o.ordinal === i+1 && o.boot === raw.boot && o.generation === raw.generation && o.revision === raw.revision);
       requireValue(p.graph.connections.some((c: any) => c.id === o.connection_id && c.provider === o.provider && c.isActive === true));
       const refresh = o.model === 'credential_refresh';

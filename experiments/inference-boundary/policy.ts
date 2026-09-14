@@ -3,8 +3,10 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { canonical, keys, object, parseJSON } from './json.ts';
 import { Denial, fingerprint, ref, validateBinding, validatePolicy, type Binding, type Outcome, type Policy } from './types.ts';
+import { assertNativeBinding } from './native-policy.ts';
+import { validateNativeRequest, continuationOutput } from '../router-authority-extension/overlay/native-responses.mjs';
 import { abortable } from './wait.ts';
-import { classifyReceipt, sha, validateRouterPolicy, type RouterReservation, type ReceiptEvidence } from './router-policy.ts';
+import { classifyReceipt, hashDocument, sha, validateRouterPolicy, type RouterReservation, type ReceiptEvidence } from './router-policy.ts';
 
 // Implementations are trusted configuration authorities outside the worker HTTP surface.
 // Both supported families are synthetic. Receipt authority is mandatory for schema 2.
@@ -19,11 +21,12 @@ export interface ReceiptAuthority extends FrozenAuthority {
   waitReceipt(record: Reservation, signal: AbortSignal): Promise<ReceiptEvidence>;
   assertCurrent(record: Reservation, admission?: boolean): void;
   cancel(requestId: string): void;
+  prepare?(record: Reservation): void;
 }
 export interface Decision {
   requestId: string; taskId: string; attemptId: string; router: RouterReservation;
   verdict: 'validated_success' | 'quiescent_failure' | 'never_sent';
-  evidence: ReceiptEvidence; completionDigest: string | null; delivery: Outcome | 'unobserved';
+  evidence: ReceiptEvidence; nativeOutput?: any[]; completionDigest: string | null; delivery: Outcome | 'unobserved';
 }
 export interface Reservation {
   requestId: string; attemptId: string; taskId: string; epoch: number;
@@ -38,7 +41,7 @@ function validateJournal(value: unknown): asserts value is Journal {
   keys(value, ['schema', 'generation', 'phase', 'policy', 'fingerprint', 'reservations', 'counts', 'decisions'], ['schema', 'generation', 'phase', 'policy', 'fingerprint', 'reservations', 'counts']); object(value);
   if (![1,2].includes(value.schema) || typeof value.generation !== 'string' || !['closed', 'active', 'draining', 'mutating'].includes(value.phase) || !Array.isArray(value.reservations) || value.reservations.length > 16) throw new Error();
   if (value.policy !== null && fingerprint(validatePolicy(value.policy)) !== value.fingerprint || value.policy === null && value.fingerprint !== null) throw new Error();
-  if (value.schema === 1 && (value.decisions !== undefined || value.policy?.schema === 2) || value.schema === 2 && (!Array.isArray(value.decisions) || value.decisions.length > 64 || value.policy?.schema !== 2)) throw new Error();
+  if (value.schema === 1 && (value.decisions !== undefined || (value.policy?.schema === 2 || value.policy?.schema === 3)) || value.schema === 2 && (!Array.isArray(value.decisions) || value.decisions.length > 64 || ![2,3].includes(value.policy?.schema))) throw new Error();
   const ids = new Set<string>();
   for (const r of value.reservations) {
     keys(r, ['requestId', 'attemptId', 'taskId', 'epoch', 'outcome', 'router'], ['requestId', 'attemptId', 'taskId', 'epoch', 'outcome']);
@@ -48,20 +51,21 @@ function validateJournal(value: unknown): asserts value is Journal {
   }
   const decisions = new Set<string>();
   for (const d of value.decisions ?? []) {
-    keys(d,['requestId','taskId','attemptId','router','verdict','evidence','completionDigest','delivery'],['requestId','taskId','attemptId','router','verdict','evidence','completionDigest','delivery']);
+    keys(d,['requestId','taskId','attemptId','router','verdict','evidence','completionDigest','delivery','nativeOutput'],['requestId','taskId','attemptId','router','verdict','evidence','completionDigest','delivery']);
     validateSaved(d.router, d);
     if (!/^[a-f0-9]{32}$/.test(d.requestId) || decisions.has(d.requestId) || !['validated_success','quiescent_failure','never_sent'].includes(d.verdict) || !['unobserved','completed','failed_before_output','partial_failure','cancelled_unknown'].includes(d.delivery)) throw new Error();
     keys(d.evidence,['disposition','receiptDigest','operations'],['disposition','receiptDigest','operations']);
-    if (!['original_success','quiescent_failure','pending_or_unknown'].includes(d.evidence.disposition) || !Array.isArray(d.evidence.operations) || d.evidence.operations.length > 16 || d.evidence.receiptDigest !== null && !sha(d.evidence.receiptDigest)) throw new Error();
+    if (!['original_success','quiescent_failure','pending_or_unknown'].includes(d.evidence.disposition) || !Array.isArray(d.evidence.operations) || d.evidence.operations.length > (d.router.policy.schema===3?d.router.policy.native.scope.maxInferenceAttempts:16) || d.evidence.receiptDigest !== null && !sha(d.evidence.receiptDigest)) throw new Error();
     if (d.verdict === 'validated_success' && (!sha(d.completionDigest) || d.evidence.disposition !== 'original_success' || !sha(d.evidence.receiptDigest)) || d.verdict !== 'validated_success' && d.completionDigest !== null) throw new Error();
     if (d.verdict === 'never_sent') {
       if (d.router.send !== 'reserved' || d.evidence.operations.length || d.evidence.receiptDigest !== null) throw new Error();
     } else {
       const p = d.router.policy;
-      const classified = classifyReceipt({id:d.requestId,known:true,quiescent:true,boot:p.authority.boot,generation:p.authority.generation,revision:p.revision,route:p.routerModel,handler_done:1,local_stop:'local_eof',operations:d.evidence.operations},d.requestId,d.router);
+      const classified = classifyReceipt({id:d.requestId,known:true,quiescent:true,boot:p.authority.boot,generation:p.authority.generation,revision:p.revision,route:p.routerModel,handler_done:1,local_stop:'local_eof',operations:d.evidence.operations,...(p.schema===3?{native:{profileDigest:hashDocument(p.native),scopeId:p.native.scope.id,authorizationDigest:p.native.scope.authorizationDigest,bindingDigest:hashDocument(d.router.binding),requestDigest:d.router.requestDigest}}:{})},d.requestId,d.router);
       if (d.router.send !== 'send_possible' || !sha(d.evidence.receiptDigest) || classified.disposition === 'pending_or_unknown' || d.verdict === 'validated_success' && classified.disposition !== 'original_success') throw new Error();
     }
     const live = value.reservations.find((r: Reservation) => r.requestId === d.requestId);
+    if(d.router.policy.schema===3&&d.verdict==='validated_success'){continuationOutput(d.nativeOutput,d.router.policy.native);if(hashDocument(d.nativeOutput)!==d.evidence.operations.at(-1)?.output_digest)throw Error();}else if(d.nativeOutput!==undefined)throw Error();
     if (live && (live.taskId !== d.taskId || live.attemptId !== d.attemptId || canonical(live.router) !== canonical(d.router))) throw new Error();
     decisions.add(d.requestId);
   }
@@ -76,8 +80,9 @@ function validateJournal(value: unknown): asserts value is Journal {
   }
 }
 function validateSaved(saved: RouterReservation, owner: {attemptId:string;taskId:string}) {
-  keys(saved,['policy','binding','requestDigest','send'],['policy','binding','requestDigest','send']);
+  keys(saved,['policy','binding','requestDigest','send','nativeRequest'],['policy','binding','requestDigest','send']);
   validateRouterPolicy(saved.policy); validateBinding(saved.binding);
+  if(saved.policy.schema===3){assertNativeBinding(saved.binding,saved.policy);if(!saved.nativeRequest||hashDocument(JSON.stringify(saved.nativeRequest))!==saved.requestDigest)throw Error();}else if(saved.binding.native||saved.nativeRequest!==undefined)throw Error();
   if (!sha(saved.requestDigest) || !['reserved','send_possible'].includes(saved.send) || saved.binding.attemptId !== owner.attemptId || saved.binding.taskId !== owner.taskId || saved.binding.epoch !== saved.policy.epoch || saved.binding.revision !== saved.policy.revision || saved.binding.routeId !== saved.policy.routeId || saved.binding.routerId !== saved.policy.routerId) throw new Error();
 }
 export class PolicyGate {
@@ -202,9 +207,10 @@ export class PolicyGate {
       if (this.state.phase !== 'active' || !r?.router || r.router.send !== 'reserved') throw new Denial('boundary_closed',503);
       this.receipts().assertCurrent(r, true); this.check(signal);
       r.router.send = 'send_possible'; await this.persist();
+      if(r.router.policy.schema===3){if(!this.receipts().prepare)throw new Denial('boundary_closed',503);this.receipts().prepare!(structuredClone(r));}
     });
   }
-  async finalize(requestId: string, completionDigest: string, current: () => boolean, caller: AbortSignal) {
+  async finalize(requestId: string, completionDigest: string, current: () => boolean, caller: AbortSignal, nativeOutput?: any[]) {
     return this.serial(async signal => {
       const r = this.state.reservations.find(r => r.requestId === requestId);
       if (!['active','draining'].includes(this.state.phase) || !r?.router || r.router.send !== 'send_possible' || !sha(completionDigest)) throw new Denial('boundary_closed',503);
@@ -212,7 +218,9 @@ export class PolicyGate {
       if (evidence.disposition !== 'original_success') throw new Denial('receipt_unverified',502);
       if (!current()) throw new Denial('cancelled',409);
       this.receipts().assertCurrent(r);
-      this.recordDecision(r,evidence,'validated_success',completionDigest); await this.persist();
+      const decision=this.recordDecision(r,evidence,'validated_success',completionDigest);
+      if(r.router.policy.schema===3){if(!nativeOutput||hashDocument(nativeOutput)!==evidence.operations.at(-1)?.output_digest)throw new Denial('invalid_stream',502);continuationOutput(nativeOutput,r.router.policy.native);decision.nativeOutput=structuredClone(nativeOutput);}
+      await this.persist();
       this.check(signal); if (!current()) throw new Denial('cancelled',409);
       this.receipts().assertCurrent(r);
     },caller);
@@ -229,26 +237,28 @@ export class PolicyGate {
         }
       }
       const policy = validatePolicy(await this.authorityCall(s => this.authority.readFrozenPolicy(s), signal));
-      if (policy.schema === 2 && this.state.schema === 1 && (this.state.policy !== null || this.state.reservations.length || Object.keys(this.state.counts).length)) throw new Denial('policy_denied');
+      if (policy.schema !== 1 && this.state.schema === 1 && (this.state.policy !== null || this.state.reservations.length || Object.keys(this.state.counts).length)) throw new Denial('policy_denied');
       if (!await this.authorityCall(s => this.authority.quiescent(this.state.reservations.map(r => r.requestId), s), signal)) throw new Denial('boundary_closed', 503);
       this.state.reservations = [];
-      if (policy.schema === 2 && this.state.schema === 1 && (this.state.policy !== null || this.state.reservations.length || Object.keys(this.state.counts).length)) throw new Denial('policy_denied');
-      if (policy.schema === 2) { this.receipts(); this.state.schema = 2; this.state.decisions ??= []; }
+      if (policy.schema !== 1 && this.state.schema === 1 && (this.state.policy !== null || this.state.reservations.length || Object.keys(this.state.counts).length)) throw new Denial('policy_denied');
+      if (policy.schema !== 1) { this.receipts(); this.state.schema = 2; this.state.decisions ??= []; }
       else if (this.state.schema === 2) throw new Denial('policy_denied');
       this.state.policy = policy; this.state.fingerprint = fingerprint(policy); this.state.phase = 'active';
       await this.persist(); return structuredClone(policy);
     });
   }
-  async admit(binding: Binding, current: () => boolean, caller?: AbortSignal, requestDigest?: string) {
+  nativePrevious(attemptId:string){const previous=this.state.decisions?.filter(d=>d.attemptId===attemptId&&d.verdict==='validated_success').at(-1);return previous?{request:previous.router.nativeRequest,output:previous.nativeOutput!}:null;}
+  async admit(binding: Binding, current: () => boolean, caller?: AbortSignal, requestDigest?: string, nativeRequest?: any) {
     validateBinding(binding);
     return this.serial(async signal => {
       const policy = this.state.policy;
       if (this.failed || this.state.phase !== 'active' || !policy) throw new Denial('boundary_closed', 503);
-      if (policy.schema === 2) {
+      if (policy.schema !== 1) {
         this.receipts().assertCurrent({requestId:'',attemptId:binding.attemptId,taskId:binding.taskId,epoch:policy.epoch,outcome:'active',router:{policy,binding,requestDigest:requestDigest ?? '',send:'reserved'}},true);
         if (!sha(requestDigest) || this.state.decisions!.length + this.state.reservations.length >= 64) throw new Denial('attempt_limit',429);
-        if (policy.profile === 'router-native-chat-translation-synthetic-v1' && this.state.reservations.length) throw new Denial('concurrency_limit',429);
+        if ((policy.schema===3 || policy.profile === 'router-native-chat-translation-synthetic-v1') && this.state.reservations.length) throw new Denial('concurrency_limit',429);
       }
+      if(policy.schema===3){assertNativeBinding(binding,policy);validateNativeRequest(nativeRequest,policy.native,policy.routerModel,this.nativePrevious(binding.attemptId));}else if(binding.native)throw new Denial('policy_denied');
       const retired = this.state.reservations.filter(r => r.outcome !== 'active');
       if (policy.schema === 1 && retired.length && await this.authorityCall(s => this.authority.quiescent(retired.map(r => r.requestId), s), signal)) this.state.reservations = this.state.reservations.filter(r => r.outcome === 'active');
       this.check(signal);
@@ -259,7 +269,7 @@ export class PolicyGate {
       if (!Number.isSafeInteger(count) || count < 0) throw new Denial('boundary_closed', 503);
       if (count >= policy.limits.requestCount || Object.keys(this.state.counts).length >= 64 && !Object.hasOwn(this.state.counts, binding.attemptId)) throw new Denial('attempt_limit', 429);
       const reservation: Reservation = { requestId: randomUUID().replaceAll('-', ''), attemptId: binding.attemptId, taskId: binding.taskId, epoch: policy.epoch, outcome: 'active' };
-      if (policy.schema === 2) reservation.router = {policy:structuredClone(policy),binding:structuredClone(binding),requestDigest:requestDigest!,send:'reserved'};
+      if (policy.schema !== 1) reservation.router = {policy:structuredClone(policy),binding:structuredClone(binding),requestDigest:requestDigest!,send:'reserved',...(policy.schema===3?{nativeRequest:structuredClone(nativeRequest)}:{})};
       this.state.reservations.push(reservation);
       Object.defineProperty(this.state.counts, binding.attemptId, { value: count + 1, writable: true, enumerable: true, configurable: true });
       await this.persist();
@@ -291,7 +301,7 @@ export class PolicyGate {
     return this.serial(async signal => {
       if (this.failed || !['active', 'draining'].includes(this.state.phase)) throw new Denial('boundary_closed', 503);
       const previous = this.state.policy!;
-      if (previous.schema === 2) { this.state.phase = 'closed'; await this.persist(); throw new Denial('replacement_read_only'); }
+      if (previous.schema !== 1) { this.state.phase = 'closed'; await this.persist(); throw new Denial('replacement_read_only'); }
       const reviewed = validatePolicy(next);
       if (reviewed.epoch !== previous.epoch + 1 || reviewed.revision === previous.revision || reviewed.routerId !== previous.routerId || reviewed.routeId !== previous.routeId) throw new Denial('policy_denied');
       this.state.phase = 'draining'; await this.persist();

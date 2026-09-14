@@ -9,6 +9,7 @@ export interface PrivateControl {
   state(): {boot:string;generation:number;revision:string;phase:string;policy:unknown};
   snapshot(): unknown; receipt(id:string): unknown;
   quiescent(ids:string[]): boolean; cancel(id:string): unknown;
+  prepareNative?(record:Reservation):void;
 }
 export class RouterAuthority implements ReceiptAuthority {
   readonly kind = 'router-receipts-v1' as const;
@@ -61,6 +62,7 @@ export class RouterAuthority implements ReceiptAuthority {
     if (ids.some(id => (this.read(id).receipt as any)?.known !== true)) return false;
     return this.control.quiescent(ids);
   }
+  prepare(record:Reservation){if(record.router?.policy.schema!==3||!this.control.prepareNative)throw new Denial('boundary_closed',503);this.current(record.router.policy,this.read(),true);this.control.prepareNative(structuredClone(record));}
   cancel(id: string) { this.control.cancel(id); }
   async replaceFrozenPolicy(_next: Policy, signal: AbortSignal): Promise<Policy> { signal.throwIfAborted(); throw new Denial('replacement_read_only'); }
 }
