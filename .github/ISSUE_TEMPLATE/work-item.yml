@@ -1,0 +1,44 @@
+name: Focused work item
+description: One specification, implementation or validation outcome for one PR.
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: State the single observable result and why it matters.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and dependencies
+      description: Link relevant spec sections, prerequisite issues and existing code. Say if none.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria and verification
+      description: Use checkboxes with observable outcomes, including relevant failure cases.
+    validations:
+      required: true
+  - type: textarea
+    id: exclusions
+    attributes:
+      label: Out of scope
+      description: Name adjacent work that belongs in another issue.
+    validations:
+      required: true
+  - type: textarea
+    id: astra
+    attributes:
+      label: Astra execution instruction
+      value: |
+        Implement this issue using GPT-6 Astra. Read AGENTS.md and the linked context,
+        verify prerequisite outcomes, and deliver this one result in one branch and
+        PR. Choose routine details autonomously; complete relevant verification and
+        fixes. Use local Astra subagents for independent work when useful, with one
+        writer per branch/worktree. Include criterion evidence and Closes #<number>
+        in the PR. Do not merge or deploy. Follow docs/astra-playbook.md.
+    validations:
+      required: true

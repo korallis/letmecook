@@ -1,0 +1,11 @@
+{
+  "name": "gaffer-planning-docs",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "build": "node build-reader.ts",
+    "check": "node build-reader.ts --check"
+  },
+  "devDependencies": { "marked": "18.0.13" }
+}

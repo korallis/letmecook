@@ -1,0 +1,12 @@
+.DS_Store
+.review-backups/
+node_modules/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.gaffer/
+coverage/
+dist/
+tmp/
