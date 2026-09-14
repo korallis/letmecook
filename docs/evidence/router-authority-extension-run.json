@@ -1,0 +1,6149 @@
+{
+  "schema": 1,
+  "source": {
+    "repository": "https://github.com/decolua/9router.git",
+    "commit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+    "version": "0.5.75",
+    "verifiedFiles": 1252
+  },
+  "runtime": {
+    "node": "v24.21.0",
+    "platform": "linux",
+    "arch": "arm64"
+  },
+  "evidenceClass": "isolated-real-router-modules-sqlite-synthetic-http",
+  "liveAcceptance": false,
+  "results": [
+    {
+      "schema": 1,
+      "source": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+      "scenario": "main",
+      "realModules": [
+        "chat",
+        "chatCore",
+        "DefaultExecutor",
+        "BaseExecutor",
+        "proxyAwareFetch",
+        "combosRepo",
+        "connectionsRepo",
+        "importDb",
+        "nodeSqliteAdapter"
+      ],
+      "evidence": [
+        {
+          "test": "real_router_sqlite_bootstrap",
+          "result": "passed",
+          "driver": "node:sqlite",
+          "phase": "active",
+          "profile": "9router-0.5.75-synthetic-compatible-chat-v1"
+        },
+        {
+          "test": "original_terminal_through_stock_chat",
+          "result": "passed",
+          "receipt": {
+            "id": "complete_request",
+            "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "complete_request",
+                "ordinal": 1,
+                "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_account_1",
+                "terminal": "provider_terminal",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "test": "bounded_streaming_ingress",
+          "result": "passed",
+          "oversizedAndStalledDeniedBeforeUpstream": true
+        },
+        {
+          "test": "stock_repository_import_and_raw_entrypoint_guards",
+          "result": "passed",
+          "healthWriteAllowed": true,
+          "policyChangingMetadataDenied": true
+        },
+        {
+          "test": "regression_kv_shadow_cannot_mask_policy_writer",
+          "result": "passed",
+          "forgedScopeRolledBack": true,
+          "effectiveStrategy": "fallback"
+        },
+        {
+          "test": "delayed_ingress_stale_generation",
+          "result": "passed",
+          "unknownNeverQuiescent": true
+        },
+        {
+          "test": "stock_account_fallback",
+          "result": "passed",
+          "receipt": {
+            "id": "fallback_request",
+            "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+            "generation": 3,
+            "revision": "revision_2",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "fallback_request",
+                "ordinal": 1,
+                "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+                "generation": 3,
+                "revision": "revision_2",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model-2",
+                "connection_id": "synthetic_account_1",
+                "terminal": "provider_rejected",
+                "local_stop": "original_eof"
+              },
+              {
+                "request_id": "fallback_request",
+                "ordinal": 2,
+                "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+                "generation": 3,
+                "revision": "revision_2",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model-2",
+                "connection_id": "synthetic_account_2",
+                "terminal": "provider_terminal",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "test": "cancel_stops_base_retry",
+          "result": "passed",
+          "receipt": {
+            "id": "retry_cancel",
+            "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+            "generation": 3,
+            "revision": "revision_2",
+            "route": "gaffer-synthetic",
+            "local_stop": "cancelled_unknown",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "retry_cancel",
+                "ordinal": 1,
+                "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+                "generation": 3,
+                "revision": "revision_2",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model-2",
+                "connection_id": "synthetic_account_2",
+                "terminal": "provider_rejected",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          },
+          "sendCountAfterCancel": 0
+        },
+        {
+          "test": "admission_writer_race",
+          "result": "passed",
+          "admissionDeniedDuringMutation": true
+        },
+        {
+          "test": "drain_preserves_admitted_work",
+          "result": "passed",
+          "newAdmissionDenied": true,
+          "existingOriginalTerminal": true
+        },
+        {
+          "test": "late_writer_cannot_outlive_generation",
+          "result": "passed",
+          "lateWriteDenied": true
+        },
+        {
+          "test": "mutation_exception_and_readback_failure",
+          "result": "passed",
+          "recoveredOnlyByExplicitReplacement": true
+        },
+        {
+          "test": "cancel_discards_queued_output",
+          "result": "passed",
+          "newlyReadOutputBytes": 0
+        },
+        {
+          "test": "regression_chat_identity_drift",
+          "result": "passed",
+          "receipt": {
+            "id": "identity_drift",
+            "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+            "generation": 10,
+            "revision": "revision_5",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_error",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "identity_drift",
+                "ordinal": 1,
+                "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+                "generation": 10,
+                "revision": "revision_5",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model-2",
+                "connection_id": "synthetic_account_1",
+                "terminal": "unknown",
+                "local_stop": "original_error"
+              }
+            ],
+            "quiescent": false
+          }
+        },
+        {
+          "test": "regression_chat_error_with_finish",
+          "result": "passed",
+          "receipt": {
+            "id": "error_with_finish",
+            "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+            "generation": 10,
+            "revision": "revision_5",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_error",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "error_with_finish",
+                "ordinal": 1,
+                "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+                "generation": 10,
+                "revision": "revision_5",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model-2",
+                "connection_id": "synthetic_account_1",
+                "terminal": "unknown",
+                "local_stop": "original_error"
+              }
+            ],
+            "quiescent": false
+          }
+        },
+        {
+          "test": "regression_chat_incomplete_tool",
+          "result": "passed",
+          "receipt": {
+            "id": "incomplete_tool",
+            "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+            "generation": 10,
+            "revision": "revision_5",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_error",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "incomplete_tool",
+                "ordinal": 1,
+                "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+                "generation": 10,
+                "revision": "revision_5",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model-2",
+                "connection_id": "synthetic_account_1",
+                "terminal": "unknown",
+                "local_stop": "original_error"
+              }
+            ],
+            "quiescent": false
+          }
+        },
+        {
+          "test": "translated_eof_cannot_settle_partial",
+          "result": "passed",
+          "receipt": {
+            "id": "partial_request",
+            "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+            "generation": 10,
+            "revision": "revision_5",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "partial_request",
+                "ordinal": 1,
+                "boot": "895c6d5f-e368-4fd7-999c-704fdac11519",
+                "generation": 10,
+                "revision": "revision_5",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model-2",
+                "connection_id": "synthetic_account_1",
+                "terminal": "unknown",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": false
+          },
+          "replacementDenied": true
+        },
+        {
+          "test": "hidden_default_and_unproven_native_profile_denied",
+          "result": "passed",
+          "nativeOutputBoundUnsupported": true
+        },
+        {
+          "test": "untracked_mitm_dispatch_graph_denied",
+          "result": "passed",
+          "rejectedBeforeAdmission": true
+        },
+        {
+          "test": "production_enrollment_not_inferred",
+          "result": "passed",
+          "nonLoopbackDenied": true,
+          "liveAdmission": false
+        }
+      ]
+    },
+    {
+      "scenario": "policy-reserved-keys",
+      "regressionOf": "4294e66649a981c9d227d8e1323ac9eaee4efe85",
+      "severity": "P2-policy-projection",
+      "unapprovedInferenceDemonstrated": false,
+      "statements": [
+        {
+          "scope": "modelAliases",
+          "key": "ordinary_key",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "modelAliases",
+          "key": "__proto__",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "modelAliases",
+          "key": "constructor",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "modelAliases",
+          "key": "prototype",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "modelAliases",
+          "key": "toString",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "modelAliases",
+          "key": "hasOwnProperty",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "pricing",
+          "key": "ordinary_key",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "pricing",
+          "key": "__proto__",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "pricing",
+          "key": "constructor",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "pricing",
+          "key": "prototype",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "pricing",
+          "key": "toString",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "pricing",
+          "key": "hasOwnProperty",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "ordinary_key",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "__proto__",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "constructor",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "prototype",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "toString",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "hasOwnProperty",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "customModels",
+          "key": "ordinary_key",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "customModels",
+          "key": "__proto__",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "customModels",
+          "key": "constructor",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "customModels",
+          "key": "prototype",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "customModels",
+          "key": "toString",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "customModels",
+          "key": "hasOwnProperty",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        }
+      ],
+      "failedReadbacks": [
+        {
+          "scope": "modelAliases",
+          "key": "__proto__",
+          "admission": "closed"
+        },
+        {
+          "scope": "pricing",
+          "key": "__proto__",
+          "admission": "closed"
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "__proto__",
+          "admission": "closed"
+        },
+        {
+          "scope": "customModels",
+          "key": "__proto__",
+          "admission": "closed"
+        }
+      ],
+      "aliasResolution": null,
+      "effectivePricing": null,
+      "healthWriteAllowed": true,
+      "unknownScopeRejected": true
+    },
+    {
+      "scenario": "request-compatible",
+      "regressionOf": "461cb2f372d88689dd6aed6cd3e1fe3ed060bd7e",
+      "native": false,
+      "rejected": [
+        {
+          "id": "strict_true",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "strict_false",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_none",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_required",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_auto",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_function",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_hosted",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_null",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "temperature_zero",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "parallel_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "structured_output",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "hosted_tool",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "tool_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "function_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "empty_tools",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "null_tools",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "missing_parameters",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "malformed_parameters",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "missing_properties",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "removed_pattern",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "trimmed_name",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "truncated_name",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "duplicate_tools",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "named_message",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "hosted_message",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "user_tool_calls",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "call_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "call_function_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "missing_call_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "malformed_arguments",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "primitive_arguments",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "orphan_result",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "unmatched_call",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "duplicate_call",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "duplicate_system",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "late_system",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "empty_messages",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "blank_message",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        }
+      ],
+      "headerRejected": [
+        {
+          "id": "header_client_0",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_1",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_2",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_3",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_4",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_5",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_6",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_7",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_8",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_9",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_originator",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_app",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_openai_intent",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_initiator",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_session_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_session_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_session_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_amp_thread_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_claude_code_session_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_client_request_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_9router_token_saver",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_chatgpt_account_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_openai_organization",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_connection_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_provider",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_anthropic_beta",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_cookie",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_forwarded",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_forwarded_host",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_gaffer_unreviewed",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_constructor",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header___proto__",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_mixed_case_client",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_json_accept",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_wrong_content_type",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_content_encoding",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_foreign_host",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_header_connection_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_duplicate_content_length",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_mismatched_content_length",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_ambiguous_framing",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_unknown_encoding",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_combined_auth",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_header_bytes_limit",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "raw_codex",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "raw_claude",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "raw_empty",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        }
+      ],
+      "earlyBodyCancelled": true,
+      "routerAuthStillEnforced": true,
+      "accepted": [
+        {
+          "id": "ordinary_tools",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "function": {
+                  "name": "read_file",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            ],
+            "messages": [
+              {
+                "role": "system",
+                "content": "Synthetic system instructions"
+              },
+              {
+                "role": "user",
+                "content": "Read synthetic text"
+              }
+            ]
+          },
+          "receipt": {
+            "id": "ordinary_tools",
+            "boot": "dcd1e1f6-9b3a-46c0-8f64-d7753444d679",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "ordinary_tools",
+                "ordinal": 1,
+                "boot": "dcd1e1f6-9b3a-46c0-8f64-d7753444d679",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_terminal",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "matched_continuation",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "function": {
+                  "name": "read_file",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            ],
+            "messages": [
+              {
+                "role": "system",
+                "content": "Synthetic system instructions"
+              },
+              {
+                "role": "user",
+                "content": "Read synthetic text"
+              },
+              {
+                "role": "assistant",
+                "content": null,
+                "tool_calls": [
+                  {
+                    "id": "call_synthetic_1",
+                    "type": "function",
+                    "function": {
+                      "name": "read_file",
+                      "arguments": "{\"path\":\"synthetic-one.txt\"}"
+                    }
+                  },
+                  {
+                    "id": "call_synthetic_2",
+                    "type": "function",
+                    "function": {
+                      "name": "read_file",
+                      "arguments": "{\"path\":\"synthetic-two.txt\"}"
+                    }
+                  }
+                ]
+              },
+              {
+                "role": "tool",
+                "tool_call_id": "call_synthetic_2",
+                "content": ""
+              },
+              {
+                "role": "tool",
+                "tool_call_id": "call_synthetic_1",
+                "content": "Synthetic file contents"
+              }
+            ]
+          },
+          "receipt": {
+            "id": "matched_continuation",
+            "boot": "dcd1e1f6-9b3a-46c0-8f64-d7753444d679",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "matched_continuation",
+                "ordinal": 1,
+                "boot": "dcd1e1f6-9b3a-46c0-8f64-d7753444d679",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_terminal",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "neutral_tool_set",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "function": {
+                  "name": "read_file",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              {
+                "type": "function",
+                "function": {
+                  "name": "WebSearch",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              {
+                "type": "function",
+                "function": {
+                  "name": "mcp__exa__web_search_exa",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            ],
+            "messages": [
+              {
+                "role": "system",
+                "content": "Synthetic system instructions"
+              },
+              {
+                "role": "user",
+                "content": "Read synthetic text"
+              },
+              {
+                "role": "assistant",
+                "content": null,
+                "tool_calls": [
+                  {
+                    "id": "call_synthetic_1",
+                    "type": "function",
+                    "function": {
+                      "name": "read_file",
+                      "arguments": "{\"path\":\"synthetic-one.txt\"}"
+                    }
+                  },
+                  {
+                    "id": "call_synthetic_2",
+                    "type": "function",
+                    "function": {
+                      "name": "read_file",
+                      "arguments": "{\"path\":\"synthetic-two.txt\"}"
+                    }
+                  }
+                ]
+              },
+              {
+                "role": "tool",
+                "tool_call_id": "call_synthetic_2",
+                "content": ""
+              },
+              {
+                "role": "tool",
+                "tool_call_id": "call_synthetic_1",
+                "content": "Synthetic file contents"
+              }
+            ]
+          },
+          "receipt": {
+            "id": "neutral_tool_set",
+            "boot": "dcd1e1f6-9b3a-46c0-8f64-d7753444d679",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "neutral_tool_set",
+                "ordinal": 1,
+                "boot": "dcd1e1f6-9b3a-46c0-8f64-d7753444d679",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_terminal",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "http_metadata",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "function": {
+                  "name": "read_file",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              {
+                "type": "function",
+                "function": {
+                  "name": "WebSearch",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              {
+                "type": "function",
+                "function": {
+                  "name": "mcp__exa__web_search_exa",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            ],
+            "messages": [
+              {
+                "role": "system",
+                "content": "Synthetic system instructions"
+              },
+              {
+                "role": "user",
+                "content": "Read synthetic text"
+              },
+              {
+                "role": "assistant",
+                "content": null,
+                "tool_calls": [
+                  {
+                    "id": "call_synthetic_1",
+                    "type": "function",
+                    "function": {
+                      "name": "read_file",
+                      "arguments": "{\"path\":\"synthetic-one.txt\"}"
+                    }
+                  },
+                  {
+                    "id": "call_synthetic_2",
+                    "type": "function",
+                    "function": {
+                      "name": "read_file",
+                      "arguments": "{\"path\":\"synthetic-two.txt\"}"
+                    }
+                  }
+                ]
+              },
+              {
+                "role": "tool",
+                "tool_call_id": "call_synthetic_2",
+                "content": ""
+              },
+              {
+                "role": "tool",
+                "tool_call_id": "call_synthetic_1",
+                "content": "Synthetic file contents"
+              }
+            ]
+          },
+          "receipt": {
+            "id": "http_metadata",
+            "boot": "dcd1e1f6-9b3a-46c0-8f64-d7753444d679",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "http_metadata",
+                "ordinal": 1,
+                "boot": "dcd1e1f6-9b3a-46c0-8f64-d7753444d679",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_terminal",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "alternate_api_auth",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "function": {
+                  "name": "read_file",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              {
+                "type": "function",
+                "function": {
+                  "name": "WebSearch",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              {
+                "type": "function",
+                "function": {
+                  "name": "mcp__exa__web_search_exa",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            ],
+            "messages": [
+              {
+                "role": "system",
+                "content": "Synthetic system instructions"
+              },
+              {
+                "role": "user",
+                "content": "Read synthetic text"
+              },
+              {
+                "role": "assistant",
+                "content": null,
+                "tool_calls": [
+                  {
+                    "id": "call_synthetic_1",
+                    "type": "function",
+                    "function": {
+                      "name": "read_file",
+                      "arguments": "{\"path\":\"synthetic-one.txt\"}"
+                    }
+                  },
+                  {
+                    "id": "call_synthetic_2",
+                    "type": "function",
+                    "function": {
+                      "name": "read_file",
+                      "arguments": "{\"path\":\"synthetic-two.txt\"}"
+                    }
+                  }
+                ]
+              },
+              {
+                "role": "tool",
+                "tool_call_id": "call_synthetic_2",
+                "content": ""
+              },
+              {
+                "role": "tool",
+                "tool_call_id": "call_synthetic_1",
+                "content": "Synthetic file contents"
+              }
+            ]
+          },
+          "receipt": {
+            "id": "alternate_api_auth",
+            "boot": "dcd1e1f6-9b3a-46c0-8f64-d7753444d679",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "alternate_api_auth",
+                "ordinal": 1,
+                "boot": "dcd1e1f6-9b3a-46c0-8f64-d7753444d679",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_terminal",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        }
+      ],
+      "sends": 5,
+      "liveAcceptance": false
+    },
+    {
+      "scenario": "request-native",
+      "regressionOf": "461cb2f372d88689dd6aed6cd3e1fe3ed060bd7e",
+      "native": true,
+      "rejected": [
+        {
+          "id": "strict_true",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "strict_false",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_none",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_required",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_auto",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_function",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_hosted",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_null",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "temperature_zero",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "parallel_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "structured_output",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "hosted_tool",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "tool_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "function_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "empty_tools",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "null_tools",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "missing_parameters",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "malformed_parameters",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "missing_properties",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "removed_pattern",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "trimmed_name",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "truncated_name",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "duplicate_tools",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "named_message",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "hosted_message",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "user_tool_calls",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "call_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "call_function_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "missing_call_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "malformed_arguments",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "primitive_arguments",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "orphan_result",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "unmatched_call",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "duplicate_call",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "duplicate_system",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "late_system",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "empty_messages",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "blank_message",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        }
+      ],
+      "headerRejected": [
+        {
+          "id": "header_client_0",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_1",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_2",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_3",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_4",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_5",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_6",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_7",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_8",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_client_9",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_originator",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_app",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_openai_intent",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_initiator",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_session_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_session_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_session_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_amp_thread_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_claude_code_session_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_client_request_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_9router_token_saver",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_chatgpt_account_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_openai_organization",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_connection_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_provider",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_anthropic_beta",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_cookie",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_forwarded",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_forwarded_host",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_x_gaffer_unreviewed",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_constructor",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header___proto__",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_mixed_case_client",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_json_accept",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_wrong_content_type",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_content_encoding",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_foreign_host",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_header_connection_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_duplicate_content_length",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_mismatched_content_length",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_ambiguous_framing",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_unknown_encoding",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_combined_auth",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "header_header_bytes_limit",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "raw_codex",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "raw_claude",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        },
+        {
+          "id": "raw_empty",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false
+        }
+      ],
+      "earlyBodyCancelled": true,
+      "routerAuthStillEnforced": true,
+      "accepted": [
+        {
+          "id": "ordinary_tools",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "name": "read_file",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "input": [
+              {
+                "type": "message",
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Read synthetic text"
+                  }
+                ]
+              }
+            ],
+            "instructions": "Synthetic system instructions"
+          },
+          "receipt": {
+            "id": "ordinary_tools",
+            "boot": "7809f58a-1dc3-4fa7-b6d4-a87b93c6ecf5",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "ordinary_tools",
+                "ordinal": 1,
+                "boot": "7809f58a-1dc3-4fa7-b6d4-a87b93c6ecf5",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "matched_continuation",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "name": "read_file",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "input": [
+              {
+                "type": "message",
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Read synthetic text"
+                  }
+                ]
+              },
+              {
+                "type": "function_call",
+                "call_id": "call_synthetic_1",
+                "name": "read_file",
+                "arguments": "{\"path\":\"synthetic-one.txt\"}"
+              },
+              {
+                "type": "function_call",
+                "call_id": "call_synthetic_2",
+                "name": "read_file",
+                "arguments": "{\"path\":\"synthetic-two.txt\"}"
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call_synthetic_2",
+                "output": ""
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call_synthetic_1",
+                "output": "Synthetic file contents"
+              }
+            ],
+            "instructions": "Synthetic system instructions"
+          },
+          "receipt": {
+            "id": "matched_continuation",
+            "boot": "7809f58a-1dc3-4fa7-b6d4-a87b93c6ecf5",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "matched_continuation",
+                "ordinal": 1,
+                "boot": "7809f58a-1dc3-4fa7-b6d4-a87b93c6ecf5",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "neutral_tool_set",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "name": "read_file",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "function",
+                "name": "WebSearch",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "function",
+                "name": "mcp__exa__web_search_exa",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "input": [
+              {
+                "type": "message",
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Read synthetic text"
+                  }
+                ]
+              },
+              {
+                "type": "function_call",
+                "call_id": "call_synthetic_1",
+                "name": "read_file",
+                "arguments": "{\"path\":\"synthetic-one.txt\"}"
+              },
+              {
+                "type": "function_call",
+                "call_id": "call_synthetic_2",
+                "name": "read_file",
+                "arguments": "{\"path\":\"synthetic-two.txt\"}"
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call_synthetic_2",
+                "output": ""
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call_synthetic_1",
+                "output": "Synthetic file contents"
+              }
+            ],
+            "instructions": "Synthetic system instructions"
+          },
+          "receipt": {
+            "id": "neutral_tool_set",
+            "boot": "7809f58a-1dc3-4fa7-b6d4-a87b93c6ecf5",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "neutral_tool_set",
+                "ordinal": 1,
+                "boot": "7809f58a-1dc3-4fa7-b6d4-a87b93c6ecf5",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "http_metadata",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "name": "read_file",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "function",
+                "name": "WebSearch",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "function",
+                "name": "mcp__exa__web_search_exa",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "input": [
+              {
+                "type": "message",
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Read synthetic text"
+                  }
+                ]
+              },
+              {
+                "type": "function_call",
+                "call_id": "call_synthetic_1",
+                "name": "read_file",
+                "arguments": "{\"path\":\"synthetic-one.txt\"}"
+              },
+              {
+                "type": "function_call",
+                "call_id": "call_synthetic_2",
+                "name": "read_file",
+                "arguments": "{\"path\":\"synthetic-two.txt\"}"
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call_synthetic_2",
+                "output": ""
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call_synthetic_1",
+                "output": "Synthetic file contents"
+              }
+            ],
+            "instructions": "Synthetic system instructions"
+          },
+          "receipt": {
+            "id": "http_metadata",
+            "boot": "7809f58a-1dc3-4fa7-b6d4-a87b93c6ecf5",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "http_metadata",
+                "ordinal": 1,
+                "boot": "7809f58a-1dc3-4fa7-b6d4-a87b93c6ecf5",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "alternate_api_auth",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "name": "read_file",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "function",
+                "name": "WebSearch",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              {
+                "type": "function",
+                "name": "mcp__exa__web_search_exa",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "input": [
+              {
+                "type": "message",
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Read synthetic text"
+                  }
+                ]
+              },
+              {
+                "type": "function_call",
+                "call_id": "call_synthetic_1",
+                "name": "read_file",
+                "arguments": "{\"path\":\"synthetic-one.txt\"}"
+              },
+              {
+                "type": "function_call",
+                "call_id": "call_synthetic_2",
+                "name": "read_file",
+                "arguments": "{\"path\":\"synthetic-two.txt\"}"
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call_synthetic_2",
+                "output": ""
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call_synthetic_1",
+                "output": "Synthetic file contents"
+              }
+            ],
+            "instructions": "Synthetic system instructions"
+          },
+          "receipt": {
+            "id": "alternate_api_auth",
+            "boot": "7809f58a-1dc3-4fa7-b6d4-a87b93c6ecf5",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "alternate_api_auth",
+                "ordinal": 1,
+                "boot": "7809f58a-1dc3-4fa7-b6d4-a87b93c6ecf5",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        }
+      ],
+      "sends": 5,
+      "liveAcceptance": false
+    },
+    {
+      "scenario": "unknown",
+      "unknownIdBlocksReplacement": true,
+      "receipt": {
+        "id": "never_observed",
+        "known": false,
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "crash",
+      "receipt": {
+        "id": "crash_request",
+        "boot": "1fa70b99-002f-4942-ad1b-c442bf801217",
+        "generation": 3,
+        "revision": "revision_2",
+        "route": "gaffer-synthetic",
+        "local_stop": "running",
+        "handler_done": 0,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "crash_request",
+            "ordinal": 1,
+            "boot": "1fa70b99-002f-4942-ad1b-c442bf801217",
+            "generation": 3,
+            "revision": "revision_2",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model-2",
+            "connection_id": "synthetic_account_2",
+            "terminal": "unknown",
+            "local_stop": "running"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "restart",
+      "phase": "closed",
+      "crashReceipt": {
+        "id": "crash_request",
+        "boot": "1fa70b99-002f-4942-ad1b-c442bf801217",
+        "generation": 3,
+        "revision": "revision_2",
+        "route": "gaffer-synthetic",
+        "local_stop": "crash_unknown",
+        "handler_done": 0,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "crash_request",
+            "ordinal": 1,
+            "boot": "1fa70b99-002f-4942-ad1b-c442bf801217",
+            "generation": 3,
+            "revision": "revision_2",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model-2",
+            "connection_id": "synthetic_account_2",
+            "terminal": "unknown",
+            "local_stop": "crash_unknown"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "success",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_success",
+        "boot": "ba9a6cdc-503b-428d-b91f-63947ab1ae8b",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_eof",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_success",
+            "ordinal": 1,
+            "boot": "ba9a6cdc-503b-428d-b91f-63947ab1ae8b",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_completed",
+            "local_stop": "original_eof"
+          }
+        ],
+        "quiescent": true
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "tools",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_tools",
+        "boot": "7401a695-f0ff-4c0b-bb53-46c0bbfc3147",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_eof",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_tools",
+            "ordinal": 1,
+            "boot": "7401a695-f0ff-4c0b-bb53-46c0bbfc3147",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_completed",
+            "local_stop": "original_eof"
+          }
+        ],
+        "quiescent": true
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "tools-identity-drift",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_tools_identity_drift",
+        "boot": "0b9d679a-249d-452b-b296-d1b89bdf30a2",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_tools_identity_drift",
+            "ordinal": 1,
+            "boot": "0b9d679a-249d-452b-b296-d1b89bdf30a2",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "unknown",
+            "local_stop": "original_error"
+          }
+        ],
+        "quiescent": false
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "tools-delta-drift",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_tools_delta_drift",
+        "boot": "821ce946-d167-4f62-9cba-4d6d5f8d7aeb",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_tools_delta_drift",
+            "ordinal": 1,
+            "boot": "821ce946-d167-4f62-9cba-4d6d5f8d7aeb",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "unknown",
+            "local_stop": "original_error"
+          }
+        ],
+        "quiescent": false
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "tools-duplicate-argument-keys",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_tools_duplicate_argument_keys",
+        "boot": "b5ef8fac-837d-406a-828e-e0fd43dd726e",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_tools_duplicate_argument_keys",
+            "ordinal": 1,
+            "boot": "b5ef8fac-837d-406a-828e-e0fd43dd726e",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "unknown",
+            "local_stop": "original_error"
+          }
+        ],
+        "quiescent": false
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "account-fallback",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        },
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_2"
+        }
+      ],
+      "receipt": {
+        "id": "native_account_fallback",
+        "boot": "e8221152-c67a-437e-a1d6-350927ce9ec1",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_eof",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_account_fallback",
+            "ordinal": 1,
+            "boot": "e8221152-c67a-437e-a1d6-350927ce9ec1",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_rejected",
+            "local_stop": "original_eof"
+          },
+          {
+            "request_id": "native_account_fallback",
+            "ordinal": 2,
+            "boot": "e8221152-c67a-437e-a1d6-350927ce9ec1",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_2",
+            "terminal": "provider_completed",
+            "local_stop": "original_eof"
+          }
+        ],
+        "quiescent": true
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "model-fallback",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        },
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_2"
+        },
+        {
+          "path": "/responses",
+          "model": "gpt-5.6-sol",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_model_fallback",
+        "boot": "1f827e62-86eb-4e87-bcfc-e0ad1e210469",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_eof",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_model_fallback",
+            "ordinal": 1,
+            "boot": "1f827e62-86eb-4e87-bcfc-e0ad1e210469",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_rejected",
+            "local_stop": "original_eof"
+          },
+          {
+            "request_id": "native_model_fallback",
+            "ordinal": 2,
+            "boot": "1f827e62-86eb-4e87-bcfc-e0ad1e210469",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_2",
+            "terminal": "provider_rejected",
+            "local_stop": "original_eof"
+          },
+          {
+            "request_id": "native_model_fallback",
+            "ordinal": 3,
+            "boot": "1f827e62-86eb-4e87-bcfc-e0ad1e210469",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-5.6-sol",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_completed",
+            "local_stop": "original_eof"
+          }
+        ],
+        "quiescent": true
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "refresh",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        },
+        {
+          "path": "/token",
+          "model": null,
+          "maxOutputFieldPresent": false,
+          "account": null
+        },
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_refresh",
+        "boot": "db497236-db53-4116-8fa0-3a7378233cbb",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_eof",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_refresh",
+            "ordinal": 1,
+            "boot": "db497236-db53-4116-8fa0-3a7378233cbb",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_rejected",
+            "local_stop": "original_eof"
+          },
+          {
+            "request_id": "native_refresh",
+            "ordinal": 2,
+            "boot": "db497236-db53-4116-8fa0-3a7378233cbb",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_refresh_terminal",
+            "local_stop": "original_eof"
+          },
+          {
+            "request_id": "native_refresh",
+            "ordinal": 3,
+            "boot": "db497236-db53-4116-8fa0-3a7378233cbb",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_completed",
+            "local_stop": "original_eof"
+          }
+        ],
+        "quiescent": true
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "proactive-refresh",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/token",
+          "model": null,
+          "maxOutputFieldPresent": false,
+          "account": null
+        },
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_proactive_refresh",
+        "boot": "c831017a-b1dd-4556-94ae-f689fcb6c5ec",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_eof",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_proactive_refresh",
+            "ordinal": 1,
+            "boot": "c831017a-b1dd-4556-94ae-f689fcb6c5ec",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_refresh_terminal",
+            "local_stop": "original_eof"
+          },
+          {
+            "request_id": "native_proactive_refresh",
+            "ordinal": 2,
+            "boot": "c831017a-b1dd-4556-94ae-f689fcb6c5ec",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_completed",
+            "local_stop": "original_eof"
+          }
+        ],
+        "quiescent": true
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "sse-retry",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        },
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_sse_retry",
+        "boot": "e62b2d8e-3f7d-4fe9-9c5a-44ef83b670b3",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_eof",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_sse_retry",
+            "ordinal": 1,
+            "boot": "e62b2d8e-3f7d-4fe9-9c5a-44ef83b670b3",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_failed",
+            "local_stop": "original_cancel"
+          },
+          {
+            "request_id": "native_sse_retry",
+            "ordinal": 2,
+            "boot": "e62b2d8e-3f7d-4fe9-9c5a-44ef83b670b3",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_completed",
+            "local_stop": "original_eof"
+          }
+        ],
+        "quiescent": true
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "retry-cancel",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_retry_cancel",
+        "boot": "074c4e40-e13b-4977-b864-809f5e186e7f",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "cancelled_unknown",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_retry_cancel",
+            "ordinal": 1,
+            "boot": "074c4e40-e13b-4977-b864-809f5e186e7f",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_failed",
+            "local_stop": "original_cancel"
+          }
+        ],
+        "quiescent": true
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "fence-retry",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_fence_retry",
+        "boot": "1d9ecd21-4fde-4227-87d8-0f03c8519ed2",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_fence_retry",
+            "ordinal": 1,
+            "boot": "1d9ecd21-4fde-4227-87d8-0f03c8519ed2",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_failed",
+            "local_stop": "original_cancel"
+          }
+        ],
+        "quiescent": true
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "preheaders-cancel",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_preheaders_cancel",
+        "boot": "48139974-28b8-4d4b-9641-993137867347",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "cancelled_unknown",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_preheaders_cancel",
+            "ordinal": 1,
+            "boot": "48139974-28b8-4d4b-9641-993137867347",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "fence-preheaders",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_fence_preheaders",
+        "boot": "01baeafb-7ad9-4dee-8068-60bfa6852e4f",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_fence_preheaders",
+            "ordinal": 1,
+            "boot": "01baeafb-7ad9-4dee-8068-60bfa6852e4f",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "refresh-cancel",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/token",
+          "model": null,
+          "maxOutputFieldPresent": false,
+          "account": null
+        }
+      ],
+      "receipt": {
+        "id": "native_refresh_cancel",
+        "boot": "9ec899cb-886e-4bfb-acf4-aebb10cb8736",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "cancelled_unknown",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_refresh_cancel",
+            "ordinal": 1,
+            "boot": "9ec899cb-886e-4bfb-acf4-aebb10cb8736",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_native_1",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "failed",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_failed",
+        "boot": "1328804b-6db6-4ef6-b913-ad9b3abc7def",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_eof",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_failed",
+            "ordinal": 1,
+            "boot": "1328804b-6db6-4ef6-b913-ad9b3abc7def",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_failed",
+            "local_stop": "original_eof"
+          }
+        ],
+        "quiescent": true
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "incomplete",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_incomplete",
+        "boot": "ebc790c4-544d-4208-ac48-c3bda695742c",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_eof",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_incomplete",
+            "ordinal": 1,
+            "boot": "ebc790c4-544d-4208-ac48-c3bda695742c",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "provider_incomplete",
+            "local_stop": "original_eof"
+          }
+        ],
+        "quiescent": true
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "partial",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_partial",
+        "boot": "cb723bc3-eda5-4b44-ae2f-957e4c44eeba",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_eof",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_partial",
+            "ordinal": 1,
+            "boot": "cb723bc3-eda5-4b44-ae2f-957e4c44eeba",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "unknown",
+            "local_stop": "original_eof"
+          }
+        ],
+        "quiescent": false
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "contradictory",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_contradictory",
+        "boot": "844333ab-c073-44c3-860e-3a07dc04b682",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_contradictory",
+            "ordinal": 1,
+            "boot": "844333ab-c073-44c3-860e-3a07dc04b682",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "unknown",
+            "local_stop": "original_error"
+          }
+        ],
+        "quiescent": false
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "schema": 1,
+      "scenario": "oversized",
+      "nativeAuthorityOnly": true,
+      "providerOutputBound": false,
+      "liveAcceptance": false,
+      "sends": [
+        {
+          "path": "/responses",
+          "model": "gpt-6-astra",
+          "maxOutputFieldPresent": false,
+          "account": "synthetic_workspace_1"
+        }
+      ],
+      "receipt": {
+        "id": "native_oversized",
+        "boot": "9735e538-8462-4760-83d4-7d24ce4e9389",
+        "generation": 2,
+        "revision": "native_revision_1",
+        "route": "gaffer-native",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_oversized",
+            "ordinal": 1,
+            "boot": "9735e538-8462-4760-83d4-7d24ce4e9389",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_native_1",
+            "terminal": "unknown",
+            "local_stop": "original_error"
+          }
+        ],
+        "quiescent": false
+      },
+      "policy": {
+        "schema": 1,
+        "profile": "9router-0.5.75-synthetic-native-authority-v1",
+        "liveAdmission": false,
+        "nativeLiveAdmission": false,
+        "nodes": [],
+        "connections": [
+          {
+            "id": "synthetic_native_1",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 1,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_1"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          },
+          {
+            "id": "synthetic_native_2",
+            "provider": "codex",
+            "authType": "oauth",
+            "priority": 2,
+            "isActive": true,
+            "endpoint": "http://127.0.0.1:47771/responses",
+            "refreshEndpoint": "http://127.0.0.1:47771/token",
+            "workspace": {
+              "chatgptAccountId": "synthetic_workspace_2"
+            },
+            "billing": "synthetic-subscription",
+            "providerOutputBound": false
+          }
+        ],
+        "routes": [
+          {
+            "id": "native_route",
+            "name": "gaffer-native",
+            "strategy": "fallback",
+            "edges": [
+              {
+                "member": "cx/gpt-6-astra",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-sol",
+                "provider": "codex",
+                "model": "gpt-5.6-sol",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              },
+              {
+                "member": "cx/gpt-5.6-terra",
+                "provider": "codex",
+                "model": "gpt-5.6-terra",
+                "connections": [
+                  "synthetic_native_1",
+                  "synthetic_native_2"
+                ]
+              }
+            ]
+          }
+        ],
+        "settings": {
+          "requireApiKey": true,
+          "comboStrategy": "fallback",
+          "accountStrategy": "fill-first",
+          "adapters": false,
+          "helpers": false,
+          "remoteResources": false,
+          "proxies": false,
+          "autoPing": false
+        },
+        "bounds": {
+          "requestBytes": 65536,
+          "responseBytes": 1048576,
+          "requestMaxTokens": 1024,
+          "providerOutputTokens": null,
+          "ingressMs": 3000,
+          "totalMs": 30000,
+          "subattempts": 16
+        },
+        "terminals": [
+          "validated-original-chat-sse",
+          "validated-original-json-error",
+          "validated-original-responses-sse",
+          "validated-original-refresh-json"
+        ]
+      }
+    },
+    {
+      "scenario": "error-oversized-open",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 30,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "error_oversized_open",
+        "boot": "71fad48d-d2b4-41f6-9dc7-d6b962f15814",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "error_oversized_open",
+            "ordinal": 1,
+            "boot": "71fad48d-d2b4-41f6-9dc7-d6b962f15814",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "error-invalid-utf8",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 29,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "error_invalid_utf8",
+        "boot": "9f3c0736-ce48-43bf-b16f-49eac1cdc58c",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "error_invalid_utf8",
+            "ordinal": 1,
+            "boot": "9f3c0736-ce48-43bf-b16f-49eac1cdc58c",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "error-invalid-json",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 40,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "error_invalid_json",
+        "boot": "446a7140-a47e-4d70-abfe-bcb9e25061db",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "error_invalid_json",
+            "ordinal": 1,
+            "boot": "446a7140-a47e-4d70-abfe-bcb9e25061db",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "success-wrong-content-type-open",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 33,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "success_wrong_content_type_open",
+        "boot": "09fc637d-2249-45a5-b4f4-212d61893ceb",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "success_wrong_content_type_open",
+            "ordinal": 1,
+            "boot": "09fc637d-2249-45a5-b4f4-212d61893ceb",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "refresh-oversized-open",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 34,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "refresh_oversized_open",
+        "boot": "6bcd79b4-1929-409f-b54a-bdbd281a7f6e",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "refresh_oversized_open",
+            "ordinal": 1,
+            "boot": "6bcd79b4-1929-409f-b54a-bdbd281a7f6e",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "refresh-error-oversized-open",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 29,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "refresh_error_oversized_open",
+        "boot": "8faad014-ecff-4e96-b911-6d10f75c6a9a",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "refresh_error_oversized_open",
+            "ordinal": 1,
+            "boot": "8faad014-ecff-4e96-b911-6d10f75c6a9a",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "refresh-invalid-utf8",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 35,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "refresh_invalid_utf8",
+        "boot": "c8450f7f-d409-440c-b8d3-7a6cff772a11",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "refresh_invalid_utf8",
+            "ordinal": 1,
+            "boot": "c8450f7f-d409-440c-b8d3-7a6cff772a11",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "refresh-invalid-schema",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 22,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "refresh_invalid_schema",
+        "boot": "5759c39e-a944-44e1-a0e8-b020e16af2ee",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "local_error",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "refresh_invalid_schema",
+            "ordinal": 1,
+            "boot": "5759c39e-a944-44e1-a0e8-b020e16af2ee",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "error-cancel-complete-json",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 148,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "error_cancel_complete_json",
+        "boot": "25bb7ebb-a0af-4741-9b9d-ed352c35adf7",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "cancelled_unknown",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "error_cancel_complete_json",
+            "ordinal": 1,
+            "boot": "25bb7ebb-a0af-4741-9b9d-ed352c35adf7",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "refresh-cancel-complete-json",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 132,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "refresh_cancel_complete_json",
+        "boot": "f80e000f-1ff0-4586-9b2a-02a93c148549",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "cancelled_unknown",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "refresh_cancel_complete_json",
+            "ordinal": 1,
+            "boot": "f80e000f-1ff0-4586-9b2a-02a93c148549",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "codex",
+            "model": "credential_refresh",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "error-deadline",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 30017,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "error_deadline",
+        "boot": "8a4ec4e4-881c-48b5-b714-be2b9aadd5f9",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "cancelled_unknown",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "error_deadline",
+            "ordinal": 1,
+            "boot": "8a4ec4e4-881c-48b5-b714-be2b9aadd5f9",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "openai-compatible-synthetic",
+            "model": "synthetic-model",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "transport_error"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "native-peek-deadline",
+      "regressionOf": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+      "sends": 1,
+      "closed": 1,
+      "openOriginalResponses": 0,
+      "elapsedMs": 30009,
+      "afterHandlerCancelStillUnknown": true,
+      "receipt": {
+        "id": "native_peek_deadline",
+        "boot": "1d00ef44-8930-465b-bad7-64e02e4de220",
+        "generation": 2,
+        "revision": "revision_1",
+        "route": "gaffer-synthetic",
+        "local_stop": "cancelled_unknown",
+        "handler_done": 1,
+        "known": true,
+        "operations": [
+          {
+            "request_id": "native_peek_deadline",
+            "ordinal": 1,
+            "boot": "1d00ef44-8930-465b-bad7-64e02e4de220",
+            "generation": 2,
+            "revision": "revision_1",
+            "provider": "codex",
+            "model": "gpt-6-astra",
+            "connection_id": "synthetic_transport_account",
+            "terminal": "unknown",
+            "local_stop": "original_cancel"
+          }
+        ],
+        "quiescent": false
+      }
+    },
+    {
+      "scenario": "tampered",
+      "result": "source_digest_refused_before_evaluation"
+    }
+  ]
+}

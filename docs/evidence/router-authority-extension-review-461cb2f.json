@@ -1,0 +1,348 @@
+{
+  "schema": 1,
+  "reviewedCommit": "461cb2f372d88689dd6aed6cd3e1fe3ed060bd7e",
+  "classification": "independent-isolated-synthetic-review-failure",
+  "severity": "P2-request-envelope",
+  "unapprovedProviderAccountModelOrHostedExecutionDemonstrated": false,
+  "falseRemoteQuiescenceDemonstrated": false,
+  "liveAcceptance": false,
+  "provenance": {
+    "sourceCommit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+    "runtimeImageId": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a",
+    "originalArtifactSha256": {
+      "native-request-shapes.mjs": "86e8c834eb764b6b190a6d77119f48fd91dd2a64e480ba50002a237a28d4c451",
+      "native-request-shapes.log": "784fba838527bca04207d611a98b2e95db56e82505a31ed141e1f2929964e954"
+    }
+  },
+  "observations": [
+    {
+      "cases": [
+        {
+          "id": "missing_key",
+          "status": 401,
+          "sends": 0,
+          "upstream": null,
+          "receipt": {
+            "id": "missing_key",
+            "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-native",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "invalid_key",
+          "status": 401,
+          "sends": 0,
+          "upstream": null,
+          "receipt": {
+            "id": "invalid_key",
+            "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-native",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "strict_function",
+          "status": 200,
+          "sends": 1,
+          "upstream": {
+            "tools": [
+              {
+                "type": "function",
+                "name": "read_file",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "tool_choice": null,
+            "temperature": null
+          },
+          "receipt": {
+            "id": "strict_function",
+            "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-native",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "strict_function",
+                "ordinal": 1,
+                "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_conn",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "unreviewed_tool_choice",
+          "status": 200,
+          "sends": 1,
+          "upstream": {
+            "tools": [
+              {
+                "type": "function",
+                "name": "read_file",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            ],
+            "tool_choice": null,
+            "temperature": null
+          },
+          "receipt": {
+            "id": "unreviewed_tool_choice",
+            "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-native",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "unreviewed_tool_choice",
+                "ordinal": 1,
+                "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_conn",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "tool_choice_none",
+          "status": 200,
+          "sends": 1,
+          "upstream": {
+            "tools": [
+              {
+                "type": "function",
+                "name": "read_file",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            ],
+            "tool_choice": null,
+            "temperature": null
+          },
+          "receipt": {
+            "id": "tool_choice_none",
+            "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-native",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "tool_choice_none",
+                "ordinal": 1,
+                "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_conn",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "tool_choice_required",
+          "status": 200,
+          "sends": 1,
+          "upstream": {
+            "tools": [
+              {
+                "type": "function",
+                "name": "read_file",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            ],
+            "tool_choice": null,
+            "temperature": null
+          },
+          "receipt": {
+            "id": "tool_choice_required",
+            "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-native",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "tool_choice_required",
+                "ordinal": 1,
+                "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_conn",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "tool_choice_named",
+          "status": 200,
+          "sends": 1,
+          "upstream": {
+            "tools": [
+              {
+                "type": "function",
+                "name": "read_file",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            ],
+            "tool_choice": null,
+            "temperature": null
+          },
+          "receipt": {
+            "id": "tool_choice_named",
+            "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-native",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "tool_choice_named",
+                "ordinal": 1,
+                "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_conn",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "temperature_zero",
+          "status": 200,
+          "sends": 1,
+          "upstream": {
+            "tool_choice": null,
+            "temperature": null
+          },
+          "receipt": {
+            "id": "temperature_zero",
+            "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-native",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "temperature_zero",
+                "ordinal": 1,
+                "boot": "38841cc3-b500-43ad-aa40-cb72f1ad5cb9",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_conn",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "direct_remote_resource",
+          "status": 503,
+          "sends": 0,
+          "upstream": null,
+          "receipt": {
+            "id": "direct_remote_resource",
+            "known": false,
+            "quiescent": false
+          }
+        }
+      ]
+    }
+  ]
+}
