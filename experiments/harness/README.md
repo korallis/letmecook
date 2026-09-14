@@ -37,8 +37,9 @@ The [current closure replay](../../docs/evidence/first-harness-legacy-closure.md
 records the fresh-review startup failure and its verified fix at `7315bcaf`.
 Both advertised launchers remain runnable. Static native-policy imports resolve
 through an explicit pure validation/codec closure. The actual-router worker gets
-only `native-profile.mjs` and `scope-profile.mjs`; the gateway also gets the pure
-Responses codecs at the relative import path. Scope authority and storage stay
+`native-profile.mjs`, `scope-profile.mjs` and the closed planner validator, schema
+and terminal parser that native profile validation imports. The gateway also gets
+the pure Responses codec at the relative import path. Scope authority and storage stay
 outside the worker. Extracting scope validation does not change its limits.
 
 The actual binary configuration is explicitly versioned as

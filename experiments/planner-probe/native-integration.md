@@ -18,7 +18,10 @@ The native and legacy consumer staging lists include only the pure
 `scope-profile.mjs` shape/limit validator. The stateful `evaluation-scope.mjs`
 authority stays in the gateway, and both actual staged consumers verify that
 module is absent. This follows the shared dependency's validator extraction;
-the scope rules, planner limits and live authorization are unchanged.
+the scope rules, planner limits and live authorization are unchanged. The
+inherited worker and legacy harness staging lists also include the pure planner
+validator, pinned schema and terminal parser imported by native profile validation;
+they still exclude scope authority and storage.
 
 The complete private policy participates in `input_revision`. The model sees a
 small proposal-only projection. The durable gate derives assessment, read and
@@ -60,6 +63,23 @@ describes typed lifecycle events; tests exercise the actual created, item,
 content, argument, delta and completed sequence, fragmented UTF-8, original EOF
 and receipt-to-output digest joins. Documentation does not establish deployed
 subscription-route conformance.
+
+## CI reconciliation
+
+The [reconciliation packet](evidence/ci-reconciliation-run.json) retains the two
+initial CI failures and the corrected observations. Harness staging now includes
+the full pure planner validator dependency. Portable authority fixtures await
+output flush before forced exit, and their parent waits for pipe EOF before
+strictly parsing every JSON record. A backpressured actual `baseline32` process
+previously exited successfully with truncated JSON; the corrected replay emitted
+a complete record. All 38 portable source cases, seven selected actual Chat
+harness cases, 16 harness tests and 23 native evaluation/scope/output tests pass.
+
+The first historical 512 MiB fixture replay OOMed before inference in its edit
+case. A serial replay passed all 13 cases with identical source and limits. Both
+records remain in the packet: this historical memory profile showed intermittent
+behavior. No memory or timing limit was increased, and the separate native worker
+profile is unchanged.
 
 ## Evidence and acknowledgement
 
