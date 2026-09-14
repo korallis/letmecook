@@ -62,3 +62,10 @@ the single initial maximum of ten physical attempts and 600,000 ms begins across
 roles/retries. Separately approved baselines cannot reset that scope. Continuity
 needs its own exact reviewed transport evidence; unchanged/no-tool output remains
 artifact_mismatch in this worker adapter.
+
+The current worker binary wall ceiling is 30,000 ms. Synthetic gateway fixtures
+use request/first-output/idle limits of 6,000/4,000/2,000 ms; these are deterministic
+fault-test timings, not measured live Astra xhigh thresholds. The exact reviewed
+live suite must declare suitable finite request and consumer bounds within its
+shared 600,000 ms scope before admission. No limits were widened or calibrated
+through model calls in this integration.

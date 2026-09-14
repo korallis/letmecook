@@ -26,7 +26,7 @@ const execute = promisify(execFile), root = resolve(import.meta.dirname, '../../
 const source = process.env.GAFFER_ROUTER_SOURCE, binary = process.env.GAFFER_OPENCODE_BINARY;
 assert(source?.startsWith('/') && binary?.startsWith('/'), 'absolute public router and pinned binary paths required');
 const image = 'gaffer-router-extension-deps:0.5.75-locked', output = resolve(process.argv[2] ?? '/tmp/gaffer-native-harness-run.json');
-const all = ['edit', 'delay', 'ask', 'registry', 'cancel', 'crash', 'tree', 'receipt-write', 'decision-write', 'artifact-write', 'partial', 'forbidden', 'router-error', 'disabled-hook', 'ambient', 'auth', 'containment', 'transport', 'oom'];
+const all = ['edit', 'start-delay', 'delay', 'ask', 'registry', 'cancel', 'crash', 'tree', 'receipt-write', 'decision-write', 'artifact-write', 'partial', 'forbidden', 'router-error', 'disabled-hook', 'ambient', 'auth', 'containment', 'transport', 'oom'];
 const cases = process.argv[3]?.split(',') ?? all; assert(cases.length && cases.every(x => all.includes(x)));
 const run = 'gaffer-native-harness-' + randomBytes(6).toString('hex'), containers = new Set<string>(), volumes = new Set<string>();
 const staging = await mkdtemp(join(tmpdir(), run)), fixtureRoot = join(staging, 'base'), baseSHA = createFixture(fixtureRoot);
@@ -42,7 +42,22 @@ async function staleGrant(socketVolume: string, token: string) {
 }
 const inspect = async (id: string) => JSON.parse(await docker(['inspect', id]))[0];
 async function owned(id: string) { const s = await inspect(id); assert.equal(s.Config.Labels[LABEL], run); return s; }
-async function event(id: string, name: string, limit = 40000) { const until = Date.now() + limit; while (Date.now() < until) { stop.signal.throwIfAborted(); const text = await docker(['logs', id]); const found = text.split('\n').flatMap(line => { try { return [JSON.parse(line)]; } catch { return []; } }).find(x => x.event === name); if (found) return found; if (!(await owned(id)).State.Running) throw Error('exited_before_' + name + ':' + text); await delay(50); } throw Error('event_timeout:' + name); }
+async function event(id: string, name: string, limit = 40000) {
+  const until = Date.now() + limit; let previous = '';
+  const extract = (text: string) => text.split('\n').flatMap(line => { try { return [JSON.parse(line)]; } catch { return []; } }).find(x => x.event === name);
+  while (Date.now() < until) {
+    stop.signal.throwIfAborted(); const logs = await docker(['logs', id]), found = extract(logs); if (found) return found;
+    const state = (await owned(id)).State;
+    if (state.Status !== previous) { report.lifecycle ??= []; report.lifecycle.push({ id, at: Date.now(), state }); previous = state.Status; }
+    // docker start --attach is asynchronous: created is not a terminal state.
+    if (['exited', 'dead'].includes(state.Status)) {
+      const finalLogs = await docker(['logs', id]), final = extract(finalLogs); if (final) return final;
+      throw Error('exited_before_' + name + ':' + JSON.stringify({ state, logs: finalLogs }));
+    }
+    await delay(50);
+  }
+  throw Error('event_timeout:' + name + ':' + JSON.stringify((await owned(id)).State));
+}
 async function control(volume: string, message: unknown) {
   const name = run + '-control-' + randomBytes(4).toString('hex'); containers.add(name);
   const program = "const http=require('node:http');let body='';process.stdin.on('data',c=>body+=c);process.stdin.on('end',()=>{const q=http.request({socketPath:'/control/gateway.sock',path:'/control',method:'POST'},r=>{let text='';r.on('data',c=>text+=c);r.on('end',()=>{console.log(JSON.stringify({status:r.statusCode,body:JSON.parse(text)}));});});q.setTimeout(5000,()=>q.destroy());q.on('error',()=>process.exit(1));q.end(body);});";
@@ -92,9 +107,11 @@ try {
       const binding: Binding = { attemptId: 'worker_attempt_' + index, grantId: 'worker_grant_' + index, taskId: 'worker_task_' + index, leaseId: 'worker_lease_' + index, fence: 1, role: 'worker', routerId: policy.routerId, routeId: policy.routeId, revision: policy.revision, epoch: policy.epoch, expiresAt: Date.now() + 45000, leaseExpiresAt: Date.now() + 45000, native: { profileDigest: digest(policy.native), scopeId: policy.native.scope.id, authorizationDigest: policy.native.scope.authorizationDigest } };
       const grant = await call(controlVolume, { command: 'grant', binding }); secrets.push(grant.token);
       const request = prepareRun(policy, binding, { baseSHA, brief: BRIEF, approval: mode === 'ask' ? 'ask' : 'allow', limits: { wallMs: 30000, outputBytes: 262144 }, token: grant.token });
-      const worker = run + '-' + scenario + '-worker-' + index; containers.add(worker); const argv = workerArgs(worker, run); argv.push('--interactive', '--mount', `type=bind,source=${clientStage},target=/fixture,readonly`, '--mount', `type=volume,source=${socketVolume},target=/router,readonly,volume-nocopy`, '--env', 'HOST_SENTINEL=/nonexistent-host-sentinel', image, 'node', '/fixture/experiments/harness/native/proof-worker.ts', mode); await docker(argv);
+      const worker = run + '-' + scenario + '-worker-' + index; containers.add(worker); const argv = workerArgs(worker, run); argv.push('--interactive', '--mount', `type=bind,source=${clientStage},target=/fixture,readonly`, '--mount', `type=volume,source=${socketVolume},target=/router,readonly,volume-nocopy`, '--env', 'HOST_SENTINEL=/nonexistent-host-sentinel', image, 'node', '/fixture/experiments/harness/native/' + (['edit', 'start-delay', 'delay', 'ask', 'receipt-write', 'decision-write', 'artifact-write', 'partial', 'forbidden', 'router-error'].includes(mode) ? 'worker.ts' : 'proof-worker.ts'), mode); await docker(argv);
       const measured = inspectWorker(await owned(worker), image, run, socketVolume, clientStage), entry: any = { mode, binding, policy, measured, outcome: 'pending' }; current.workers.push(entry); await save();
-      const child = spawn('docker', ['--context', context, 'start', '--attach', '--interactive', worker], { stdio: ['pipe', 'pipe', 'pipe'] }); let stdout = '', stderr = ''; child.stdout.on('data', b => stdout += b); child.stderr.on('data', b => stderr += b); child.stdin.on('error', () => {}); child.stdin.end(JSON.stringify(request)); const exited = new Promise(resolve => child.once('exit', (code, signal) => resolve({ code, signal })));
+      const dockerStart = ['--context', context, 'start', '--attach', '--interactive', worker];
+      const deferredStart = "const chunks=[];process.stdin.on('data',c=>chunks.push(c));process.stdin.on('end',()=>setTimeout(()=>{const c=require('node:child_process').spawn('docker',process.argv.slice(1),{stdio:['pipe','inherit','inherit']});c.stdin.end(Buffer.concat(chunks));c.on('exit',code=>process.exit(code??1))},750))";
+      const child = mode === 'start-delay' ? spawn(process.execPath, ['-e', deferredStart, ...dockerStart], { stdio: ['pipe', 'pipe', 'pipe'] }) : spawn('docker', dockerStart, { stdio: ['pipe', 'pipe', 'pipe'] }); let stdout = '', stderr = ''; child.stdout.on('data', b => stdout += b); child.stderr.on('data', b => stderr += b); child.stdin.on('error', () => {}); child.stdin.end(JSON.stringify(request)); const exited = new Promise(resolve => child.once('exit', (code, signal) => resolve({ code, signal })));
       const watchdog = setTimeout(() => { void stopWorker(worker, true).finally(() => child.kill('SIGKILL')).catch(() => {}); }, 42000);
       try {
         if (mode === 'oom') { entry.observation = await event(worker, 'native_worker_observation', 15000); assert(entry.observation.oom.after.oom_kill > entry.observation.oom.before.oom_kill); assert.equal(entry.observation.oom.exit.signal, 'SIGKILL'); entry.state = await stopWorker(worker); entry.outcome = 'cgroup_oom_observed'; }
@@ -102,7 +119,7 @@ try {
           entry.observation = await event(worker, 'native_worker_observation'); await save();
           const artifact = JSON.parse(await docker(['exec', worker, 'node', '/fixture/experiments/harness/native/inspect-artifact.ts', baseSHA])); entry.observedArtifact = artifact;
           entry.evidence = await call(controlVolume, { command: 'evidence', attemptId: binding.attemptId }); await save();
-          const completed = ['edit', 'delay', 'artifact-write'].includes(mode);
+          const completed = ['edit', 'start-delay', 'delay', 'artifact-write'].includes(mode);
           if (completed) {
             assert.equal(entry.observation.result.outcome, 'completed_candidate'); assert.equal(artifact.content, CONTENT);
             const envelope = candidateEnvelope({ policy, packetDigest: entry.evidence.packetDigest, scope: entry.evidence.scope, binding, request, result: entry.observation.result, requests: entry.observation.requests, decisions: entry.evidence.decisions, receipts: entry.evidence.receipts, pendingReservations: entry.evidence.reservations, durableDecisionTimes: entry.evidence.decisionTimes, observedArtifact: artifact }); entry.candidate = envelope;
@@ -116,16 +133,17 @@ try {
           else if (mode === 'disabled-hook') { assert.equal(entry.observation.requests.length, 0); assert(entry.observation.rejected.length > 0); assert(entry.observation.rejected.every((r: any) => r.body.max_output_tokens === 128)); assert.equal(artifact.content, 'hello\n'); entry.outcome = 'cap_request_refused'; }
           else { assert.notEqual(entry.observation.result.outcome, 'completed_candidate'); assert.equal(artifact.content, 'hello\n'); assert(!entry.observation.result.events.some((e: any) => e.type === 'tool_use' && e.native.part.state.status === 'completed')); entry.outcome = entry.observation.result.outcome; }
           if (mode === 'tree') entry.treeBeforeStop = await docker(['top', worker, '-eo', 'pid,ppid,comm']);
-          entry.state = await stopWorker(worker, mode === 'tree'); assert.equal(entry.state.OOMKilled, false);
+          entry.state = await stopWorker(worker, mode === 'tree'); assert.equal(entry.state.OOMKilled, false); if (mode !== 'tree') assert.equal(entry.state.ExitCode, 0);
         }
       } finally { clearTimeout(watchdog); if ((await owned(worker)).State.Running) await stopWorker(worker, true); entry.attach = await exited; entry.stdout = stdout; entry.stderr = stderr; await save(); }
     }
     await call(controlVolume, { command: 'stop' }); await docker(['wait', gateway], 15000); current.gatewayState = (await owned(gateway)).State; current.gatewayLogs = await docker(['logs', gateway]); current.retained = await readState(stateVolume); current.gateway = current.retained.result; await save();
     if (scenario === 'decision-write') { assert.equal(current.gatewayState.ExitCode, 1); assert.equal(current.gateway, null); assert(current.retained.records['boundary/state.json']); current.closure = 'failed_closed_quiescence_unknown'; } else assert.equal(current.gatewayState.ExitCode, 0); assert.equal(current.gatewayState.OOMKilled, false); assert.equal(current.gatewayState.Pid, 0);
     if (['ambient', 'auth', 'containment', 'transport', 'oom', 'disabled-hook'].includes(scenario)) assert.equal(current.gateway.observed.sends.length, 0);
-    if (['edit', 'delay', 'artifact-write'].includes(scenario)) assert.equal(current.gateway.observed.sends.length, 2);
+    if (['edit', 'start-delay', 'delay', 'artifact-write'].includes(scenario)) assert.equal(current.gateway.observed.sends.length, 2);
     if (scenario === 'delay') assert(current.workers[0].observation.result.events.find((e: any) => e.type === 'tool_use').native.part.state.time.start >= current.gateway.observed.harnessFault.originalEnds[0].at);
     for (const entry of current.workers) if (entry.qualified) { const stored = current.retained.records[entry.acknowledgement.body.file]; assert.deepEqual(stored, entry.candidate); assert.equal(digest(stored), entry.qualified.artifactDigest); }
+    if (scenario === 'start-delay') assert(report.lifecycle.some((e: any) => e.id.includes('-worker-') && e.state.Status === 'created'));
     current.result = 'passed'; await save(); console.log(JSON.stringify({ scenario, result: current.result, physicalSyntheticSends: current.gateway?.observed.sends.length ?? null }));
     for (const id of [...containers]) { await owned(id); await docker(['rm', '--force', id]); containers.delete(id); }
     for (const volume of caseVolumes) { const v = JSON.parse(await docker(['volume', 'inspect', volume]))[0]; assert.equal(v.Labels[LABEL], run); await docker(['volume', 'rm', volume]); volumes.delete(volume); }
