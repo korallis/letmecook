@@ -27,6 +27,12 @@ private data, deploy, or build the durable application core. Both profiles remai
 synthetic; native provider-output bounds remain unsupported and live admission is
 false. Existing #6/#7/#8 and the foundation gate stay open.
 
+The subsequent [#81 limits amendment](../contracts/native-subscription-limits.md)
+records operator approval of an optional native local-limits profile and bounded
+evaluation. It leaves this historical evidence and runtime unchanged. Implementation
+of that profile, reviewed deployment controls, live conformance, real baseline and
+two-subscription results, and the #9 foundation decision remain work.
+
 The old fixture policy/parser and its committed evidence are preserved. The new
 schema-2 policies bind deployment/boot/generation/revision, exact full graph and
 operation envelope. The private-process authority bridge refuses replacement.

@@ -710,6 +710,20 @@ that route only under hard-cap policy. Cancellation cannot refund already proces
 requests. Include planning, coding, model review, retries and summaries in accounting;
 report marginal cash separately from allocated subscription/hardware cost.
 
+Each grant binds an explicit versioned limits profile together with exact router
+build, complete route graph, protocol/harness/settings, capability evidence and
+authority. `strict-provider-output-v1` is the default and interpretation of existing
+grants: a positive finite provider output-token cap must be preserved and enforced
+on every approved path. The operator-approved optional
+[`native-subscription-local-v1` contract](https://github.com/korallis/letmecook/blob/main/docs/contracts/native-subscription-limits.md)
+requires explicit authorization and finite enforced local bytes, concurrency,
+request/subattempt/retry counts and deadlines. It declares provider output-token
+and monetary bounds unavailable and rejects tasks requiring either hard bound.
+Every reachable connection/fallback must have reviewed subscription classification
+and required compatibility. A profile change needs a new policy/grant identity
+and freeze/drain; no automatic downgrade is allowed. The approved bounded evaluation
+envelope is separate from public installation defaults and is not live evidence.
+
 ### 8.4 Failure boundary and conformance
 
 A connection rate limit or pre-output request failure that 9Router successfully
@@ -724,6 +738,14 @@ connection failure before output and during a partial stream. Do not replay a
 partially executed tool action merely because another subscription is available;
 if the router/harness cannot safely continue, preserve the artifact and reconcile
 at the task boundary. Model fallback must satisfy required capabilities.
+
+Local timeout, process exit and transport EOF never establish provider cancellation
+acknowledgement or refund. Unknown remote work retains its reservation and blocks
+replacement and policy-drain completion. A trustworthy original terminal can prove
+that an individual request ended without proving a configurable provider-token or
+monetary cap. Quiescent failed/incomplete requests remain failures; successful
+final/tool release still requires schema validation, original completion, scoped
+authority, lease/fence checks and durable decisions.
 
 Router downtime parks inference-dependent work with a visible reason. Capture,
 review of stored artifacts and stop remain available. There is no silent direct

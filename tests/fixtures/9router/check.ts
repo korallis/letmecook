@@ -9,14 +9,16 @@ import addFormats from 'ajv-formats';
 // implement the status adapter, forwarding boundary or stream state machine.
 const directory = dirname(fileURLToPath(import.meta.url));
 const readJSON = async (name: string) => JSON.parse(await readFile(join(directory, name), 'utf8'));
-const [schema, statuses, examples, failures, profiles, deployment] = await Promise.all([
+const [schema, statuses, examples, failures, profiles, deployment, limitsSchema, nativeExample] = await Promise.all([
   readJSON('status.schema.json'), readJSON('status-cases.json'),
   readJSON('examples.json'), readJSON('failure-cases.json'),
   readJSON('input-profiles.json'), readJSON('../../../docs/contracts/9router-deployment-2026-09-14.json'),
+  readJSON('limits-profile.schema.json'), readJSON('native-limits-example.json'),
 ]);
 const ajv = new Ajv({ allErrors: true, strict: true, strictRequired: false, allowUnionTypes: true });
 addFormats(ajv);
 const validate = ajv.compile(schema);
+const validateLimitsProfile = ajv.compile(limitsSchema);
 const ids = new Set<string>();
 const profileIds = new Set(profiles.profiles.map((profile: any) => profile.id));
 let mutationCount = 0;
@@ -82,6 +84,78 @@ assert.equal(examples.deployment.deployed_commit, null);
 assert.equal(examples.deployment.deployed_artifact_digest, null);
 assert.equal(examples.policy.ready_for_deployment, false);
 assert.equal(examples.policy.limits.boundary_retries, 0);
+assert.equal(examples.policy.limits_profile.kind, 'strict-provider-output-v1');
+assert.equal(examples.policy.limits_profile.providerOutput.maxTokens, examples.policy.limits.output_tokens);
+// These assertions validate illustrative documents only. They cannot resolve
+// authority references, inspect a reachable graph or admit runtime requests.
+for (const example of [examples, nativeExample]) {
+  assert.equal(example.evidence, 'synthetic');
+  assert.equal(example.policy.ready_for_deployment, false);
+  assert.equal(example.policy.policy_write_mode, 'freeze_and_drain');
+  assert(validateLimitsProfile(example.policy.limits_profile), ajv.errorsText(validateLimitsProfile.errors));
+  for (const key of ['router_id', 'route_id', 'router_build_ref', 'graph_fingerprint', 'policy_revision',
+    'epoch', 'protocol_harness_settings_ref', 'capability_evidence_ref', 'authorization_policy_ref', 'limits_profile']) {
+    assert.notEqual(example.policy[key], undefined, `missing policy identity ${key}`);
+    assert.deepEqual(example.attempt_binding[key], example.policy[key], `mismatched grant identity ${key}`);
+  }
+  assert.match(example.policy.graph_fingerprint, /^[a-f0-9]{64}$/);
+  for (const key of ['request_bytes', 'response_bytes', 'in_flight', 'request_count', 'inference_subattempt_count',
+    'total_ms', 'first_output_ms', 'semantic_idle_ms', 'attempt_ms']) {
+    assert(Number.isSafeInteger(example.policy.limits[key]) && example.policy.limits[key] > 0, `invalid local limit ${key}`);
+  }
+  for (const key of ['router_retries_per_request', 'harness_retries_per_attempt', 'boundary_retries']) {
+    assert(Number.isSafeInteger(example.policy.limits[key]) && example.policy.limits[key] >= 0, `invalid retry limit ${key}`);
+  }
+  assert.equal(example.policy.limits.boundary_retries, 0);
+  assert(example.policy.limits.first_output_ms <= example.policy.limits.total_ms);
+  assert(example.policy.limits.semantic_idle_ms <= example.policy.limits.total_ms);
+  assert(example.policy.limits.total_ms <= example.policy.limits.attempt_ms);
+}
+assert.equal(nativeExample.policy.limits_profile.kind, 'native-subscription-local-v1');
+assert.equal(nativeExample.policy.limits_profile.authorizationPolicyRef, nativeExample.policy.authorization_policy_ref);
+assert.equal(nativeExample.policy.limits_profile.subscriptionEnvelopeRef, nativeExample.policy.subscription_envelope.ref);
+assert.deepEqual(nativeExample.policy.task_requirements, { hard_provider_output_bound: false, hard_provider_monetary_cap: false });
+assert(!Object.hasOwn(nativeExample.policy.limits, 'output_tokens'));
+assert(nativeExample.policy.subscription_envelope.all_reachable_connections_and_fallbacks.length > 0);
+for (const edge of nativeExample.policy.subscription_envelope.all_reachable_connections_and_fallbacks) {
+  assert.equal(edge.billing, 'subscription');
+  for (const key of ['connection_ref', 'model_ref', 'classification_ref', 'compatibility_evidence_ref']) {
+    assert.match(edge[key], /^[A-Za-z][A-Za-z0-9_-]{0,127}$/);
+  }
+}
+assert.equal(nativeExample.request.method, 'POST');
+assert.equal(nativeExample.request.path, '/v1/responses');
+assert.equal(nativeExample.request.body.model, nativeExample.policy.router_model);
+assert.equal(nativeExample.request.body.stream, true);
+for (const key of ['max_tokens', 'max_completion_tokens', 'max_output_tokens']) assert(!Object.hasOwn(nativeExample.request.body, key));
+
+let limitsMutationCount = 0;
+function rejectLimitsMutation(original: unknown, change: (value: any) => void, label: string) {
+  const mutated = structuredClone(original);
+  change(mutated);
+  assert.equal(validateLimitsProfile(mutated), false, `limits schema accepted ${label}`);
+  limitsMutationCount++;
+}
+const strictProfile = examples.policy.limits_profile;
+const nativeProfile = nativeExample.policy.limits_profile;
+for (const cap of [null, 0, -1, 1.5, '4096']) {
+  rejectLimitsMutation(strictProfile, value => { value.providerOutput.maxTokens = cap; }, `invalid strict cap ${cap}`);
+}
+rejectLimitsMutation(strictProfile, value => { delete value.providerOutput.maxTokens; }, 'missing strict cap');
+rejectLimitsMutation(strictProfile, value => { value.kind = 'native-subscription-local-v1'; }, 'implicit downgrade');
+rejectLimitsMutation(strictProfile, value => { delete value.kind; }, 'missing discriminator in a new logical profile');
+for (const key of ['authorizationPolicyRef', 'subscriptionEnvelopeRef']) {
+  rejectLimitsMutation(nativeProfile, value => { delete value[key]; }, `missing native ${key}`);
+  rejectLimitsMutation(nativeProfile, value => { value[key] = ''; }, `empty native ${key}`);
+}
+for (const key of ['providerOutput', 'providerMonetaryCap']) {
+  rejectLimitsMutation(nativeProfile, value => { value[key].requirement = 'hard'; }, `native hard ${key}`);
+  rejectLimitsMutation(nativeProfile, value => { value[key].capability = 'verified'; }, `native claims ${key}`);
+  rejectLimitsMutation(nativeProfile, value => { delete value[key]; }, `missing unavailable ${key}`);
+}
+rejectLimitsMutation(nativeProfile, value => { value.providerOutput.maxTokens = 4096; }, 'native disguised cap');
+rejectLimitsMutation(nativeProfile, value => { value.kind = 'unlimited'; }, 'unknown limits profile');
+
 const requestPaths = new Set(['/v1/chat/completions', '/v1/messages', '/v1/responses']);
 for (const request of examples.requests) {
   assert.equal(request.method, 'POST');
@@ -112,4 +186,4 @@ for (const fixture of failures.cases) {
     streamCount++;
   }
 }
-console.log(`Contract corpus verified: ${statuses.cases.length} projections, ${mutationCount} rejected schema mutations, ${examples.requests.length} request examples, ${failures.cases.length} fault specifications, ${streamCount} SSE fixtures. No live conformance was run.`);
+console.log(`Contract corpus verified: ${statuses.cases.length} projections, ${mutationCount} rejected status-schema mutations, 2 limits-profile examples, ${limitsMutationCount} rejected limits-schema mutations, ${examples.requests.length + 1} request examples, ${failures.cases.length} fault specifications, ${streamCount} SSE fixtures. No runtime admission or live conformance was run.`);

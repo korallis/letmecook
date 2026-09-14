@@ -154,6 +154,12 @@ The actual HTTP gateway regressions retain Node's automatic transport headers.
 
 ## Exact profiles and limitations
 
+The limits amendment in [#81](../../docs/contracts/native-subscription-limits.md)
+now approves an explicit optional native local-limits contract. The runtime
+profiles and historical observations below are unchanged: their mandatory cap
+field and `nativeLiveAdmission:false` do not implement the new contract. Reviewed
+runtime changes and deployment/live conformance remain required.
+
 Both profiles accept the same deliberately narrow Chat request envelope: `model`,
 `messages`, `stream:true`, `max_tokens`, and optional function `tools`. Explicit
 `temperature` and every `tool_choice` value are rejected before admission, including
@@ -243,7 +249,9 @@ the corrected commit requires a fresh final review.
 
 No deployment was selected, configuration/credentials copied, provider inference
 sent, package published, upstream repository changed, or human baseline invented.
-The operator's integration/build choice and live credential/data authorization
-remain separate. Live native admission additionally needs an accepted resolution
-of the provider-output-bound contract gap. Keep the issue's PR draft until all
-required review and integration criteria have been assessed honestly.
+At the time of this experiment, the operator's integration/build choice, live
+credential/data authorization and provider-output-bound product choice remained
+separate gates. The subsequent [#81 amendment](../../docs/contracts/native-subscription-limits.md)
+records the approved profile and bounded evaluation authority; it does not change
+these results or enable live admission. Runtime implementation, reviewed deployment
+controls and actual live conformance remain required.

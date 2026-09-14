@@ -149,6 +149,12 @@ tests were rerun; a new independent final review remains required.
 
 ## Remaining gates
 
+Historical experiment status below is retained. The subsequent operator-approved
+[#81 amendment](../contracts/native-subscription-limits.md) resolves the optional
+native limits product choice and records bounded evaluation authority. It changes
+no runtime, result or deployment: native implementation, reviewed deployment
+controls and actual live conformance remain outstanding.
+
 Both profiles report `liveAdmission:false`. Native registry injection changes only
 response/token endpoint literals to loopback. Actual Codex removes all configured
 output-token limits and the backend sees none; its policy records no provider
@@ -157,8 +163,8 @@ output bound. Local byte/time cancellation is not remote-generation/stop proof.
 Production still requires the operator integration/build choice, reviewed endpoint
 and billing enrollment, exclusive process/storage ownership, authenticated private
 ingress, deployment attestation, credential/data authorization and live provider
-conformance. Native admission also requires resolution of the mandatory provider
-output-bound gap. No existing deployment, active credentials, private configuration,
+conformance. At this run, native admission also required resolution of the mandatory
+provider output-bound product choice. No existing deployment, active credentials, private configuration,
 real provider requests, publication or human baseline were used.
 
 The earlier boundary's `FrozenAuthority` remains deliberately fixture-schema-only.

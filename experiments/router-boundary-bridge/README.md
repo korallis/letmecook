@@ -81,9 +81,11 @@ journal. Worker-supplied authority/client/session headers cannot pass the bounda
 
 Native Codex demonstrably removes the requested output cap. Its projection keeps
 `providerOutputTokens:null`, `providerOutputBound:false` and
-`nativeLiveAdmission:false`. Byte/time/cancellation controls do not substitute for
-provider-generation bounds. The accepted finite-output contract remains unchanged;
-native live admission is still denied. Compatible wire preservation is also not
+`nativeLiveAdmission:false`. The subsequent [#81 contract amendment](../../docs/contracts/native-subscription-limits.md)
+approves an explicit native local-limits option but does not implement it here or
+alter these synthetic results. Byte/time/cancellation controls do not substitute for
+provider-generation bounds. This experiment's strict-cap request profile remains
+unchanged; native live admission is still denied. Compatible wire preservation is also not
 proof of a real provider's adherence to a cap or billing identity.
 
 ## Durable request and completion join
