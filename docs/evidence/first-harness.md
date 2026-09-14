@@ -134,13 +134,16 @@ These are concrete selected-profile negatives, not a universal sandbox proof.
 ## Review replay and diagnostic retention
 
 The fresh review of `994281d` found a real evidence-loss failure. Its
-[first replay record](first-harness-review-failure.json), retained unchanged,
+[first replay record](first-harness-review-failure.json), retained with presentation-only host-path redaction,
 pins the reviewed source separately from the final implementation and shows an
 ambient worker exit after 21.218 s with one forwarded request: the 20 s
 native timeout fired, then an exit-zero assertion ran before native output,
 signal and canary state were emitted. Those missing fields cannot be reconstructed
 from the remaining logs. Cleanup was verified. A second review replay passed the
-original 12 cases; that pass does not erase the first failure.
+original 12 cases; that pass does not erase the first failure. Both historical
+failure records replace personal checkout paths in error stacks with
+`<host-checkout>/`; original unredacted files remain local. Outcomes, native
+observations and source digests are unchanged.
 
 Workers now flush a structured `observation` record before validating native,
 canary or artifact outcomes. Each artifact/process read records an error if it
