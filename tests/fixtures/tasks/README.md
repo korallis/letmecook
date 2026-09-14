@@ -5,19 +5,23 @@ not an execution harness or evidence of a live run.
 
 | File | Purpose |
 | --- | --- |
-| `operator-intake.json` | Three explicitly unfilled real-case slots and their missing inputs |
+| `operator-intake.json` | Three real candidate briefs, private manifest digest and remaining registration inputs |
 | `development-examples.json` | Synthetic design examples for feasible, ambiguous, changed-intent, misleading-preference, unauthorized and impossible requests |
 | `run-template.json` | Unstarted observation template; copy and complete it for a permitted real run |
 
 Examples contain invented captures and expected responses. They are labelled
 `synthetic`, all belong to development, and are excluded from measurement. No
-held-out text or operator label is committed here. The null intake and run fields
-mean unavailable, not a negative label or a zero measurement. The run template's
-arrays are empty because there are no attempts, timer intervals, observations,
+held-out text or operator label is committed here. The real candidates were selected
+under user delegation; their case-specific human labels and model-route exposure
+permission remain unrecorded. Null fields mean unavailable or privately referenced,
+not a negative label or a zero measurement. The run template's arrays are empty because there are no attempts, timer intervals, observations,
 checks, defects or accepted artifacts yet.
 
 A registered real case requires every intake field to be completed with its source.
-`repository.startingCommit` must be a full immutable SHA, not a branch name.
+`repository.startingCommit` must resolve to a full immutable SHA, not a branch name.
+For private source, retain that SHA in the operator-owned manifest and publish only
+`startingCommitRef` plus the manifest digest. A public null SHA is deliberate
+redaction and does not substitute for resolving the private value before execution.
 `operatorLabel` records the human label's author/time and source; synthetic expected
 responses must never be copied into it as if an operator approved them. Store
 sensitive details externally with an immutable reference if repository publication

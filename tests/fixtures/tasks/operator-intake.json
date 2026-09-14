@@ -1,66 +1,158 @@
 {
   "contractVersion": 1,
-  "status": "blocked-awaiting-operator-input",
+  "status": "candidates-prepared-awaiting-registration",
   "recordedAt": "2026-09-14",
-  "source": "No operator-labelled cases supplied for this baseline",
+  "source": "User delegated case selection from an existing private repository. The three briefs are agent-proposed real candidates, not synthetic captures or completed human labels.",
+  "privateManifest": {
+    "reference": "operator-owned:baseline-candidates-20260914-v1",
+    "sha256": "4c39749342353505ef40134d1041caeb9b0d9476eab6a31728e1877c5a8c49fa",
+    "access": "Private operator evidence store; never resolve by fetching private contents into the public repository."
+  },
   "missingInputs": [
-    "Three real captures and their operator-defined intended outcomes",
-    "Repository references and immutable starting commits",
-    "Acceptance criteria and required check commands",
-    "Declared data, model exposure, execution and external-effect permissions",
-    "Human labels and their source/time"
+    "Case-specific operator outcome labels with author/time before evaluation",
+    "Approved private-source exposure to the selected 9Router route and provider policy",
+    "Pinned harness, router endpoint reference, execution profile, budgets and stop mechanism",
+    "Exact runnable checks/prerequisites and private starting-commit mapping frozen into a registered fixture"
   ],
   "cases": [
     {
       "id": "operator-01",
+      "taskClass": "ci-dependency-update",
+      "intendedOutcome": "Evaluate and prepare the narrowly scoped package-manager CI action update while preserving immutable pins and the selected package-manager version. Separate existing dependency-audit failures from regressions introduced by this update.",
+      "scope": "Only the two existing action references and their version comments; necessary verification evidence. No dependency refresh, workflow permission expansion, audit suppression or unrelated CI changes.",
+      "acceptanceCriteria": [
+        "Both intended action references use the same reviewed immutable revision.",
+        "Selected Node/package-manager versions and the dependency lock remain unchanged.",
+        "Changed-action behavior is verified in the selected isolated CI-equivalent environment; existing failures are compared against the same starting dependency graph.",
+        "Report every unresolved verification failure; do not call the update merge-ready while repository-required gates fail."
+      ],
+      "requiredChecks": [
+        "Review the exact action diff and upstream release changes.",
+        "Run the repository immutable-action-pin check and workflow lint in the isolated environment.",
+        "Compare dependency manifests and lockfile between the registered base and candidate.",
+        "Run frozen dependency installation and the required security audit at both revisions with matching tooling/advisory evidence.",
+        "Run required CI gates or record platform/network blockers explicitly."
+      ],
+      "feasibilityReason": "Smallest candidate and recommended first harness task once route/private-source permissions and a bounded execution profile are registered. Existing CI failures prevent a green-readiness claim.",
+      "expectedResponse": "Produce the narrow reviewed update and a failure-attribution report. Escalate inherited security blockers without suppressing them or silently expanding dependency scope.",
       "origin": "operator",
+      "selectionProvenance": "agent-proposed-under-user-delegation",
       "partition": "development",
-      "capture": null,
-      "taskClass": null,
-      "intendedOutcome": null,
-      "scope": null,
-      "acceptanceCriteria": null,
-      "requiredChecks": null,
-      "repository": { "reference": null, "startingCommit": null, "prerequisites": null },
-      "dataPermissions": null,
-      "feasibility": null,
-      "feasibilityReason": null,
-      "expectedResponse": null,
-      "operatorLabel": null
+      "capture": "Evaluate and fix selected existing pull requests in the operator-selected private repository (redacted paraphrase).",
+      "repository": {
+        "reference": "private:operator-selected-repository",
+        "startingCommit": null,
+        "startingCommitRef": "operator-owned:baseline-candidates-20260914-v1#operator-01",
+        "prerequisites": "Exact revisions, commands, toolchain and CI evidence are retained in the private manifest. No repository scripts executed on the host."
+      },
+      "dataPermissions": {
+        "localInspection": "Authorized source and CI review plus isolated static analysis.",
+        "publicPublication": "Redacted brief and opaque evidence references only.",
+        "prohibitedPublication": [
+          "Private repository identity/URLs",
+          "Private source or diffs",
+          "Exact private commit mappings",
+          "Unredacted CI/Doctor reports",
+          "Personal data and credentials"
+        ],
+        "modelExposure": "Unresolved for the evaluated 9Router route; registration blocked.",
+        "externalEffects": "No merge, deployment, account changes or public disclosure of private artifacts."
+      },
+      "feasibility": "needs-clarification",
+      "operatorLabel": null,
+      "registrationStatus": "not-registered"
     },
     {
       "id": "operator-02",
+      "taskClass": "swift-runtime-patch",
+      "intendedOutcome": "Evaluate and prepare a patch-level Swift runtime update while retaining unrelated platform dependency pins and generated-client consistency.",
+      "scope": "The selected Swift dependency declaration and resolver-owned lock update only; do not manually patch generated clients or change application behavior.",
+      "acceptanceCriteria": [
+        "Only the intended runtime version changes semantically.",
+        "Unrelated platform dependencies remain correctly resolved on the required platform.",
+        "Generated-client drift checks and Swift package tests pass.",
+        "Required native platform checks run on an available supported toolchain, or their unavailability is stated without a compatibility claim."
+      ],
+      "requiredChecks": [
+        "Review manifest and complete lock diff, including removed pins.",
+        "Resolve dependencies using the registered supported native toolchain.",
+        "Run existing generated-client consistency check and Swift package tests.",
+        "Run required native build/test and repository gates in an authorized environment."
+      ],
+      "feasibilityReason": "Bounded change, but the proposed lock update also removes unrelated platform pins. Native-platform resolver/build evidence is required; a Linux-only run cannot establish native compatibility.",
+      "expectedResponse": "Preserve platform lock completeness, prepare the patch, and report exact checks plus platform blockers. Do not treat a nominal patch version as proof of compatibility.",
       "origin": "operator",
+      "selectionProvenance": "agent-proposed-under-user-delegation",
       "partition": "development",
-      "capture": null,
-      "taskClass": null,
-      "intendedOutcome": null,
-      "scope": null,
-      "acceptanceCriteria": null,
-      "requiredChecks": null,
-      "repository": { "reference": null, "startingCommit": null, "prerequisites": null },
-      "dataPermissions": null,
-      "feasibility": null,
-      "feasibilityReason": null,
-      "expectedResponse": null,
-      "operatorLabel": null
+      "capture": "Evaluate and fix selected existing pull requests in the operator-selected private repository (redacted paraphrase).",
+      "repository": {
+        "reference": "private:operator-selected-repository",
+        "startingCommit": null,
+        "startingCommitRef": "operator-owned:baseline-candidates-20260914-v1#operator-02",
+        "prerequisites": "Exact revisions, commands, toolchain and CI evidence are retained in the private manifest. No repository scripts executed on the host."
+      },
+      "dataPermissions": {
+        "localInspection": "Authorized source and CI review plus isolated static analysis.",
+        "publicPublication": "Redacted brief and opaque evidence references only.",
+        "prohibitedPublication": [
+          "Private repository identity/URLs",
+          "Private source or diffs",
+          "Exact private commit mappings",
+          "Unredacted CI/Doctor reports",
+          "Personal data and credentials"
+        ],
+        "modelExposure": "Unresolved for the evaluated 9Router route; registration blocked.",
+        "externalEffects": "No merge, deployment, account changes or public disclosure of private artifacts."
+      },
+      "feasibility": "needs-clarification",
+      "operatorLabel": null,
+      "registrationStatus": "not-registered"
     },
     {
       "id": "operator-03",
+      "taskClass": "development-toolchain-compatibility-review",
+      "intendedOutcome": "Assess a grouped JavaScript development-tool update, identify changes compatible with the pinned runtime/framework, and produce a bounded keep/split/defer recommendation with a React Doctor baseline.",
+      "scope": "Dependency compatibility analysis and a proposed minimal subset. Major toolchain migrations and application/styling rewrites are outside this case. Implementation of a selected subset requires a newly frozen brief.",
+      "acceptanceCriteria": [
+        "Every grouped change is assigned a compatibility decision supported by its runtime/framework constraints.",
+        "Baseline failures are distinguished from candidate-introduced failures.",
+        "React Doctor runs with a pinned version and full scope; findings are triaged as evidence, not automatically treated as confirmed defects.",
+        "Recommend an explicit minimal subset or defer the group, without weakening tests or migrating the existing styling system."
+      ],
+      "requiredChecks": [
+        "Compare grouped manifest/lock changes against pinned runtime and framework constraints.",
+        "Run pinned React Doctor in a read-only, network-isolated source environment and retain its full report privately.",
+        "Register base/candidate web lint, typecheck, unit test and build comparisons for any selected subset.",
+        "Record remaining security and native-platform gates separately."
+      ],
+      "feasibilityReason": "Feasible as a bounded diagnosis after registration. The grouped update contains major changes and cannot be accepted as a routine bump without broader migration scope. A static Doctor preflight exists privately; it is not an evaluated harness result.",
+      "expectedResponse": "Return a compatibility matrix, triaged static findings and a minimal follow-up brief. Do not silently implement all major upgrades.",
       "origin": "operator",
+      "selectionProvenance": "agent-proposed-under-user-delegation",
       "partition": "development",
-      "capture": null,
-      "taskClass": null,
-      "intendedOutcome": null,
-      "scope": null,
-      "acceptanceCriteria": null,
-      "requiredChecks": null,
-      "repository": { "reference": null, "startingCommit": null, "prerequisites": null },
-      "dataPermissions": null,
-      "feasibility": null,
-      "feasibilityReason": null,
-      "expectedResponse": null,
-      "operatorLabel": null
+      "capture": "Evaluate and fix selected existing pull requests in the operator-selected private repository (redacted paraphrase).",
+      "repository": {
+        "reference": "private:operator-selected-repository",
+        "startingCommit": null,
+        "startingCommitRef": "operator-owned:baseline-candidates-20260914-v1#operator-03",
+        "prerequisites": "Exact revisions, commands, toolchain and CI evidence are retained in the private manifest. No repository scripts executed on the host."
+      },
+      "dataPermissions": {
+        "localInspection": "Authorized source and CI review plus isolated static analysis.",
+        "publicPublication": "Redacted brief and opaque evidence references only.",
+        "prohibitedPublication": [
+          "Private repository identity/URLs",
+          "Private source or diffs",
+          "Exact private commit mappings",
+          "Unredacted CI/Doctor reports",
+          "Personal data and credentials"
+        ],
+        "modelExposure": "Unresolved for the evaluated 9Router route; registration blocked.",
+        "externalEffects": "No merge, deployment, account changes or public disclosure of private artifacts."
+      },
+      "feasibility": "needs-clarification",
+      "operatorLabel": null,
+      "registrationStatus": "not-registered"
     }
   ]
 }

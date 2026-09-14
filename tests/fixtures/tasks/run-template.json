@@ -7,7 +7,7 @@
   "comparisonArm": "standalone-harness",
   "status": "blocked",
   "blockers": [
-    "Operator-labelled case and pinned repository unavailable",
+    "Three proposed real candidates exist, but case-specific operator labels and private fixture registration remain incomplete",
     "Authorized pinned harness/9Router environment and named route unavailable",
     "Registered budgets, stop mechanism and exact invocation unavailable"
   ],

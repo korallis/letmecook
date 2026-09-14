@@ -2,9 +2,11 @@
 
 Contract version **1** · recorded **14 September 2026** · issue [#1](https://github.com/korallis/letmecook/issues/1).
 
-**Status: fixture design ready for review; real baseline blocked.** No operator
-labels or live baseline observations have been supplied or recorded. This document
-does not establish a product benefit or satisfy the M0 live-baseline gate.
+**Status: three real candidate briefs prepared; evaluated baseline blocked.**
+The user delegated selection from an existing private repository. The agent has
+prepared bounded candidates and retained exact starting commits and check evidence
+privately. Case-specific human labels and live baseline observations remain absent.
+This document does not establish a product benefit or satisfy the M0 live-baseline gate.
 
 This is an isolated measurement contract for the [PRD validation measures](../PRD.md#6-validation-and-success-measures),
 [evaluation design](../evaluation.md#6-how-to-test-the-product-hypothesis) and
@@ -15,9 +17,9 @@ Gaffer runtime, intent engine, account router or harness adapter.
 
 | Input | Observed state | Required to unblock |
 | --- | --- | --- |
-| First three real operator cases | Unavailable; three empty slots in `operator-intake.json` | Operator captures, intended outcomes, acceptance criteria and data permissions, labelled before any evaluated brief |
-| Repository fixture for each case | Unavailable | Repository reference, full starting commit, permitted files/data and reproducible prerequisites |
-| Harness and 9Router route | Unavailable for this baseline; not probed | Pinned harness/router versions, authorized named route, model/config identity, execution isolation and a permitted access mechanism |
+| First three real operator cases | Three agent-proposed candidates selected under user delegation in `operator-intake.json` | Case-specific human outcome labels and final registration before evaluation |
+| Repository fixture for each case | Exact repository/base/candidate commits and existing check snapshots retained in a private manifest | Freeze permitted source/data, executable prerequisites and private manifest reference for the run |
+| Harness and 9Router route | No harness/route configuration registered for these cases | Pinned harness/router versions, authorized named route, private-source exposure policy, model/config identity, isolation and a permitted access mechanism |
 | Baseline budgets | Proposed defaults below, no run registration yet | Record explicit bounds and any task-specific overrides before dispatch |
 | Raw live observations | None | Redacted brief, progress notes, attempt/check evidence, operator timers and human outcome labels |
 | Real baseline cohort | 0 registered, 0 started, 0 accepted | Three real cases, then a bounded standalone run per case, including failures |
@@ -31,16 +33,61 @@ discovery, subscription changes, provider-direct inference or live probes.
 The committed [fixture examples](../../tests/fixtures/tasks/development-examples.json)
 are synthetic and never enter reported denominators. The
 [operator intake](../../tests/fixtures/tasks/operator-intake.json) records exactly
-which labels remain unavailable. The [run template](../../tests/fixtures/tasks/run-template.json)
-is an unstarted, non-observational record; its null values mean unknown or not yet
+the proposed briefs, their private mapping reference and which labels remain
+unavailable. The [run template](../../tests/fixtures/tasks/run-template.json) is an unstarted, non-observational record; its null values mean unknown or not yet
 recorded, never zero. There are no fabricated raw observations in this change.
+
+## First real candidates and private evidence boundary
+
+The selected cases are genuine work candidates from the user's delegated task,
+not completed operator-labelled fixtures. Selection authority does not fabricate
+an intended-outcome label, acceptance decision or measurement interval.
+
+| Case | Proposed outcome | Scope and first-run suitability |
+| --- | --- | --- |
+| `operator-01` | Evaluate a narrowly scoped package-manager CI action update and separate inherited audit failures from regressions | Recommended first harness case: immutable action pins, unchanged toolchain/dependency graph, bounded verification and explicit unresolved gates |
+| `operator-02` | Prepare a Swift runtime patch while preserving unrelated platform lock entries | Requires platform-aware resolution and native checks; an unsupported host cannot establish native compatibility |
+| `operator-03` | Assess a grouped development-tool update and recommend a minimal compatible subset | Bounded compatibility diagnosis, including React Doctor; major migrations and styling rewrites are outside the case |
+
+The first case is small enough to register before the wider dependency work. Its
+success criteria include honest failure attribution. A failed existing security
+audit is neither evidence that a small action update caused the vulnerabilities
+nor permission to suppress a gate. Compare the exact starting/candidate dependency
+graph and audit evidence before assigning cause. Unresolved required checks keep
+an update from being called ready for merge.
+
+The public repository contains only redacted briefs, stable case IDs and the digest
+of an operator-owned private manifest. That manifest holds repository identity,
+full starting/candidate commits, exact commands, toolchain requirements and private
+CI evidence. Private source, diffs, logs, URLs and commit mappings must not enter
+this repository, public issues/PRs, generated reader output or shareable artifacts.
+A private fixture can be reproducible to its authorized evaluator without making
+its source public. Public reproducibility is limited to the measurement method.
+
+An isolated static React Doctor preflight has been retained privately. It used
+version `0.9.14`, `--scope full --blocking error --no-telemetry`, a read-only source
+mount and disabled container networking. It is preparation evidence, not a
+standalone model run, a confirmed defect label or proof of a secure application.
+Its full report and invocation remain in the private evidence store. Reproduce
+and triage findings before changing behavior; preserve the existing styling system.
+The [CLI reference](https://www.react.doctor/docs/reference/cli-reference) documents
+scope, blocking severity and telemetry controls. Remote scores and supply-chain
+checks are outside this offline scan's evidence.
+
+Register the operator-selected router endpoint and execution profile independently
+of the private source location. No named machine is required by these fixtures.
+Authorization to inspect a private repository does not establish permission to
+send it to a particular model route. Keep execution blocked until that exposure
+policy and the named route are recorded. The current Codex research and static
+preflight are not represented as 9Router inference, operator minutes or an
+accepted baseline result. There are still zero registered or started live cases.
 
 ## Register fixtures before evaluation
 
 Assign each capture a stable ID and record its source, capture text, task class,
 intended outcome, permitted scope, objective acceptance criteria, required checks,
-full repository starting SHA and declared data permissions. A human operator owns
-the intended-outcome label. Record who labelled it and when; an agent's guess
+full repository starting SHA (in the private manifest when required) and declared
+data permissions. A human operator owns the intended-outcome label. Record who labelled it and when; an agent's guess
 cannot fill that field. Data permissions name approved data, prohibited data,
 allowed route/provider exposure, execution and network access, and any separately
 authorized external effects. Omitted permissions grant no authority.
@@ -118,8 +165,9 @@ No provider credentials or management credentials belong in a worker fixture.
 
 ## Reproducible collection procedure
 
-1. Complete the three operator intake slots. Classify eligibility and freeze the
-   labelled fixture manifest in git. Record prerequisites and exact setup/check
+1. Register the three proposed operator cases, including their human labels.
+   Classify eligibility and freeze the permitted labelled fixture manifest or its
+   immutable private reference in git. Record prerequisites and exact setup/check
    commands; confirm the starting SHA exists before initializing a fresh workspace.
    A worktree alone is not an execution security boundary.
 2. Copy `run-template.json` to a local evidence directory, with a unique run ID.
@@ -238,10 +286,11 @@ follow-up pass. M0's three-case baseline is not this beta study.
 
 - Fixture partition, contamination policy, severity rules and operator-minute
   method: specified here, ready for review before data collection.
-- First three real use cases, starting commits, checks and permissions: blocked on
-  operator input; see intake slots rather than synthetic substitutes.
+- Three real candidate briefs and private starting-commit/check mapping: prepared
+  under user-delegated selection. Case-specific human labels, route exposure
+  permissions and run registration remain incomplete.
 - Bounded standalone baseline through intended 9Router routes: not run; blocked on
-  those fixtures plus authorized pinned environment/route details.
+  fixture registration plus authorized pinned environment/route details.
 - Reproducible collection instructions and redacted record formats: committed.
   Exact harness invocation, observed versions, raw live observations and real
   baseline results remain unavailable until a permitted collection run occurs.
