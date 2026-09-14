@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { once } from 'node:events';
 import assert from 'node:assert/strict';
 import { mkdtemp, writeFile, symlink, link, rm, realpath, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -211,4 +212,55 @@ test('trusted reader allows only pinned regular-file bytes and rejects filesyste
     await rm(join(root, 'fixture.txt')); await mkdir(join(root, 'fixture.txt')); await assert.rejects(snapshot(root, 'fixture.txt', sha256('toy'), 4096, signal), /discovery_denied/);
     await assert.rejects(snapshot(FIXTURE_ROOT, 'fixture.txt', FIXTURE_HASH, 4096, AbortSignal.abort()), /cancelled/);
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('full schema-2 policy identity, graph and envelope are revision inputs; transport takes an immutable copy', async () => {
+  const { routerPolicyFixture } = await import('../inference-boundary/router-fixture.ts');
+  const { hashDocument } = await import('../inference-boundary/router-policy.ts');
+  const { BoundaryTransport } = await import('./transport.ts');
+  const { PlannerSession } = await import('./planner.ts');
+  const { BRIEF } = await import('./public-fixture.ts');
+  const policy = routerPolicyFixture(); policy.limits.outputTokens = 1024;
+  const file = await snapshot(FIXTURE_ROOT, 'fixture.txt', FIXTURE_HASH, 4096, AbortSignal.timeout(1000));
+  const revision = (p: typeof policy) => new PlannerSession(new BoundaryTransport('/unused', '0'.repeat(64), p), file, BRIEF).inputRevision;
+  const original = revision(policy);
+  for (const mutate of [
+    (p: typeof policy) => { p.authority.deploymentId = 'other_deployment'; },
+    (p: typeof policy) => { p.authority.boot = '00000000-0000-0000-0000-000000000002'; },
+    (p: typeof policy) => { p.authority.generation++; },
+    (p: typeof policy) => { p.revision = p.authority.revision = 'policy_2'; },
+    (p: typeof policy) => { p.epoch++; },
+    (p: typeof policy) => { p.envelope.overlay = '4'.repeat(64); },
+    (p: typeof policy) => { p.envelope.sourceLock = '4'.repeat(64); },
+    (p: typeof policy) => { p.envelope.runtime = '4'.repeat(64); },
+    (p: typeof policy) => { p.graph.connections[0].priority = 2; p.authority.graphDigest = hashDocument(p.graph); },
+    (p: typeof policy) => { p.routerModel = p.graph.routes[0].name = 'other_route'; p.authority.graphDigest = hashDocument(p.graph); },
+    (p: typeof policy) => { p.limits.outputTokens = 512; },
+  ]) { const next = structuredClone(policy); mutate(next); assert.notEqual(revision(next), original); }
+  const transport = new BoundaryTransport('/unused', '0'.repeat(64), policy);
+  policy.authority.deploymentId = 'outside_mutation'; const returned = transport.policy; returned.epoch++;
+  assert.equal(new PlannerSession(transport, file, BRIEF).inputRevision, original);
+});
+
+test('transport validates safe request identity and independently refuses tools when locally disabled', async t => {
+  const { createServer } = await import('node:http');
+  const { BoundaryTransport } = await import('./transport.ts');
+  const { routerPolicyFixture } = await import('../inference-boundary/router-fixture.ts');
+  for (const identity of [undefined, 'malformed', 'a'.repeat(32)]) await t.test(String(identity), async () => {
+    const directory = await mkdtemp('/tmp/gp-'); const socket = join(directory, 's'); const policy = routerPolicyFixture();
+    let calls = 0;
+    const server = createServer(async (req, res) => {
+      const chunks: Buffer[] = []; for await (const chunk of req) chunks.push(chunk);
+      const body = JSON.parse(Buffer.concat(chunks).toString()); calls++;
+      assert.equal(body.max_completion_tokens, 32); assert.equal(body.max_tokens, undefined); assert.equal(body.tools, undefined);
+      res.writeHead(200, { 'content-type': 'text/event-stream', ...(identity ? { 'x-gaffer-request-id': identity } : {}) });
+      res.end(toolStream());
+    });
+    server.listen(socket); await once(server, 'listening');
+    try {
+      const transport = new BoundaryTransport(socket, '0'.repeat(64), policy);
+      await assert.rejects(transport.complete({ model: policy.routerModel, stream: true, max_completion_tokens: 32, messages: [{ role: 'user', content: 'toy' }] }, AbortSignal.timeout(1000), 32768, false), identity?.length === 32 ? /invalid_stream/ : /invalid_request_identity/);
+      assert.equal(calls, 1);
+    } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); await rm(directory, { recursive: true, force: true }); }
+  });
 });
