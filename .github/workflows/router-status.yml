@@ -24,5 +24,7 @@ jobs:
           cache: npm
           cache-dependency-path: experiments/router-status/package-lock.json
       - run: npm --prefix experiments/router-status ci --ignore-scripts
+      - run: npm --prefix tests/fixtures/9router ci --ignore-scripts
+      - run: npm --prefix tests/fixtures/9router test
       - run: npm --prefix experiments/router-status run check
       - run: npm --prefix experiments/router-status test
