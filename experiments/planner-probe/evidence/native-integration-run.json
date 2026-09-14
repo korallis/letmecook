@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "observedAt": "2026-09-14T21:54:07.360Z",
+  "observedAt": "2026-09-14T22:21:14.679Z",
   "result": "offline_native_planner_integration_passed",
   "issueComplete": false,
   "liveInferenceAttempts": 0,
@@ -12,7 +12,7 @@
     "experiments/planner-probe/fixture.ts": "45aa35907e1c8c4c6b4d16e6d83ff54c841fc32bb62cdf89c1034812509d0860",
     "experiments/planner-probe/native-boundary-port.ts": "6f151e6ea79ef42c8995e202441181c38f41293d59cc58109c2b0012765a3933",
     "experiments/planner-probe/native-collect.ts": "f5cc55b0823d061fbb24bd6418849b3884d45bed1dd5ce92a89e6260bab13403",
-    "experiments/planner-probe/native-consumer.ts": "2269ff039e7500de142952ed919ee882d0ea8e9b8e44c8e289a0687436341c4a",
+    "experiments/planner-probe/native-consumer.ts": "fa7ac36685794c4d0fb3007b651387235f02f9888d274eef4894e57a2c52be2f",
     "experiments/planner-probe/native-evidence.ts": "930ae551140337a2164d26151161e385dcfc085401fa168004bc8b59bfe8ee1b",
     "experiments/planner-probe/native-fixture.ts": "5d5b04df0a4e9c98c7bbe2fd239f820931194c71dada14a3c8274e415efcc3a2",
     "experiments/planner-probe/native-gateway-prove.ts": "0ab4c7ce3e708766cbf96c8826dd1f2fd188d8eb8ff165fb64e5aa3b30c39ab2",
@@ -22,7 +22,7 @@
     "experiments/planner-probe/native-router-integration.mjs": "2af5e28d46e845c6cab92d753f89346316d6fe1f8f483cc816c60a79d61e085c",
     "experiments/planner-probe/native-router-prove.ts": "0f88e847036d0487945af719f54c6b5d2a42e79d4823bdd04d370b09f2a65917",
     "experiments/planner-probe/native-shared.test.ts": "df8778ebb060445e7213a3e564e6c147c357fc7e1ab1c52c0a6db44b510f8134",
-    "experiments/planner-probe/native-staging.ts": "bdf27b6fce8c16f1df89f06356d42eb47b1b05d25d154ef73cb60419adf9db54",
+    "experiments/planner-probe/native-staging.ts": "d81d39689a9855466eb21b07089714084eba9600beccf5291fd2803f185fb685",
     "experiments/planner-probe/native-transport.ts": "88e4bc9c65d497f0dca4cf3ef3e4580160835eaa350cca70f47015ba6c98c118",
     "experiments/planner-probe/package-lock.json": "8a9a9881e0d48b3e98a52ffc56a81344b15a004c9827efc387edf733126e7237",
     "experiments/planner-probe/package.json": "1986909d3de242b5964d4bbf2f658b2d738547ddadd51da6755177d57d59f067",
@@ -31,9 +31,9 @@
     "experiments/planner-probe/prove.ts": "756086a5101c958434e57685323bbd009db469fa9458b48b659584a13d531902",
     "experiments/planner-probe/public-fixture.ts": "017a70154c329347744e3303c5d55d9d669d751647b5f5d2d87d2c1329e8b85c",
     "experiments/planner-probe/reader.ts": "de2930b80a6c0dd9336910dad74b4668019a4629540a6f91677f0ee8bff370dc",
-    "experiments/planner-probe/router-consumer.ts": "b5cdb384760b1e8c0b15c22ebc2acc95dec640d89aa29f5bcb19dcccc2d6a78e",
+    "experiments/planner-probe/router-consumer.ts": "7cbd5988228a004a37c9deb1b6d6c20a7b739d272a86b3eab0fc37eb1b0427d3",
     "experiments/planner-probe/router-gateway.ts": "cafd9013af6d297bf504ad2f9d5b0ce69cb757c71ce0d6731023f5334cbc0a05",
-    "experiments/planner-probe/router-prove.ts": "80bfb5ce9d574d58d248f8be0b5d2ca574eb0fd1adb9436fd5187b1222c89638",
+    "experiments/planner-probe/router-prove.ts": "7eb37a04959a1fcc297350f38df836f772ee22fdfe2dfa9162c81feec84831a7",
     "experiments/planner-probe/router-supervise.ts": "2b9c2f56338a08d4c704bcb1b28c5fa0a974d4482bb63afbf17a8fe881aa70d7",
     "experiments/planner-probe/transport.ts": "ca79a9a5586c90e25f05d24c8eb2baefcec55ebe7113f8aecb3f4e2b669d1f28",
     "experiments/planner-probe/tsconfig.json": "9656dff150d8ce8e649ab7932a8e9148a20a55ffbaf87cf63cc1a7f7e52d52cf",
@@ -84,14 +84,15 @@
     "experiments/router-authority-extension/overlay/authority.mjs": "7d6f3e460169d99b6b8af2e4935d26f3ff36678e66f80f5f70f4f64fb38b7e86",
     "experiments/router-authority-extension/overlay/chat-terminal.mjs": "07e06cde6caeb1f0fd5bcbac0be9d6a7486afb3c34de7d77f8b414a8335009c0",
     "experiments/router-authority-extension/overlay/deployment-owner.mjs": "a3ef177075816bc6c4de14b943864e72a56a4bde12b8021b48032a7b4ed8e6d2",
-    "experiments/router-authority-extension/overlay/evaluation-scope.mjs": "01708987b54a7fc95e1a6839c87e88382f10a811ef2e6793730702ec1cdb5c4d",
+    "experiments/router-authority-extension/overlay/evaluation-scope.mjs": "816fc21ffec05e223bb1fc3970f90746c720db83f1d2d9d8413807c20fcb7702",
     "experiments/router-authority-extension/overlay/native-planner.mjs": "2aaa3a5a50f03ad612abfcef36722705f49ed92c973c13988027a84cd9a94ef2",
-    "experiments/router-authority-extension/overlay/native-profile.mjs": "cb1d8e0bab160ba69ef1b6effcf0c9e9469798b516d3102bb43a3b5dcfd85fd0",
+    "experiments/router-authority-extension/overlay/native-profile.mjs": "307134694b3c5a70ea1582b4c933bacd14236cb23518edd62ba768ac685851bc",
     "experiments/router-authority-extension/overlay/native-responses.mjs": "79927f64a911da1b4ee1427a7ff3f7de225c303deefdc5d84188d2b4a70c0642",
     "experiments/router-authority-extension/overlay/native-transport.mjs": "f151b6363016e5edff5273b9a16aea4eb6f1b8cc86c7dbff4e7ea562f76d8f6c",
     "experiments/router-authority-extension/overlay/opencode-profile.mjs": "2ff535ca043db2fa0269b0b430daa2e3786a4daec9f143420e7b0c2181eb55ca",
     "experiments/router-authority-extension/overlay/planner-plan-schema.mjs": "1af55197a0f44d69867be5987c116d4e7066950fb9a951cab6da689c6aa75f1d",
     "experiments/router-authority-extension/overlay/responses-terminal.mjs": "d4e2e792b631f4101db6dc7c0d679f3ace4aee428a2c70d386a34cf56bc415f1",
+    "experiments/router-authority-extension/overlay/scope-profile.mjs": "c71f6caaf4f5dce1c00a2ced23b369be7ea6681ae725c366bbba08b8570ea689",
     "experiments/router-authority-extension/package.json": "1b028cc34bbf05e89d4a3b9842da17d384e5997a1736f863ef8ca70d57c92a7a",
     "experiments/router-authority-extension/patches.mjs": "0eeb206a3b22ffaf921e04277a8aeec271d21eb860a6f70c9dfcf9be7a69e168",
     "experiments/router-authority-extension/policy-regressions.mjs": "cf72e099290577f244f597ad84280a2598fd2452855e4169ff87d4bb551712b7",
@@ -209,16 +210,16 @@
   },
   "rawReports": [
     {
-      "name": "gaffer-planner-native-router-final-20260914/run.json",
-      "sha256": "2b4e0ce0e5ff9fa790e8bb0e6dbbbf8991c34ed438a9c0ac0eb5a5c19e8cf443"
+      "name": "gaffer-planner-native-scope-router-20260914/run.json",
+      "sha256": "f5f7dd163e50c285d3f09c9f2f2ae6f843879df2267cff2f6cd6d1cc62dc2c96"
     },
     {
-      "name": "gaffer-planner-native-gateway-final-20260914/run.json",
-      "sha256": "f5d21eac152ab6e5155e6397c31ab7677978c9e492463863c05ba251fd364eec"
+      "name": "gaffer-planner-native-scope-gateway-20260914/run.json",
+      "sha256": "d693a335e929c2f7aa06023e1244cf04a0dde672c87f4bd3f35f88dcb20279c8"
     },
     {
-      "name": "gaffer-planner-legacy43-stacked-20260914.json",
-      "sha256": "2521ed325017be73213dd54eadc789c71f70088716d4fb53ed00bb28c3bdfa02"
+      "name": "gaffer-planner-legacy-scope43-20260914.json",
+      "sha256": "5e56a405a58a059183f4b2a2f8b9e497d3154b7f3831164b077d3d12505cfdb8"
     }
   ],
   "nativeCases": [
@@ -250,7 +251,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "81ebd59fa331c750d87adc0f533b82075ab80e1e2afa4b21a4920fc3b508bc96",
+          "bodyDigest": "d24377bd38247e96598d4f31ee5726e5381e2d0c7b92a2d0d2cc40d586f28c19",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -288,7 +289,7 @@
         },
         {
           "path": "/responses",
-          "bodyDigest": "100017541483b1a7b9328cef4e61c4f189a687efb60e449e356793ec60e42420",
+          "bodyDigest": "8e832fd553b9ebe9f2ba2988add5e132e1237bc1651ee944bbeb52a930ecbffc",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -327,41 +328,41 @@
       ],
       "completions": [
         {
-          "requestId": "33d62908b6934fbc9a64b4b0794e0c15",
-          "acceptedAt": 1789422772301,
+          "requestId": "db0a01d9011c4fc79d10ca110a73278c",
+          "acceptedAt": 1789424334759,
           "calls": [
             "call_synthetic"
           ]
         },
         {
-          "requestId": "1ac45418f0884a37a53939ba8e47f6e3",
-          "acceptedAt": 1789422772338,
+          "requestId": "88709d175ba046ae97169fc9a33709f5",
+          "acceptedAt": 1789424334797,
           "calls": []
         }
       ],
       "decisions": [
         {
-          "requestId": "33d62908b6934fbc9a64b4b0794e0c15",
+          "requestId": "db0a01d9011c4fc79d10ca110a73278c",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "2c8e9e288108b886b9be3ac976ae40e2301640d24b0b1852e39e015631f203e0",
-          "decisionDigest": "5817cfcce844c8892427b813a3e8bae9bc41aa9bbb97125eff6066073a0ea98b",
-          "receiptDigest": "9f6c7f4e10859eb6062788e805137e1fca45ae32d80e219f395f4ae2eeaf6952",
+          "requestDigest": "06dcb6b29bed5dcbe256cdddd1d596e86c582ac19cf01cce146a1c41d328676c",
+          "decisionDigest": "95e68b02d87ff38e4c7839e42d9d9d92674fba009e37a67062e7caca4042167e",
+          "receiptDigest": "4c358d1163d74594d72dfaae8f87fb3f55b5dc9358a39d6043281670a70c8de3",
           "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
         },
         {
-          "requestId": "1ac45418f0884a37a53939ba8e47f6e3",
+          "requestId": "88709d175ba046ae97169fc9a33709f5",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "0583c17a6fef2260adb94f8a4c5e7ecd3158ed48da1f3dbe10bdeaebeb5f2b0f",
-          "decisionDigest": "67c153f46fcddeb16efd40b0242944f40b8937691a2ecafc5861c3e202cb6bf4",
-          "receiptDigest": "bb9f755d045103d15ce280f6c218b9f721fb7b26096899cb4c84d1d99c7deb44",
-          "nativeOutputDigest": "080c00ad3b5ba0cec7e8739f4cfe5d320fbac72fb6f3feb915c37a6b317fb7de"
+          "requestDigest": "5eaf817da416c1491366b002d2c21cf217b731a54b81a87dd7a9b6074d86487d",
+          "decisionDigest": "c1e248f7c46d33cb26c7a00ac7296bd9f0b675d490421a829074f11ff00625a9",
+          "receiptDigest": "2d32929f94b0eaea835a76039659a177da2b1149a6e430c7fa25b13294fd16e8",
+          "nativeOutputDigest": "4bf7752151c4abfa7835995dc6f18cc4d11628fdc8e7a41a49764a85df84d1df"
         }
       ],
       "receipts": [
         {
-          "requestId": "33d62908b6934fbc9a64b4b0794e0c15",
+          "requestId": "db0a01d9011c4fc79d10ca110a73278c",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -372,13 +373,13 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "81ebd59fa331c750d87adc0f533b82075ab80e1e2afa4b21a4920fc3b508bc96",
+              "bodyDigest": "d24377bd38247e96598d4f31ee5726e5381e2d0c7b92a2d0d2cc40d586f28c19",
               "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
             }
           ]
         },
         {
-          "requestId": "1ac45418f0884a37a53939ba8e47f6e3",
+          "requestId": "88709d175ba046ae97169fc9a33709f5",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -389,8 +390,8 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "100017541483b1a7b9328cef4e61c4f189a687efb60e449e356793ec60e42420",
-              "outputDigest": "080c00ad3b5ba0cec7e8739f4cfe5d320fbac72fb6f3feb915c37a6b317fb7de"
+              "bodyDigest": "8e832fd553b9ebe9f2ba2988add5e132e1237bc1651ee944bbeb52a930ecbffc",
+              "outputDigest": "4bf7752151c4abfa7835995dc6f18cc4d11628fdc8e7a41a49764a85df84d1df"
             }
           ]
         }
@@ -398,19 +399,19 @@
       "reservations": 0,
       "scope": {
         "phase": "initial",
-        "started": 1789422772164,
-        "deadline": 1789423372164,
+        "started": 1789424334644,
+        "deadline": 1789424934644,
         "spent": 2,
         "state": "active"
       },
       "decisionTimes": [
         {
-          "requestId": "33d62908b6934fbc9a64b4b0794e0c15",
-          "at": 1789422772261
+          "requestId": "db0a01d9011c4fc79d10ca110a73278c",
+          "at": 1789424334756
         },
         {
-          "requestId": "1ac45418f0884a37a53939ba8e47f6e3",
-          "at": 1789422772337
+          "requestId": "88709d175ba046ae97169fc9a33709f5",
+          "at": 1789424334795
         }
       ],
       "durabilityEnded": null,
@@ -448,7 +449,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "8b9a4df9d678cb32d205777e283305932911859dfa3240238ccc452fbe3a4084",
+          "bodyDigest": "825dcf2b573f117161c06d13aae1f27cad346135774d93cf2c93b53403414822",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -487,25 +488,25 @@
       ],
       "completions": [
         {
-          "requestId": "1ce85f3c4f114b839377e6845c369cd0",
-          "acceptedAt": 1789422773942,
+          "requestId": "932e02df37c54393a7ed53abb1c44531",
+          "acceptedAt": 1789424336797,
           "calls": []
         }
       ],
       "decisions": [
         {
-          "requestId": "1ce85f3c4f114b839377e6845c369cd0",
+          "requestId": "932e02df37c54393a7ed53abb1c44531",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "d7bcdf19feec22ca107c1a5d56286fbee0ce127af4804a1c1de483f1146fdbd4",
-          "decisionDigest": "bff1ac9a2f3073dbe0b41eefd2feb134009e2837480926b1b5873b6e0c298158",
-          "receiptDigest": "671c610c5425181faf9a51a627bed6b4948137ce47a71a3b5983e71e32477774",
-          "nativeOutputDigest": "1ab85494266973eb1d0a75991a8791c0d1d739eddc559136d02245d2debca7be"
+          "requestDigest": "f0f6ed50de2fd37120831c91efe8209505b6e5d2c939f89fbed233d289adfffe",
+          "decisionDigest": "d921648b02b0dda758a65a792da0c1aa3e77dbd12b903c5fc3a1521eccd3d509",
+          "receiptDigest": "40c69dd4602a7903307a77bcfabf4ab861c1bac6d6d8650e8087489f98b19ed0",
+          "nativeOutputDigest": "cd45f84a8f32762a5a1e546fd496328fb1a7f630ee2cfe21123d72862360d311"
         }
       ],
       "receipts": [
         {
-          "requestId": "1ce85f3c4f114b839377e6845c369cd0",
+          "requestId": "932e02df37c54393a7ed53abb1c44531",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -516,8 +517,8 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "8b9a4df9d678cb32d205777e283305932911859dfa3240238ccc452fbe3a4084",
-              "outputDigest": "1ab85494266973eb1d0a75991a8791c0d1d739eddc559136d02245d2debca7be"
+              "bodyDigest": "825dcf2b573f117161c06d13aae1f27cad346135774d93cf2c93b53403414822",
+              "outputDigest": "cd45f84a8f32762a5a1e546fd496328fb1a7f630ee2cfe21123d72862360d311"
             }
           ]
         }
@@ -525,15 +526,15 @@
       "reservations": 0,
       "scope": {
         "phase": "initial",
-        "started": 1789422773825,
-        "deadline": 1789423373825,
+        "started": 1789424336690,
+        "deadline": 1789424936690,
         "spent": 1,
         "state": "active"
       },
       "decisionTimes": [
         {
-          "requestId": "1ce85f3c4f114b839377e6845c369cd0",
-          "at": 1789422773939
+          "requestId": "932e02df37c54393a7ed53abb1c44531",
+          "at": 1789424336793
         }
       ],
       "durabilityEnded": null,
@@ -571,7 +572,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "a68dd00a858242983a2304b669f6ed22925f3a4f4c92fec2d11197c35d8de2e7",
+          "bodyDigest": "2f6e82b4e8ae8790addcb874c8d329385a9d13b82d1ecb16996b338e4c83bac1",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -609,7 +610,7 @@
         },
         {
           "path": "/responses",
-          "bodyDigest": "a9125a563cd63c79677a34ef969d4ae09ae9535afe7b0fa7bbdca658ada50e3f",
+          "bodyDigest": "26102bf128572e6cd551f689a9a42cf403427517afd812b6b3ecae548f2f151c",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -647,7 +648,7 @@
         },
         {
           "path": "/responses",
-          "bodyDigest": "0de6578f4e40d2f68ffd13d9d7f1fe756e52dee25b2bcdee14ea3bbddc31ba5d",
+          "bodyDigest": "e7a6cb8b7a183f642c50e660d64590e50542cdfdb3ecf69d3f3bf557c03844bf",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -686,55 +687,55 @@
       ],
       "completions": [
         {
-          "requestId": "78005389c5b448b4839fdb85767e50c2",
-          "acceptedAt": 1789422775571,
+          "requestId": "4d6c68cbfa16409095f1447e323a76d1",
+          "acceptedAt": 1789424338907,
           "calls": [
             "call_synthetic"
           ]
         },
         {
-          "requestId": "e73ce9504eb946e3847fb1cf7dfacd7a",
-          "acceptedAt": 1789422775634,
+          "requestId": "fa1701724fc14ad29ca0a63babb7b07a",
+          "acceptedAt": 1789424338951,
           "calls": []
         },
         {
-          "requestId": "1060fa6c2c9e4858b99bbc5d78cd1445",
-          "acceptedAt": 1789422775703,
+          "requestId": "a55e703125bb45488b4cb9393edcaa76",
+          "acceptedAt": 1789424339020,
           "calls": []
         }
       ],
       "decisions": [
         {
-          "requestId": "78005389c5b448b4839fdb85767e50c2",
+          "requestId": "4d6c68cbfa16409095f1447e323a76d1",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "4075079c6e55c16cd472df258e187cb12b7fa4f3f59ef4a25fe39dccfd78ee25",
-          "decisionDigest": "7241f0b33fde3dc2e1d64f01843a570cd12ec906510245c8002f7b0bf291bc88",
-          "receiptDigest": "71b22d1da4e73be33bc1eead056c688dc61dbce297a4dbcd795a5868e8982f53",
+          "requestDigest": "5adb5aa33d8f3226f4d38b4939f9c22f8ba8943515832a1ba8f8d81a3e2ea278",
+          "decisionDigest": "da52106d2b4846981f6273edcd430eafc1658ae6e7c47f107ea3972979226392",
+          "receiptDigest": "0fa8e57a37b07981d29c3a1c5cc78c054d611fa66eef35a2675e611f6a2a8dca",
           "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
         },
         {
-          "requestId": "e73ce9504eb946e3847fb1cf7dfacd7a",
+          "requestId": "fa1701724fc14ad29ca0a63babb7b07a",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "88c5b25c46932bad6fb37c54c56869a60f75afa35dae7e90f52dec1ea1c7cc9a",
-          "decisionDigest": "6782fd6d7bf3bb99116f1621fdb5372c2539c3ed13792e0974abb0219cb03c34",
-          "receiptDigest": "fc126cd995d2381331ab6a9428d291381b92c6e8c34b9aec46227f833446cc5c",
+          "requestDigest": "d8ad6097e3cd79e5bcacf94745bdaa877689e24f5593d1aa98bacebd523b7517",
+          "decisionDigest": "2c189af21459ef93ad6d839f728c682ab7573f40e29a1ce5511ff26057627693",
+          "receiptDigest": "542afbd1552d787398ac4745f87dfa5bf0decbe6c605f6cf94766e216bf4c155",
           "nativeOutputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
         },
         {
-          "requestId": "1060fa6c2c9e4858b99bbc5d78cd1445",
+          "requestId": "a55e703125bb45488b4cb9393edcaa76",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "066ad159926d17240ef47757f764b183990682461c19b0c5eac7bf225ee7cedf",
-          "decisionDigest": "e902cca97f5a358342bb95c75a136f2c8f7a0a78577985270af55b6aa7584c79",
-          "receiptDigest": "022b33e05d8b129ac844bcfb9ae62689768c5e887acb10a2d0dd0d44890e1dbe",
-          "nativeOutputDigest": "fe091cf2d580030acf25bb43d10f8043adac8b4ba1f5d4f51611ea532d95c01c"
+          "requestDigest": "561a66f2955f1b34064c38a222e6e1e9b5f59d0fd12b7345a571ddc64f90d91a",
+          "decisionDigest": "43816f1ebde010da89c278c3f7086c30c20dbc42f0212c153467e2fdaf2ee54b",
+          "receiptDigest": "3fece5b9c6955c640a660d9aab8a36c5ea89eb8bdf9b618800f50500a4fbb1c2",
+          "nativeOutputDigest": "292e90cafe1247921876de361d687f87afc2537775ad72d22c917b51da7fab6f"
         }
       ],
       "receipts": [
         {
-          "requestId": "78005389c5b448b4839fdb85767e50c2",
+          "requestId": "4d6c68cbfa16409095f1447e323a76d1",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -745,13 +746,13 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "a68dd00a858242983a2304b669f6ed22925f3a4f4c92fec2d11197c35d8de2e7",
+              "bodyDigest": "2f6e82b4e8ae8790addcb874c8d329385a9d13b82d1ecb16996b338e4c83bac1",
               "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
             }
           ]
         },
         {
-          "requestId": "e73ce9504eb946e3847fb1cf7dfacd7a",
+          "requestId": "fa1701724fc14ad29ca0a63babb7b07a",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -762,13 +763,13 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "a9125a563cd63c79677a34ef969d4ae09ae9535afe7b0fa7bbdca658ada50e3f",
+              "bodyDigest": "26102bf128572e6cd551f689a9a42cf403427517afd812b6b3ecae548f2f151c",
               "outputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
             }
           ]
         },
         {
-          "requestId": "1060fa6c2c9e4858b99bbc5d78cd1445",
+          "requestId": "a55e703125bb45488b4cb9393edcaa76",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -779,8 +780,8 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "0de6578f4e40d2f68ffd13d9d7f1fe756e52dee25b2bcdee14ea3bbddc31ba5d",
-              "outputDigest": "fe091cf2d580030acf25bb43d10f8043adac8b4ba1f5d4f51611ea532d95c01c"
+              "bodyDigest": "e7a6cb8b7a183f642c50e660d64590e50542cdfdb3ecf69d3f3bf557c03844bf",
+              "outputDigest": "292e90cafe1247921876de361d687f87afc2537775ad72d22c917b51da7fab6f"
             }
           ]
         }
@@ -788,23 +789,23 @@
       "reservations": 0,
       "scope": {
         "phase": "initial",
-        "started": 1789422775473,
-        "deadline": 1789423375473,
+        "started": 1789424338750,
+        "deadline": 1789424938750,
         "spent": 3,
         "state": "active"
       },
       "decisionTimes": [
         {
-          "requestId": "78005389c5b448b4839fdb85767e50c2",
-          "at": 1789422775568
+          "requestId": "4d6c68cbfa16409095f1447e323a76d1",
+          "at": 1789424338903
         },
         {
-          "requestId": "e73ce9504eb946e3847fb1cf7dfacd7a",
-          "at": 1789422775632
+          "requestId": "fa1701724fc14ad29ca0a63babb7b07a",
+          "at": 1789424338949
         },
         {
-          "requestId": "1060fa6c2c9e4858b99bbc5d78cd1445",
-          "at": 1789422775701
+          "requestId": "a55e703125bb45488b4cb9393edcaa76",
+          "at": 1789424339018
         }
       ],
       "durabilityEnded": null,
@@ -842,7 +843,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "508bb50ba0961e4bb3dbf3f304ab9aa2bc030a843b302db7d9483fa882db8503",
+          "bodyDigest": "d6ba28e31cc57bae8771d043e3798e226c1da2af68ff66980a8a198c6dedf058",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -880,7 +881,7 @@
         },
         {
           "path": "/responses",
-          "bodyDigest": "88384b945f104f307090f153bc5a2988ecf7ad0496316a0d3136db6388243e15",
+          "bodyDigest": "c2a1636f5352f1ac0b9d83314f01ff81ea1c4c2a37d070260616b7b2edd1bc20",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -919,39 +920,39 @@
       ],
       "completions": [
         {
-          "requestId": "af93f6fca61c40568c4289bbc324cd9b",
-          "acceptedAt": 1789422777240,
+          "requestId": "aad66c6a13624c20920f3ce16454d596",
+          "acceptedAt": 1789424340986,
           "calls": []
         },
         {
-          "requestId": "e3465ab3f83e449a93068e6a41e96649",
-          "acceptedAt": 1789422777328,
+          "requestId": "732cc7a642224b028bfa5166bf8c70c5",
+          "acceptedAt": 1789424341078,
           "calls": []
         }
       ],
       "decisions": [
         {
-          "requestId": "af93f6fca61c40568c4289bbc324cd9b",
+          "requestId": "aad66c6a13624c20920f3ce16454d596",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "31ebafbf3f01993cd6901dcf9fe21084310ff927dae8c53b193b501dca488701",
-          "decisionDigest": "4cd65e2772a36a548979d7d2fe46aed47e534ebda5141c73ecf21dbe32f31425",
-          "receiptDigest": "83db83ed6d8051b81d060868114edfb287d9ec1960a1f6fb675d86dd1b24945a",
+          "requestDigest": "e5e7be5dbbb4e7a6bf951602365d50eb72f69f7f490d45f06bc59b6cb1e48d5d",
+          "decisionDigest": "762a356cc21f7bb5ee45e3d3349f1d7658afeaa00cdaeb0daaeb5f0ca5baba90",
+          "receiptDigest": "53fc211959a6c59c0dbc334fc7a49df36c22afed194094295757a6c7addd3677",
           "nativeOutputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
         },
         {
-          "requestId": "e3465ab3f83e449a93068e6a41e96649",
+          "requestId": "732cc7a642224b028bfa5166bf8c70c5",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "c6b8edf0b016e335cc7955d387f7dc93c4f72379de752f6297d10b722aece8a2",
-          "decisionDigest": "35efae2e20c26c94fff4fa58aaf6f8ebe47ef7bf6167dc58bb02aac6d83f46a4",
-          "receiptDigest": "35669f928654ddc531b9c05879c81c2f7d9df0e63c9ac973c3fb224c2d62c677",
-          "nativeOutputDigest": "8e57f0b1eef45352c4e0a3a92cbf343feaa368f00e5dbf9e30eb8145c620ee80"
+          "requestDigest": "0fbb60e637355901d04e9c1d42d72fcdd5f2be91060d09c62d563e55fb8ea9d7",
+          "decisionDigest": "453238ee41d07d9ad9d9601e100722b1c9ae608ad198f164a5106d4bb447e389",
+          "receiptDigest": "090c1b3a8c7259274fa5d607cae6ee7ceb230cc277d410464937a13a1bfaa669",
+          "nativeOutputDigest": "0e4977fb2761a31f820aeb489c11a7c0505f28cb3a333c1e2d6ded660b3254d8"
         }
       ],
       "receipts": [
         {
-          "requestId": "af93f6fca61c40568c4289bbc324cd9b",
+          "requestId": "aad66c6a13624c20920f3ce16454d596",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -962,13 +963,13 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "508bb50ba0961e4bb3dbf3f304ab9aa2bc030a843b302db7d9483fa882db8503",
+              "bodyDigest": "d6ba28e31cc57bae8771d043e3798e226c1da2af68ff66980a8a198c6dedf058",
               "outputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
             }
           ]
         },
         {
-          "requestId": "e3465ab3f83e449a93068e6a41e96649",
+          "requestId": "732cc7a642224b028bfa5166bf8c70c5",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -979,8 +980,8 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "88384b945f104f307090f153bc5a2988ecf7ad0496316a0d3136db6388243e15",
-              "outputDigest": "8e57f0b1eef45352c4e0a3a92cbf343feaa368f00e5dbf9e30eb8145c620ee80"
+              "bodyDigest": "c2a1636f5352f1ac0b9d83314f01ff81ea1c4c2a37d070260616b7b2edd1bc20",
+              "outputDigest": "0e4977fb2761a31f820aeb489c11a7c0505f28cb3a333c1e2d6ded660b3254d8"
             }
           ]
         }
@@ -988,19 +989,19 @@
       "reservations": 0,
       "scope": {
         "phase": "initial",
-        "started": 1789422777127,
-        "deadline": 1789423377127,
+        "started": 1789424340859,
+        "deadline": 1789424940859,
         "spent": 2,
         "state": "active"
       },
       "decisionTimes": [
         {
-          "requestId": "af93f6fca61c40568c4289bbc324cd9b",
-          "at": 1789422777236
+          "requestId": "aad66c6a13624c20920f3ce16454d596",
+          "at": 1789424340983
         },
         {
-          "requestId": "e3465ab3f83e449a93068e6a41e96649",
-          "at": 1789422777326
+          "requestId": "732cc7a642224b028bfa5166bf8c70c5",
+          "at": 1789424341076
         }
       ],
       "durabilityEnded": null,
@@ -1038,7 +1039,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "cab374e91db791721561fe55c471fdff8d7babc73d68031bc61b5462b92495b0",
+          "bodyDigest": "7da81bd96cc8ffb196a6fe55695e98ee20aac667fefa4a2fcf2d5290d3e1fb8b",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -1076,7 +1077,7 @@
         },
         {
           "path": "/responses",
-          "bodyDigest": "ebb03a1c880fb7aa8797b0fc4956d2823130dc3884ade085c0820ea2619cfbf6",
+          "bodyDigest": "7fc962ee115e8d2fca8fefe41d96c1e9dc0a0e4c51fcb689d5a0bbf8ce21f7fd",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -1115,39 +1116,39 @@
       ],
       "completions": [
         {
-          "requestId": "3c1e7fe3d7814d52bd8d00b794fd77ec",
-          "acceptedAt": 1789422778913,
+          "requestId": "182089afe9b64715a6ae237187c36034",
+          "acceptedAt": 1789424342935,
           "calls": []
         },
         {
-          "requestId": "0868dbc43e3f40db8e426cd6bec738c8",
-          "acceptedAt": 1789422779001,
+          "requestId": "a9db7b341cbc4d8d8033527b26613b39",
+          "acceptedAt": 1789424342974,
           "calls": []
         }
       ],
       "decisions": [
         {
-          "requestId": "3c1e7fe3d7814d52bd8d00b794fd77ec",
+          "requestId": "182089afe9b64715a6ae237187c36034",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "5051c79cf60751b9cd15bd37c2932a76608b9ada1650f9fcaa83f8bf7b1d423f",
-          "decisionDigest": "2aea51e6b82450f0399bb905a450b77a5e57adf19c1d6cd3fd1fed66c2139fa8",
-          "receiptDigest": "2defa9d24fd51b8c57a37c82d55b9bafe44ea4987722c86637986e32b60be190",
+          "requestDigest": "b1959d5b81e854ef7721bfc82d2ec36cfede99cb597096dfd8642f7b4eade600",
+          "decisionDigest": "80e4e94855fc9b96817bb952b2e51cc5625485e7fb7c1423f601a762670378bb",
+          "receiptDigest": "6f7b74e14deea8a3fe5718243a5175baa54922f3cfac4d0b1fdea54dcdae7401",
           "nativeOutputDigest": "ca7a26181afee3d71490cf61ddac3b4effce93090b78d11cb95c6c37d44e1895"
         },
         {
-          "requestId": "0868dbc43e3f40db8e426cd6bec738c8",
+          "requestId": "a9db7b341cbc4d8d8033527b26613b39",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "5067a1e61b9862da362884313500981d8e9b6617a4882d57c3a4f92029b12577",
-          "decisionDigest": "2254198ae26935b7c63468ac8690b6e34c4e48efff50fb2f51db441b82f6713a",
-          "receiptDigest": "8a68f36004b4be72c94c91aa269870af3eec08f33af16dd72842bba255ffdb87",
-          "nativeOutputDigest": "89abc24261aed43cdefca8dd115cfe3109ddadeb2ea064f510a4d71e9c6198f4"
+          "requestDigest": "11ec4a31e2d0e574c3277c6e83da19b1c193b139c27861548105555999af23d3",
+          "decisionDigest": "c505c155bbf33e3726b78127216b5b929160482dbe001d3f5280be580da104b5",
+          "receiptDigest": "e46eae23d65232163ccf21ead33da544eed60c19a08485eb49f426a2999279a1",
+          "nativeOutputDigest": "ec515fa471b1493c7a1b0ff9cc91a9689a5bf6d1ea29ad63092cfbc5dcc611f9"
         }
       ],
       "receipts": [
         {
-          "requestId": "3c1e7fe3d7814d52bd8d00b794fd77ec",
+          "requestId": "182089afe9b64715a6ae237187c36034",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -1158,13 +1159,13 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "cab374e91db791721561fe55c471fdff8d7babc73d68031bc61b5462b92495b0",
+              "bodyDigest": "7da81bd96cc8ffb196a6fe55695e98ee20aac667fefa4a2fcf2d5290d3e1fb8b",
               "outputDigest": "ca7a26181afee3d71490cf61ddac3b4effce93090b78d11cb95c6c37d44e1895"
             }
           ]
         },
         {
-          "requestId": "0868dbc43e3f40db8e426cd6bec738c8",
+          "requestId": "a9db7b341cbc4d8d8033527b26613b39",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -1175,8 +1176,8 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "ebb03a1c880fb7aa8797b0fc4956d2823130dc3884ade085c0820ea2619cfbf6",
-              "outputDigest": "89abc24261aed43cdefca8dd115cfe3109ddadeb2ea064f510a4d71e9c6198f4"
+              "bodyDigest": "7fc962ee115e8d2fca8fefe41d96c1e9dc0a0e4c51fcb689d5a0bbf8ce21f7fd",
+              "outputDigest": "ec515fa471b1493c7a1b0ff9cc91a9689a5bf6d1ea29ad63092cfbc5dcc611f9"
             }
           ]
         }
@@ -1184,19 +1185,19 @@
       "reservations": 0,
       "scope": {
         "phase": "initial",
-        "started": 1789422778776,
-        "deadline": 1789423378776,
+        "started": 1789424342805,
+        "deadline": 1789424942805,
         "spent": 2,
         "state": "active"
       },
       "decisionTimes": [
         {
-          "requestId": "3c1e7fe3d7814d52bd8d00b794fd77ec",
-          "at": 1789422778909
+          "requestId": "182089afe9b64715a6ae237187c36034",
+          "at": 1789424342900
         },
         {
-          "requestId": "0868dbc43e3f40db8e426cd6bec738c8",
-          "at": 1789422779000
+          "requestId": "a9db7b341cbc4d8d8033527b26613b39",
+          "at": 1789424342972
         }
       ],
       "durabilityEnded": null,
@@ -1234,7 +1235,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "5dc07645a76c723a6f53fc47ad765b7521b5e820bfb0a1cc7517f7978fea3fff",
+          "bodyDigest": "342d727953978eb76bcd2d4fe797571f5f024ab001a6c2a8dd6b43ad56e06faa",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -1272,7 +1273,7 @@
         },
         {
           "path": "/responses",
-          "bodyDigest": "913656c3e5e9be37370422e00b84f1dc48c1bd9c1bf0f3df78f2d9e9913bd822",
+          "bodyDigest": "b03c11dd094f2475d509a030ddb662e8bdcf90c952df46731a026804bcc44307",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -1311,39 +1312,39 @@
       ],
       "completions": [
         {
-          "requestId": "2db35008f5bc474b8f64b1d50c1b0f49",
-          "acceptedAt": 1789422780098,
+          "requestId": "1b253420a1f342ae8ebcfc9c6997d0d6",
+          "acceptedAt": 1789424344658,
           "calls": []
         },
         {
-          "requestId": "ada5f6c551cc492992bb5961eba6dfe9",
-          "acceptedAt": 1789422780170,
+          "requestId": "74451dc83f56464eb5dc1b512fc409d1",
+          "acceptedAt": 1789424344732,
           "calls": []
         }
       ],
       "decisions": [
         {
-          "requestId": "2db35008f5bc474b8f64b1d50c1b0f49",
+          "requestId": "1b253420a1f342ae8ebcfc9c6997d0d6",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "96e6478b3ef54b2cf0589d6951be695ccdd4be1ea3c800d02e38ce35a938a125",
-          "decisionDigest": "a04287046ec30dfba6f2095f98010d11f2e2a24d6256ed2a9f52e1a50b3041db",
-          "receiptDigest": "6bd33ae859711337a7f09abaa90107d45d1d2f32c9cf766a0bff5f439d189de8",
+          "requestDigest": "9a872dec634de1a059b4bb87162f65fb7625aec898b80ae2dadb31eb5ecaf7bf",
+          "decisionDigest": "444fbc79d41f919da4ff53ee7cef6386d22bfc467eff3b3d2d7bd9807e38a6a8",
+          "receiptDigest": "935414fb2518eadc2a9fd5bc57355d173d89a84c955dc0caa55f31b041a325e9",
           "nativeOutputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
         },
         {
-          "requestId": "ada5f6c551cc492992bb5961eba6dfe9",
+          "requestId": "74451dc83f56464eb5dc1b512fc409d1",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "26b36e56ec50ca2f292c70a64d14c309afabe731d3d213b1ad752720194eb46f",
-          "decisionDigest": "fe7fbe852242fe8585f40408b1b6f54647011d4b76cd7b2081b09887bc56d759",
-          "receiptDigest": "1fb3c21789af454cd37360c129b96853a22394284733eb2f6f12eb3dc9d89922",
+          "requestDigest": "4319ea0988187e5d82da6137a5af7f2f16042191e1295060cb5ebf25c8b9969e",
+          "decisionDigest": "9de086516f4247a72734174b528887f62306a8d128297b6314bcc3711be7224e",
+          "receiptDigest": "d3739cd4106df2cb3a4f361493faa3f490262e68ec51aa9b9b874ce140d6c729",
           "nativeOutputDigest": "a3ba86ce9dc2c9f4aa8f02aaa3725daefb92bd48840fa7f5101af09cac784227"
         }
       ],
       "receipts": [
         {
-          "requestId": "2db35008f5bc474b8f64b1d50c1b0f49",
+          "requestId": "1b253420a1f342ae8ebcfc9c6997d0d6",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -1354,13 +1355,13 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "5dc07645a76c723a6f53fc47ad765b7521b5e820bfb0a1cc7517f7978fea3fff",
+              "bodyDigest": "342d727953978eb76bcd2d4fe797571f5f024ab001a6c2a8dd6b43ad56e06faa",
               "outputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
             }
           ]
         },
         {
-          "requestId": "ada5f6c551cc492992bb5961eba6dfe9",
+          "requestId": "74451dc83f56464eb5dc1b512fc409d1",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -1371,7 +1372,7 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "913656c3e5e9be37370422e00b84f1dc48c1bd9c1bf0f3df78f2d9e9913bd822",
+              "bodyDigest": "b03c11dd094f2475d509a030ddb662e8bdcf90c952df46731a026804bcc44307",
               "outputDigest": "a3ba86ce9dc2c9f4aa8f02aaa3725daefb92bd48840fa7f5101af09cac784227"
             }
           ]
@@ -1380,19 +1381,19 @@
       "reservations": 0,
       "scope": {
         "phase": "initial",
-        "started": 1789422780037,
-        "deadline": 1789423380037,
+        "started": 1789424344558,
+        "deadline": 1789424944558,
         "spent": 2,
         "state": "active"
       },
       "decisionTimes": [
         {
-          "requestId": "2db35008f5bc474b8f64b1d50c1b0f49",
-          "at": 1789422780096
+          "requestId": "1b253420a1f342ae8ebcfc9c6997d0d6",
+          "at": 1789424344655
         },
         {
-          "requestId": "ada5f6c551cc492992bb5961eba6dfe9",
-          "at": 1789422780169
+          "requestId": "74451dc83f56464eb5dc1b512fc409d1",
+          "at": 1789424344730
         }
       ],
       "durabilityEnded": null,
@@ -1430,7 +1431,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "33d0e3cee1114d5532b7b6f4c6e76f5921e65a6d33bea0359623fad76c142af9",
+          "bodyDigest": "0774d41bc0daf2f77371a57f695d0fc12c983a410a291f0a9cc8a7eba9454db7",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -1471,7 +1472,7 @@
       "decisions": [],
       "receipts": [
         {
-          "requestId": "17ec5c1ef29b40e08dc727c721bb128e",
+          "requestId": "b711a5d540d84bdea71ded51ba021f05",
           "known": true,
           "quiescent": false,
           "handlerDone": 1,
@@ -1482,7 +1483,7 @@
               "model": "gpt-6-astra",
               "terminal": "unknown",
               "localStop": "original_eof",
-              "bodyDigest": "33d0e3cee1114d5532b7b6f4c6e76f5921e65a6d33bea0359623fad76c142af9",
+              "bodyDigest": "0774d41bc0daf2f77371a57f695d0fc12c983a410a291f0a9cc8a7eba9454db7",
               "outputDigest": null
             }
           ]
@@ -1491,8 +1492,8 @@
       "reservations": 1,
       "scope": {
         "phase": "initial",
-        "started": 1789422780915,
-        "deadline": 1789423380915,
+        "started": 1789424345940,
+        "deadline": 1789424945940,
         "spent": 1,
         "state": "active"
       },
@@ -1532,7 +1533,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "8a112db9d19540f093fe1f1fa17156167c9762b6f65398510ccb335c8dd076b6",
+          "bodyDigest": "5f24ae3c3b6ad9c40167c1a186df4d07e5c99c0b366dce15ecaea2fe1fe2100a",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -1570,7 +1571,7 @@
         },
         {
           "path": "/responses",
-          "bodyDigest": "a4b1d2204134ac508d925a3d31d17cf852dbf68154c2b8cdcdd4048162ad92a0",
+          "bodyDigest": "e14bb130ba5a6443fd3f9bc557d6aa9c0edc57490840f095a41317a0612f845a",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -1609,8 +1610,8 @@
       ],
       "completions": [
         {
-          "requestId": "1c1227ded29e4d64ad220069e2e0ee0e",
-          "acceptedAt": 1789422781845,
+          "requestId": "7034261b937541399da5bc859180ac8b",
+          "acceptedAt": 1789424347423,
           "calls": [
             "call_synthetic"
           ]
@@ -1618,18 +1619,18 @@
       ],
       "decisions": [
         {
-          "requestId": "1c1227ded29e4d64ad220069e2e0ee0e",
+          "requestId": "7034261b937541399da5bc859180ac8b",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "efa78b2f609ca078e26a24ca2666b4bfbe36b71905c4bcf1a9031184bdac05cc",
-          "decisionDigest": "d4160b2b483ae6cfcc28336d5d174c3400aefe3e4700c2b4e177c8751499da91",
-          "receiptDigest": "839850c45940cd3d5b8fdb1cd383f119d83bccf1c81a364c8918616fb85c5776",
+          "requestDigest": "c5680ea5c61275a879763bb86722753a6d6ab7b932a46f0140b111ce81e28ce5",
+          "decisionDigest": "3e3f60076d79b82fa294f0428bc05d8e251fb3287120069b587258df47f2921e",
+          "receiptDigest": "75c66332b4324f8d55169e6ba388f99910ed9f50e23a4f5ca69f7cd93a44869f",
           "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
         }
       ],
       "receipts": [
         {
-          "requestId": "1c1227ded29e4d64ad220069e2e0ee0e",
+          "requestId": "7034261b937541399da5bc859180ac8b",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -1640,13 +1641,13 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "8a112db9d19540f093fe1f1fa17156167c9762b6f65398510ccb335c8dd076b6",
+              "bodyDigest": "5f24ae3c3b6ad9c40167c1a186df4d07e5c99c0b366dce15ecaea2fe1fe2100a",
               "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
             }
           ]
         },
         {
-          "requestId": "9d4239938a124c1ab0b0bc5d8bf67312",
+          "requestId": "da4c0f4d42504046bc6654a38fcf28bf",
           "known": true,
           "quiescent": false,
           "handlerDone": 1,
@@ -1657,7 +1658,7 @@
               "model": "gpt-6-astra",
               "terminal": "unknown",
               "localStop": "original_eof",
-              "bodyDigest": "a4b1d2204134ac508d925a3d31d17cf852dbf68154c2b8cdcdd4048162ad92a0",
+              "bodyDigest": "e14bb130ba5a6443fd3f9bc557d6aa9c0edc57490840f095a41317a0612f845a",
               "outputDigest": null
             }
           ]
@@ -1666,15 +1667,15 @@
       "reservations": 1,
       "scope": {
         "phase": "initial",
-        "started": 1789422781763,
-        "deadline": 1789423381763,
+        "started": 1789424347311,
+        "deadline": 1789424947311,
         "spent": 2,
         "state": "active"
       },
       "decisionTimes": [
         {
-          "requestId": "1c1227ded29e4d64ad220069e2e0ee0e",
-          "at": 1789422781843
+          "requestId": "7034261b937541399da5bc859180ac8b",
+          "at": 1789424347420
         }
       ],
       "durabilityEnded": null,
@@ -1712,7 +1713,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "108d6da3ead800833c9076201ae2bce32655f41e05eeafb10aa861667eae09b4",
+          "bodyDigest": "9f8adf6485c8c234b54442e89d4b7ac046a18978962a929cef2953017d1ee233",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -1750,7 +1751,7 @@
         },
         {
           "path": "/responses",
-          "bodyDigest": "aecb71ba6297184fbcce00d730679135fc21b2649e218d90fd97e0df551c6f36",
+          "bodyDigest": "bb7ffb819a1de754293205b9927af48233f72faf795fe1b42510ccdbd6a6014a",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -1789,25 +1790,25 @@
       ],
       "completions": [
         {
-          "requestId": "ee22cae2c660474aa83d87809c9a6148",
-          "acceptedAt": 1789422782644,
+          "requestId": "dc3dd669cfb042d9badb64bdea743583",
+          "acceptedAt": 1789424348616,
           "calls": []
         }
       ],
       "decisions": [
         {
-          "requestId": "ee22cae2c660474aa83d87809c9a6148",
+          "requestId": "dc3dd669cfb042d9badb64bdea743583",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "8c2885b5838416e888c17f6dced8399bf7c003d0016eb75c82c509dc2bc6c4ab",
-          "decisionDigest": "b4e19c0fd159303ee73eb24fd27dc1cd9c171f499dd586f2e1f0d6a58c47b191",
-          "receiptDigest": "fa1888563bcfc8ab9470329bcda6e5a7ea4e4a3e971f039509134d47a5048f9a",
+          "requestDigest": "e21997e0a03753dc0fc68bab5ce5c5cc642e410d47dac4efaca2ba2e31811b74",
+          "decisionDigest": "dc0f8c2d3f134ceeabf26838945d995560c73827dc8fee38c7d124097976f303",
+          "receiptDigest": "1181848ea36f03c20463ee9917ba7195167511e6b373058eff0c72659c581e8b",
           "nativeOutputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
         }
       ],
       "receipts": [
         {
-          "requestId": "ee22cae2c660474aa83d87809c9a6148",
+          "requestId": "dc3dd669cfb042d9badb64bdea743583",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -1818,13 +1819,13 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "108d6da3ead800833c9076201ae2bce32655f41e05eeafb10aa861667eae09b4",
+              "bodyDigest": "9f8adf6485c8c234b54442e89d4b7ac046a18978962a929cef2953017d1ee233",
               "outputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
             }
           ]
         },
         {
-          "requestId": "0c9d48dd78ce40d9864608e070932dd1",
+          "requestId": "5c343043555146b1857ee274af9c6e79",
           "known": true,
           "quiescent": false,
           "handlerDone": 1,
@@ -1835,7 +1836,7 @@
               "model": "gpt-6-astra",
               "terminal": "unknown",
               "localStop": "original_eof",
-              "bodyDigest": "aecb71ba6297184fbcce00d730679135fc21b2649e218d90fd97e0df551c6f36",
+              "bodyDigest": "bb7ffb819a1de754293205b9927af48233f72faf795fe1b42510ccdbd6a6014a",
               "outputDigest": null
             }
           ]
@@ -1844,15 +1845,15 @@
       "reservations": 1,
       "scope": {
         "phase": "initial",
-        "started": 1789422782575,
-        "deadline": 1789423382575,
+        "started": 1789424348536,
+        "deadline": 1789424948536,
         "spent": 2,
         "state": "active"
       },
       "decisionTimes": [
         {
-          "requestId": "ee22cae2c660474aa83d87809c9a6148",
-          "at": 1789422782641
+          "requestId": "dc3dd669cfb042d9badb64bdea743583",
+          "at": 1789424348614
         }
       ],
       "durabilityEnded": null,
@@ -1890,7 +1891,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "6abb8d8b549583eef8cd114f175b8159cd90c24267300535f30c82b953d283b2",
+          "bodyDigest": "91085dcaaf9344ac0618a9d995d6e6c90e35c31c890d4196017b64dfc73ca4bc",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -1928,7 +1929,7 @@
         },
         {
           "path": "/responses",
-          "bodyDigest": "0a8c81c6b27aca31b99d12d189b7bf1a10f76bf3c7572b27fc47be80eb77d7fb",
+          "bodyDigest": "af49d43426bab68ed85818d473550b00d6b3a378bcc83cf05333ab95cbec524b",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -1967,41 +1968,41 @@
       ],
       "completions": [
         {
-          "requestId": "3a2efc6269d94630b792788d30d6275f",
-          "acceptedAt": 1789422783518,
+          "requestId": "489d7db2424a4a098b328907763f5b1a",
+          "acceptedAt": 1789424349742,
           "calls": [
             "call_synthetic"
           ]
         },
         {
-          "requestId": "87e19750b7c7475ab79cfe5074314e07",
-          "acceptedAt": 1789422783589,
+          "requestId": "de7e88a2052d4e3eb41fdb4f182de33e",
+          "acceptedAt": 1789424349829,
           "calls": []
         }
       ],
       "decisions": [
         {
-          "requestId": "3a2efc6269d94630b792788d30d6275f",
+          "requestId": "489d7db2424a4a098b328907763f5b1a",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "fd051b3361cdd4c6d126a6216301153b68dadf17ee7af558913eaf3508ef81d1",
-          "decisionDigest": "129ec7b707b8d6f319a1a5f0012af0d9acb034032527533ec59cad21ff9ec583",
-          "receiptDigest": "602a404f4f7615fceececa1ac3e0060ff951c6aacee349e9231cdfa387847fe5",
+          "requestDigest": "be2e09b29091700c73ca98ef6d0c940d8bd1963ffe1c634e9a05dc3963a5de27",
+          "decisionDigest": "ee77e142b1c1a2904facb14fc06190aa4b984ea3c80fa9e8ac71f0e511880836",
+          "receiptDigest": "d918f13f405a78326601aee96200c94109b114e2dd6858f479b4ec9af80d705d",
           "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
         },
         {
-          "requestId": "87e19750b7c7475ab79cfe5074314e07",
+          "requestId": "de7e88a2052d4e3eb41fdb4f182de33e",
           "verdict": "validated_success",
           "delivery": "completed",
-          "requestDigest": "3b6781f49edbba8abf7d8bfeb1feefc6a5bd75bddf7c8cda5118f4c95cf9da6f",
-          "decisionDigest": "12f639aaa5b5be66a448afaa83ecf97089af3bc59e01eaf78871551300f6469e",
-          "receiptDigest": "a3640e250dbd66bbc30a54a6f987304e425602c11f283376b5125f6812a9faa6",
-          "nativeOutputDigest": "3ffef45b82822639c0ce38e385fb51ee4e0a606dcec659d98ea6fde3c4e045fa"
+          "requestDigest": "53ceed48b247e600fca5cacf6b53a0ca30c16b2fc85a356fe3ba114af931c91c",
+          "decisionDigest": "9c66c05f5beab9ecb963a0e7c7392f9d3477dd8cbafe03fc5cfeee7f08e77d68",
+          "receiptDigest": "7d3d280cf4b5c7c654f1b4af143a31184e1d1cbaece7bf5ede7bfd1e203e5a58",
+          "nativeOutputDigest": "70be1b1e9e2164fae01a9afa46b8d1ee3845d0f572d4bd8dd83ed1ca93ef2abf"
         }
       ],
       "receipts": [
         {
-          "requestId": "3a2efc6269d94630b792788d30d6275f",
+          "requestId": "489d7db2424a4a098b328907763f5b1a",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -2012,13 +2013,13 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "6abb8d8b549583eef8cd114f175b8159cd90c24267300535f30c82b953d283b2",
+              "bodyDigest": "91085dcaaf9344ac0618a9d995d6e6c90e35c31c890d4196017b64dfc73ca4bc",
               "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
             }
           ]
         },
         {
-          "requestId": "87e19750b7c7475ab79cfe5074314e07",
+          "requestId": "de7e88a2052d4e3eb41fdb4f182de33e",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -2029,8 +2030,8 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "0a8c81c6b27aca31b99d12d189b7bf1a10f76bf3c7572b27fc47be80eb77d7fb",
-              "outputDigest": "3ffef45b82822639c0ce38e385fb51ee4e0a606dcec659d98ea6fde3c4e045fa"
+              "bodyDigest": "af49d43426bab68ed85818d473550b00d6b3a378bcc83cf05333ab95cbec524b",
+              "outputDigest": "70be1b1e9e2164fae01a9afa46b8d1ee3845d0f572d4bd8dd83ed1ca93ef2abf"
             }
           ]
         }
@@ -2038,19 +2039,19 @@
       "reservations": 0,
       "scope": {
         "phase": "initial",
-        "started": 1789422783445,
-        "deadline": 1789423383445,
+        "started": 1789424349644,
+        "deadline": 1789424949644,
         "spent": 2,
         "state": "active"
       },
       "decisionTimes": [
         {
-          "requestId": "3a2efc6269d94630b792788d30d6275f",
-          "at": 1789422783516
+          "requestId": "489d7db2424a4a098b328907763f5b1a",
+          "at": 1789424349740
         },
         {
-          "requestId": "87e19750b7c7475ab79cfe5074314e07",
-          "at": 1789422783588
+          "requestId": "de7e88a2052d4e3eb41fdb4f182de33e",
+          "at": 1789424349828
         }
       ],
       "durabilityEnded": null,
@@ -2088,7 +2089,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "ba37674226c1295aa18d7e986956fb138953c9d2b195a348caa3edcf74d1dc38",
+          "bodyDigest": "629f3756fd0c2b9b85d8e642e8a262500dd896f31395369f7daca8f6abce192f",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -2129,7 +2130,7 @@
       "decisions": [],
       "receipts": [
         {
-          "requestId": "851034c6914c4d60b9758d1db86a3f05",
+          "requestId": "4a56d57e59a64ff6a9ec3342e09d86e7",
           "known": true,
           "quiescent": false,
           "handlerDone": 1,
@@ -2140,7 +2141,7 @@
               "model": "gpt-6-astra",
               "terminal": "unknown",
               "localStop": "original_error",
-              "bodyDigest": "ba37674226c1295aa18d7e986956fb138953c9d2b195a348caa3edcf74d1dc38",
+              "bodyDigest": "629f3756fd0c2b9b85d8e642e8a262500dd896f31395369f7daca8f6abce192f",
               "outputDigest": null
             }
           ]
@@ -2149,8 +2150,8 @@
       "reservations": 1,
       "scope": {
         "phase": "initial",
-        "started": 1789422784334,
-        "deadline": 1789423384334,
+        "started": 1789424350807,
+        "deadline": 1789424950807,
         "spent": 1,
         "state": "active"
       },
@@ -2190,7 +2191,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "ea1a2eecef3929bae66305265d79aaae46d9d30104a518c50131361bfd87aff7",
+          "bodyDigest": "175e3600da6a281457cd2ad452b30b81fec4ff72d59372d19eae59a0839804dd",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -2231,7 +2232,7 @@
       "decisions": [],
       "receipts": [
         {
-          "requestId": "a6c6dc7a80b24232870e5383966a54e3",
+          "requestId": "89fc52d0245e4f6892b031179f1b4b00",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -2242,7 +2243,7 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "ea1a2eecef3929bae66305265d79aaae46d9d30104a518c50131361bfd87aff7",
+              "bodyDigest": "175e3600da6a281457cd2ad452b30b81fec4ff72d59372d19eae59a0839804dd",
               "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
             }
           ]
@@ -2251,8 +2252,8 @@
       "reservations": 1,
       "scope": {
         "phase": "initial",
-        "started": 1789422785136,
-        "deadline": 1789423385136,
+        "started": 1789424352027,
+        "deadline": 1789424952027,
         "spent": 1,
         "state": "active"
       },
@@ -2292,7 +2293,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "d42937882450495d290124e6c4ee1859b74d51195868aa20d5cfcaf6222dfe9a",
+          "bodyDigest": "3606f7b2a13b6668d2fe7c31f4935cf160d692de2f7e7fef3c6f431624bf6613",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -2332,18 +2333,18 @@
       "completions": [],
       "decisions": [
         {
-          "requestId": "5ba053fa973943839ae8ae2ded758df4",
+          "requestId": "750c5a556adf4eac89e2accf764ee366",
           "verdict": "validated_success",
           "delivery": "cancelled_unknown",
-          "requestDigest": "e58c9cecafb6105f9433c5a9367c20bdd3a75043e158e62baac02f43b2a4edce",
-          "decisionDigest": "596ca23d432d6aaf19aa143793a2697300570cca903084c2c7583a2979cb7633",
-          "receiptDigest": "640c27bc0bb6f034f74e0d2545b1bfd73a6df1dce28e7558fe7606d95d79f73d",
+          "requestDigest": "e3831ba419b33b2946353fb30d5a9243e4729183a50643550024d5444dd00065",
+          "decisionDigest": "ed04a9ebdce17482285657888dc3295d56f6b8e0957312e29ab96ac89a0b625c",
+          "receiptDigest": "59b8ebf49d34b32b712a202bd03d578eb88c9e1d6b97a26556371b2ca02948e9",
           "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
         }
       ],
       "receipts": [
         {
-          "requestId": "5ba053fa973943839ae8ae2ded758df4",
+          "requestId": "750c5a556adf4eac89e2accf764ee366",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -2354,7 +2355,7 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "d42937882450495d290124e6c4ee1859b74d51195868aa20d5cfcaf6222dfe9a",
+              "bodyDigest": "3606f7b2a13b6668d2fe7c31f4935cf160d692de2f7e7fef3c6f431624bf6613",
               "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
             }
           ]
@@ -2363,13 +2364,13 @@
       "reservations": 0,
       "scope": {
         "phase": "initial",
-        "started": 1789422785947,
-        "deadline": 1789422787447,
+        "started": 1789424353243,
+        "deadline": 1789424354743,
         "spent": 1,
         "state": "active"
       },
       "decisionTimes": [],
-      "durabilityEnded": 1789422787678,
+      "durabilityEnded": 1789424354987,
       "fault": {
         "mode": "release-scope",
         "triggered": 0,
@@ -2404,7 +2405,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "179e5e8462587e7f9a1c42596b135731c0aa84bf0117e02bc7ab3c770440e193",
+          "bodyDigest": "f35a2c8f1074620c31692addff6f1a78696da02004cd299644f95db66a348fac",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -2444,18 +2445,18 @@
       "completions": [],
       "decisions": [
         {
-          "requestId": "7af2cbacba024a1ea09687de683d019b",
+          "requestId": "c0b9f12cb05e40d1b2231833fed22678",
           "verdict": "validated_success",
           "delivery": "cancelled_unknown",
-          "requestDigest": "5683a950415a4ea53403015954dd575ad77dc7da2a8a7a2388a7a707f9cd23c9",
-          "decisionDigest": "ff704f78355077241e964b76aa0a185d8112f5c2eda83ecfddb29aed5efcee5b",
-          "receiptDigest": "49b80e512735171df0fd3f5504f7996428900f68a614d6946e764c03fff7feb3",
+          "requestDigest": "7c55e14f4d1b4878399dfebbba3c1342ca9dbcca964343b0adde7d038b97d3f0",
+          "decisionDigest": "30a053480dbd463b648efb71fcea697df8a5d0f001df0d4a1349fd55b11120e5",
+          "receiptDigest": "de3c31e7ceb0a5cd779c47d7acf1e6fdfbd5f2f0ff7f04af94bba6f7670a654a",
           "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
         }
       ],
       "receipts": [
         {
-          "requestId": "7af2cbacba024a1ea09687de683d019b",
+          "requestId": "c0b9f12cb05e40d1b2231833fed22678",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -2466,7 +2467,7 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "179e5e8462587e7f9a1c42596b135731c0aa84bf0117e02bc7ab3c770440e193",
+              "bodyDigest": "f35a2c8f1074620c31692addff6f1a78696da02004cd299644f95db66a348fac",
               "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
             }
           ]
@@ -2475,13 +2476,13 @@
       "reservations": 0,
       "scope": {
         "phase": "initial",
-        "started": 1789422788403,
-        "deadline": 1789423388403,
+        "started": 1789424356085,
+        "deadline": 1789424956085,
         "spent": 1,
         "state": "active"
       },
       "decisionTimes": [],
-      "durabilityEnded": 1789422789395,
+      "durabilityEnded": 1789424357090,
       "fault": {
         "mode": "release-request",
         "triggered": 0,
@@ -2516,7 +2517,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "e3a0e1be5c78a7f55ca65d67712b1a297a1e9b4beca9f6811c44e8135ce3b235",
+          "bodyDigest": "abbf2ba4493d4a01282676b5e109b26cd6dcff4c5ac342f7d14d2348744f2ce6",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -2556,18 +2557,18 @@
       "completions": [],
       "decisions": [
         {
-          "requestId": "b3380cf88deb4b1bb24aabeab6f8e3f5",
+          "requestId": "5c443a98010a446daa9e8a8f633b92c7",
           "verdict": "validated_success",
           "delivery": "cancelled_unknown",
-          "requestDigest": "230399600c6b13883b5ae8d54a37d7b3d3e918861faeb46003f65c1c90f4db19",
-          "decisionDigest": "d3e0f60ad4a40a0545844afeb79fa917fdf01277bde6e63d9cbf6a9656cab460",
-          "receiptDigest": "224fe781fc824773cb77cd532e0f2c10cf74042bac3b4222cb9cdb5f7f06d726",
+          "requestDigest": "5d6e8b7c76abecf386b6452c89a91031f739a9058fb48d4a7d09fdeb5117ae16",
+          "decisionDigest": "d5b1d218aff272f3354dc48d7c3dd257cabecc433d741beba0d6fa39dc24b0c1",
+          "receiptDigest": "0a10126ed316c68b38a391442d9f471777af9c017059a7768146178d4dc7a63c",
           "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
         }
       ],
       "receipts": [
         {
-          "requestId": "b3380cf88deb4b1bb24aabeab6f8e3f5",
+          "requestId": "5c443a98010a446daa9e8a8f633b92c7",
           "known": true,
           "quiescent": true,
           "handlerDone": 1,
@@ -2578,7 +2579,7 @@
               "model": "gpt-6-astra",
               "terminal": "provider_completed",
               "localStop": "original_eof",
-              "bodyDigest": "e3a0e1be5c78a7f55ca65d67712b1a297a1e9b4beca9f6811c44e8135ce3b235",
+              "bodyDigest": "abbf2ba4493d4a01282676b5e109b26cd6dcff4c5ac342f7d14d2348744f2ce6",
               "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
             }
           ]
@@ -2587,13 +2588,13 @@
       "reservations": 0,
       "scope": {
         "phase": "initial",
-        "started": 1789422790157,
-        "deadline": 1789423390157,
+        "started": 1789424358025,
+        "deadline": 1789424958025,
         "spent": 1,
         "state": "active"
       },
       "decisionTimes": [],
-      "durabilityEnded": 1789422791139,
+      "durabilityEnded": 1789424359014,
       "fault": {
         "mode": "release-lease",
         "triggered": 0,
@@ -2628,7 +2629,7 @@
       "physicalRequests": [
         {
           "path": "/responses",
-          "bodyDigest": "0e93eb4c74c1853947007b17b53b8aa73d647fb584ede2677f5a74acd0c04909",
+          "bodyDigest": "5c18cff0d44ecc7387f1f0ee2fc90003bc781a68df80f1ebb0c59fbe72c1de15",
           "model": "gpt-6-astra",
           "reasoning": {
             "effort": "xhigh",
@@ -2669,7 +2670,7 @@
       "decisions": [],
       "receipts": [
         {
-          "requestId": "18c2e8bb90d94e4381ec6c43f48d15bd",
+          "requestId": "fc18db5afdb749339b95e3a87a6f0acb",
           "known": true,
           "quiescent": false,
           "handlerDone": 1,
@@ -2680,7 +2681,7 @@
               "model": "gpt-6-astra",
               "terminal": "unknown",
               "localStop": "original_cancel",
-              "bodyDigest": "0e93eb4c74c1853947007b17b53b8aa73d647fb584ede2677f5a74acd0c04909",
+              "bodyDigest": "5c18cff0d44ecc7387f1f0ee2fc90003bc781a68df80f1ebb0c59fbe72c1de15",
               "outputDigest": null
             }
           ]
@@ -2689,8 +2690,8 @@
       "reservations": 1,
       "scope": {
         "phase": "initial",
-        "started": 1789422791924,
-        "deadline": 1789423391924,
+        "started": 1789424360386,
+        "deadline": 1789424960386,
         "spent": 1,
         "state": "active"
       },
@@ -2727,7 +2728,7 @@
       "experiments/router-authority-extension/overlay/planner-plan-schema.mjs",
       "experiments/router-authority-extension/overlay/native-responses.mjs",
       "experiments/router-authority-extension/overlay/responses-terminal.mjs",
-      "experiments/router-authority-extension/overlay/evaluation-scope.mjs",
+      "experiments/router-authority-extension/overlay/scope-profile.mjs",
       "tests/fixtures/planner/fixture.txt",
       "tests/fixtures/planner/plan.schema.json"
     ],
@@ -2799,6 +2800,7 @@
         "/router-source",
         "/probe",
         "/gaffer",
+        "/consumer/experiments/router-authority-extension/overlay/evaluation-scope.mjs",
         "/var/run/docker.sock",
         "/Users",
         "/consumer/experiments/native-evaluation",
@@ -2846,29 +2848,29 @@
     "invalidCandidateSubmissions": 6,
     "acknowledgement": {
       "acknowledged": true,
-      "digest": "566e1efbc0d854784ce8892996306064bf23f327525a0d356881e774eb52f233",
-      "file": "candidate-566e1efbc0d854784ce8892996306064bf23f327525a0d356881e774eb52f233.json"
+      "digest": "857b558e5b4ef4b9b5937074e67c2506b60314af33c5b44924bb59e2ca0f7b99",
+      "file": "candidate-857b558e5b4ef4b9b5937074e67c2506b60314af33c5b44924bb59e2ca0f7b99.json"
     },
     "accepted": {
       "outcome": "acknowledged_plan_proposal",
-      "artifactDigest": "566e1efbc0d854784ce8892996306064bf23f327525a0d356881e774eb52f233",
+      "artifactDigest": "857b558e5b4ef4b9b5937074e67c2506b60314af33c5b44924bb59e2ca0f7b99",
       "requestIds": [
-        "f42656d46f6749f8a16a21cf2244ac13",
-        "e304204ca233494bb78e69715eff10c6"
+        "39d239a7651b45faad6a7e258499f0f0",
+        "21cac1657ddc488fad46db06363c344a"
       ],
       "authority": "proposal_only",
       "independentlyAccepted": false,
       "published": false
     },
-    "durableCandidateDigest": "566e1efbc0d854784ce8892996306064bf23f327525a0d356881e774eb52f233",
+    "durableCandidateDigest": "857b558e5b4ef4b9b5937074e67c2506b60314af33c5b44924bb59e2ca0f7b99",
     "immutableAfterGatewayStop": true,
     "scopeBefore": {
       "id": "initial_checks",
       "phase": "initial",
       "spec": "{\"authorizationDigest\":\"8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3\",\"caseRef\":\"initial_checks\",\"elapsedMs\":600000,\"id\":\"initial_checks\",\"maxInferenceAttempts\":10,\"maxRefreshOperations\":0,\"phase\":\"initial\"}",
-      "boot": "3c173b4f-98af-4a59-9604-1f15f6062d26",
-      "started": 1789422774362,
-      "deadline": 1789423374362,
+      "boot": "f8aa87c8-b8e0-43dc-8ebc-18e8582bd188",
+      "started": 1789424335410,
+      "deadline": 1789424935410,
       "spent": 2,
       "state": "active"
     },
@@ -2876,9 +2878,9 @@
       "id": "initial_checks",
       "phase": "initial",
       "spec": "{\"authorizationDigest\":\"8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3\",\"caseRef\":\"initial_checks\",\"elapsedMs\":600000,\"id\":\"initial_checks\",\"maxInferenceAttempts\":10,\"maxRefreshOperations\":0,\"phase\":\"initial\"}",
-      "boot": "3c173b4f-98af-4a59-9604-1f15f6062d26",
-      "started": 1789422774362,
-      "deadline": 1789423374362,
+      "boot": "f8aa87c8-b8e0-43dc-8ebc-18e8582bd188",
+      "started": 1789424335410,
+      "deadline": 1789424935410,
       "spent": 2,
       "state": "active"
     },
@@ -3217,14 +3219,15 @@
       "experiments/router-authority-extension/overlay/authority.mjs": "7d6f3e460169d99b6b8af2e4935d26f3ff36678e66f80f5f70f4f64fb38b7e86",
       "experiments/router-authority-extension/overlay/chat-terminal.mjs": "07e06cde6caeb1f0fd5bcbac0be9d6a7486afb3c34de7d77f8b414a8335009c0",
       "experiments/router-authority-extension/overlay/deployment-owner.mjs": "a3ef177075816bc6c4de14b943864e72a56a4bde12b8021b48032a7b4ed8e6d2",
-      "experiments/router-authority-extension/overlay/evaluation-scope.mjs": "01708987b54a7fc95e1a6839c87e88382f10a811ef2e6793730702ec1cdb5c4d",
+      "experiments/router-authority-extension/overlay/evaluation-scope.mjs": "816fc21ffec05e223bb1fc3970f90746c720db83f1d2d9d8413807c20fcb7702",
       "experiments/router-authority-extension/overlay/native-planner.mjs": "2aaa3a5a50f03ad612abfcef36722705f49ed92c973c13988027a84cd9a94ef2",
-      "experiments/router-authority-extension/overlay/native-profile.mjs": "cb1d8e0bab160ba69ef1b6effcf0c9e9469798b516d3102bb43a3b5dcfd85fd0",
+      "experiments/router-authority-extension/overlay/native-profile.mjs": "307134694b3c5a70ea1582b4c933bacd14236cb23518edd62ba768ac685851bc",
       "experiments/router-authority-extension/overlay/native-responses.mjs": "79927f64a911da1b4ee1427a7ff3f7de225c303deefdc5d84188d2b4a70c0642",
       "experiments/router-authority-extension/overlay/native-transport.mjs": "f151b6363016e5edff5273b9a16aea4eb6f1b8cc86c7dbff4e7ea562f76d8f6c",
       "experiments/router-authority-extension/overlay/opencode-profile.mjs": "2ff535ca043db2fa0269b0b430daa2e3786a4daec9f143420e7b0c2181eb55ca",
       "experiments/router-authority-extension/overlay/planner-plan-schema.mjs": "1af55197a0f44d69867be5987c116d4e7066950fb9a951cab6da689c6aa75f1d",
       "experiments/router-authority-extension/overlay/responses-terminal.mjs": "d4e2e792b631f4101db6dc7c0d679f3ace4aee428a2c70d386a34cf56bc415f1",
+      "experiments/router-authority-extension/overlay/scope-profile.mjs": "c71f6caaf4f5dce1c00a2ced23b369be7ea6681ae725c366bbba08b8570ea689",
       "experiments/router-authority-extension/package.json": "1b028cc34bbf05e89d4a3b9842da17d384e5997a1736f863ef8ca70d57c92a7a",
       "experiments/router-authority-extension/patches.mjs": "0eeb206a3b22ffaf921e04277a8aeec271d21eb860a6f70c9dfcf9be7a69e168",
       "experiments/router-authority-extension/policy-regressions.mjs": "cf72e099290577f244f597ad84280a2598fd2452855e4169ff87d4bb551712b7",
@@ -3236,23 +3239,25 @@
       "experiments/router-authority-extension/transport-failures.mjs": "e4c99a65df8dcb7ef18ec1e34378c3a0b27797e5551b900b83cbc9f1b834dc8e",
       "experiments/router-authority-extension/upstream-dependencies.lock.json": "87551d12f5d946cc1c98cf8e01cb4ec7d632f67dff0fb3554d0f556881843d05",
       "experiments/router-authority-extension/upstream-package.json": "670515d6f190581be53f98f7e4a8764ab0a1ac3bc60858466ebfaea59fc77de7",
-      "experiments/planner-probe/capabilities.ts": "6d9f7315fd1c2a28f561071c13ae4c621832260b5e587e18e69169535362dc71",
+      "experiments/planner-probe/capabilities.ts": "d2e5ee897888ba8cd9cf6e59602f55e1c124af9a290573a30f017efcfb28aad8",
       "experiments/planner-probe/demo.ts": "25d1927331fb70f0f0552bc19006bee7bbb36b63fdd315e06d6ae236538680a6",
       "experiments/planner-probe/evidence/legacy-regression-run.json": "92cd7c32d8620e435ba680c12f5d86e6a1d8c8cba30244b5dba625a745766537",
+      "experiments/planner-probe/evidence/native-integration-run.json": "7688ceb9231cc9336073bbb0fe1e137b2acc9a27985c95eb18e1fbf2b412eef4",
       "experiments/planner-probe/evidence/native-preparation-run.json": "c7f7f1f39a53f1dd077c93b734dcc1a92d32a66765eb66d46cf4e2146687e089",
       "experiments/planner-probe/fixture.ts": "45aa35907e1c8c4c6b4d16e6d83ff54c841fc32bb62cdf89c1034812509d0860",
       "experiments/planner-probe/native-boundary-port.ts": "6f151e6ea79ef42c8995e202441181c38f41293d59cc58109c2b0012765a3933",
-      "experiments/planner-probe/native-consumer.ts": "2269ff039e7500de142952ed919ee882d0ea8e9b8e44c8e289a0687436341c4a",
+      "experiments/planner-probe/native-collect.ts": "f5cc55b0823d061fbb24bd6418849b3884d45bed1dd5ce92a89e6260bab13403",
+      "experiments/planner-probe/native-consumer.ts": "fa7ac36685794c4d0fb3007b651387235f02f9888d274eef4894e57a2c52be2f",
       "experiments/planner-probe/native-evidence.ts": "930ae551140337a2164d26151161e385dcfc085401fa168004bc8b59bfe8ee1b",
       "experiments/planner-probe/native-fixture.ts": "5d5b04df0a4e9c98c7bbe2fd239f820931194c71dada14a3c8274e415efcc3a2",
       "experiments/planner-probe/native-gateway-prove.ts": "0ab4c7ce3e708766cbf96c8826dd1f2fd188d8eb8ff165fb64e5aa3b30c39ab2",
       "experiments/planner-probe/native-planner.test.ts": "d285a65a3570820cbe42ce28af27e6d87214a5f0c0c788e6e98d8d38c9fb1907",
       "experiments/planner-probe/native-profile.ts": "ce4a2256e2ff58136c6f9cf419e4f59254a00930e0c7a93972d7196ef9dd4a1a",
-      "experiments/planner-probe/native-prove.ts": "3aeeda4c193d6dfcd1cab3fb95f00ebc2e8c8013964b466b5366ebfb77807d24",
+      "experiments/planner-probe/native-prove.ts": "2ba02175c380ceba556b4fe3b5c81e0a13c19fe0413d32dc1042f8ea969aae97",
       "experiments/planner-probe/native-router-integration.mjs": "2af5e28d46e845c6cab92d753f89346316d6fe1f8f483cc816c60a79d61e085c",
-      "experiments/planner-probe/native-router-prove.ts": "1841e23b851add83cd595c0e2c39e30202b1afada5402a0f7a968dea4728edb6",
+      "experiments/planner-probe/native-router-prove.ts": "0f88e847036d0487945af719f54c6b5d2a42e79d4823bdd04d370b09f2a65917",
       "experiments/planner-probe/native-shared.test.ts": "df8778ebb060445e7213a3e564e6c147c357fc7e1ab1c52c0a6db44b510f8134",
-      "experiments/planner-probe/native-staging.ts": "bdf27b6fce8c16f1df89f06356d42eb47b1b05d25d154ef73cb60419adf9db54",
+      "experiments/planner-probe/native-staging.ts": "d81d39689a9855466eb21b07089714084eba9600beccf5291fd2803f185fb685",
       "experiments/planner-probe/native-transport.ts": "88e4bc9c65d497f0dca4cf3ef3e4580160835eaa350cca70f47015ba6c98c118",
       "experiments/planner-probe/package-lock.json": "8a9a9881e0d48b3e98a52ffc56a81344b15a004c9827efc387edf733126e7237",
       "experiments/planner-probe/package.json": "1986909d3de242b5964d4bbf2f658b2d738547ddadd51da6755177d57d59f067",
@@ -3261,9 +3266,9 @@
       "experiments/planner-probe/prove.ts": "756086a5101c958434e57685323bbd009db469fa9458b48b659584a13d531902",
       "experiments/planner-probe/public-fixture.ts": "017a70154c329347744e3303c5d55d9d669d751647b5f5d2d87d2c1329e8b85c",
       "experiments/planner-probe/reader.ts": "de2930b80a6c0dd9336910dad74b4668019a4629540a6f91677f0ee8bff370dc",
-      "experiments/planner-probe/router-consumer.ts": "b5cdb384760b1e8c0b15c22ebc2acc95dec640d89aa29f5bcb19dcccc2d6a78e",
+      "experiments/planner-probe/router-consumer.ts": "7cbd5988228a004a37c9deb1b6d6c20a7b739d272a86b3eab0fc37eb1b0427d3",
       "experiments/planner-probe/router-gateway.ts": "cafd9013af6d297bf504ad2f9d5b0ce69cb757c71ce0d6731023f5334cbc0a05",
-      "experiments/planner-probe/router-prove.ts": "80bfb5ce9d574d58d248f8be0b5d2ca574eb0fd1adb9436fd5187b1222c89638",
+      "experiments/planner-probe/router-prove.ts": "7eb37a04959a1fcc297350f38df836f772ee22fdfe2dfa9162c81feec84831a7",
       "experiments/planner-probe/router-supervise.ts": "2b9c2f56338a08d4c704bcb1b28c5fa0a974d4482bb63afbf17a8fe881aa70d7",
       "experiments/planner-probe/transport.ts": "ca79a9a5586c90e25f05d24c8eb2baefcec55ebe7113f8aecb3f4e2b669d1f28",
       "experiments/planner-probe/tsconfig.json": "9656dff150d8ce8e649ab7932a8e9148a20a55ffbaf87cf63cc1a7f7e52d52cf",
