@@ -51,7 +51,7 @@ the contract. `acceptance.decision` stays null until human review, including whe
 the process has already terminated. Follow-up remains open for seven days after
 acceptance. Run `node tests/fixtures/tasks/check.ts` from the repository root to
 check the committed candidate/example/template invariants. CI runs the same check,
-including rejection of five mutations that falsely claim measurement evidence.
+including rejection of thirteen mutations that falsely claim measurement evidence.
 These design records remain unregistered: future frozen registrations and real run
 records are separate reviewed artifacts. This checker is not a run collector or
 general observation validator and cannot establish evidence or label authenticity.

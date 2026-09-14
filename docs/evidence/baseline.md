@@ -212,7 +212,7 @@ npm --prefix docs run check
 These commands check the design-record semantics and existing documentation reader.
 The fixture checker verifies that the proposed cases remain unregistered, synthetic
 examples remain excluded from measurement, and the template contains no run or
-acceptance observations; five invalid-claim mutations exercise those checks. It does
+acceptance observations; thirteen invalid-claim mutations exercise those checks. It does
 not collect live evidence, authenticate operator labels, establish route readiness
 or validate future run records. No application test suite is introduced.
 

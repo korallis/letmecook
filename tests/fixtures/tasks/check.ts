@@ -58,9 +58,12 @@ function validate(intake: unknown, development: unknown, template: unknown) {
   for (const field of ['operatorIntervals', 'attempts', 'checks', 'rawObservations', 'usage', 'defects', 'budgetOverruns']) {
     assert.deepEqual(template[field], [], 'template contains observations');
   }
-  record(template.acceptance); assert.equal(template.acceptance.decision, null);
-  assert.equal(template.acceptance.operatorId, null); assert.deepEqual(template.acceptance.criteria, []);
-  record(template.followUp); assert.equal(template.followUp.completedAt, null);
+  assert.deepEqual(template.acceptance, {
+    decision: null, operatorId: null, labelledAt: null, criteria: [], scopeBreach: null, artifactRef: null, reason: null,
+  }, 'template contains acceptance observations');
+  assert.deepEqual(template.followUp, {
+    startedAt: null, dueAt: null, completedAt: null, evidenceRef: null,
+  }, 'template contains follow-up observations');
 }
 
 const load = (name: string): unknown => JSON.parse(readFileSync(new URL(`${name}.json`, import.meta.url), 'utf8'));
@@ -75,4 +78,15 @@ for (const [index, field, value] of [
   record(mutated[index]); mutated[index][field] = value;
   assert.throws(() => validate(...mutated), 'invalid evidence claim was accepted');
 }
-console.log('Baseline design records verified: 3 unregistered candidates, 6 excluded synthetic examples, unstarted template; 5 invalid claims rejected. No live evidence or human labels validated.');
+for (const [group, fields] of Object.entries({
+  acceptance: ['labelledAt', 'scopeBreach', 'artifactRef', 'reason'],
+  followUp: ['startedAt', 'dueAt', 'completedAt', 'evidenceRef'],
+})) {
+  for (const field of fields) {
+    const mutated = structuredClone(inputs);
+    record(mutated[2]); const observation = mutated[2][group]; record(observation);
+    observation[field] = field === 'scopeBreach' ? true : 'invented-observation';
+    assert.throws(() => validate(...mutated), 'nested template observation was accepted');
+  }
+}
+console.log('Baseline design records verified: 3 unregistered candidates, 6 excluded synthetic examples, unstarted template; 13 invalid claims rejected. No live evidence or human labels validated.');
