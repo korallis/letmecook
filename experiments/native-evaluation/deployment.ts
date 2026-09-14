@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { execFile,spawn } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile,writeFile,open,mkdir,readdir,rename,lstat,realpath } from 'node:fs/promises';
+import { readFile,writeFile,open,mkdir,readdir,rename,lstat,realpath,unlink } from 'node:fs/promises';
 import { resolve,dirname,join,basename } from 'node:path';
 import { randomBytes,createHash } from 'node:crypto';
 import { commonArgs } from '../router-boundary-bridge/isolation.ts';
@@ -16,10 +16,16 @@ assert(recordArgument&&['prepare','inspect','start','select','grant','stop'].inc
 if(command==='prepare')await mkdir(dirname(requestedRecordPath),{recursive:true,mode:0o700});
 const parent=await realpath(dirname(requestedRecordPath)),parentState=await lstat(parent);assert(parentState.isDirectory()&&parentState.uid===process.getuid()&&(parentState.mode&0o077)===0,'private_record_directory_required');
 const recordPath=join(parent,basename(requestedRecordPath));
+const commandLockPath=recordPath+'.command.lock';
+const commandLock=await open(commandLockPath,'wx',0o600);
+try{await commandLock.writeFile(JSON.stringify({pid:process.pid,command})+'\n');await commandLock.sync();await run();}
+finally{await commandLock.close();await unlink(commandLockPath);}
+async function run(){
 if(command!=='prepare'){const existing=await lstat(recordPath);assert(existing.isFile()&&!existing.isSymbolicLink()&&existing.uid===process.getuid()&&(existing.mode&0o077)===0,'private_record_file_required');}
 const context=process.env.GAFFER_DOCKER_CONTEXT??'desktop-linux',image='gaffer-router-extension-deps:0.5.75-locked',helper='sha256:482b25318f295c63cfe19108c7c465039f7d98336c20b7f9db564fdd03af9cc0',label='dev.gaffer.native-deployment';
 let record:any=command==='prepare'?{schema:1,run:'native-'+randomBytes(8).toString('hex'),phase:'preparing',containers:[],transient:[],volumes:[],commands:[],packet:null}:JSON.parse(await readFile(recordPath,'utf8'));
-async function save(){const temporary=recordPath+'.'+randomBytes(12).toString('hex')+'.next';const f=await open(temporary,'wx',0o600);try{await f.writeFile(JSON.stringify(record,null,2)+'\n');await f.sync();}finally{await f.close();}await rename(temporary,recordPath);const d=await open(dirname(recordPath),'r');try{await d.sync();}finally{await d.close();}}
+let recordOwned=command!=='prepare';
+async function save(){assert(recordOwned,'deployment_record_not_owned');const temporary=recordPath+'.'+randomBytes(12).toString('hex')+'.next';const f=await open(temporary,'wx',0o600);try{await f.writeFile(JSON.stringify(record,null,2)+'\n');await f.sync();}finally{await f.close();}await rename(temporary,recordPath);const d=await open(dirname(recordPath),'r');try{await d.sync();}finally{await d.close();}}
 async function docker(args:string[],timeout=15000){record.commands.push(args);const result=await execute('docker',['--context',context,...args],{timeout,maxBuffer:8*1024*1024});return(result.stdout+(args[0]==='logs'?result.stderr:'')).trim();}
 const inspect=async(name:string)=>JSON.parse(await docker(['inspect',name]))[0];
 async function owned(name:string){const s=await inspect(name);assert.equal(s.Config.Labels[label],record.run);return s;}
@@ -37,7 +43,7 @@ async function control(message:any){
 }
 try{
  if(command==='prepare'){
-  assert(input&&sourceArgument,'input directory and public source required');await mkdir(dirname(recordPath),{recursive:true,mode:0o700});const guard=await open(recordPath,'wx',0o600);await guard.close();await save();
+  assert(input&&sourceArgument,'input directory and public source required');await mkdir(dirname(recordPath),{recursive:true,mode:0o700});const guard=await open(recordPath,'wx',0o600);recordOwned=true;await guard.close();await save();
   const directory=resolve(input),source=resolve(sourceArgument),profile=validateNativeProfile(JSON.parse(await readFile(join(directory,'profile.json'),'utf8'))),config=JSON.parse(await readFile(join(directory,'config.json'),'utf8')),destination=JSON.parse(await readFile(join(directory,'relay.json'),'utf8'));
   let candidates;try{candidates=JSON.parse(await readFile(join(directory,'profiles.json'),'utf8'));}catch(error:any){if(error.code!=='ENOENT')throw error;candidates=[profile];}const profiles=validateNativeRegistry(candidates);assert.equal(digest(profiles[0]),digest(profile),'primary profile mismatch');
   const synthetic=profile.evidence==='synthetic';reviewedAddress(destination.address,synthetic);assert.equal(destination.evidence,synthetic?'synthetic':'reviewed-deployment');
@@ -65,13 +71,15 @@ try{
   else if(command==='start'){assert.equal(record.phase,'prepared');assert.equal(input,record.packet.packetDigest,'reviewed packet digest required');record.scope=await control({command:'start',packetDigest:input});record.phase='started';await save();console.log(JSON.stringify({scope:record.scope}));}
   else if(command==='select'){assert(['prepared','started'].includes(record.phase));assert(input);record.selection=await control({command:'select',packetDigest:record.packet.packetDigest,profileDigest:input});await save();console.log(JSON.stringify(record.selection));}
   else if(command==='grant'){assert.equal(record.phase,'started');assert(input);const binding=JSON.parse(await readFile(resolve(input),'utf8'));const grant=await control({command:'grant',binding});await save();console.log(JSON.stringify(grant));}
-  else{await control({command:'stop'});await docker(['wait',record.gateway]);await docker(['kill','--signal','SIGTERM',record.relay]);await docker(['wait',record.relay]);for(const name of record.containers){const s=await owned(name);assert.equal(s.State.Pid,0);assert.equal(s.State.OOMKilled,false);await assert.rejects(docker(['exec',name,'true']));}record.phase='stopped';record.persistentStateRetained=true;await save();console.log(JSON.stringify({phase:'stopped',stateVolume:record.stateVolume,record:recordPath}));}
+  else{await control({command:'stop'});assert.equal(Number(await docker(['wait',record.gateway])),0,'gateway_stop_failed');await docker(['kill','--signal','SIGTERM',record.relay]);assert.equal(Number(await docker(['wait',record.relay])),0,'relay_stop_failed');for(const name of record.containers){const s=await owned(name);assert.equal(s.State.Pid,0);assert.equal(s.State.OOMKilled,false);await assert.rejects(docker(['exec',name,'true']));}record.phase='stopped';record.persistentStateRetained=true;await save();console.log(JSON.stringify({phase:'stopped',stateVolume:record.stateVolume,record:recordPath}));}
  }
 }catch(error){
+ // An incumbent record grants no cleanup or replacement authority to this attempt.
+ if(!recordOwned)throw error;
  record.failure=String(error);record.phase='closed_failure';
  // Failed journal persistence must never prevent the independent physical fence.
  const fencing=await Promise.allSettled([...new Set<string>([...record.transient,...record.containers])].map(async name=>{const s=await owned(name);if(s.State.Running)await docker(['kill',name]);const stopped=await owned(name);assert.equal(stopped.State.Pid,0);}));
  record.failureFencing=fencing.map(x=>x.status);try{await save();}catch{/* Retain prior durable record, SQLite and owner locks for supervised recovery. */}
  throw error;
 }
-
+}

@@ -10,4 +10,9 @@ fs.promises.open=async function(path,...args){
  if(target&&process.env.GAFFER_TEST_RECORD_FAILURE_MODE==='sync')handle.sync=async()=>{throw Object.assign(Error('injected_record_sync_failure'),{code:'EIO'});};
  return handle;
 };
+const originalRead=fs.promises.readFile;
+fs.promises.readFile=async function(path,...args){
+ if(path===process.env.GAFFER_TEST_PAUSE_RECORD){await fs.promises.writeFile(path+'.paused','ready');while(!fs.existsSync(path+'.resume'))await new Promise(r=>setTimeout(r,10));}
+ return originalRead.call(this,path,...args);
+};
 syncBuiltinESMExports();

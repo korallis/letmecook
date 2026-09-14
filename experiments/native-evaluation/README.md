@@ -65,6 +65,8 @@ supervisor. `bootstrap.mjs` verifies its source/runtime manifest before gateway
 or database evaluation. A private configuration volume supplies only the gateway;
 the relay and nftables helper receive only their destination/rules files. Host
 records require a private directory and use exclusive random temporary files.
+An exclusive command lock serializes record reads and updates. Duplicate prepare
+and concurrent commands fail without changing an incumbent record or processes.
 Persistent record open/fsync failure fences owned containers independently of
 record saving and retains SQLite plus the owner lock for supervised recovery.
 Changing a Boolean or endpoint does not turn synthetic evidence into deployed
@@ -111,6 +113,9 @@ one owner; these controls do not require changing an optional source host.
 `run-deployment.ts` exercises prepare/start/selection/stop without inference. Its
 `open` and `sync` variants inject host-record persistence failure after scope
 start and verify physical fencing, unchanged SQLite scope and retained ownership.
+The `gateway-stop` variant prevents gateway result persistence and requires a
+failed stop plus the same retained ownership and physical fencing. Every variant
+also verifies duplicate prepare and overlapping-command denial.
 `portable-run.mjs` executes source regressions on CI's reported runtime without
 claiming that it matches the measured Docker Desktop/Linux ARM64 profile.
 

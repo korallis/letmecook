@@ -137,12 +137,16 @@ packet. The private `start` command requires that packet's reviewed digest. Prep
 all intended consumers and review their controls before issuing it.
 
 Host records require a private directory and use exclusive random temporary
-files, fsync and rename. The gateway stores budgets, receipts, journal decisions
+files, fsync and rename. An exclusive command lock is acquired before reading
+the record; duplicate preparation preserves the incumbent bytes and processes,
+and overlapping commands cannot overwrite state with an older snapshot. The gateway stores budgets, receipts, journal decisions
 and acknowledged artifacts outside disposable tmpfs. Normal stop persists state;
 container/process-tree checks verify exit, no OOM and denied post-stop execution.
 Injected persistent host-record open and fsync failures after start still fence
 the owned containers independently of record writing, retaining the unchanged
-SQLite scope and deployment owner lock.
+SQLite scope and deployment owner lock. Failed gateway result persistence also
+returns a failed stop, retains ownership and fences both containers; a zero exit
+from the stop supervisor requires successful gateway and relay exits.
 
 Consumer supervisors stop their own trees before the shared gateway/relay. State
 volumes are retained by deployment controls. Recovery requires verified old-process
