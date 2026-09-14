@@ -8,14 +8,14 @@ const request: RunRequest = JSON.parse(bytes.toString('utf8')); validateRunReque
 assertExecutionEnvironment();
 if (createFixture('/work/repo') !== request.baseSHA) throw Error('fixture_base_mismatch');
 const transport = await relay(request.token, 65536);
-let parked = false;
+let parked = false, stopRequested = false;
+let result: Awaited<ReturnType<typeof start>["done"]>;
 try {
-  const handle = start(request); for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => { if (parked) process.exit(0); void handle.cancel(); });
-  const result = await handle.done;
-  // The supervisor must retain this observation even when classification fails.
-  await new Promise<void>((resolve, reject) => process.stdout.write(JSON.stringify({ event: 'native_worker_observation', result, requests: transport.observations }) + '\n', e => e ? reject(e) : resolve()));
+  const handle = start(request); for (const signal of ['SIGTERM', 'SIGINT'] as const) process.on(signal, () => { stopRequested = true; if (parked) process.exit(0); void handle.cancel(); });
+  result = await handle.done;
 } finally { await transport.close(); }
-// The supervisor reads this tmpfs through the immutable inspector before it
-// acknowledges a candidate and tears down the container. Bound abandoned holds.
+// Observation ready also means the relay has closed and immediate stop is safe.
 parked = true;
-await delay(10000);
+await new Promise<void>((resolve, reject) => process.stdout.write(JSON.stringify({ event: 'native_worker_observation', result, requests: transport.observations }) + '\n', e => e ? reject(e) : resolve()));
+// Retain tmpfs for the trusted read, unless an active cancellation requested stop.
+if (!stopRequested) await delay(10000);
