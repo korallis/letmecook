@@ -17,6 +17,8 @@ async function run(file,scenario,{native=false,data=scenario,expectedSignal=null
 }
 results.push(await run('integration.mjs','main'));
 results.push(await run('policy-regressions.mjs','policy-reserved-keys'));
+results.push(await run('request-regressions.mjs','request-compatible'));
+results.push(await run('request-regressions.mjs','request-native',{native:true}));
 results.push(await run('integration.mjs','unknown'));
 results.push(await run('integration.mjs','crash',{data:'crash',expectedSignal:'SIGKILL'}));
 results.push(await run('integration.mjs','restart',{data:'crash'}));

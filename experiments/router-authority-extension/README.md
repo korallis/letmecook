@@ -131,6 +131,33 @@ SHA-256 fingerprint of the retained full sanitized policy document.
 
 ## Exact profiles and limitations
 
+Both profiles accept the same deliberately narrow Chat request envelope: `model`,
+`messages`, `stream:true`, `max_tokens`, and optional function `tools`. Explicit
+`temperature` and every `tool_choice` value are rejected before admission, including
+`auto`, `none`, `required` and named-function choices. The pinned Chat-to-Responses
+translator drops tool choice, and Codex deletes temperature; this candidate does
+not claim to preserve them. Native removal of the mandatory `max_tokens` field
+remains the separately declared provider-output-bound incompatibility below.
+
+Function declarations and historical calls have closed outer/nested objects;
+`strict` (including false), hosted tools, unknown controls, trimmed/overlong names,
+missing or rewritten call IDs, and malformed argument strings reject. Tool names
+and call IDs use 1–64 ASCII letters, digits, underscores or hyphens. A request has
+1–64 text messages, up to eight unique function declarations, and up to eight
+calls per assistant message. There may be one initial nonempty system message;
+non-tool text messages must be nonblank. Every historical call must have one
+matching tool result before subsequent messages or admission, and call IDs cannot
+repeat. Tool-result strings may be empty; assistant tool-only content is null.
+Ordinary tools and a matched two-call continuation are verified on both real
+executor paths, including preserved IDs, arguments, results and schema fields.
+
+Function parameters must supply an object schema with an explicit `properties`
+object. The candidate uses the pinned Codex schema helper to reject any schema it
+would transform; preserved literal escape patterns and a property named `pattern`
+remain accepted. This is a check for known transformations, not a general JSON
+Schema validator, provider strict-output guarantee, or worker tool allowlist.
+Those consumer permissions and final/tool acceptance remain in #79.
+
 The synthetic compatible profile supports only flat named fallback combos containing
 literal `openai-compatible-*` node IDs and unambiguous model IDs. Nodes and every
 connection must agree on a loopback HTTP Chat Completions endpoint and API type.
@@ -182,11 +209,13 @@ consume that integration. Quiescence alone also includes provider failure/incomp
 outcomes.
 
 The [evidence record](../../docs/evidence/router-authority-extension.md) preserves
-two blocking defects found in the first independent review and the second review's
-P2 reserved-key policy-projection bypass, alongside their corrected actual-router
-regressions. The second review demonstrated changed effective alias/pricing lookups,
-not unapproved inference. Passing a previous suite did not establish conformance;
-the corrected commit requires a fresh final review.
+two blocking defects found in the first independent review, the second review's
+P2 reserved-key policy-projection bypass, and the third review's P2 silently dropped
+native request controls, alongside their corrected actual-router regressions.
+The latter reviews demonstrated changed alias/pricing lookups and lost request
+controls, respectively; neither demonstrated unapproved inference or hosted-tool
+execution. Passing a previous suite did not establish conformance; the corrected
+commit requires a fresh final review.
 
 No deployment was selected, configuration/credentials copied, provider inference
 sent, package published, upstream repository changed, or human baseline invented.

@@ -53,6 +53,7 @@ are not a new worker-isolation certification.
 | Original error and refresh cleanup | Oversized, malformed UTF-8/JSON, wrong content type and invalid refresh bodies abort the request and close the original response after one physical send. Neither later retries nor credential persistence occur. |
 | Deadline and cancellation before original EOF | Stalled error JSON and Codex's first-event peek obey the real 30-second request deadline. Cancelling complete JSON without EOF retains unknown evidence; local disposal never supplies remote quiescence. |
 | Native streamed tool consistency | Added tool identity, incremental arguments and complete snapshots must agree. The review's identity/delta drift and duplicate argument keys reject before successful output or terminal settlement. |
+| Request envelope and ordinary continuation | Both profiles reject 38 unsupported request shapes with zero sends and no receipt. Ordinary function declarations and matched two-call continuation preserve the tested native/compatible wire fields. |
 | Unsupported graph | Enabled default adapters, unsupported native live profiles, MITM bypass and non-loopback/unclassified production endpoints fail closed. |
 
 Fifty original-stream observer tests pass in the locked isolated runtime, covering
@@ -82,7 +83,7 @@ The correction owns each physical transport until original EOF or local disposal
 aborts and cancels every size/decode/validation failure, fences later retries, and
 retains active cancellation/deadline bookkeeping until outstanding local cleanup
 settles. Native item identities and per-index content channels are now reconciled
-through incremental and completed events. The recorded run includes 38 scenarios,
+through incremental and completed events. The recorded run includes 40 scenarios,
 including 12 actual HTTP cleanup/deadline cases and three native review regressions.
 Closing the synthetic HTTP response is local cleanup evidence; affected remote
 operations remain unknown and block replacement. A new independent final review
@@ -101,6 +102,26 @@ alias/pricing lookups, allowed health writes, and four privileged-writer readbac
 failures that leave admission closed. The full integration replay also retains
 successful stock native refresh behavior. This correction again requires a new
 independent final review.
+
+The third fresh review at `461cb2f372d88689dd6aed6cd3e1fe3ed060bd7e` found
+another P2: native requests accepted function `strict:true`, tool choices (`none`,
+`required`, named function and unsupported hosted choice) and `temperature:0`,
+then returned completed receipts although the actual upstream request omitted
+those controls. The [original observations and exact reproduction/log hashes](router-authority-extension-review-461cb2f.json)
+are retained. This demonstrated lost controls, not unapproved provider/account/model
+selection, hosted-tool execution or false remote quiescence.
+
+The common request envelope now rejects explicit temperature/tool choice and uses
+closed tool/function/call shapes before durable admission. It rejects fields and
+shapes the pinned path would rewrite, matches historical call IDs/results, and
+uses the actual pinned schema helper to detect removed pattern constraints. It
+does not implement general JSON Schema validation or #79's worker tool allowlists.
+The new native and compatible HTTP regressions each reject 38 request shapes with
+zero sends and unknown request IDs, then accept ordinary tools and matched two-call
+continuation with exact relevant upstream wire assertions. Those positives include
+preserved escaped literal patterns and a property actually named `pattern`. All
+50 observer tests were rerun after the envelope correction. A new independent
+final review is still required for this corrected commit.
 
 ## Remaining gates
 

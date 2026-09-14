@@ -4,6 +4,7 @@ import { mergeWithDefaults } from '../src/lib/db/repos/settingsRepo.js';
 import { existsSync } from 'node:fs';
 import { createResponsesTerminalObserver } from './responses-terminal.mjs';
 import { createChatTerminalObserver } from './chat-terminal.mjs';
+import { stripCodexUnsupportedPatterns } from 'open-sse/utils/codexToolSchema.js';
 
 const context = new AsyncLocalStorage();
 let instance;
@@ -21,6 +22,55 @@ const nativeEndpoint = 'http://127.0.0.1:47771/responses';
 const nativeRefreshEndpoint = 'http://127.0.0.1:47771/token';
 const mitmHosts = ['cloudcode-pa.googleapis.com','daily-cloudcode-pa.googleapis.com','api.individual.githubcopilot.com','q.us-east-1.amazonaws.com','codewhisperer.us-east-1.amazonaws.com','api2.cursor.sh'];
 const closedKeys = (value, allowed) => requireThat(value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).every(k => allowed.includes(k)), 'unsupported_policy_field');
+const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+const toolName = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(value);
+const toolId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(value);
+
+function validateRequest(body) {
+  // Explicit tool_choice and temperature are unsupported by this common profile:
+  // the pinned native path drops them, so they are outside this envelope.
+  closedKeys(body, ['model','messages','stream','max_tokens','tools']);
+  requireThat(body.stream === true && Number.isInteger(body.max_tokens) && body.max_tokens > 0 && body.max_tokens <= 1024 && Array.isArray(body.messages) && body.messages.length > 0 && body.messages.length <= 64, 'unsupported_request');
+  if (Object.hasOwn(body,'tools')) {
+    requireThat(Array.isArray(body.tools) && body.tools.length > 0 && body.tools.length <= 8, 'unsupported_tools');
+    const names=new Set();
+    for(const tool of body.tools){
+      closedKeys(tool,['type','function']);closedKeys(tool.function,['name','description','parameters']);
+      const fn=tool.function;
+      requireThat(tool.type==='function' && toolName(fn.name) && !names.has(fn.name), 'unsupported_tools');names.add(fn.name);
+      requireThat(!Object.hasOwn(fn,'description') || typeof fn.description==='string' && fn.description.length>0, 'unsupported_tool_description');
+      requireThat(object(fn.parameters) && fn.parameters.type==='object' && object(fn.parameters.properties), 'unsupported_tool_parameters');
+      // Schema data is not generally validated here. Refuse the precise schema
+      // transformation performed by the pinned Codex executor, using its helper.
+      requireThat(canonical(stripCodexUnsupportedPatterns(fn.parameters))===canonical(fn.parameters), 'unsupported_tool_schema_mutation');
+    }
+  }
+  const pending=new Set(),seen=new Set();
+  let system=false;
+  for(const [index,m] of body.messages.entries()){
+    requireThat(object(m), 'unsupported_message');
+    if(m.role==='assistant'){
+      closedKeys(m,['role','content','tool_calls']);
+      requireThat(!pending.size && (typeof m.content==='string' && m.content.trim().length>0 || m.content===null && Object.hasOwn(m,'tool_calls')), 'unsupported_message');
+      if(Object.hasOwn(m,'tool_calls')){
+        requireThat(Array.isArray(m.tool_calls) && m.tool_calls.length>0 && m.tool_calls.length<=8, 'unsupported_tool_call');
+        for(const call of m.tool_calls){
+          closedKeys(call,['id','type','function']);closedKeys(call.function,['name','arguments']);
+          requireThat(call.type==='function' && toolId(call.id) && !seen.has(call.id) && toolName(call.function.name) && typeof call.function.arguments==='string' && object(JSON.parse(call.function.arguments)), 'unsupported_tool_call');
+          pending.add(call.id);seen.add(call.id);
+        }
+      }
+    }else if(m.role==='tool'){
+      closedKeys(m,['role','content','tool_call_id']);
+      requireThat(typeof m.content==='string' && toolId(m.tool_call_id) && pending.delete(m.tool_call_id), 'unsupported_tool_result');
+    }else{
+      closedKeys(m,['role','content']);
+      requireThat(!pending.size && ['system','user'].includes(m.role) && typeof m.content==='string' && m.content.trim().length>0, 'unsupported_message');
+      if(m.role==='system'){requireThat(!system && index===0 && body.messages.length>1, 'unsupported_system_messages');system=true;}
+    }
+  }
+  requireThat(!pending.size, 'unmatched_tool_calls');
+}
 
 // A closed supported graph, not a best-effort redaction of arbitrary router JSON.
 export function project(payload) {
@@ -220,14 +270,8 @@ export function installAuthority(db) {
       const bodyText = new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks));
       const admittedRequest=new Request(request.url,{method:request.method,headers:request.headers,body:bodyText,signal:request.signal});
       const body = JSON.parse(bodyText);
-      closedKeys(body, ['model','messages','stream','max_tokens','temperature','tools','tool_choice']);
-      requireThat(new URL(request.url).pathname === '/v1/chat/completions' && body.stream === true && Number.isInteger(body.max_tokens) && body.max_tokens > 0 && body.max_tokens <= 1024 && Array.isArray(body.messages), 'unsupported_request');
-      for (const m of body.messages) {
-        closedKeys(m, ['role','content','tool_calls','tool_call_id','name']);
-        requireThat(['system','user','assistant','tool'].includes(m.role) && (typeof m.content === 'string' || m.content === null && m.role === 'assistant'), 'unsupported_message');
-        if (m.tool_calls) requireThat(Array.isArray(m.tool_calls) && m.tool_calls.every(t => t.type === 'function' && typeof t.function?.name === 'string' && typeof t.function?.arguments === 'string'), 'unsupported_tool_call');
-      }
-      if (body.tools) requireThat(Array.isArray(body.tools) && body.tools.every(t => t.type === 'function' && typeof t.function?.name === 'string'), 'unsupported_tools');
+      requireThat(new URL(request.url).pathname === '/v1/chat/completions', 'unsupported_request');
+      validateRequest(body);
       const id = request.headers.get('x-gaffer-request-id');
       const generation = Number(request.headers.get('x-gaffer-generation')); const revision = request.headers.get('x-gaffer-revision');
       requireThat(ref(id), 'invalid_request_id');

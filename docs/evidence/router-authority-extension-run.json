@@ -42,7 +42,7 @@
           "result": "passed",
           "receipt": {
             "id": "complete_request",
-            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+            "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
             "generation": 2,
             "revision": "revision_1",
             "route": "gaffer-synthetic",
@@ -53,7 +53,7 @@
               {
                 "request_id": "complete_request",
                 "ordinal": 1,
-                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+                "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
                 "generation": 2,
                 "revision": "revision_1",
                 "provider": "openai-compatible-synthetic",
@@ -93,7 +93,7 @@
           "result": "passed",
           "receipt": {
             "id": "fallback_request",
-            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+            "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
             "generation": 3,
             "revision": "revision_2",
             "route": "gaffer-synthetic",
@@ -104,7 +104,7 @@
               {
                 "request_id": "fallback_request",
                 "ordinal": 1,
-                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+                "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
                 "generation": 3,
                 "revision": "revision_2",
                 "provider": "openai-compatible-synthetic",
@@ -116,7 +116,7 @@
               {
                 "request_id": "fallback_request",
                 "ordinal": 2,
-                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+                "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
                 "generation": 3,
                 "revision": "revision_2",
                 "provider": "openai-compatible-synthetic",
@@ -134,7 +134,7 @@
           "result": "passed",
           "receipt": {
             "id": "retry_cancel",
-            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+            "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
             "generation": 3,
             "revision": "revision_2",
             "route": "gaffer-synthetic",
@@ -145,7 +145,7 @@
               {
                 "request_id": "retry_cancel",
                 "ordinal": 1,
-                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+                "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
                 "generation": 3,
                 "revision": "revision_2",
                 "provider": "openai-compatible-synthetic",
@@ -190,7 +190,7 @@
           "result": "passed",
           "receipt": {
             "id": "identity_drift",
-            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+            "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
             "generation": 10,
             "revision": "revision_5",
             "route": "gaffer-synthetic",
@@ -201,7 +201,7 @@
               {
                 "request_id": "identity_drift",
                 "ordinal": 1,
-                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+                "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
                 "generation": 10,
                 "revision": "revision_5",
                 "provider": "openai-compatible-synthetic",
@@ -219,7 +219,7 @@
           "result": "passed",
           "receipt": {
             "id": "error_with_finish",
-            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+            "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
             "generation": 10,
             "revision": "revision_5",
             "route": "gaffer-synthetic",
@@ -230,7 +230,7 @@
               {
                 "request_id": "error_with_finish",
                 "ordinal": 1,
-                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+                "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
                 "generation": 10,
                 "revision": "revision_5",
                 "provider": "openai-compatible-synthetic",
@@ -248,7 +248,7 @@
           "result": "passed",
           "receipt": {
             "id": "incomplete_tool",
-            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+            "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
             "generation": 10,
             "revision": "revision_5",
             "route": "gaffer-synthetic",
@@ -259,7 +259,7 @@
               {
                 "request_id": "incomplete_tool",
                 "ordinal": 1,
-                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+                "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
                 "generation": 10,
                 "revision": "revision_5",
                 "provider": "openai-compatible-synthetic",
@@ -277,7 +277,7 @@
           "result": "passed",
           "receipt": {
             "id": "partial_request",
-            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+            "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
             "generation": 10,
             "revision": "revision_5",
             "route": "gaffer-synthetic",
@@ -288,7 +288,7 @@
               {
                 "request_id": "partial_request",
                 "ordinal": 1,
-                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
+                "boot": "8d716494-2328-45b8-aa25-0a3a7e16b46c",
                 "generation": 10,
                 "revision": "revision_5",
                 "provider": "openai-compatible-synthetic",
@@ -499,6 +499,880 @@
       "unknownScopeRejected": true
     },
     {
+      "scenario": "request-compatible",
+      "regressionOf": "461cb2f372d88689dd6aed6cd3e1fe3ed060bd7e",
+      "native": false,
+      "rejected": [
+        {
+          "id": "strict_true",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "strict_false",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_none",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_required",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_auto",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_function",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_hosted",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_null",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "temperature_zero",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "parallel_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "structured_output",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "hosted_tool",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "tool_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "function_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "empty_tools",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "null_tools",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "missing_parameters",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "malformed_parameters",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "missing_properties",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "removed_pattern",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "trimmed_name",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "truncated_name",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "duplicate_tools",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "named_message",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "hosted_message",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "user_tool_calls",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "call_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "call_function_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "missing_call_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "malformed_arguments",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "primitive_arguments",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "orphan_result",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "unmatched_call",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "duplicate_call",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "duplicate_system",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "late_system",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "empty_messages",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "blank_message",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        }
+      ],
+      "accepted": [
+        {
+          "id": "ordinary_tools",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "function": {
+                  "name": "read_file",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            ],
+            "messages": [
+              {
+                "role": "system",
+                "content": "Synthetic system instructions"
+              },
+              {
+                "role": "user",
+                "content": "Read synthetic text"
+              }
+            ]
+          },
+          "receipt": {
+            "id": "ordinary_tools",
+            "boot": "6db50ff9-2da3-422e-96fc-cbd65a4c3d7f",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "ordinary_tools",
+                "ordinal": 1,
+                "boot": "6db50ff9-2da3-422e-96fc-cbd65a4c3d7f",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_terminal",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "matched_continuation",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "function": {
+                  "name": "read_file",
+                  "description": "Read synthetic text",
+                  "parameters": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string",
+                        "pattern": "^.+$"
+                      },
+                      "pattern": {
+                        "type": "string",
+                        "pattern": "\\\\p{Cc}"
+                      }
+                    },
+                    "required": [
+                      "path"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            ],
+            "messages": [
+              {
+                "role": "system",
+                "content": "Synthetic system instructions"
+              },
+              {
+                "role": "user",
+                "content": "Read synthetic text"
+              },
+              {
+                "role": "assistant",
+                "content": null,
+                "tool_calls": [
+                  {
+                    "id": "call_synthetic_1",
+                    "type": "function",
+                    "function": {
+                      "name": "read_file",
+                      "arguments": "{\"path\":\"synthetic-one.txt\"}"
+                    }
+                  },
+                  {
+                    "id": "call_synthetic_2",
+                    "type": "function",
+                    "function": {
+                      "name": "read_file",
+                      "arguments": "{\"path\":\"synthetic-two.txt\"}"
+                    }
+                  }
+                ]
+              },
+              {
+                "role": "tool",
+                "tool_call_id": "call_synthetic_2",
+                "content": ""
+              },
+              {
+                "role": "tool",
+                "tool_call_id": "call_synthetic_1",
+                "content": "Synthetic file contents"
+              }
+            ]
+          },
+          "receipt": {
+            "id": "matched_continuation",
+            "boot": "6db50ff9-2da3-422e-96fc-cbd65a4c3d7f",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "matched_continuation",
+                "ordinal": 1,
+                "boot": "6db50ff9-2da3-422e-96fc-cbd65a4c3d7f",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_terminal",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        }
+      ],
+      "sends": 2,
+      "liveAcceptance": false
+    },
+    {
+      "scenario": "request-native",
+      "regressionOf": "461cb2f372d88689dd6aed6cd3e1fe3ed060bd7e",
+      "native": true,
+      "rejected": [
+        {
+          "id": "strict_true",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "strict_false",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_none",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_required",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_auto",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_function",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_hosted",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "choice_null",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "temperature_zero",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "parallel_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "structured_output",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "hosted_tool",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "tool_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "function_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "empty_tools",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "null_tools",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "missing_parameters",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "malformed_parameters",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "missing_properties",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "removed_pattern",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "trimmed_name",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "truncated_name",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "duplicate_tools",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "named_message",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "hosted_message",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "user_tool_calls",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "call_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "call_function_control",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "missing_call_id",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "malformed_arguments",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "primitive_arguments",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "orphan_result",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "unmatched_call",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "duplicate_call",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "duplicate_system",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "late_system",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "empty_messages",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        },
+        {
+          "id": "blank_message",
+          "status": 503,
+          "sends": 0,
+          "receiptKnown": false,
+          "quiescent": false
+        }
+      ],
+      "accepted": [
+        {
+          "id": "ordinary_tools",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "name": "read_file",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "input": [
+              {
+                "type": "message",
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Read synthetic text"
+                  }
+                ]
+              }
+            ],
+            "instructions": "Synthetic system instructions"
+          },
+          "receipt": {
+            "id": "ordinary_tools",
+            "boot": "c680d03b-b3a0-438c-88a0-e81d227c1424",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "ordinary_tools",
+                "ordinal": 1,
+                "boot": "c680d03b-b3a0-438c-88a0-e81d227c1424",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "id": "matched_continuation",
+          "wire": {
+            "tools": [
+              {
+                "type": "function",
+                "name": "read_file",
+                "description": "Read synthetic text",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "pattern": "^.+$"
+                    },
+                    "pattern": {
+                      "type": "string",
+                      "pattern": "\\\\p{Cc}"
+                    }
+                  },
+                  "required": [
+                    "path"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            ],
+            "input": [
+              {
+                "type": "message",
+                "role": "user",
+                "content": [
+                  {
+                    "type": "input_text",
+                    "text": "Read synthetic text"
+                  }
+                ]
+              },
+              {
+                "type": "function_call",
+                "call_id": "call_synthetic_1",
+                "name": "read_file",
+                "arguments": "{\"path\":\"synthetic-one.txt\"}"
+              },
+              {
+                "type": "function_call",
+                "call_id": "call_synthetic_2",
+                "name": "read_file",
+                "arguments": "{\"path\":\"synthetic-two.txt\"}"
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call_synthetic_2",
+                "output": ""
+              },
+              {
+                "type": "function_call_output",
+                "call_id": "call_synthetic_1",
+                "output": "Synthetic file contents"
+              }
+            ],
+            "instructions": "Synthetic system instructions"
+          },
+          "receipt": {
+            "id": "matched_continuation",
+            "boot": "c680d03b-b3a0-438c-88a0-e81d227c1424",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "matched_continuation",
+                "ordinal": 1,
+                "boot": "c680d03b-b3a0-438c-88a0-e81d227c1424",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        }
+      ],
+      "sends": 2,
+      "liveAcceptance": false
+    },
+    {
       "scenario": "unknown",
       "unknownIdBlocksReplacement": true,
       "receipt": {
@@ -511,7 +1385,7 @@
       "scenario": "crash",
       "receipt": {
         "id": "crash_request",
-        "boot": "95d7eceb-f32d-43ea-b2da-12594d4ca936",
+        "boot": "06b9226d-f582-4b7b-be2d-94394967532d",
         "generation": 3,
         "revision": "revision_2",
         "route": "gaffer-synthetic",
@@ -522,7 +1396,7 @@
           {
             "request_id": "crash_request",
             "ordinal": 1,
-            "boot": "95d7eceb-f32d-43ea-b2da-12594d4ca936",
+            "boot": "06b9226d-f582-4b7b-be2d-94394967532d",
             "generation": 3,
             "revision": "revision_2",
             "provider": "openai-compatible-synthetic",
@@ -540,7 +1414,7 @@
       "phase": "closed",
       "crashReceipt": {
         "id": "crash_request",
-        "boot": "95d7eceb-f32d-43ea-b2da-12594d4ca936",
+        "boot": "06b9226d-f582-4b7b-be2d-94394967532d",
         "generation": 3,
         "revision": "revision_2",
         "route": "gaffer-synthetic",
@@ -551,7 +1425,7 @@
           {
             "request_id": "crash_request",
             "ordinal": 1,
-            "boot": "95d7eceb-f32d-43ea-b2da-12594d4ca936",
+            "boot": "06b9226d-f582-4b7b-be2d-94394967532d",
             "generation": 3,
             "revision": "revision_2",
             "provider": "openai-compatible-synthetic",
@@ -580,7 +1454,7 @@
       ],
       "receipt": {
         "id": "native_success",
-        "boot": "715d915e-c5f9-435c-b0f5-790fc90841f7",
+        "boot": "d020fd51-2fa3-4147-a330-bf2735baf7b1",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -591,7 +1465,7 @@
           {
             "request_id": "native_success",
             "ordinal": 1,
-            "boot": "715d915e-c5f9-435c-b0f5-790fc90841f7",
+            "boot": "d020fd51-2fa3-4147-a330-bf2735baf7b1",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -718,7 +1592,7 @@
       ],
       "receipt": {
         "id": "native_tools",
-        "boot": "bf93710e-eb80-4a9d-9cbf-4e48c948c328",
+        "boot": "b2a854d6-79a3-4f73-8cd7-68bfc2fbc3d7",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -729,7 +1603,7 @@
           {
             "request_id": "native_tools",
             "ordinal": 1,
-            "boot": "bf93710e-eb80-4a9d-9cbf-4e48c948c328",
+            "boot": "b2a854d6-79a3-4f73-8cd7-68bfc2fbc3d7",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -856,7 +1730,7 @@
       ],
       "receipt": {
         "id": "native_tools_identity_drift",
-        "boot": "5b546f64-14c5-4540-bca6-a0e82b49fa21",
+        "boot": "942fb229-8531-4c50-beb4-0017349e9cfb",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -867,7 +1741,7 @@
           {
             "request_id": "native_tools_identity_drift",
             "ordinal": 1,
-            "boot": "5b546f64-14c5-4540-bca6-a0e82b49fa21",
+            "boot": "942fb229-8531-4c50-beb4-0017349e9cfb",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -994,7 +1868,7 @@
       ],
       "receipt": {
         "id": "native_tools_delta_drift",
-        "boot": "c54d7acc-bf3b-4ce8-8103-07929c07ea1a",
+        "boot": "45139b14-1f31-40bc-9c1e-7dcd7cc30392",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1005,7 +1879,7 @@
           {
             "request_id": "native_tools_delta_drift",
             "ordinal": 1,
-            "boot": "c54d7acc-bf3b-4ce8-8103-07929c07ea1a",
+            "boot": "45139b14-1f31-40bc-9c1e-7dcd7cc30392",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1132,7 +2006,7 @@
       ],
       "receipt": {
         "id": "native_tools_duplicate_argument_keys",
-        "boot": "d94c9c57-cf94-474a-9919-70b1895c0b25",
+        "boot": "fbe69efc-b1eb-4e78-a37e-56748c27e080",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1143,7 +2017,7 @@
           {
             "request_id": "native_tools_duplicate_argument_keys",
             "ordinal": 1,
-            "boot": "d94c9c57-cf94-474a-9919-70b1895c0b25",
+            "boot": "fbe69efc-b1eb-4e78-a37e-56748c27e080",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1276,7 +2150,7 @@
       ],
       "receipt": {
         "id": "native_account_fallback",
-        "boot": "25351c3a-4c16-40b4-9e4f-e8305853c00b",
+        "boot": "9be3f3ad-2dfa-4422-b572-cd1975896e9e",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1287,7 +2161,7 @@
           {
             "request_id": "native_account_fallback",
             "ordinal": 1,
-            "boot": "25351c3a-4c16-40b4-9e4f-e8305853c00b",
+            "boot": "9be3f3ad-2dfa-4422-b572-cd1975896e9e",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1299,7 +2173,7 @@
           {
             "request_id": "native_account_fallback",
             "ordinal": 2,
-            "boot": "25351c3a-4c16-40b4-9e4f-e8305853c00b",
+            "boot": "9be3f3ad-2dfa-4422-b572-cd1975896e9e",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1438,7 +2312,7 @@
       ],
       "receipt": {
         "id": "native_model_fallback",
-        "boot": "7e1a6d2d-579e-4a0a-9629-5b6a1a133041",
+        "boot": "7da93ae3-daaf-46a6-a7f7-e331d0d31e38",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1449,7 +2323,7 @@
           {
             "request_id": "native_model_fallback",
             "ordinal": 1,
-            "boot": "7e1a6d2d-579e-4a0a-9629-5b6a1a133041",
+            "boot": "7da93ae3-daaf-46a6-a7f7-e331d0d31e38",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1461,7 +2335,7 @@
           {
             "request_id": "native_model_fallback",
             "ordinal": 2,
-            "boot": "7e1a6d2d-579e-4a0a-9629-5b6a1a133041",
+            "boot": "7da93ae3-daaf-46a6-a7f7-e331d0d31e38",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1473,7 +2347,7 @@
           {
             "request_id": "native_model_fallback",
             "ordinal": 3,
-            "boot": "7e1a6d2d-579e-4a0a-9629-5b6a1a133041",
+            "boot": "7da93ae3-daaf-46a6-a7f7-e331d0d31e38",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1612,7 +2486,7 @@
       ],
       "receipt": {
         "id": "native_refresh",
-        "boot": "938875c5-ef58-4a9e-9255-45ab372c08b8",
+        "boot": "21d984b5-ff77-41c7-889d-38009b8cddd3",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1623,7 +2497,7 @@
           {
             "request_id": "native_refresh",
             "ordinal": 1,
-            "boot": "938875c5-ef58-4a9e-9255-45ab372c08b8",
+            "boot": "21d984b5-ff77-41c7-889d-38009b8cddd3",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1635,7 +2509,7 @@
           {
             "request_id": "native_refresh",
             "ordinal": 2,
-            "boot": "938875c5-ef58-4a9e-9255-45ab372c08b8",
+            "boot": "21d984b5-ff77-41c7-889d-38009b8cddd3",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1647,7 +2521,7 @@
           {
             "request_id": "native_refresh",
             "ordinal": 3,
-            "boot": "938875c5-ef58-4a9e-9255-45ab372c08b8",
+            "boot": "21d984b5-ff77-41c7-889d-38009b8cddd3",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1780,7 +2654,7 @@
       ],
       "receipt": {
         "id": "native_proactive_refresh",
-        "boot": "6f5ead3a-723c-460d-8a9c-2cb4dc63961b",
+        "boot": "515d1a9c-62fa-44e1-94ca-8b776cdb0e0b",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1791,7 +2665,7 @@
           {
             "request_id": "native_proactive_refresh",
             "ordinal": 1,
-            "boot": "6f5ead3a-723c-460d-8a9c-2cb4dc63961b",
+            "boot": "515d1a9c-62fa-44e1-94ca-8b776cdb0e0b",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1803,7 +2677,7 @@
           {
             "request_id": "native_proactive_refresh",
             "ordinal": 2,
-            "boot": "6f5ead3a-723c-460d-8a9c-2cb4dc63961b",
+            "boot": "515d1a9c-62fa-44e1-94ca-8b776cdb0e0b",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1936,7 +2810,7 @@
       ],
       "receipt": {
         "id": "native_sse_retry",
-        "boot": "a8990bd8-4836-4ef5-949e-5fc67c050f91",
+        "boot": "97c7852e-204b-40be-9e08-b031c65eb6ab",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1947,7 +2821,7 @@
           {
             "request_id": "native_sse_retry",
             "ordinal": 1,
-            "boot": "a8990bd8-4836-4ef5-949e-5fc67c050f91",
+            "boot": "97c7852e-204b-40be-9e08-b031c65eb6ab",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1959,7 +2833,7 @@
           {
             "request_id": "native_sse_retry",
             "ordinal": 2,
-            "boot": "a8990bd8-4836-4ef5-949e-5fc67c050f91",
+            "boot": "97c7852e-204b-40be-9e08-b031c65eb6ab",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2086,7 +2960,7 @@
       ],
       "receipt": {
         "id": "native_retry_cancel",
-        "boot": "42647967-5891-4e27-a3b2-cddbba3bbbfe",
+        "boot": "2032aee1-f45e-45de-b534-284d43135564",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2097,7 +2971,7 @@
           {
             "request_id": "native_retry_cancel",
             "ordinal": 1,
-            "boot": "42647967-5891-4e27-a3b2-cddbba3bbbfe",
+            "boot": "2032aee1-f45e-45de-b534-284d43135564",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2224,7 +3098,7 @@
       ],
       "receipt": {
         "id": "native_fence_retry",
-        "boot": "221f3feb-dfc8-438b-b91d-8340da3870c0",
+        "boot": "abc9d719-2821-4461-be77-368cf6d8a75c",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2235,7 +3109,7 @@
           {
             "request_id": "native_fence_retry",
             "ordinal": 1,
-            "boot": "221f3feb-dfc8-438b-b91d-8340da3870c0",
+            "boot": "abc9d719-2821-4461-be77-368cf6d8a75c",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2362,7 +3236,7 @@
       ],
       "receipt": {
         "id": "native_preheaders_cancel",
-        "boot": "ca26ed96-00e4-406b-84d8-b3d147e5a6d7",
+        "boot": "46a7ebf7-cde8-47fa-8bc6-53c681a3e35f",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2373,7 +3247,7 @@
           {
             "request_id": "native_preheaders_cancel",
             "ordinal": 1,
-            "boot": "ca26ed96-00e4-406b-84d8-b3d147e5a6d7",
+            "boot": "46a7ebf7-cde8-47fa-8bc6-53c681a3e35f",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2500,7 +3374,7 @@
       ],
       "receipt": {
         "id": "native_fence_preheaders",
-        "boot": "93c237bd-8afd-412a-8aa8-38d4235feef3",
+        "boot": "e758a5b8-1f2f-4724-b554-43c0ef3f942c",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2511,7 +3385,7 @@
           {
             "request_id": "native_fence_preheaders",
             "ordinal": 1,
-            "boot": "93c237bd-8afd-412a-8aa8-38d4235feef3",
+            "boot": "e758a5b8-1f2f-4724-b554-43c0ef3f942c",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2638,7 +3512,7 @@
       ],
       "receipt": {
         "id": "native_refresh_cancel",
-        "boot": "9eae52d6-0c8f-4fe3-8eda-0d942d9a7ff2",
+        "boot": "5ca5c4b6-5772-4d86-bece-6722c32c6852",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2649,7 +3523,7 @@
           {
             "request_id": "native_refresh_cancel",
             "ordinal": 1,
-            "boot": "9eae52d6-0c8f-4fe3-8eda-0d942d9a7ff2",
+            "boot": "5ca5c4b6-5772-4d86-bece-6722c32c6852",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2776,7 +3650,7 @@
       ],
       "receipt": {
         "id": "native_failed",
-        "boot": "f34ff783-4847-43d8-a207-19615dcd7390",
+        "boot": "b80194b5-c6f1-479d-ad0b-0500432c8773",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2787,7 +3661,7 @@
           {
             "request_id": "native_failed",
             "ordinal": 1,
-            "boot": "f34ff783-4847-43d8-a207-19615dcd7390",
+            "boot": "b80194b5-c6f1-479d-ad0b-0500432c8773",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2914,7 +3788,7 @@
       ],
       "receipt": {
         "id": "native_incomplete",
-        "boot": "f67ca478-eae7-471b-a721-b1dc80d4b870",
+        "boot": "aaa7fcdc-2683-4236-b9e7-cd204c888fa5",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2925,7 +3799,7 @@
           {
             "request_id": "native_incomplete",
             "ordinal": 1,
-            "boot": "f67ca478-eae7-471b-a721-b1dc80d4b870",
+            "boot": "aaa7fcdc-2683-4236-b9e7-cd204c888fa5",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -3052,7 +3926,7 @@
       ],
       "receipt": {
         "id": "native_partial",
-        "boot": "051006bb-4090-4447-9f6e-cf1e1c417f00",
+        "boot": "1d572b12-01c0-4eda-93a1-ba3fbc365a42",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -3063,7 +3937,7 @@
           {
             "request_id": "native_partial",
             "ordinal": 1,
-            "boot": "051006bb-4090-4447-9f6e-cf1e1c417f00",
+            "boot": "1d572b12-01c0-4eda-93a1-ba3fbc365a42",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -3190,7 +4064,7 @@
       ],
       "receipt": {
         "id": "native_contradictory",
-        "boot": "09856814-2c38-4098-8cee-753987af3df6",
+        "boot": "3df97a95-f247-43d0-8a2d-5c567e7f8220",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -3201,7 +4075,7 @@
           {
             "request_id": "native_contradictory",
             "ordinal": 1,
-            "boot": "09856814-2c38-4098-8cee-753987af3df6",
+            "boot": "3df97a95-f247-43d0-8a2d-5c567e7f8220",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -3328,7 +4202,7 @@
       ],
       "receipt": {
         "id": "native_oversized",
-        "boot": "00c99a74-530d-4e4c-9651-72005d647ff8",
+        "boot": "5768aa4e-22a7-46ff-9361-3fd07204062c",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -3339,7 +4213,7 @@
           {
             "request_id": "native_oversized",
             "ordinal": 1,
-            "boot": "00c99a74-530d-4e4c-9651-72005d647ff8",
+            "boot": "5768aa4e-22a7-46ff-9361-3fd07204062c",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -3456,11 +4330,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 39,
+      "elapsedMs": 66,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "error_oversized_open",
-        "boot": "089f4fa8-737a-4e34-a01a-548d4e3ca729",
+        "boot": "9fe078e8-5013-4064-97bc-0cc350500d0d",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3471,7 +4345,7 @@
           {
             "request_id": "error_oversized_open",
             "ordinal": 1,
-            "boot": "089f4fa8-737a-4e34-a01a-548d4e3ca729",
+            "boot": "9fe078e8-5013-4064-97bc-0cc350500d0d",
             "generation": 2,
             "revision": "revision_1",
             "provider": "openai-compatible-synthetic",
@@ -3490,11 +4364,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 27,
+      "elapsedMs": 41,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "error_invalid_utf8",
-        "boot": "1d339aa2-c8c3-414e-a031-f8684d5e3ae9",
+        "boot": "92bf7b4a-5ee8-46db-8b9f-267ed1a330bd",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3505,7 +4379,7 @@
           {
             "request_id": "error_invalid_utf8",
             "ordinal": 1,
-            "boot": "1d339aa2-c8c3-414e-a031-f8684d5e3ae9",
+            "boot": "92bf7b4a-5ee8-46db-8b9f-267ed1a330bd",
             "generation": 2,
             "revision": "revision_1",
             "provider": "openai-compatible-synthetic",
@@ -3524,11 +4398,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 24,
+      "elapsedMs": 42,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "error_invalid_json",
-        "boot": "0344f0ca-9fc0-4428-ae1b-32d11a83b405",
+        "boot": "2afdb7d4-1d79-4336-a286-7a967a57b895",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3539,7 +4413,7 @@
           {
             "request_id": "error_invalid_json",
             "ordinal": 1,
-            "boot": "0344f0ca-9fc0-4428-ae1b-32d11a83b405",
+            "boot": "2afdb7d4-1d79-4336-a286-7a967a57b895",
             "generation": 2,
             "revision": "revision_1",
             "provider": "openai-compatible-synthetic",
@@ -3558,11 +4432,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 25,
+      "elapsedMs": 29,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "success_wrong_content_type_open",
-        "boot": "736c5047-542f-4215-9cfb-bc098d198bae",
+        "boot": "233c0a4e-9949-4f3e-95e2-570faea4b2ee",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3573,7 +4447,7 @@
           {
             "request_id": "success_wrong_content_type_open",
             "ordinal": 1,
-            "boot": "736c5047-542f-4215-9cfb-bc098d198bae",
+            "boot": "233c0a4e-9949-4f3e-95e2-570faea4b2ee",
             "generation": 2,
             "revision": "revision_1",
             "provider": "openai-compatible-synthetic",
@@ -3592,11 +4466,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 24,
+      "elapsedMs": 31,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "refresh_oversized_open",
-        "boot": "2f9257bc-f12b-4e4a-a57c-c3a39f9d960c",
+        "boot": "f64b8fe1-b899-41fa-b872-d8e1554b59d8",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3607,7 +4481,7 @@
           {
             "request_id": "refresh_oversized_open",
             "ordinal": 1,
-            "boot": "2f9257bc-f12b-4e4a-a57c-c3a39f9d960c",
+            "boot": "f64b8fe1-b899-41fa-b872-d8e1554b59d8",
             "generation": 2,
             "revision": "revision_1",
             "provider": "codex",
@@ -3626,11 +4500,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 24,
+      "elapsedMs": 35,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "refresh_error_oversized_open",
-        "boot": "1b701061-4a64-487b-876e-7075eb1a9e43",
+        "boot": "0d3b95b2-030e-4583-940b-58dcac260856",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3641,7 +4515,7 @@
           {
             "request_id": "refresh_error_oversized_open",
             "ordinal": 1,
-            "boot": "1b701061-4a64-487b-876e-7075eb1a9e43",
+            "boot": "0d3b95b2-030e-4583-940b-58dcac260856",
             "generation": 2,
             "revision": "revision_1",
             "provider": "codex",
@@ -3660,11 +4534,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 20,
+      "elapsedMs": 25,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "refresh_invalid_utf8",
-        "boot": "c01dc50a-1c7c-4caa-875c-ecf94c12d910",
+        "boot": "6e514a22-56b7-4a78-94b2-a3a9c55b66a1",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3675,7 +4549,7 @@
           {
             "request_id": "refresh_invalid_utf8",
             "ordinal": 1,
-            "boot": "c01dc50a-1c7c-4caa-875c-ecf94c12d910",
+            "boot": "6e514a22-56b7-4a78-94b2-a3a9c55b66a1",
             "generation": 2,
             "revision": "revision_1",
             "provider": "codex",
@@ -3694,11 +4568,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 19,
+      "elapsedMs": 35,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "refresh_invalid_schema",
-        "boot": "eb1ae77b-073b-4151-b093-3b1796f8a3a4",
+        "boot": "bb05512b-3e0c-4100-9f9d-8bd638acab5f",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3709,7 +4583,7 @@
           {
             "request_id": "refresh_invalid_schema",
             "ordinal": 1,
-            "boot": "eb1ae77b-073b-4151-b093-3b1796f8a3a4",
+            "boot": "bb05512b-3e0c-4100-9f9d-8bd638acab5f",
             "generation": 2,
             "revision": "revision_1",
             "provider": "codex",
@@ -3728,11 +4602,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 132,
+      "elapsedMs": 135,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "error_cancel_complete_json",
-        "boot": "e32ac856-63e7-4d0f-a403-223d2798e802",
+        "boot": "9ed63aa3-6eaa-49f7-b78e-db958a80153b",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3743,7 +4617,7 @@
           {
             "request_id": "error_cancel_complete_json",
             "ordinal": 1,
-            "boot": "e32ac856-63e7-4d0f-a403-223d2798e802",
+            "boot": "9ed63aa3-6eaa-49f7-b78e-db958a80153b",
             "generation": 2,
             "revision": "revision_1",
             "provider": "openai-compatible-synthetic",
@@ -3766,7 +4640,7 @@
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "refresh_cancel_complete_json",
-        "boot": "75c351e9-8dd2-4819-b676-578b07251290",
+        "boot": "d55068c1-282c-428a-a68c-925e5e42c87a",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3777,7 +4651,7 @@
           {
             "request_id": "refresh_cancel_complete_json",
             "ordinal": 1,
-            "boot": "75c351e9-8dd2-4819-b676-578b07251290",
+            "boot": "d55068c1-282c-428a-a68c-925e5e42c87a",
             "generation": 2,
             "revision": "revision_1",
             "provider": "codex",
@@ -3800,7 +4674,7 @@
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "error_deadline",
-        "boot": "835ec18c-9d8a-4cf5-850f-c3eb54145227",
+        "boot": "95bf7615-a623-4101-8f30-73b3f426cd37",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3811,7 +4685,7 @@
           {
             "request_id": "error_deadline",
             "ordinal": 1,
-            "boot": "835ec18c-9d8a-4cf5-850f-c3eb54145227",
+            "boot": "95bf7615-a623-4101-8f30-73b3f426cd37",
             "generation": 2,
             "revision": "revision_1",
             "provider": "openai-compatible-synthetic",
@@ -3830,11 +4704,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 30015,
+      "elapsedMs": 30016,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "native_peek_deadline",
-        "boot": "4ae4d6c3-6ea9-41fc-b4e9-228f71515c70",
+        "boot": "4ee796a5-d1e3-4d8d-af69-963dbbab2bd3",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3845,7 +4719,7 @@
           {
             "request_id": "native_peek_deadline",
             "ordinal": 1,
-            "boot": "4ae4d6c3-6ea9-41fc-b4e9-228f71515c70",
+            "boot": "4ee796a5-d1e3-4d8d-af69-963dbbab2bd3",
             "generation": 2,
             "revision": "revision_1",
             "provider": "codex",
