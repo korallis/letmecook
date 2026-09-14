@@ -27,6 +27,7 @@ const backend=createServer(async(req,res)=>{
   if(scenario==='account-fallback' && req.headers['chatgpt-account-id']==='synthetic_workspace_1') {res.writeHead(429,{'content-type':'application/json'});res.end(JSON.stringify({error:{message:'synthetic subscription exhausted'}}));return;}
   if(scenario==='model-fallback' && body.model==='gpt-6-astra') {res.writeHead(429,{'content-type':'application/json'});res.end(JSON.stringify({error:{message:'synthetic model exhausted'}}));return;}
   res.writeHead(200,{'content-type':'text/event-stream'});
+  if(scenario==='sse-retry-open-eof'&&inferenceCount===1){res.write(frames([created()])+': server_is_overloaded\n\n');return;}
   if(scenario==='oversized'){res.end(frames([created()])+':'+ 'x'.repeat(1100000)+'\n\n');return;}
   let events=[created(),completed()];
   if(scenario==='tools' || invalidTools) {
@@ -77,15 +78,16 @@ if(waiting) {
   assert.equal(a.receipt(id).quiescent,scenario.endsWith('retry') || scenario==='retry-cancel');
 } else {
   const reply=await pending;
-  if(!invalidTools && !['oversized','contradictory'].includes(scenario))assert.equal(reply.status,200);
+  if(!invalidTools && !['oversized','contradictory','sse-retry-open-eof'].includes(scenario))assert.equal(reply.status,200);
   const r=a.receipt(id);
-  if(invalidTools || ['partial','contradictory','oversized'].includes(scenario)){assert.equal(r.quiescent,false);assert.equal(await a.replace(a.state().generation,'forbidden',originalPolicy,()=>{}),false);}
+  if(invalidTools || ['partial','contradictory','oversized','sse-retry-open-eof'].includes(scenario)){assert.equal(r.quiescent,false);assert.equal(await a.replace(a.state().generation,'forbidden',originalPolicy,()=>{}),false);}
   else assert.equal(r.quiescent,true);
   if(invalidTools){assert.equal(reply.status,503);assert.equal(sends.length,1);assert.equal(r.operations.length,1);assert.equal(r.operations[0].terminal,'unknown');assert.equal(r.handler_done,1);assert.ok(!reply.text.includes('previous_tool')&&!reply.text.includes('different.txt'),'invalid original tool content must not be accepted');}
   if(scenario==='refresh'){assert.deepEqual(r.operations.map(o=>o.model),['gpt-6-astra','credential_refresh','gpt-6-astra']);assert.ok(r.operations.some(o=>o.terminal==='provider_refresh_terminal'));}
   if(scenario==='account-fallback')assert.equal(r.operations.length,2);
   if(scenario==='model-fallback')assert.deepEqual(r.operations.map(o=>o.model),['gpt-6-astra','gpt-6-astra','gpt-5.6-sol']);
   if(scenario==='sse-retry'){assert.equal(r.operations.length,2);assert.deepEqual(r.operations.map(o=>o.terminal),['provider_failed','provider_completed']);}
+  if(scenario==='sse-retry-open-eof'){assert.equal(sends.length,1);assert.equal(r.operations.length,1);assert.equal(r.operations[0].terminal,'unknown');assert.equal(r.operations[0].local_stop,'original_cancel');assert.equal(reply.status,503);}
   if(scenario==='failed')assert.equal(r.operations[0].terminal,'provider_failed');
   if(scenario==='incomplete')assert.equal(r.operations[0].terminal,'provider_incomplete');
   if(scenario==='oversized')assert.equal(r.operations[0].local_stop,'original_error');

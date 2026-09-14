@@ -200,3 +200,10 @@ decision in [#9](https://github.com/korallis/letmecook/issues/9). No application
 native conformance, completed output acceptance or human-minute result is delivered
 by this contract approval. Final-head independent review and observed CI checks
 gate delivery of the contract PR; live execution has the separate controls above.
+
+## Shared implementation evidence
+
+The [#83 native evaluation experiment](../evidence/native-evaluation.md) implements
+this optional profile in the existing M0 boundary and router authority. Its
+synthetic measurements and deployable controls remain distinct from the concrete
+deployment review and live #6/#7 results required by this contract.

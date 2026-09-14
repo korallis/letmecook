@@ -23,10 +23,16 @@ async function refreshProviderCredentialsUnfenced(provider, credentials, log) {`
   }
   if (path === 'src/sse/services/tokenRefresh.js') {
     text = `import { authority } from '../../../gaffer-extension/authority.mjs';\n${text}`;
+    replace('export async function checkAndRefreshToken(provider, credentials, options = {}) {', 'export async function checkAndRefreshToken(provider, credentials, options = {}) {\n  if(authority().noRefreshCredentials(provider,credentials))return credentials;');
     replace('export async function updateProviderCredentials(connectionId, newCredentials) {', `export async function updateProviderCredentials(connectionId, newCredentials) {
   return authority().credentialUpdate(connectionId, () => updateProviderCredentialsUnfenced(connectionId, newCredentials));
 }
 async function updateProviderCredentialsUnfenced(connectionId, newCredentials) {`);
+  }
+  if (path === 'open-sse/services/tokenRefresh.js') {
+    text = `import { authority } from '../../gaffer-extension/authority.mjs';\n${text}`;
+    replace('      await new Promise(r => setTimeout(r, delay));', '      await authority().delay(delay);');
+    replace('    const result = await refreshFn();', '    authority().assertCurrent();\n    const result = await refreshFn();');
   }
   if (path === 'src/lib/db/driver.js') {
     text = `import { installAuthority } from '../../../gaffer-extension/authority.mjs';\n${text}`;
