@@ -78,8 +78,8 @@ candidate control validates those links again and uses shared `persistImmutable`
 to retain the entire envelope as `candidate-<digest>.json`. Retries verify and
 sync that record; they cannot overwrite it. After gateway shutdown the supervisor
 reads the actual immutable file and verifies its identity/content before cleanup.
-Planner proposal validation is supplied by the separately reviewed planner codec
-and cannot grant repository-write authority.
+The proposal callback defaults to denial; the planner PR owns its codec and
+callback wiring. Proposal acknowledgement cannot grant repository-write authority.
 
 The synthetic failure matrix covers edit/final, delayed original EOF, CLI ask
 rejection, same-scope profile selection with old-token/old-binding refusal,

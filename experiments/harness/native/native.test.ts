@@ -68,10 +68,10 @@ test('client metadata validates exact OpenCode origin and session without admitt
   assert.throws(() => validateHeaders([...Object.entries(h).flat(), 'Host', h.host], c.body, 'f'.repeat(64), raw), /duplicate/);
 });
 test('candidate joins exact ordered continuation, native output digest, durable receipt, event and separately observed artifact', () => {
-  const e = evidence(), artifact = candidateEnvelope(e), ack = { acknowledged: true, digest: digest(artifact) };
+  const e = evidence(), artifact = candidateEnvelope(e), ack = { acknowledged: true, digest: digest(artifact), file: 'candidate-' + digest(artifact) + '.json' };
   assert.equal(artifact.artifact.metadata.callIds[0], 'call_synthetic'); assert.equal(artifact.requestIds.length, 2);
-  assert.equal(acknowledgeCandidate(artifact, ack, [{ path: artifact.artifact.path, digest: ack.digest }]).outcome, 'completed_candidate');
-  assert.throws(() => acknowledgeCandidate(artifact, ack, [])); assert.throws(() => acknowledgeCandidate(artifact, capture.artifactAcknowledgement, [{ path: artifact.artifact.path, digest: ack.digest }]));
+  assert.equal(acknowledgeCandidate(artifact, ack, [{ path: artifact.artifact.path, digest: ack.digest, file: ack.file, attemptId: artifact.attemptId, kind: artifact.kind }]).outcome, 'completed_candidate');
+  assert.throws(() => acknowledgeCandidate(artifact, { ...ack, file: 'different.json' }, [{ path: artifact.artifact.path, digest: ack.digest, file: ack.file, attemptId: artifact.attemptId, kind: artifact.kind }])); assert.throws(() => acknowledgeCandidate(artifact, ack, [])); assert.throws(() => acknowledgeCandidate(artifact, capture.artifactAcknowledgement, [{ path: artifact.artifact.path, digest: ack.digest, file: ack.file, attemptId: artifact.attemptId, kind: artifact.kind }]));
 });
 test('unknown/corrupted receipts, false decisions, early output, altered history and forged worker artifacts cannot qualify', () => {
   const changes: ((e: any) => void)[] = [

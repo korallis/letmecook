@@ -56,6 +56,6 @@ export function candidateEnvelope(e: CandidateEvidence) {
 }
 export function acknowledgeCandidate(artifact: ReturnType<typeof candidateEnvelope>, acknowledgement: any, durableArtifacts: any[]) {
   const expected = digest(artifact);
-  requireValue(acknowledgement?.acknowledged === true && acknowledgement.digest === expected && durableArtifacts.some(a => a.path === artifact.artifact.path && a.digest === expected), 'candidate_artifact_not_durable');
+  requireValue(acknowledgement?.acknowledged === true && acknowledgement.digest === expected && acknowledgement.file === 'candidate-' + expected + '.json' && durableArtifacts.some(a => a.path === artifact.artifact.path && a.digest === expected && a.file === acknowledgement.file && a.attemptId === artifact.attemptId && a.kind === artifact.kind), 'candidate_artifact_not_durable');
   return { outcome: 'completed_candidate', artifactDigest: expected, requestIds: artifact.requestIds, independentlyAccepted: false, published: false };
 }
