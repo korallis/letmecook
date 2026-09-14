@@ -14,6 +14,12 @@ registry with identical deployment, authorization, connections and scope.
 Serial selection increments the authority generation without resetting the
 scope start, deadline or spent physical attempts.
 
+The native and legacy consumer staging lists include only the pure
+`scope-profile.mjs` shape/limit validator. The stateful `evaluation-scope.mjs`
+authority stays in the gateway, and both actual staged consumers verify that
+module is absent. This follows the shared dependency's validator extraction;
+the scope rules, planner limits and live authorization are unchanged.
+
 The complete private policy participates in `input_revision`. The model sees a
 small proposal-only projection. The durable gate derives assessment, read and
 repair state from the exact prior accepted requests and original outputs. It
