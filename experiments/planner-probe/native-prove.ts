@@ -12,7 +12,7 @@ const evidence = {
   schema: 1, observedAt: new Date().toISOString(), result: 'blocked',
   evidenceKind: 'in_memory_consumer_contract_only', nativeProtocol: NATIVE_PLANNER_PROTOCOL,
   issueComplete: false, liveRouterCalled: false, syntheticRouterCalled: false, physicalInferenceAttempts: 0,
-  sharedNativeAdmission: 'blocked_missing_accepted_planner_profile_and_codec', sharedReceiptConformance: 'not_exercised', deploymentConformance: 'not_exercised',
+  sharedNativeAdmission: 'not_exercised_by_in_memory_proof', sharedReceiptConformance: 'not_exercised', deploymentConformance: 'not_exercised',
   command: 'npm --prefix experiments/planner-probe run prove:native',
   runtime: { node: process.version, platform: process.platform, architecture: process.arch }, budget: NATIVE_PLANNER_BUDGET,
   sourceDigests: {} as Record<string, string>, tests: [] as { name: string; result: string }[],
@@ -47,7 +47,7 @@ try {
     evidence.observation = { outcome: result.outcome, authority: result.authority, usage: result.usage, settings: result.settings,
       nativeCallIdentityPreserved: result.completions[0]?.calls[0] === 'native_original_call_1', repeatedRunCached: JSON.stringify(await f.planner.run()) === JSON.stringify(result),
       toolChoices: f.requests.map(request => request.body.tool_choice), providerCapFields: f.requests.flatMap(request => Object.keys(request.body).filter(key => /^max_.*tokens$/.test(key))) };
-    if (result.outcome === 'plan_proposed') evidence.result = 'native_consumer_preparation_passed_shared_admission_blocked';
+    if (result.outcome === 'plan_proposed') evidence.result = 'native_consumer_preparation_passed';
   }
 } catch { evidence.result = 'blocked'; }
 finally { await persist(); }

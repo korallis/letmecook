@@ -39,8 +39,11 @@ retains bounded read-only discovery and proposal-only authority. Native translat
 Chat is a synthetic diagnostic with no provider generation bound or consumer
 Responses codec. Live model/settings, deployed conformance and #7 remain incomplete.
 
-Native Responses consumer preparation has separate `check:native`, `test:native`
-and `prove:native` targets. It uses an in-memory boundary port and makes no
-router or model call. The shared planner profile, native codec and production
-port remain blocked pending accepted integration. See the [native preparation
-contract](native-preparation.md) for the exact continuation and shared API needs.
+Native Responses has a separate closed read-only profile, native codec and
+production boundary port. `check:native` and `test:native` validate the consumer
+and shared protocol; `prove:native` remains an explicitly in-memory proof.
+`prove:native-router` runs the actual pinned router failure matrix and
+`prove:native-gateway` runs the staged consumer against the production gateway's
+private evidence and immutable proposal acknowledgement controls. Neither command
+calls a real provider. See [native integration and evidence](native-integration.md)
+for commands, current official parameter notes and the outstanding live gate.

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 const root=resolve(process.argv[2]??'/tmp/gaffer-native-planner-router-matrix');const repository=resolve(import.meta.dirname,'../..');
 import { mkdirSync } from 'node:fs';mkdirSync(root,{recursive:true});
@@ -21,7 +21,9 @@ for(const key of ['MemoryLimit','SwapLimit','CpuCfsQuota','PidsLimit'])assert.eq
 assert(info.SecurityOptions.includes('name=seccomp,profile=builtin'));
 const imageId=JSON.parse(docker(['image','inspect',image]))[0].Id;
 assert.equal(imageId,JSON.parse(readFileSync(probe+'/runtime-identity.json','utf8')).imageId);
-const result:any={runId,startedAt:new Date().toISOString(),realProviderCalled:false,networkEgress:false,syntheticOriginalHttp:true,runtime:{server:version.Server,imageId,profile,cgroupVersion:info.CgroupVersion},cases:[],cleanup:[]};
+const result:any={sourceDigests:{},runId,startedAt:new Date().toISOString(),realProviderCalled:false,networkEgress:false,syntheticOriginalHttp:true,runtime:{server:version.Server,imageId,profile,cgroupVersion:info.CgroupVersion},cases:[],cleanup:[]};
+function hashTree(path:string){for(const item of readdirSync(repository+'/'+path,{withFileTypes:true})){if(['node_modules','evidence'].includes(item.name))continue;const file=path+'/'+item.name;if(item.isDirectory())hashTree(file);else if(/\.(ts|mjs|json|txt)$/.test(file))result.sourceDigests[file]=createHash('sha256').update(readFileSync(repository+'/'+file)).digest('hex');}}
+for(const path of ['experiments/planner-probe','experiments/native-evaluation','experiments/router-authority-extension','experiments/inference-boundary','experiments/router-boundary-bridge','tests/fixtures/planner'])hashTree(path);
 writeFileSync(root+'/run.json',JSON.stringify(result,null,2)+'\n');
 for(const scenario of (process.argv[3]?.split(',')??routerCases)){const name=scenario.replace(/[^a-z0-9-]/gi,'-'),file='../gaffer/experiments/planner-probe/native-router-integration.mjs';
  const container=runId+'-'+name; let created=false;

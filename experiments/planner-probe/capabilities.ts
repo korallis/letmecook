@@ -5,7 +5,7 @@ export function livePreflight() {
   return {
     outcome: 'blocked_missing_live_boundary', liveRouterCalled: false, liveEligible: false, unattendedSupported: false,
     routerSource: { version: '0.5.75', commit: '17c4cc76877bd1755030a8414f8d0083f48dcccf', evidence: 'actual_pinned_modules_sqlite_synthetic_http' },
-    requiredBeforeLive: ['operator-approved exact bootstrap route and complete graph', 'deployed pinned writer fencing and original-work receipt authority', 'attempt-scoped compatible Responses/tool/stream profile', 'verified exact effort and named strict-output support or unsupported outcome'],
+    requiredBeforeLive: ['operator-approved exact bootstrap route and complete graph', 'deployed pinned writer fencing and original-work receipt authority', 'attempt-scoped compatible Responses/tool/stream profile', 'exact Astra xhigh native request and one authorized shared initial scope', 'fresh reviews of the full consumer suite and concrete deployment packet'],
     desiredPlannerCandidates: [
       { model: 'cx/gpt-6-astra', requestedEffort: 'xhigh', outcome: 'unverified_live_capability', sourceTranslation: 'xhigh_preserved', nativeToolProtocol: 'responses_required', outputTokenLimit: 'unsupported_output_token_translation' },
       { model: 'cc/claude-opus-5', requestedEffort: 'xhigh', outcome: 'unsupported_exact_effort_translation', sourceTranslation: 'xhigh_normalized_to_high' },
@@ -14,17 +14,19 @@ export function livePreflight() {
     actualRouterSyntheticProfiles: {
       route: 'gaffer-planner', consumer: 'real_PlannerSession', authority: 'accepted_shared_RouterAuthority',
       compatibleChat: 'synthetic_read_proposal_repair_receipts', nativeTranslatedChat: 'synthetic_diagnostic_only',
-      consumerResponsesCodec: 'unsupported', providerOutputBound: { compatible: 'synthetic_1024_cap_mapping', native: 'unsupported_output_token_translation' },
+      consumerResponsesCodec: 'separate_native_readonly_codec_synthetic_pass', providerOutputBound: { compatible: 'synthetic_1024_cap_mapping', native: 'unsupported_output_token_translation' },
       deployedConformance: 'unverified', liveModelSettings: 'unverified', strictProviderSchema: 'unsupported',
     },
-    nativeConsumerPreparation: {
-      protocol: 'planner-probe-responses-read-file-v1', evidence: 'in_memory_consumer_contract_only',
-      consumerRequestBuilder: 'prepared', productionBoundaryPort: 'not_implemented',
-      sharedPlannerProfileAndCodec: 'blocked_pending_accepted_integration',
-      originalStreamAndReceiptConformance: 'not_exercised_by_preparation',
+    nativeConsumerIntegration: {
+      protocol: 'planner-probe-responses-read-file-v1', evidence: 'actual_pinned_router_and_staged_consumer_synthetic',
+      consumerRequestBuilder: 'implemented', productionBoundaryPort: 'scoped_private_uds',
+      sharedPlannerProfileAndCodec: 'closed_readonly_profile_and_exact_history',
+      originalStreamAndReceiptConformance: 'synthetic_passed',
+      acknowledgement: 'private_gateway_evidence_and_immutable_named_proposal',
       providerOutputTokens: null, providerMonetaryCap: null,
-      strictProviderSchema: 'unsupported', localSchema: 'ajv_plan_validation',
-      physicalInferenceAttempts: 0, liveEligible: false, issueComplete: false,
+      strictProviderSchema: 'not_requested', localSchema: 'ajv_plus_gateway_pinned_schema_validation',
+      liveInferenceAttempts: 0, liveEligible: false, issueComplete: false,
+      liveGate: 'consumer_reviews_and_exact_deployment_packet_before_shared_initial_scope',
     },
     selectedSyntheticProfile: {
       route: 'gaffer-planner-fixture', profile: 'chat-text-tools-v1', protocol: 'POST /v1/chat/completions',

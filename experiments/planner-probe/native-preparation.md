@@ -1,3 +1,5 @@
+> Historical preparation checkpoint. The production port, shared read-only codec and actual synthetic gateway integration are now implemented; see [current integration](native-integration.md). The original in-memory evidence below remains a preparation-only record.
+
 # Native planner consumer preparation
 
 This is consumer-owned preparation for issue #7, separate from the historical

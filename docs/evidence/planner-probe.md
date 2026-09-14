@@ -1,3 +1,5 @@
+> Native integration update: [closed read-only Responses profile and actual synthetic gateway evidence](../../experiments/planner-probe/native-integration.md). Historical Chat/translated-native observations below remain preserved; live conformance is still outstanding.
+
 # Restricted planning: synthetic contract passes, live gate blocked
 
 For [issue #7](https://github.com/korallis/letmecook/issues/7). This M0 experiment
