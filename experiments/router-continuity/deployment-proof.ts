@@ -1,0 +1,34 @@
+// Synthetic-only exercise of the actual deployment CLI and attach-only consumer.
+import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { mkdir,readFile,writeFile } from 'node:fs/promises';
+import { resolve,join } from 'node:path';
+import { randomBytes } from 'node:crypto';
+import { profile } from '../native-evaluation/fixtures.mjs';
+import { settingsDigest,digest } from '../harness/native/client.ts';
+import { persistImmutable } from '../native-evaluation/durable-records.mjs';
+import { consume } from './consume.ts';
+import { FIXTURE,FIRST,SECOND,TRANSITION } from './constants.ts';
+const execute=promisify(execFile),directory=resolve(process.argv[2]??'/tmp/continuity-deployment-'+randomBytes(6).toString('hex')),root=resolve(import.meta.dirname,'../..'),source=process.env.GAFFER_ROUTER_SOURCE,binary=process.env.GAFFER_OPENCODE_BINARY,context=process.env.GAFFER_DOCKER_CONTEXT??'desktop-linux';assert(source?.startsWith('/')&&binary?.startsWith('/'));
+await mkdir(directory,{recursive:true,mode:0o700});const inputs=join(directory,'inputs');await mkdir(inputs,{mode:0o700});const record=join(directory,'deployment.json'),n=profile();n.deployment.id='synthetic_continuity_'+randomBytes(6).toString('hex');n.harness.settings=settingsDigest('ask');
+const config={settings:{requireApiKey:true,rtkEnabled:false,headroomEnabled:false,pxpipeEnabled:false,cavemanEnabled:false,ponytailEnabled:false,ccFilterNaming:false,capacityAdapter:Object.fromEntries(['vision','pdf','audioInput','videoInput'].map(k=>[k,{enabled:false,models:[]}]))},providerConnections:n.connections.map((c:any,i:number)=>({id:c.id,provider:'codex',authType:'oauth',name:'Synthetic',priority:i+1,isActive:true,accessToken:'synthetic_access_'+i,expiresAt:new Date(c.expiresAt).toISOString(),providerSpecificData:{chatgptAccountId:'synthetic_workspace_'+i}})),combos:[{id:'native_route',name:'gpt-6-astra',models:['cx/gpt-6-astra']}]};
+for(const [name,value]of Object.entries({'profile.json':n,'config.json':config,'relay.json':{address:'172.19.0.2',evidence:'synthetic'},'continuity.json':{schema:1,fixture:FIXTURE,firstAttemptId:FIRST,secondAttemptId:SECOND,transitionId:TRANSITION,settingsDigest:settingsDigest('ask'),scopeId:n.scope.id}}))await writeFile(join(inputs,name),JSON.stringify(value),{mode:0o600});
+const result:any={schema:1,evidence:'production-deployment-controls-synthetic',live:false,issueComplete:false,result:'failed'};
+const cli=async(command:string,arg?:string)=>{const x=await execute(process.execPath,[join(root,'experiments/native-evaluation/deployment.ts'),command,record,...(arg?[arg]:[]),...(command==='prepare'?[source!]:[])],{timeout:45000,maxBuffer:8*1048576});return JSON.parse(x.stdout);};
+const docker=async(args:string[])=>{const x=await execute('docker',['--context',context,...args],{timeout:15000,maxBuffer:8*1048576});return x.stdout.trim();};
+try{
+ result.prepared=await cli('prepare',inputs);result.before=await cli('inspect');assert.equal(result.before.current.scope,null);assert.equal(result.before.packet.continuityFixture.fixture,FIXTURE);assert.equal(result.before.packet.continuityFixture.settingsDigest,settingsDigest('ask'));
+ const r=JSON.parse(await readFile(record,'utf8'));assert(r.sourceManifest.files['experiments/router-continuity/consume.ts']);assert(r.sourceManifest.files['experiments/harness/native/run.ts']);assert.equal(digest(r.sourceManifest.files),result.before.selectedPolicy.native.deployment.overlay);
+ result.started=await cli('start',result.prepared.packetDigest);assert.equal(result.started.scope.spent,0);
+ result.consumed=await consume(record,join(directory,'consumer.json'),binary!);const pointer=JSON.parse(await readFile(join(directory,'consumer.json'),'utf8'));result.consumer=JSON.parse(await readFile(join(directory,pointer.snapshot),'utf8'));assert.equal(digest(result.consumer),pointer.digest);assert.equal(result.consumer.scopeCreated,false);assert.equal(result.consumer.result,'passed');assert.equal(result.consumer.cleanup,true);
+ result.after=await cli('inspect');assert.equal(result.after.current.scope.spent,2);assert.equal(result.after.current.scope.started,result.started.scope.started);assert.equal(result.after.current.scope.deadline,result.started.scope.deadline);
+ result.stopped=await cli('stop');const stopped=JSON.parse(await readFile(record,'utf8'));
+ result.retained=JSON.parse(await docker(['run','--rm','--network','none','--user','1000:1000','--cap-drop','ALL','--security-opt','no-new-privileges=true','--read-only','--memory','128m','--memory-swap','128m','--pids-limit','32','--mount',`type=volume,source=${stopped.stateVolume},target=/state,readonly,volume-nocopy`,'--mount',`type=bind,source=${root},target=/gaffer,readonly`,'gaffer-router-extension-deps:0.5.75-locked','node','/gaffer/experiments/router-continuity/read-state.mjs']));
+ const final=result.retained.records['result.json'];assert.equal(final.scope.spent,2);assert.equal(final.observed.sends.length,2);assert(final.receipts.every((x:any)=>x.quiescent));assert.deepEqual(result.retained.records[result.consumer.transition.file],result.consumer.transition.result);result.result='passed';
+}catch(error:any){result.error=String(error.stack??error);process.exitCode=1;}
+finally{
+ persistImmutable(directory,'continuity-deployment',result);let r;try{r=JSON.parse(await readFile(record,'utf8'));}catch{}const errors=[];
+ if(r){for(const id of [...r.transient,...r.containers])try{const s=JSON.parse(await docker(['inspect',id]))[0];assert.equal(s.Config.Labels['dev.gaffer.native-deployment'],r.run);await docker(['rm','--force',id]);}catch{errors.push(id);}for(const v of r.volumes)try{const s=JSON.parse(await docker(['volume','inspect',v]))[0];assert.equal(s.Labels['dev.gaffer.native-state'],n.deployment.id);await docker(['volume','rm',v]);}catch{errors.push(v);}if(r.network)try{const s=JSON.parse(await docker(['network','inspect',r.network]))[0];assert.equal(s.Labels['dev.gaffer.native-deployment'],r.run);await docker(['network','rm',r.network]);}catch{errors.push(r.network);}}
+ result.cleanup=errors.length===0;result.cleanupErrors=errors;const saved=persistImmutable(directory,'continuity-deployment',result);await writeFile(join(directory,'result.json'),JSON.stringify({result:result.result,cleanup:result.cleanup,snapshot:saved.file,digest:saved.digest})+'\n');console.log(JSON.stringify({result:result.result,cleanup:result.cleanup,directory}));
+}

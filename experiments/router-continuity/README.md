@@ -19,6 +19,10 @@ receipt, durable decision and exact request/output/settings identity.
 The worker uses default client-only staging, a network-none 768 MiB container,
 finite 30-second binary wall/output bounds and a ten-second artifact-inspection
 window. It has no private controls, router DB, provider credentials or fault loader.
+It emits its observation after closing the relay and becoming ready for artifact
+inspection. Active cancellation skips that hold and preserves unknown upstream
+work; a stopped process does not acknowledge upstream quiescence. The supervisor
+waits through Docker's asynchronous `created` state before expecting observation.
 The gateway is a separate measured 768 MiB container. Synthetic gateway request
 timers remain 6/4/2 seconds. These short fixture timings are not a live readiness
 claim or revised product defaults.
@@ -83,7 +87,7 @@ npm --prefix experiments/router-continuity run prove -- /tmp/continuity.json
 ```
 
 An optional comma-separated third argument selects `pair`, `partial`, `outage`,
-`tool`, `intent-write` or `result-write`. Each offline fault case uses its own fake
+`tool`, `intent-write`, `result-write`, `active-stop` or `start-delay`. Each offline fault case uses its own fake
 scope; this never renews a real initial allowance. The pure control matrix uses
 constructed captured receipts, not provider observations. The integrated pair
 executes the actual stock helper, router selection, authority and pinned binary.
@@ -92,20 +96,60 @@ replacement must produce no second original send. Router outage produces zero
 original sends. Intent/result persistence faults fence the gateway and retain
 evidence before synthetic cleanup.
 
+The production packaging check uses the shared deployment CLI with synthetic-only
+inputs, then the actual attach-only consumer. It uses the normal gateway loader,
+an isolated internal network and measured egress relay, and no fault loader:
+
+```sh
+GAFFER_ROUTER_SOURCE=/absolute/pinned/public/router \
+GAFFER_OPENCODE_BINARY=/absolute/pinned/linux-arm64/opencode \
+node experiments/router-continuity/deployment-proof.ts /tmp/private-continuity-proof
+```
+
+It checks prepared packet/source hashes, an initially unstarted clock, both
+receipts, the unchanged initial scope/start/deadline, retained transition state and
+cleanup. Its synthetic credentials and provider responses are never live evidence.
+
 Detailed output files are private synthetic troubleshooting records. The pair's
 `public` field is an explicit projection with opaque A/B references and no policy,
 account/workspace metadata, credentials or private paths. Retention is immutable
 before cleanup; missing/failing observations are kept as failures.
 
-## Live integration remains pending
+## Shared deployment consumer
 
-There is no live launcher in this directory. The generic deployment CLI currently
-does not package `continuity.json` or these extra optional modules; that concrete
-packaging and full-suite supervisor must be integrated and independently reviewed
-before the live initial clock starts. No new operator approval is required merely
-because a routine fixture implementation was absent: the coordinator assesses the
-existing assigned scope against the concrete reviewed controls. Source-host,
-credential and billing mutations remain outside this fixture.
+The shared `experiments/native-evaluation/deployment.ts prepare` command packages
+these modules only when its private inputs contain the exact `continuity.json`
+declaration. It binds the reviewed source manifest and resolved fixture to the
+deployment packet. `evidence RECORD ATTEMPT_ID` and
+`continuity-transition RECORD continuity_model_lock_once` reuse its serialized
+private control channel; neither command creates a scope. Without the declaration,
+the gateway has no continuity handler and packaging adds no continuity code.
+
+After the coordinator has prepared/reviewed the complete suite and explicitly
+started its single initial scope, the trusted host runs:
+
+```sh
+GAFFER_OPENCODE_BINARY=/absolute/pinned/linux-arm64/opencode \
+node experiments/router-continuity/consume.ts \
+  /private/deployment.json /private/continuity-result.json
+```
+
+The consumer requires private owned directories/record, an already started initial
+scope, the exact packet, no unresolved reservations, two remaining sends and at
+least 120 seconds remaining. It checks every staged client source against the
+prepared manifest, selects only the packet's declared profile, grants the two fixed
+attempts, and retains immutable private observations. Worker staging, 30-second
+worker walls, 45-second grants and control/artifact overhead count against the
+existing deadline. Each new member needs 45 seconds remaining. It never prepares,
+starts, resets or restarts a scope. On failure it retains available evidence and
+removes only its workers; the suite coordinator owns shared deployment stop and
+retention. No configured evidence label automatically establishes live acceptance.
+
+Optional packaging and this consumer have passed an actual synthetic deployment
+exercise. The final worker/planner stack, shared suite sequencing, concrete live
+timers and independent controls review remain prerequisites to live use. Source-host,
+credential and billing mutations remain outside this fixture; routine fixture
+implementation does not create an additional operator approval flow.
 
 Prepare every consumer and its failure evidence first. The intended initial suite
 is worker edit/final (two expected sends), planner read/proposal (two), then this
