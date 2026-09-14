@@ -106,6 +106,13 @@ unique task-owned container names and labels, creates the socket volume, creates
 each stopped container, verifies its inspected configuration, and only then starts
 it. A failed runtime check creates no container. Failure during a probe refuses
 further launches. CLI operations have deadlines; cleanup runs even after failure.
+SIGINT/SIGTERM are checked again immediately before each start. Pending observation
+and container-wait CLIs and polling delays are interruptible, so stop proceeds to
+cleanup without waiting for the probe deadline. In-flight mutations settle within
+their existing CLI deadline before ownership reconciliation; cancelling the CLI
+alone would not establish that the daemon had finished creating or starting a
+container. Cleanup inspections, removals and final label queries remain active
+after stop, including repeated signals. An interrupted run always remains blocked.
 The result is accepted only after removing the run's containers/volume and checking
 that none with its exact run label remain. The gate always records
 `unattendedSupported: false`: this is an experiment, not a product execution
@@ -125,6 +132,11 @@ Docker resources. This manual recovery rule is not a durable product supervisor.
 ## Observations and limits
 
 The committed JSON is the authoritative raw result; timings and PID values vary.
+The separate [supervisor-stop run](linux-profile-stop-run.json) sent SIGTERM after
+Docker reported the probe container running. The launcher exited with code 1 in
+178 ms, recorded a blocked result, and verified zero owned containers and volumes
+remaining. This supplements the fixture's deliberate TERM-resistant process-tree
+test with an actual signal to the host supervisor.
 
 | Probe | Observed result |
 | --- | --- |
@@ -140,7 +152,7 @@ The committed JSON is the authoritative raw result; timings and PID values vary.
 | Memory pressure | Touched allocations exceeded the 128 MiB limit; Docker recorded OOMKilled, exit 137 and stopped state |
 | Cancellation | Leader, detached child, grandchild and their sleeps existed before stop; they ignored TERM; Docker escalated after one second to exit 137, `Running=false`, init PID 0; subsequent exec was rejected |
 | Cleanup | All task-owned containers and socket volume removed; exact label queries empty |
-| Failure handling tests | Unsupported runtime/missing controls rejected; simulated container termination and volume cleanup failures propagate a blocked result while attempting remaining cleanup |
+| Failure handling tests | Fourteen tests pass: runtime/missing controls rejected; cleanup failures propagate; real launcher subprocesses receiving SIGINT/SIGTERM during create, inspect, wait and readiness polling refuse further execution and promptly clean up; ownership mismatch still blocks removal |
 
 Cancellation evidence uses Docker's container/task state and PID namespace, with
 the actual process tree observed before stopping. It does not prove upstream model

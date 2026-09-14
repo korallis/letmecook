@@ -7,7 +7,7 @@
   },
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "node --test profile.test.ts",
+    "test": "node --test profile.test.ts run.test.ts",
     "prove": "node run.ts"
   },
   "devDependencies": {

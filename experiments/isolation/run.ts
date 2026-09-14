@@ -6,6 +6,7 @@ import { tmpdir, homedir } from 'node:os';
 import { dirname, resolve, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import { IMAGE, PROFILE, LABEL, selectedProfile, assertRuntime, containerArgs, assertContainer, cleanupOwned } from './profile.ts';
 
 const exec = promisify(execFile);
@@ -29,12 +30,21 @@ await mkdir(dirname(output), { recursive: true });
 await writeFile(output, JSON.stringify({ ...evidence, cleanup: { verified: false } }, null, 2) + '\n');
 console.log(JSON.stringify({ runId, profile: PROFILE, result: 'blocked-until-proof-and-cleanup' }));
 const redact = (text: string) => text.replaceAll(token, '<scoped-fixture-token>').replaceAll(host, '<host-fixture>').replaceAll(homedir(), '<host-home>');
-const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const stop = new AbortController();
+let cleaning = false;
+function refuseInterrupted() {
+  if (stop.signal.aborted) throw new Error('Interrupted: new execution refused');
+}
+const pause = (ms: number) => delay(ms, undefined, { signal: stop.signal });
 async function docker(args: string[], timeout = 15_000) {
+  if (!cleaning) refuseInterrupted();
   evidence.commands.push(['docker', '--context', context, ...args].map(redact));
   try {
     const { stdout, stderr } = await exec('docker', ['--context', context, ...args], {
       timeout, maxBuffer: 2 * 1024 * 1024,
+      // Interrupt observation/wait CLIs, but let mutations settle before reconciling
+      // ownership. Aborting create/start could race a late daemon-side mutation.
+      signal: !cleaning && ['wait', 'logs', 'inspect', 'top'].includes(args[0]) ? stop.signal : undefined,
       // Pass the disposable attempt token through environment inheritance, never CLI arguments.
       env: { ...process.env, FIXTURE_TOKEN: token },
     });
@@ -45,7 +55,7 @@ async function docker(args: string[], timeout = 15_000) {
 }
 async function inspect(id: string) { return JSON.parse(await docker(['inspect', id]))[0]; }
 async function create(mode: string, gateway = false) {
-  if (interrupted) throw new Error('Interrupted: new execution refused');
+  refuseInterrupted();
   const args = containerArgs(`${runId}-${mode}`, runId, staging, volume!, gateway);
   const targets = { secret: join(host, 'synthetic-secret'), policy: join(host, 'runner-policy'), hostHome: homedir() };
   args.push('--env', `HOST_TARGETS=${JSON.stringify(targets)}`, '--env', 'FIXTURE_TOKEN',
@@ -63,12 +73,14 @@ async function create(mode: string, gateway = false) {
     pids: state.HostConfig.PidsLimit, tmpfs: state.HostConfig.Tmpfs,
     mounts: state.Mounts.map((m: any) => ({ type: m.Type, destination: m.Destination, writable: m.RW })),
   };
+  refuseInterrupted();
   await docker(['start', name]);
   return name;
 }
 async function waitForEvent(id: string, name: string, ms = 5000) {
   const deadline = Date.now() + ms;
   while (Date.now() < deadline) {
+    refuseInterrupted();
     const logs = await docker(['logs', id]);
     if (logs.includes(name)) return logs;
     if (!(await inspect(id)).State.Running) throw new Error(`Container exited before ${name}: ${logs}`);
@@ -76,9 +88,8 @@ async function waitForEvent(id: string, name: string, ms = 5000) {
   }
   throw new Error(`Timed out waiting for ${name}`);
 }
-let interrupted = false;
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  process.once(signal, () => { interrupted = true; });
+  process.on(signal, () => { stop.abort(); });
 }
 try {
   await mkdir(staging);
@@ -103,7 +114,7 @@ try {
   evidence.observations.probe = logs.split('\n').filter(line => line.startsWith('{"name":')).map(line => JSON.parse(line));
   assert.equal(exit, 0, logs);
   assert.ok(logs.includes('"probe-complete"'));
-  if (interrupted) throw new Error('Interrupted: remaining probes refused');
+  refuseInterrupted();
 
   const oom = await create('oom');
   const oomExit = Number(await docker(['wait', oom], 15_000));
@@ -112,7 +123,7 @@ try {
   assert.equal(oomState.OOMKilled, true);
   assert.equal(oomState.Running, false);
   evidence.observations.memoryExhaustion = { exit: oomExit, oomKilled: oomState.OOMKilled, running: oomState.Running };
-  if (interrupted) throw new Error('Interrupted: cancellation probe refused');
+  refuseInterrupted();
 
   const cancel = await create('cancel');
   await waitForEvent(cancel, '"tree-started"');
@@ -131,12 +142,14 @@ try {
   assert.equal(await readFile(join(host, 'synthetic-secret'), 'utf8'), 'SYNTHETIC-HOST-SECRET-DO-NOT-EXPOSE');
   assert.equal(await readFile(join(host, 'runner-policy'), 'utf8'), 'disabled-until-reviewed');
   evidence.observations.hostSentinelsUnchanged = true;
-  if (interrupted) throw new Error('Interrupted: proof is not accepted');
+  refuseInterrupted();
   evidence.result = 'containment-fixture-passed';
 } catch (error: any) {
   evidence.error = redact(error.stack ?? error.message);
   process.exitCode = 1;
 } finally {
+  // Stop never cancels ownership verification, removal or final resource queries.
+  cleaning = true;
   try {
     await cleanupOwned(ids, volume, docker, runId);
     const containers = await docker(['ps', '-aq', '--filter', `label=${LABEL}=${runId}`]);
@@ -152,6 +165,11 @@ try {
   }
   await rm(host, { recursive: true, force: true });
   await mkdir(dirname(output), { recursive: true });
+  if (stop.signal.aborted) {
+    evidence.result = 'blocked';
+    evidence.error ??= 'Interrupted: proof is not accepted';
+    process.exitCode = 1;
+  }
   await writeFile(output, redact(JSON.stringify(evidence, null, 2)) + '\n');
   console.log(JSON.stringify({ result: evidence.result, unattendedSupported: false, cleanup: evidence.cleanup, evidence: output, error: evidence.error }));
 }
