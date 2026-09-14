@@ -37,8 +37,26 @@ process tree. Its forced stop is separate from the successful actual OpenCode
 exit. Run it with `node docs/evidence/native-process-stop.ts /tmp/tree.json`.
 The collector accepts a local JSON manifest naming the outputs from the documented
 runners (`binary`, `disabledHook`, `router`, `portable`, `egress`, `processTree`,
-`oom512`, `legacy` and four `deployment` modes) plus the exact `sourceCommit`. No retained
+`oom512`, `legacy`, optional `artifactRestart` and four `deployment` modes) plus the exact `sourceCommit`. No retained
 private path is required by a public installation.
+
+## Review-fix verification
+
+The corrected runtime adds five actual-router failure cases for scope, token,
+request and lease expiry during delayed decision durability, plus expiry immediately
+before frame release. Each retains one charged original send and the persisted
+success decision while delivering no response frame. The private request clock
+remains available after the original handler drains. The two-boot artifact case
+preserves both scoped acknowledgements and the first packet/blob after a later
+approved baseline, including an idempotent retry and the unchanged closed first
+scope. The final native matrix has 38 cases; 127 unit tests and the three experiment
+typechecks pass. The packet names source commits separately for retained unchanged
+legacy, kernel and process-tree proofs.
+
+The imported, hashed `egress-helper/metadata/base-installed.tsv` retains 413 lines
+with trailing whitespace. A full base-to-head whitespace check reports those lines;
+the check excluding that unchanged imported inventory passes. Its bytes were not
+rewritten to hide that observation.
 
 ## Explicit authority and wire identity
 
