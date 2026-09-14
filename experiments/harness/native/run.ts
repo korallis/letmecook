@@ -28,6 +28,12 @@ function assertWorkspace() {
   }
   for (const path of ['/work/auth.json', '/work/config/opencode/auth.json', '/work/data/opencode/auth.json', '/work/repo/.git/config.worktree', '/state', '/control', '/private', '/egress', '/router-source', '/probe', '/var/run/docker.sock', '/root/.codex/auth.json', '/Users']) if (existsSync(path)) throw Error('ambient_native_state');
 }
+export function readArtifact(baseSHA: string): Artifact {
+  if (!/^[a-f0-9]{40}$/.test(baseSHA)) throw Error('invalid_artifact_base');
+  assertWorkspace();
+  const git = (...args: string[]) => execFileSync('git', ['-C', '/work/repo', ...args], { encoding: 'utf8', env: { PATH: '/usr/local/bin:/usr/bin:/bin', HOME: '/work', GIT_CONFIG_NOSYSTEM: '1', GIT_CONFIG_GLOBAL: '/dev/null' } });
+  return { baseSHA, headSHA: git('rev-parse', 'HEAD').trim(), path: 'greeting.txt', content: readFileSync('/work/repo/greeting.txt', 'utf8'), changedFiles: git('diff', '--no-ext-diff', '--no-textconv', '--name-only').trim().split('\n').filter(Boolean), status: git('status', '--porcelain'), diff: git('diff', '--no-ext-diff', '--no-textconv') };
+}
 export const artifactMatches = (artifact: Artifact | null, baseSHA: string) => !!artifact && artifact.baseSHA === baseSHA && artifact.headSHA === baseSHA && artifact.path === 'greeting.txt' && artifact.content === CONTENT && digest(artifact.changedFiles) === digest(['greeting.txt']) && artifact.status.trim() === 'M greeting.txt' && artifact.diff.length > 0;
 export interface RunHandle { events(after?: number): NativeEvent[]; done: Promise<RunResult>; cancel(): Promise<{ localProcessExited: boolean; upstreamQuiescence: 'unknown'; outcome: 'cancelled_unknown' }> }
 export function assertExecutionEnvironment() {
@@ -53,7 +59,7 @@ export function start(input: RunRequest): RunHandle {
       clearTimeout(timer); if (kill) clearTimeout(kill);
       try { parsed.end(); } catch (error: any) { invalid = true; reason = error.message; }
       let artifact: Artifact | null = null;
-      try { assertWorkspace(); artifact = { baseSHA: r.baseSHA, headSHA: git('rev-parse', 'HEAD').trim(), path: 'greeting.txt', content: readFileSync('/work/repo/greeting.txt', 'utf8'), changedFiles: git('diff', '--no-ext-diff', '--no-textconv', '--name-only').trim().split('\n').filter(Boolean), status: git('status', '--porcelain'), diff: git('diff', '--no-ext-diff', '--no-textconv') }; } catch { reason ??= 'artifact_unreadable'; }
+      try { artifact = readArtifact(r.baseSHA); } catch { reason ??= 'artifact_unreadable'; }
       resolve({ outcome: classify(parsed.values, exitCode, signal, cancelled, invalid, artifactMatches(artifact, r.baseSHA)), exitCode, signal, events: parsed.values, stderr, artifact, bindingDigest: r.bindingDigest, settingsDigest: r.settingsDigest, usage: 'unverified_native_observation', localProcessExited: true, upstreamQuiescence: 'unknown', ...(reason ? { reason } : {}) });
     });
   });

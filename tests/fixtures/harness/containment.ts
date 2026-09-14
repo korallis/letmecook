@@ -4,7 +4,7 @@ import { connect } from 'node:net';
 import { networkInterfaces } from 'node:os';
 import { spawn } from 'node:child_process';
 import { Resolver } from 'node:dns/promises';
-export async function containment(router = false) {
+export async function containment(router = false, memoryMiB: 512 | 768 = 512) {
   const evidence: Record<string, unknown> = {};
   assert.equal(process.getuid!(), 1000);
   const status = readFileSync('/proc/self/status', 'utf8');
@@ -28,7 +28,7 @@ export async function containment(router = false) {
   const resolver = new Resolver({ timeout: 500, tries: 1 }); resolver.setServers(['1.1.1.1']); let dns = '';
   try { await resolver.resolve4('example.com'); } catch (error: any) { dns = error.code; } assert(dns); evidence.dns = dns;
   const cgroup = (key: string) => readFileSync('/sys/fs/cgroup/' + key, 'utf8').trim();
-  assert.equal(cgroup('memory.max'), '536870912'); assert.equal(cgroup('memory.swap.max'), '0'); assert.equal(cgroup('pids.max'), '64'); assert.equal(cgroup('cpu.max'), '50000 100000');
+  assert.equal(cgroup('memory.max'), String(memoryMiB * 1048576)); assert.equal(cgroup('memory.swap.max'), '0'); assert.equal(cgroup('pids.max'), '64'); assert.equal(cgroup('cpu.max'), '50000 100000');
   evidence.cgroup = Object.fromEntries(['memory.max', 'memory.swap.max', 'pids.max', 'cpu.max'].map(k => [k, cgroup(k)]));
   const throttled = () => Number(cgroup('cpu.stat').match(/nr_throttled (\d+)/)![1]); const before = throttled(); const until = Date.now() + 1000;
   while (Date.now() < until) Math.sqrt(Math.random()); assert(throttled() > before); evidence.cpuThrottled = true;

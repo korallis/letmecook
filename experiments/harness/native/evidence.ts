@@ -50,8 +50,12 @@ export function candidateArtifact(e: CandidateEvidence) {
     artifactDigest: digest(e.observedArtifact), diffDigest: digest(e.observedArtifact.diff), bindingDigest: digest(e.binding), settingsDigest: e.request.settingsDigest,
     requestIds: e.requests.map(r => r.requestId!), requestDigests, decisionDigests, receiptDigests, callIds: calls.map((c: any) => c.call_id), eventsDigest: digest(parsed.values), nativeUsage: 'unverified' };
 }
-export function acknowledgeCandidate(artifact: ReturnType<typeof candidateArtifact>, acknowledgement: any, durableArtifacts: any[]) {
+export function candidateEnvelope(e: CandidateEvidence) {
+  const packet = candidateArtifact(e), { path, content, ...metadata } = packet;
+  return { schema: 1, consumer: e.policy.native.protocol, kind: 'repository_change', attemptId: e.binding.attemptId, bindingDigest: digest(e.binding), policyDigest: digest(e.policy), requestIds: packet.requestIds, decisionDigests: packet.decisionDigests, receiptDigests: packet.receiptDigests, artifact: { path, content, metadata } };
+}
+export function acknowledgeCandidate(artifact: ReturnType<typeof candidateEnvelope>, acknowledgement: any, durableArtifacts: any[]) {
   const expected = digest(artifact);
-  requireValue(acknowledgement?.acknowledged === true && acknowledgement.digest === expected && durableArtifacts.some(a => a.path === artifact.path && a.digest === expected), 'candidate_artifact_not_durable');
+  requireValue(acknowledgement?.acknowledged === true && acknowledgement.digest === expected && durableArtifacts.some(a => a.path === artifact.artifact.path && a.digest === expected), 'candidate_artifact_not_durable');
   return { outcome: 'completed_candidate', artifactDigest: expected, requestIds: artifact.requestIds, independentlyAccepted: false, published: false };
 }
