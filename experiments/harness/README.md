@@ -6,10 +6,10 @@ attempt-scoped boundary and a **synthetic** router authority. It cannot launch a
 live route, accept arbitrary repositories, resume sessions or publish changes.
 See [the evidence and remaining criteria](../../docs/evidence/first-harness.md).
 
-A separately named native Responses adapter is prepared under
-[`native/`](native/README.md). It depends on issue #83, remains offline/draft,
-and preserves this compatible Chat profile and its evidence. Its preparation
-checks do not establish execution or live readiness.
+A separately named native Responses adapter is implemented under
+[`native/`](native/README.md). Its actual synthetic execution is recorded there;
+it remains offline/draft and preserves this compatible Chat profile. Neither
+adapter's synthetic checks establish live readiness.
 
 ## Actual-router synthetic proof
 
@@ -32,6 +32,14 @@ engine/kernel/architecture. `GAFFER_HARNESS_ROUTER_CASES=edit,receipt-stop`
 selects a diagnostic subset and reports only `selected-cases-passed`.
 Source digests and failed observations are retained before cleanup. Never
 replace the historical `first-harness-run.json` when running this new mode.
+
+The [current closure replay](../../docs/evidence/first-harness-legacy-closure.md)
+records the fresh-review startup failure and its verified fix at `7315bcaf`.
+Both advertised launchers remain runnable. Static native-policy imports resolve
+through an explicit pure validation/codec closure. The actual-router worker gets
+only `native-profile.mjs` and `scope-profile.mjs`; the gateway also gets the pure
+Responses codecs at the relative import path. Scope authority and storage stay
+outside the worker. Extracting scope validation does not change its limits.
 
 The actual binary configuration is explicitly versioned as
 `opencode-1.18.30-usage-disabled-edit-v1`. Its configured

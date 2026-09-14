@@ -16,6 +16,13 @@ between independent preparation, combined synthetic proof and unproved live use.
 
 ## Actual pinned router integration
 
+The native integration later added static imports that broke the current Chat
+launcher before gateway readiness. The [retained fresh-review failure and closure
+fix](first-harness-legacy-closure.md) record that regression at `e44f374`, followed
+by seven actual-router cases and all thirteen default fixture cases at
+`7315bcaf`. The older full matrices below retain their original scope; both
+advertised commands were exercised again after the fix.
+
 The new [actual-router proof](first-harness-router-run.json) uses the accepted
 #77/#79 shared authority and durable receipt gates, real pinned router modules and
 SQLite, and synthetic original HTTP. It is a separate proof from the historical

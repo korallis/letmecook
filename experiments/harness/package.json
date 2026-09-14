@@ -7,7 +7,7 @@
   },
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "node --test adapter.test.ts protocol.test.ts router-profile.test.ts",
+    "test": "node --test adapter.test.ts protocol.test.ts router-profile.test.ts staging.test.ts",
     "prove": "node run.ts",
     "prove:router": "node router-run.ts",
     "check:native": "tsc -p native/tsconfig.json",
