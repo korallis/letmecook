@@ -93,7 +93,12 @@ output digests, binding, packet, policy and current scope independently, validat
 the final plan and fsyncs the immutable candidate before acknowledgement.
 
 The named artifact is `plan-proposal.json`, with closed metadata
-`{inputRevision,authority:"proposal_only"}`. It conveys no filesystem execution
+`{inputRevision,authority:"proposal_only",outcome}`. A schema-valid proposal with
+no unresolved questions must carry `plan_proposed`; one to three questions must
+carry `clarification_proposed`. The gateway derives that classification from the
+validated, receipt-bound proposal and rejects a forged outcome or changed
+questions. Acknowledgement projects `acknowledged_plan_proposal` or
+`acknowledged_clarification_proposal` respectively. Neither outcome conveys filesystem execution
 authority. The acknowledgement does not grant independent acceptance,
 publication or merge. This uses the same evidence/ack API introduced by PR #75;
 the planner PR is manually stacked on its frozen worker branch so that helper is
@@ -103,16 +108,19 @@ the planner PR to main and review the resulting final diff again.
 The [compact observed evidence](evidence/native-integration-run.json) identifies
 the exact consumed sources and full retained raw reports. Observed checks include:
 
-- 112 native consumer/shared-protocol tests and 35 preserved legacy fixture tests.
-- 16 actual pinned-router native planner cases: direct/read/final, one repair,
+- 114 native consumer/shared-protocol tests and 35 preserved legacy fixture tests.
+- 17 actual pinned-router native planner cases: direct/read/final, clarification, one repair,
   blank and invalid plans, prohibited worker/final/repair calls, role reload,
   receipt/decision write failures, post-durability scope/request/lease expiry and
   unknown original work. Failed release yields no read, proposal or repair.
 - The production gateway with a separately staged 128 MiB planner: no direct
   TCP, management, shared state/control/source access or writable snapshot;
-  complete original receipts precede delivery; eleven supervisor tamper cases
-  and six invalid candidate submissions are denied; idempotent acknowledgement
-  and the full immutable proposal record survive gateway shutdown.
+  complete original receipts precede delivery; fourteen supervisor tamper cases
+  and eight invalid candidate submissions are denied for both ordinary and
+  clarification proposals; idempotent acknowledgement
+  and the full immutable proposal record survive gateway shutdown. The clarification
+  case uses exactly one inference request and no read or repair; acknowledgement
+  and its negative controls add no inference or execution authority.
 - Serial planner-to-worker profile selection keeps the shared scope and fences
   the previous grant. This selection proof does not run the worker binary;
   the worker's independent adapter suite provides its execution evidence.
@@ -139,8 +147,12 @@ GAFFER_ROUTER_SOURCE=/absolute/pinned/public/router \
   npm --prefix experiments/planner-probe run prove:native-router -- /absolute/matrix
 GAFFER_ROUTER_SOURCE=/absolute/pinned/public/router \
   npm --prefix experiments/planner-probe run prove:native-gateway -- /absolute/gateway
+GAFFER_ROUTER_SOURCE=/absolute/pinned/public/router \
+  npm --prefix experiments/planner-probe run prove:native-gateway -- /absolute/clarification clarification
 GAFFER_BRIDGE_ROUTER_SOURCE=/absolute/pinned/public/router \
   npm --prefix experiments/planner-probe run prove:router -- /absolute/legacy.json
+node experiments/planner-probe/native-collect.ts /absolute/matrix/run.json \
+  /absolute/gateway/run.json /absolute/legacy.json /absolute/clarification/run.json
 ```
 
 These commands use synthetic original HTTP and spend zero live inference

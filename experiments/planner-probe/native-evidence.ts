@@ -12,7 +12,7 @@ export function nativePlannerCandidate(result:Result,evidence:any,binding:Bindin
  const p=validateNativeRouterPolicy(evidence.selectedPolicy);validateBinding(binding);assertNativeBinding(binding,p);
  check(p.native.protocol===PLANNER_PROTOCOL&&binding.role==='planner'&&evidence.schema===1&&evidence.attemptId===binding.attemptId&&/^[a-f0-9]{64}$/.test(evidence.packetDigest));
  const decisions=evidence.decisions;check(Array.isArray(decisions)&&decisions.length>0&&decisions.length<=3&&evidence.reservations.length===0&&evidence.receipts.length===decisions.length&&evidence.decisionTimes.length===decisions.length&&result.completions.length===decisions.length);
- check(result.outcome==='plan_proposed'&&result.authority==='proposal_only'&&result.routeId===p.routeId&&result.proposal);
+ check(['plan_proposed','clarification_proposed'].includes(result.outcome)&&result.authority==='proposal_only'&&result.routeId===p.routeId&&result.proposal);
  check(canonical(result.settings)===canonical({profile:'router-native-responses-local-v1',protocol:PLANNER_PROTOCOL,model:'gpt-6-astra',reasoning:{effort:'xhigh',summary:'auto'},store:false,stream:true,providerOutputTokens:null,providerMonetaryCap:null}));
  let previous:null|{request:any;output:any[]}=null;
  for(const [index,d] of decisions.entries()){
@@ -26,12 +26,13 @@ export function nativePlannerCandidate(result:Result,evidence:any,binding:Bindin
  }
  const last=decisions.at(-1),state=plannerRequestState(last.router.nativeRequest,p.native),content=JSON.stringify(result.proposal);
  check(result.inputRevision===state.inputRevision&&canonical(result.usage)===canonical({assessments:1,repairs:state.repairs,requests:state.requests,files:state.fileRead?1:0,readBytes:state.fileRead?state.packet.evidence.bytes:0}));
- const artifact={path:'plan-proposal.json',content,metadata:{inputRevision:state.inputRevision,authority:'proposal_only'}};
+ const artifact={path:'plan-proposal.json',content,metadata:{inputRevision:state.inputRevision,authority:'proposal_only',outcome:result.outcome}};
  const text=last.nativeOutput.filter((x:any)=>x.type==='message').flatMap((x:any)=>x.content.map((part:any)=>part.text)).join('');
  check(validatePlannerCandidate({text,policy:p,binding,decisions,artifact}));
  return {schema:1,consumer:PLANNER_PROTOCOL,kind:'plan_proposal',attemptId:binding.attemptId,bindingDigest:hashDocument(binding),policyDigest:hashDocument(p),packetDigest:evidence.packetDigest,scopeDigest:hashDocument(evidence.scope),requestIds:decisions.map((d:any)=>d.requestId),decisionDigests:decisions.map(hashDocument),receiptDigests:decisions.map((d:any)=>d.evidence.receiptDigest),artifact};
 }
 export function acknowledgeNativePlanner(candidate:ReturnType<typeof nativePlannerCandidate>,ack:any,artifacts:any[]){
  const digest=hashDocument(candidate);check(ack?.acknowledged===true&&ack.digest===digest&&typeof ack.file==='string'&&artifacts.some(a=>a.digest===digest&&a.file===ack.file&&a.path===candidate.artifact.path));
- return {outcome:'acknowledged_plan_proposal',artifactDigest:digest,requestIds:candidate.requestIds,authority:'proposal_only',independentlyAccepted:false,published:false};
+ check(['plan_proposed','clarification_proposed'].includes(candidate.artifact.metadata.outcome));
+ return {outcome:candidate.artifact.metadata.outcome==='clarification_proposed'?'acknowledged_clarification_proposal':'acknowledged_plan_proposal',artifactDigest:digest,requestIds:candidate.requestIds,authority:'proposal_only',independentlyAccepted:false,published:false};
 }

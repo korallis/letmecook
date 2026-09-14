@@ -1,4 +1,4 @@
-const routerCases = ['read','direct','read-repair','repair','empty','invalid-repair','worker-tool','disabled-call','repair-tool','role-reload','receipt-write','decision-write','release-scope','release-request','release-lease','unknown'];
+const routerCases = ['read','direct','clarification','read-repair','repair','empty','invalid-repair','worker-tool','disabled-call','repair-tool','role-reload','receipt-write','decision-write','release-scope','release-request','release-lease','unknown'];
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';

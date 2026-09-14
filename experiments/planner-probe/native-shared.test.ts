@@ -114,11 +114,23 @@ test('original SSE codec accepts planner lifecycle and rejects worker or disable
 
 test('proposal callback matches completed durable decision, revision, named output and read state',async()=>{
  const {requests,responses,n}=await chain(true,true),request=requests.at(-1),text=responses.at(-1)[0].content[0].text;
- const input={text,policy:{native:n},binding:{role:'planner'},decisions:[{verdict:'validated_success',delivery:'completed',router:{nativeRequest:request},nativeOutput:responses.at(-1)}],artifact:{path:'plan-proposal.json',content:text,metadata:{authority:'proposal_only',inputRevision:packet(request).input_revision}}};
+ const input={text,policy:{native:n},binding:{role:'planner'},decisions:[{verdict:'validated_success',delivery:'completed',router:{nativeRequest:request},nativeOutput:responses.at(-1)}],artifact:{path:'plan-proposal.json',content:text,metadata:{authority:'proposal_only',outcome:'plan_proposed',inputRevision:packet(request).input_revision}}};
  assert(validatePlannerCandidate(input));
  assert(validatePlannerCandidate({...input,artifact:{...input.artifact,content:JSON.stringify(JSON.parse(text),null,2)}}));
- for(const mutate of [(x:any):any=>x.binding.role='worker',(x:any):any=>x.artifact.path='fixture.txt',(x:any):any=>x.artifact.metadata.execution=true,(x:any):any=>x.artifact.metadata.inputRevision='b'.repeat(64),(x:any):any=>x.decisions[0].delivery='unobserved',(x:any):any=>x.decisions[0].nativeOutput=nativeText('different').output]){
+ for(const mutate of [(x:any):any=>x.binding.role='worker',(x:any):any=>x.artifact.path='fixture.txt',(x:any):any=>x.artifact.metadata.execution=true,(x:any):any=>x.artifact.metadata.outcome='clarification_proposed',(x:any):any=>x.artifact.metadata.inputRevision='b'.repeat(64),(x:any):any=>x.decisions[0].delivery='unobserved',(x:any):any=>x.decisions[0].nativeOutput=nativeText('different').output]){
   const x=structuredClone(input);mutate(x);assert(!validatePlannerCandidate(x));
  }
  assert.equal(canonical(JSON.parse(text)),canonical(proposal(packet(request).input_revision,true)));
+});
+
+for(const questionCount of [1,3])test(`native clarification with ${questionCount} questions is a final proposal with matching durable outcome`,async()=>{
+ const questions=Array.from({length:questionCount},(_,i)=>`Clarify requirement ${i+1}?`);
+ const f=await setupNative([body=>nativeText(JSON.stringify({...proposal(packet(body).input_revision,false),unresolved_questions:questions}))]);
+ const result=await f.planner.run();assert.equal(result.outcome,'clarification_proposed');assert.equal(result.authority,'proposal_only');assert.deepEqual(result.proposal?.unresolved_questions,questions);assert.equal(result.completions.length,1);assert.deepEqual(result.usage,{assessments:1,repairs:0,requests:1,files:0,readBytes:0});
+ const request=f.requests[0].body,text=JSON.stringify(result.proposal),output=nativeText(text).output;
+ const input={text,policy:{native:profile()},binding:{role:'planner'},decisions:[{verdict:'validated_success',delivery:'completed',router:{nativeRequest:request},nativeOutput:output}],artifact:{path:'plan-proposal.json',content:text,metadata:{authority:'proposal_only',outcome:result.outcome,inputRevision:result.inputRevision}}};
+ assert(validatePlannerCandidate(input));
+ for(const outcome of ['plan_proposed','approved','acknowledged_clarification_proposal'])assert(!validatePlannerCandidate({...input,artifact:{...input.artifact,metadata:{...input.artifact.metadata,outcome}}}));
+ const forged=structuredClone(input);const plan=JSON.parse(forged.artifact.content);plan.unresolved_questions=[];forged.artifact.content=forged.text=JSON.stringify(plan);forged.decisions[0].nativeOutput=nativeText(forged.text).output;assert(!validatePlannerCandidate(forged),'matching empty-question output cannot claim clarification status');
+ const unsettled=structuredClone(input);unsettled.decisions[0].delivery='cancelled_unknown';assert(!validatePlannerCandidate(unsettled));
 });
