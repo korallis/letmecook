@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "evidence": "synthetic",
+  "purpose": "Illustrative logical contract, not a runtime schema, production default, live grant or attestation",
+  "policy": {
+    "router_id": "router_fixture_native",
+    "route_id": "native_fixture",
+    "router_model": "gaffer-native-fixture",
+    "router_build_ref": "build_fixture_native",
+    "graph_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "policy_revision": "policy_fixture_native_1",
+    "epoch": 1,
+    "protocol_harness_settings_ref": "responses_harness_settings_fixture_1",
+    "capability_evidence_ref": "synthetic_capability_fixture_1",
+    "authorization_policy_ref": "operator_authority_fixture_1",
+    "limits_profile": {
+      "kind": "native-subscription-local-v1",
+      "providerOutput": { "requirement": "not_required", "capability": "unavailable" },
+      "providerMonetaryCap": { "requirement": "not_required", "capability": "unavailable" },
+      "subscriptionEnvelopeRef": "subscription_envelope_fixture_1",
+      "authorizationPolicyRef": "operator_authority_fixture_1"
+    },
+    "task_requirements": { "hard_provider_output_bound": false, "hard_provider_monetary_cap": false },
+    "subscription_envelope": {
+      "ref": "subscription_envelope_fixture_1",
+      "all_reachable_connections_and_fallbacks": [
+        { "connection_ref": "subscription_fixture_a", "model_ref": "model_fixture_primary", "billing": "subscription", "classification_ref": "reviewed_class_fixture_a", "compatibility_evidence_ref": "synthetic_compatibility_fixture_a" },
+        { "connection_ref": "subscription_fixture_b", "model_ref": "model_fixture_fallback", "billing": "subscription", "classification_ref": "reviewed_class_fixture_b", "compatibility_evidence_ref": "synthetic_compatibility_fixture_b" }
+      ]
+    },
+    "limits": {
+      "request_bytes": 1048576,
+      "response_bytes": 8388608,
+      "in_flight": 1,
+      "request_count": 8,
+      "inference_subattempt_count": 8,
+      "total_ms": 120000,
+      "first_output_ms": 30000,
+      "semantic_idle_ms": 15000,
+      "attempt_ms": 600000,
+      "router_retries_per_request": 1,
+      "harness_retries_per_attempt": 1,
+      "boundary_retries": 0
+    },
+    "policy_write_mode": "freeze_and_drain",
+    "ready_for_deployment": false
+  },
+  "attempt_binding": {
+    "attempt_id": "attempt_fixture_native_1",
+    "grant_id": "grant_fixture_native_1",
+    "lease_id": "lease_fixture_native_1",
+    "fence": 1,
+    "router_id": "router_fixture_native",
+    "route_id": "native_fixture",
+    "router_build_ref": "build_fixture_native",
+    "graph_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "policy_revision": "policy_fixture_native_1",
+    "epoch": 1,
+    "protocol_harness_settings_ref": "responses_harness_settings_fixture_1",
+    "capability_evidence_ref": "synthetic_capability_fixture_1",
+    "authorization_policy_ref": "operator_authority_fixture_1",
+    "limits_profile": {
+      "kind": "native-subscription-local-v1",
+      "providerOutput": { "requirement": "not_required", "capability": "unavailable" },
+      "providerMonetaryCap": { "requirement": "not_required", "capability": "unavailable" },
+      "subscriptionEnvelopeRef": "subscription_envelope_fixture_1",
+      "authorizationPolicyRef": "operator_authority_fixture_1"
+    },
+    "expires_at": "2026-09-14T10:10:00Z"
+  },
+  "request": {
+    "method": "POST",
+    "path": "/v1/responses",
+    "body": {
+      "model": "gaffer-native-fixture",
+      "stream": true,
+      "input": [{ "role": "user", "content": "Describe the public fixture in one sentence." }]
+    },
+    "compatibility": "Requires a separately reviewed native harness/request profile; not supported by this repository's current experimental Chat ingress"
+  }
+}

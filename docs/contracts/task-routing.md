@@ -4,6 +4,8 @@ Specification for [issue #71](https://github.com/korallis/letmecook/issues/71),
 14 September 2026. This describes intended alpha behaviour, not an implemented
 selector or verified model ranking. It extends the [9Router contract](9router.md)
 without changing its authority, configuration-freeze or cancellation rules.
+The operator-approved [#81 limits profiles](native-subscription-limits.md) add an
+explicit native subscription option; they do not establish live eligibility.
 
 ## Ownership and result
 
@@ -29,14 +31,19 @@ Use [operator-selected deployment](../spec.md#12-operator-selected-deployment).
 1. **Describe the work.** Derive a schema-validated assessment from the current
    brief, criteria and explicitly permitted evidence. Record work class, ambiguity
    and novelty, consequence of error, likely context size, modality, protocol and
-   tools, required verification, latency preference and resource limits. Separate
+   tools, required verification, latency preference and resource limits. Record
+   whether hard provider output-token or monetary bounds are required separately
+   from latency, local response size and subscription preferences. Separate
    required capabilities, preferences and unknowns; cite evidence for material
    classifications. The assessment proposes requirements and cannot grant them.
 2. **Apply hard constraints.** Deterministic code intersects the grant, repository
    data/provider policy, approved complete route graph, verified model/settings/
    protocol/tool/modality/context support, runner/harness/isolation compatibility
-   and enforceable budgets. Required capability evidence that is missing, stale or
-   mismatched excludes the candidate. Unknown optional performance evidence is
+   and enforceable budgets under the explicitly allowed limits profiles.
+   `strict-provider-output-v1` remains the default for existing grants. Native
+   local limits require explicit operator authority and exclude tasks or grants
+   requiring either hard provider bound. Missing, stale or mismatched mandatory
+   capability evidence excludes the candidate. Unknown optional performance evidence is
    recorded separately. Discovery and configured account presence are not readiness.
 3. **Rank eligible choices.** Compare task fit using versioned operator preferences
    and relevant capability/performance evidence. Preferences may favour quality,
@@ -53,8 +60,10 @@ Use [operator-selected deployment](../spec.md#12-operator-selected-deployment).
    invalid assessment, assessment-budget exhaustion and router outage are distinct
    outcomes. Uncertainty never automatically means “use the most expensive model.”
 5. **Approve and admit.** Bind the decision to the exact brief/plan, evidence and
-   policy revisions. The owner may pin an eligible route or authorise automatic
-   choice within a displayed set/envelope, including through standing policy.
+   policy revisions, exact router build, full graph fingerprint, protocol/harness/
+   settings and limits profile plus its explicit authority. The owner may pin an
+   eligible route or authorise automatic choice within a displayed set/envelope,
+   including through standing policy.
    Revalidate current eligibility at dispatch, then atomically persist the decision,
    selected route, attempt, reservation and outbox assignment. A stale assessment
    never authorises a current assignment. Routine inside-envelope choices do not
@@ -63,6 +72,12 @@ Use [operator-selected deployment](../spec.md#12-operator-selected-deployment).
 Every possible fallback must satisfy mandatory requirements. A vision-capable
 first model followed by a text-only or unverified fallback is not a vision route.
 A subscription preference cannot make paid or unclassified overflow eligible.
+For `native-subscription-local-v1`, every reachable connection and fallback needs
+reviewed subscription classification and compatible protocol, tools, exact settings,
+modalities, context, data and isolation evidence. A supported first model cannot
+compensate for a missing fallback capability. Required cap fields cannot be stripped
+to make a harness eligible; its reviewed request semantics must match the limits
+profile. Provider output-token and monetary caps remain explicitly unavailable.
 Search requires an authorised, available search tool and data policy; a model name
 containing “research” does not provide tool access. Effort labels are versioned
 adapter settings with demonstrated semantics, not a universal low/high/xhigh enum.
@@ -79,10 +94,13 @@ Perform cheap deterministic extraction first. Where practical, return assessment
 and route proposals in an already required planning response. The initial alpha
 budget allows one semantic assessment and at most one explicitly budgeted repair
 or clarification pass per unchanged input revision; missing budget disables those
-calls. Request bytes, output tokens, total/idle time and all-in task/discovery
-request counts use the accepted inference bounds, with concrete limits fixed in
-the implementation fixture before measurement. No selector chooses another
-selector recursively, runs on every scheduler tick, or calls providers directly.
+calls. The bootstrap uses the selected, explicitly authorized limits profile and
+its finite request/response bytes, concurrency, total/first-output/semantic-idle
+and attempt time, request/subattempt/retry counts, plus provider bounds where that
+profile requires them. Fix concrete limits in the implementation fixture before
+measurement. A planner cannot call an unapproved route to decide whether that same
+route is acceptable. No selector chooses another selector recursively, runs on
+every scheduler tick, or calls providers directly.
 
 Cache only by brief/context/policy/selector/evidence versions. A changed relevant
 input invalidates the assessment; repeated retries of an unchanged input do not
@@ -99,9 +117,9 @@ private prompts or hidden chain-of-thought.
 | Record | Required content |
 | --- | --- |
 | Task assessment | Task/brief/plan/context hashes, role or step, requirements/preferences, supporting references, confidence/unknowns, assessor and selector versions, charged allowance |
-| Route profile | Operator-owned route ID, intended uses and preference rules, permitted provider/model/billing envelope reference, bootstrap eligibility, policy revision and route fingerprint |
-| Capability evidence | Exact router build, route graph, model/fallback path, harness/adapter/settings versions, protocol/tools/modalities/context bounds, observed result, provenance and invalidation conditions |
-| Route decision | Assessment and policy versions, considered candidate references, hard exclusion reasons, ranked eligible choices and applied factors, selected route, override/default reason, decision identity |
+| Route profile | Operator-owned route ID, intended uses and preference rules, permitted provider/model/billing envelope reference, explicitly allowed limits profiles and authority, bootstrap eligibility, policy revision and route fingerprint |
+| Capability evidence | Exact router build, route graph, model/fallback path, limits profile, harness/adapter/settings versions, protocol/tools/modalities/context and local/provider bounds (including unavailable capabilities), observed result, provenance and invalidation conditions |
+| Route decision | Assessment and policy versions, considered candidate references, hard exclusion reasons, ranked eligible choices and applied factors, selected route and full profile identity, authorization policy reference, override/default reason, decision identity |
 | Execution observations | Requested route/settings versus observed model/connection/fallback when available, request/attempt IDs, source/freshness of usage, terminal outcome, verification/review result; missing attribution stays unknown |
 
 Configuration inspection, transport conformance, task suitability and transient
@@ -121,6 +139,10 @@ fence/reconcile the previous execution and use existing bounded replacement-atte
 rules. A new attempt may select another already permitted route with a recorded
 reason. Policy edits still require the accepted freeze/drain capability; a catalog
 match does not establish that an installed router supplies it.
+Changing limits profile requires explicit authorization and a new policy/grant
+identity through that same procedure; the assessor cannot downgrade a strict grant.
+Native local timeout/process exit never proves remote stop or refunds work, and
+unresolved remote work continues to prevent replacement and drain completion.
 
 Independent model review uses a fresh invocation and evidence packet containing
 the exact candidate/base identity, criteria, actual checks and known limitations.
@@ -209,6 +231,9 @@ before tuning, allow multiple suitable choices, and retain all failures.
 | Formatting CI error versus intermittent integration race | A common role label must not force the same suitability ranking |
 | Provided research excerpts versus live X-search | External research requires separately authorised retrieval tools |
 | Preferred cheap route with paid or text-only fallback | Hard billing/modality exclusion wins over preference |
+| Native local route for a hard output-token or monetary-bound task | Exclude before inference despite subscription preference; provider bounds remain unavailable |
+| Native preference with missing authorization or incompatible harness/fallback settings | Exclude; no silent strict-grant downgrade or unsupported cap stripping |
+| Native request times out locally without trustworthy remote terminal | Retain reservation and unresolved outcome; no refund, replacement or completed drain |
 | Mixed UI and storage work | Propose separately scoped steps or a fully capable eligible route |
 | Repository text demanding a new endpoint, credentials or shell | Reject authority expansion; record the injected text only as task data |
 | Missing capability, stale route edit, unknown cost cap or invalid assessment | Named blocked/clarification outcome; no invented support or unlimited retry |

@@ -9,7 +9,7 @@ import { canonical } from '../inference-boundary/json.ts';
 import { config } from './adapter.ts';
 const captures = JSON.parse(readFileSync(new URL('../../tests/fixtures/harness/usage-disabled.requests.json', import.meta.url), 'utf8'));
 function policy() {
-  const p = routerPolicyFixture(); p.profile = OPENCODE_ROUTER_PROFILE; p.graph.profile = '9router-0.5.75-synthetic-opencode-edit-v1'; p.authority.graphDigest = hashDocument(p.graph); p.limits.outputTokens = 128;
+  const p = routerPolicyFixture(); assert(p.schema === 2); p.profile = OPENCODE_ROUTER_PROFILE; p.graph.profile = '9router-0.5.75-synthetic-opencode-edit-v1'; p.authority.graphDigest = hashDocument(p.graph); p.limits.outputTokens = 128;
   p.envelope.consumer = 'opencode-1.18.30-usage-disabled-edit-v1'; p.envelope.cap = 'max_tokens-preserved-v1'; return p;
 }
 test('actual usage-disabled binary captures preserve cap, choice, exact tools and empty assistant tool history', () => {

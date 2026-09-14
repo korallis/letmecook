@@ -6,9 +6,16 @@ import { createResponsesTerminalObserver } from './responses-terminal.mjs';
 import { createChatTerminalObserver } from './chat-terminal.mjs';
 import { validateOpenCodeTools, validateOpenCodeArguments } from './opencode-profile.mjs';
 import { stripCodexUnsupportedPatterns } from 'open-sse/utils/codexToolSchema.js';
+import { CODEX_DEFAULT_INSTRUCTIONS } from 'open-sse/config/codexInstructions.js';
+import { evaluationScopes } from './evaluation-scope.mjs';
+import { validateNativeProfile,validateNativeRegistry,nativeConsumerRole } from './native-profile.mjs';
+import { validateNativeRequest, expectedPhysicalRequest, NativeResponsesStream } from './native-responses.mjs';
+import { deploymentOwner } from './deployment-owner.mjs';
+import { nativeDispatcher } from './native-transport.mjs';
 
 const context = new AsyncLocalStorage();
 let instance;
+let nativeProfile = null;
 export const canonical = value => JSON.stringify(value, (_, v) => v && typeof v === 'object' && !Array.isArray(v) ? Object.fromEntries(Object.keys(v).sort().map(k => [k, v[k]])) : v);
 export const digest = value => createHash('sha256').update(canonical(value)).digest('hex');
 const deny = (reason = 'authority_closed') => { throw new Error(reason); };
@@ -38,7 +45,7 @@ function admittedHeaders(request) {
     'user-agent':value=>['node','undici','gaffer-boundary/1'].includes(value),
     host:value=>/^127\.0\.0\.1(?::[0-9]{1,5})?$/.test(value) && (!value.includes(':') || Number(value.split(':')[1])>=1 && Number(value.split(':')[1])<=65535),
     connection:value=>['keep-alive','close'].includes(value.toLowerCase()),
-    'content-length':value=>/^(0|[1-9][0-9]{0,5})$/.test(value) && Number(value)<=65536,
+    'content-length':value=>/^(0|[1-9][0-9]{0,5})$/.test(value) && Number(value)<=(nativeProfile?.local.requestBytes??65536),
     'transfer-encoding':value=>value.toLowerCase()==='chunked',
     'accept-encoding':value=>/^(?:gzip|deflate|br|identity)(?:,\s*(?:gzip|deflate|br|identity))*$/.test(value),
     'sec-fetch-mode':value=>['cors','same-origin','no-cors'].includes(value)
@@ -134,13 +141,19 @@ export function project(payload) {
     requireThat(url.protocol==='http:' && url.hostname==='127.0.0.1', 'non_synthetic_endpoint');
     return { id: n.id, prefix: n.prefix, baseUrl: n.baseUrl, apiType: 'chat' };
   }).sort((a,b) => a.id.localeCompare(b.id));
-  requireThat((nodes.length > 0 || nativeSynthetic) && new Set(nodes.map(n => n.prefix)).size === nodes.length, 'ambiguous_node');
+  requireThat((nodes.length > 0 || nativeSynthetic || nativeProfile) && new Set(nodes.map(n => n.prefix)).size === nodes.length, 'ambiguous_node');
+  if(nativeProfile)requireThat(nodes.length===0,'native_no_paid_path');
   const connections = (payload.providerConnections || []).map(c => {
     if (c.provider === 'codex') {
-      requireThat(nativeSynthetic && ref(c.id) && c.authType === 'oauth' && typeof c.accessToken === 'string', 'native_provider_bound_unsupported');
+      requireThat((nativeSynthetic || nativeProfile) && ref(c.id) && c.authType === 'oauth' && typeof c.accessToken === 'string' && c.accessToken.length>0, 'native_provider_bound_unsupported');
       for (const key of Object.keys(c)) requireThat(['id','provider','authType','name','email','priority','isActive','createdAt','updatedAt','providerSpecificData'].includes(key) || healthKeys.has(key) || tokenKeys.has(key) || /^modelLock_[a-zA-Z0-9._/-]+$/.test(key), 'unsupported_native_metadata');
       closedKeys(c.providerSpecificData, ['workspaceId','chatgptAccountId']);
       requireThat(Object.values(c.providerSpecificData).every(ref), 'unsupported_workspace_identity');
+      if(nativeProfile){
+        const admitted=nativeProfile.connections.find(x=>x.id===c.id);
+        requireThat(admitted&&c.isActive!==false&&!c.refreshToken&&!c.idToken&&Date.parse(c.expiresAt)===admitted.expiresAt,'native_credential_profile_mismatch');
+        return {id:c.id,provider:'codex',authType:'oauth',priority:c.priority??null,isActive:true,endpoint:nativeProfile.deployment.endpoint,workspace:c.providerSpecificData,billing:admitted.billing,providerOutputBound:false,credentialRef:admitted.credentialRef,expiresAt:admitted.expiresAt,skewMs:admitted.skewMs,refresh:false};
+      }
       return {id:c.id,provider:'codex',authType:'oauth',priority:c.priority ?? null,isActive:c.isActive !== false,endpoint:nativeEndpoint,refreshEndpoint:nativeRefreshEndpoint,workspace:c.providerSpecificData,billing:'synthetic-subscription',providerOutputBound:false};
     }
     requireThat(ref(c.id) && c.authType === 'apikey' && typeof c.apiKey === 'string' && c.apiKey.length > 0, 'unsupported_credentials');
@@ -158,7 +171,7 @@ export function project(payload) {
       const match = typeof member === 'string' && /^([a-zA-Z0-9_-]+)\/([a-zA-Z0-9._-]+)$/.exec(member);
       requireThat(match, 'nested_or_unresolved_model');
       if (['cx','codex'].includes(match[1])) {
-        requireThat(nativeSynthetic && ['gpt-6-astra','gpt-5.6-sol','gpt-5.6-terra'].includes(match[2]), 'unsupported_native_model');
+        requireThat((nativeSynthetic || nativeProfile) && (nativeProfile?['gpt-6-astra']:['gpt-6-astra','gpt-5.6-sol','gpt-5.6-terra']).includes(match[2]), 'unsupported_native_model');
         return {member,provider:'codex',model:match[2],connections:connections.filter(c=>c.provider==='codex').map(c=>c.id)};
       }
       const n = nodes.find(n => n.id === match[1]);
@@ -170,6 +183,12 @@ export function project(payload) {
     return { id: c.id, name: c.name, strategy: 'fallback', edges };
   }).sort((a,b) => a.id.localeCompare(b.id));
   requireThat(routes.length > 0, 'empty_routes');
+  if(nativeProfile){
+    requireThat(connections.length===nativeProfile.connections.length && routes.length===1 && routes[0].edges.length===1,'native_full_graph_mismatch');
+    return {schema:2,profile:'9router-0.5.75-native-local-v1',profileDigest:digest(nativeProfile),nodes,connections,routes,
+      settings:{requireApiKey:true,comboStrategy:'fallback',accountStrategy:'fill-first',adapters:false,helpers:false,remoteResources:false,proxies:false,autoPing:false,refresh:false},
+      bounds:{...nativeProfile.local,providerOutputTokens:null,providerMonetaryCap:null,scope:nativeProfile.scope},terminals:['validated-original-responses-sse','validated-original-json-error']};
+  }
   return { schema: 1, profile: nativeSynthetic ? '9router-0.5.75-synthetic-native-authority-v1' : opencodeSynthetic ? '9router-0.5.75-synthetic-opencode-edit-v1' : '9router-0.5.75-synthetic-compatible-chat-v1', liveAdmission:false, nativeLiveAdmission: false, nodes, connections, routes,
     settings: { requireApiKey: true, comboStrategy: 'fallback', accountStrategy: 'fill-first', adapters: false, helpers: false, remoteResources: false, proxies: false, autoPing: false },
     bounds: { requestBytes: 65536, responseBytes: 1048576, requestMaxTokens: 1024, providerOutputTokens: nativeSynthetic ? null : 1024, ingressMs:3000, totalMs: 30000, subattempts: 16 },
@@ -193,6 +212,8 @@ function payloadFromDb(db) {
 
 export function installAuthority(db) {
   requireThat(!instance && db.driver === 'node:sqlite', 'unsupported_runtime');
+  const ownerAtBoot=process.env.GAFFER_NATIVE_DEPLOYMENT==='1'?deploymentOwner():null;
+  let dispatcher,nativeRegistry=[];
   for (const key of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy','HEADROOM_URL']) requireThat(!process.env[key], 'unsupported_environment');
   db.exec(`PRAGMA synchronous=FULL;
     CREATE TABLE IF NOT EXISTS gaffer_authority (id INTEGER PRIMARY KEY CHECK(id=1), boot TEXT NOT NULL, generation INTEGER NOT NULL, phase TEXT NOT NULL, revision TEXT, policy TEXT);
@@ -200,6 +221,10 @@ export function installAuthority(db) {
     CREATE TABLE IF NOT EXISTS gaffer_missing (id TEXT PRIMARY KEY, boot TEXT NOT NULL, generation INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS gaffer_operations (request_id TEXT NOT NULL, ordinal INTEGER NOT NULL, boot TEXT NOT NULL, generation INTEGER NOT NULL, revision TEXT NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL, connection_id TEXT NOT NULL, terminal TEXT NOT NULL, local_stop TEXT NOT NULL, PRIMARY KEY(request_id, ordinal));`);
   const boot = randomUUID();
+  const scopes=evaluationScopes(db,boot);
+  db.exec(`CREATE TABLE IF NOT EXISTS gaffer_native_registry(authorization_id TEXT PRIMARY KEY, digest TEXT NOT NULL, profiles TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS gaffer_native_authorizations(id TEXT PRIMARY KEY, digest TEXT NOT NULL, record TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS gaffer_native_admissions(id TEXT PRIMARY KEY, binding TEXT NOT NULL, request_digest TEXT NOT NULL, request TEXT NOT NULL, profile_digest TEXT NOT NULL, scope_id TEXT NOT NULL, authorization_digest TEXT NOT NULL);`);
   db.transaction(() => {
     const previous = db.get('SELECT * FROM gaffer_authority WHERE id=1');
     db.run('INSERT OR REPLACE INTO gaffer_authority VALUES(1, ?, ?, ?, ?, ?)', [boot, (previous?.generation || 0) + 1, 'closed', previous?.revision || null, previous?.policy || null]);
@@ -207,16 +232,25 @@ export function installAuthority(db) {
     db.run("UPDATE gaffer_operations SET local_stop='crash_unknown' WHERE terminal='unknown'");
   });
   const active = new Map();
-  const state = () => { const s = db.get('SELECT * FROM gaffer_authority WHERE id=1'); requireThat(s.boot === boot, 'stale_boot'); return s; };
+  const state = () => { ownerAtBoot?.assertCurrent();const s = db.get('SELECT * FROM gaffer_authority WHERE id=1'); requireThat(s.boot === boot, 'stale_boot'); return s; };
   const snapshot = () => project(payloadFromDb(db));
   const receipt = id => {
     const r = db.get('SELECT * FROM gaffer_receipts WHERE id=?', [id]);
     if (!r) return { id, known: false, quiescent: false };
-    const operations = db.all('SELECT * FROM gaffer_operations WHERE request_id=? ORDER BY ordinal', [id]);
-    return { ...r, known: true, operations, quiescent: r.handler_done === 1 && operations.every(o => o.terminal !== 'unknown') };
+    const n=db.get('SELECT * FROM gaffer_native_admissions WHERE id=?',[id]);
+    const operations = db.all('SELECT * FROM gaffer_operations WHERE request_id=? ORDER BY ordinal', [id]).map(o=>{
+      if(!n)return o;const debit=db.get('SELECT scope_id,body_digest,output_digest FROM gaffer_scope_operations WHERE request_id=? AND ordinal=?',[id,o.ordinal]);return {...o,...debit};
+    });
+    return { ...r, known: true, operations, quiescent: r.handler_done === 1 && operations.every(o => o.terminal !== 'unknown'),...(n?{native:{profileDigest:n.profile_digest,scopeId:n.scope_id,authorizationDigest:n.authorization_digest,bindingDigest:digest(JSON.parse(n.binding)),requestDigest:n.request_digest}}:{}) };
   };
   const allQuiet = () => db.get('SELECT COUNT(*) AS n FROM gaffer_missing').n===0 && db.all('SELECT id FROM gaffer_receipts').every(r => receipt(r.id).quiescent);
-  const assertContext = ctx => { const s = state(); requireThat(ctx && !ctx.cancel.signal.aborted && ['active','draining'].includes(s.phase) && s.generation === ctx.generation && s.revision === ctx.revision, 'request_fenced'); };
+  const nativeTime=ctx=>{
+    if(!ctx.native)return Infinity;
+    const binding=JSON.parse(ctx.native.binding);requireThat(binding.role===nativeConsumerRole(nativeProfile),'native_role_mismatch');const limit=scopes.assertCurrent(ctx.native.scope_id,ctx.native.authorization_digest,ctx.tokenDeadline);
+    const remaining=Math.min(limit.remainingMs,ctx.requestDeadline-performance.now(),binding.expiresAt-Date.now(),binding.leaseExpiresAt-Date.now());
+    requireThat(remaining>0,'native_deadline');return remaining;
+  };
+  const assertContext = ctx => { const s = state(); requireThat(ctx && !ctx.cancel.signal.aborted && ['active','draining'].includes(s.phase) && s.generation === ctx.generation && s.revision === ctx.revision, 'request_fenced'); nativeTime(ctx); };
   const credentials = () => db.all('SELECT id, provider, data FROM providerConnections').map(row => ({id:row.id,provider:row.provider,secrets:Object.fromEntries(Object.entries(JSON.parse(row.data)).filter(([key])=>key==='apiKey'||tokenKeys.has(key)))}));
   const write = (method, sql, params) => {
     requireThat(!/gaffer_|sqlite_|\b(?:pragma|attach|detach|vacuum|create|drop|alter)\b/i.test(sql), 'protected_storage');
@@ -244,6 +278,42 @@ export function installAuthority(db) {
     exec: () => deny('raw_sql_denied'), checkpoint: () => db.checkpoint(), close: () => deny('trusted_shutdown_only') });
   instance = Object.freeze({
     state: () => ({...state(), policy: state().policy ? JSON.parse(state().policy) : null}), snapshot, project, receipt,
+    configureNative(profile){
+      requireThat(state().phase==='closed'&&allQuiet()&&!nativeProfile,'native_configuration_closed');
+      const profiles=validateNativeRegistry(profile),next=profiles[0];
+      requireThat(next.evidence!=='synthetic'||nativeSynthetic,'native_synthetic_transport_required');
+      if(next.evidence==='reviewed-deployment'){
+        requireThat(ownerAtBoot&&ownerAtBoot.digest===next.deployment.writerFence&&!nativeSynthetic,'native_deployment_owner_required');
+        dispatcher=nativeDispatcher('/egress/provider.sock');
+      }
+      db.transaction(()=>{
+        const registry=db.get('SELECT digest FROM gaffer_native_registry WHERE authorization_id=?',[next.authorization.id]);requireThat(!registry||registry.digest===digest(profiles),'native_registry_changed');db.run('INSERT OR IGNORE INTO gaffer_native_registry VALUES(?,?,?)',[next.authorization.id,digest(profiles),canonical(profiles)]);
+        const previous=db.get('SELECT digest FROM gaffer_native_authorizations WHERE id=?',[next.authorization.id]);
+        requireThat(!previous||previous.digest===digest(next.authorization),'native_authorization_changed');
+        db.run('INSERT OR IGNORE INTO gaffer_native_authorizations VALUES(?,?,?)',[next.authorization.id,digest(next.authorization),canonical(next.authorization)]);
+      });nativeRegistry=profiles;nativeProfile=next;return digest(next);
+    },
+    nativeProfiles:()=>structuredClone(nativeRegistry),
+    selectNativeProfile(profileDigest,expectedGeneration){
+      const s=state(),next=nativeRegistry.find(p=>digest(p)===profileDigest);requireThat(next&&s.phase==='active'&&s.generation===expectedGeneration&&active.size===0&&allQuiet(),'native_selection_denied');
+      requireThat(next!==nativeProfile,'native_selection_unchanged');
+      const scope=scopes.read(next.scope.id);if(scope)scopes.assertCurrent(next.scope.id,next.scope.authorizationDigest,Math.min(...next.connections.map(c=>c.expiresAt-c.skewMs)));
+      const previous=nativeProfile;
+      try{return db.transaction(()=>{nativeProfile=next;const policy=snapshot(),generation=s.generation+1,revision='native_selection_'+generation;db.run("UPDATE gaffer_authority SET generation=?,revision=?,policy=? WHERE id=1",[generation,revision,canonical(policy)]);return {profile:structuredClone(next),state:{...state(),policy},graph:policy};});}
+      catch(error){nativeProfile=previous;throw error;}
+    },
+    startEvaluation(){requireThat(nativeProfile&&state().phase==='active','native_configuration_closed');return scopes.register(nativeProfile.scope,allQuiet);},
+    evaluationScope:id=>scopes.read(id),
+    closeEvaluation:id=>scopes.close(id,allQuiet),
+    prepareNative(record){
+      requireThat(nativeProfile&&record?.router?.policy?.schema===3&&record.router.send==='send_possible'&&ref(record.requestId),'native_preparation_required');
+      const {policy,binding,requestDigest,nativeRequest}=record.router;
+      requireThat(canonical(policy.native)===canonical(nativeProfile)&&policy.authority.boot===boot&&policy.authority.generation===state().generation&&policy.revision===state().revision&&policy.authority.graphDigest===digest(snapshot()),'native_preparation_mismatch');
+      requireThat(binding.role===nativeConsumerRole(nativeProfile)&&canonical(binding.native)===canonical({profileDigest:digest(nativeProfile),scopeId:nativeProfile.scope.id,authorizationDigest:nativeProfile.scope.authorizationDigest})&&digest(JSON.stringify(nativeRequest))===requestDigest,'native_preparation_mismatch');
+      const tokenDeadline=Math.min(...nativeProfile.connections.map(c=>c.expiresAt-c.skewMs));requireThat(Number.isSafeInteger(tokenDeadline)&&binding.expiresAt>Date.now()&&binding.leaseExpiresAt>Date.now(),'native_expired');
+      scopes.assertCurrent(nativeProfile.scope.id,nativeProfile.scope.authorizationDigest,tokenDeadline);
+      db.run('INSERT INTO gaffer_native_admissions VALUES(?,?,?,?,?,?,?)',[record.requestId,canonical(binding),requestDigest,JSON.stringify(nativeRequest),digest(nativeProfile),nativeProfile.scope.id,nativeProfile.scope.authorizationDigest]);
+    },
     quiescent: ids => db.transaction(()=>{
       const s=state();requireThat(Array.isArray(ids) && ids.every(ref),'invalid_receipt_ids');
       for(const id of ids)if(!receipt(id).known)db.run('INSERT OR IGNORE INTO gaffer_missing VALUES(?, ?, ?)',[id,boot,s.generation]);
@@ -305,7 +375,7 @@ export function installAuthority(db) {
             input.read().then(resolve,reject).finally(()=>ingressAbort.signal.removeEventListener('abort',aborted));
           });
           if(part.done)break;
-          inputBytes+=part.value.byteLength;requireThat(inputBytes<=65536,'request_bytes');chunks.push(Buffer.from(part.value));
+          inputBytes+=part.value.byteLength;requireThat(inputBytes<=(nativeProfile?.local.requestBytes??65536),'request_bytes');chunks.push(Buffer.from(part.value));
         }
         if(request.headers.has('content-length'))requireThat(Number(request.headers.get('content-length'))===inputBytes,'request_length_mismatch');
       } catch(error) {void input.cancel(error).catch(()=>{});throw error;}
@@ -313,17 +383,24 @@ export function installAuthority(db) {
       const bodyText = new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks));
       const admittedRequest=new Request(request.url,{method:'POST',headers,body:bodyText,signal:request.signal});
       const body = JSON.parse(bodyText);
-      requireThat(new URL(request.url).pathname === '/v1/chat/completions', 'unsupported_request');
-      validateRequest(body);
+      requireThat(new URL(request.url).pathname === (nativeProfile?'/v1/responses':'/v1/chat/completions'), 'unsupported_request');
+      if(!nativeProfile)validateRequest(body);
       const id = request.headers.get('x-gaffer-request-id');
       const generation = Number(request.headers.get('x-gaffer-generation')); const revision = request.headers.get('x-gaffer-revision');
       requireThat(ref(id), 'invalid_request_id');
       const cancel = new AbortController();
       const ctx = {id, boot, generation, revision, cancel, policy: null, route: body.model, transports:new Set()};
+      if(nativeProfile){
+        const prepared=db.get('SELECT * FROM gaffer_native_admissions WHERE id=?',[id]);
+        requireThat(prepared&&prepared.profile_digest===digest(nativeProfile)&&prepared.request_digest===digest(bodyText)&&canonical(JSON.parse(prepared.request))===canonical(body),'native_preparation_required');
+        ctx.native=prepared;ctx.tokenDeadline=Math.min(...nativeProfile.connections.map(c=>c.expiresAt-c.skewMs));
+        requireThat(Number.isSafeInteger(ctx.tokenDeadline),'native_token_expiry_required');
+        ctx.requestDeadline=performance.now()+nativeProfile.local.totalMs;
+      }
       db.transaction(() => {
         const s = state();requireThat(s.phase==='active','admission_closed'); assertContext(ctx); requireThat(!db.get('SELECT id FROM gaffer_receipts WHERE id=?', [id]), 'duplicate_request_id');
         // Serial native admission prevents cross-request refresh dedup dependencies.
-        if (nativeSynthetic) requireThat(active.size === 0 && allQuiet(), 'native_serial_profile');
+        if (nativeSynthetic || nativeProfile) requireThat(active.size === 0 && allQuiet(), 'native_serial_profile');
         const policy = JSON.parse(s.policy); requireThat(canonical(snapshot()) === s.policy && policy.routes.some(r => r.name === body.model), 'policy_mismatch');
         ctx.policy = policy;
         db.run("INSERT INTO gaffer_receipts VALUES(?, ?, ?, ?, ?, 'running', 0)", [id,boot,generation,revision,body.model]);
@@ -331,7 +408,7 @@ export function installAuthority(db) {
       active.set(id, ctx);
       const onAbort = () => instance.cancel(id);
       request.signal.addEventListener('abort', onAbort, {once:true}); if (request.signal.aborted) onAbort();
-      const timer = setTimeout(onAbort, 30000); timer.unref();
+      const timer = setTimeout(onAbort, Math.min(nativeProfile?.local.totalMs??30000,nativeTime(ctx))); timer.unref();
       let done = false;
       let onOutputAbort;
       ctx.onTransportsDrained=()=>{
@@ -367,34 +444,57 @@ export function installAuthority(db) {
     },
     async refresh(provider, credentials, call) {
       const ctx=context.getStore(); assertContext(ctx);
+      requireThat(!nativeProfile,'refresh_not_authorized');
       requireThat(nativeSynthetic && provider === 'codex' && ctx.policy.connections.some(c=>c.id===credentials?.connectionId && c.provider===provider), 'unsupported_refresh');
       const result=await context.run({...ctx,executor:{provider,model:'credential_refresh',connection:credentials.connectionId,kind:'refresh'}},call);
       assertContext(ctx); return result;
     },
     credentialUpdate(connectionId, call) {
       const ctx=context.getStore();assertContext(ctx);
+      requireThat(!nativeProfile,'refresh_not_authorized');
       requireThat(receipt(ctx.id).operations.some(o=>o.connection_id===connectionId && o.terminal==='provider_refresh_terminal'),'unproved_credential_update');
       return context.run({...ctx,credentialWrite:connectionId},call);
     },
     assertCurrent: () => assertContext(context.getStore()),
+    noRefreshCredentials(provider,credentials){
+      if(!nativeProfile)return false;
+      const ctx=context.getStore();assertContext(ctx);
+      const admitted=nativeProfile.connections.find(c=>c.id===(credentials.connectionId??credentials.id));
+      requireThat(provider==='codex'&&admitted&&!credentials.refreshToken&&!credentials.idToken&&Date.parse(credentials.expiresAt)===admitted.expiresAt&&Date.now()<admitted.expiresAt-admitted.skewMs,'native_credential_expired');
+      return true;
+    },
     async delay(ms) {
       const ctx = context.getStore(); assertContext(ctx);
+      requireThat(Number.isSafeInteger(ms)&&ms>=0&&ms<=300000,'invalid_retry_delay');
+      const remaining=nativeTime(ctx);
       await new Promise((resolve,reject) => {
         const abort = () => { clearTimeout(timer); reject(ctx.cancel.signal.reason); };
-        const timer = setTimeout(() => { ctx.cancel.signal.removeEventListener('abort',abort); resolve(); }, ms);
+        const timer = setTimeout(() => { ctx.cancel.signal.removeEventListener('abort',abort); if(ms>=remaining)reject(new Error('native_deadline'));else resolve(); }, Math.min(ms,remaining));
         ctx.cancel.signal.addEventListener('abort',abort,{once:true});
       });
       assertContext(ctx);
     },
     async fetch(call, url, options, proxyOptions) {
       const ctx = context.getStore(); assertContext(ctx); requireThat(ctx.executor, 'untracked_fetch');
+      if(db.all('SELECT terminal FROM gaffer_operations WHERE request_id=?',[ctx.id]).some(o=>o.terminal==='unknown')){ctx.cancel.abort(new Error('prior_operation_unknown'));deny('prior_operation_unknown');}
       const conn = ctx.policy.connections.find(c => c.id === ctx.executor.connection);
+      if(nativeProfile)requireThat(!['dispatcher','agent','ca','key','cert','rejectUnauthorized'].some(key=>Object.hasOwn(options,key)),'native_transport_override_denied');
       requireThat(String(url) === (ctx.executor.kind==='refresh' ? conn.refreshEndpoint : conn.endpoint) && !proxyOptions?.connectionProxyEnabled && !proxyOptions?.vercelRelayUrl && !proxyOptions?.enabled, 'unapproved_transport');
       requireThat(!mitmHosts.some(host => new URL(url).hostname.includes(host)), 'unsupported_mitm_transport');
       let ordinal;
       db.transaction(() => {
         assertContext(ctx); ordinal = db.get('SELECT COUNT(*) AS n FROM gaffer_operations WHERE request_id=?',[ctx.id]).n + 1;
-        requireThat(ordinal <= 16, 'subattempt_limit');
+        // A cancelled peek or failed transport is not permission to retry. This
+        // gate is shared by inference, account/model fallback and refresh.
+        requireThat(db.all('SELECT terminal FROM gaffer_operations WHERE request_id=?',[ctx.id]).every(o => o.terminal !== 'unknown'), 'prior_operation_unknown');
+        requireThat(ordinal <= (nativeProfile?nativeProfile.scope.maxInferenceAttempts:16), 'subattempt_limit');
+        if(nativeProfile){
+          requireThat(ctx.native&&ctx.executor.kind==='inference'&&ctx.executor.model==='gpt-6-astra','native_send_not_authorized');
+          requireThat(options.method==='POST'&&typeof options.body==='string','native_serialized_body_required');
+          const actual=JSON.parse(options.body),expected=expectedPhysicalRequest(JSON.parse(ctx.native.request),ctx.executor.model,CODEX_DEFAULT_INSTRUCTIONS);
+          requireThat(canonical(actual)===canonical(expected),'native_physical_body_changed');
+          scopes.debit({id:ctx.native.scope_id,authorizationDigest:ctx.native.authorization_digest,tokenDeadline:ctx.tokenDeadline,requestId:ctx.id,ordinal,kind:ctx.executor.kind,bodyDigest:digest(actual)});
+        }
         db.run("INSERT INTO gaffer_operations VALUES(?, ?, ?, ?, ?, ?, ?, ?, 'unknown', 'running')", [ctx.id,ordinal,boot,ctx.generation,ctx.revision,ctx.executor.provider,ctx.executor.model,ctx.executor.connection]);
       });
       const stop = (terminal, local) => db.run('UPDATE gaffer_operations SET terminal=?, local_stop=? WHERE request_id=? AND ordinal=?', [terminal,local,ctx.id,ordinal]);
@@ -419,7 +519,11 @@ export function installAuthority(db) {
       const onAbort=()=>{void dispose(ctx.cancel.signal.reason);};
       ctx.transports.add(dispose);ctx.cancel.signal.addEventListener('abort',onAbort,{once:true});
       try {
-        response = await call(url, {...options, signal: AbortSignal.any([ctx.cancel.signal,transportAbort.signal,...(options.signal ? [options.signal] : [])]), redirect:'error'}, proxyOptions);
+        // Synchronous FULL SQLite commit can consume the remaining elapsed or
+        // credential window before timer callbacks run. Keep its debit, but
+        // recheck immediately before handing bytes to the transport.
+        assertContext(ctx);
+        response = await call(url, {...options,...(dispatcher?{dispatcher}:{}),signal: AbortSignal.any([ctx.cancel.signal,transportAbort.signal,...(options.signal ? [options.signal] : [])]), redirect:'error'}, proxyOptions);
         assertContext(ctx);
         if (!response.ok || ctx.executor.kind==='refresh') {
           reader = response.body?.getReader(); let bytes = 0; const chunks = [];
@@ -434,32 +538,37 @@ export function installAuthority(db) {
         requireThat(response.headers.get('content-type')?.includes('text/event-stream') && response.body, 'unsupported_provider_response');
         const native=ctx.executor.provider==='codex';
         const observer=native ? createResponsesTerminalObserver({maxBytes:1048576}) : createChatTerminalObserver({maxBytes:1048576,expectedModel:ctx.executor.model});
+        const nativeCodec=nativeProfile?new NativeResponsesStream(nativeProfile):null;
         reader=response.body.getReader();
         let transportClosed=false;let responseBytes=0;
         const finalize=reason=>{
           const result=observer.finish({reason});
-          const terminal=result.disposition==='provider_terminal' ? (native ? `provider_${result.terminal.kind}` : 'provider_terminal') : 'unknown';
-          stop(terminal,`original_${reason}`);
+          let terminal=result.disposition==='provider_terminal' ? (native ? `provider_${result.terminal.kind}` : 'provider_terminal') : 'unknown';
+          let outputDigest=null;
+          if(nativeCodec&&terminal==='provider_completed'){
+            try{requireThat(reason==='eof','native_original_eof_required');nativeCodec.end();outputDigest=digest(nativeCodec.nativeOutput);}catch{terminal='unknown';}
+          }
+          db.transaction(()=>{if(outputDigest)db.run('UPDATE gaffer_scope_operations SET output_digest=? WHERE request_id=? AND ordinal=?',[outputDigest,ctx.id,ordinal]);stop(terminal,`original_${reason}`);});
         };
         return new Response(new ReadableStream({
           async pull(controller) {
             try {
               const part=await reader.read();if(transportClosed)return;
-              if(part.done){transportClosed=true;finalize('eof');release();controller.close();return;}
+              if(part.done){finalize('eof');transportClosed=true;release();controller.close();return;}
               responseBytes+=part.value.byteLength;requireThat(responseBytes<=1048576,'response_bytes');
-              const observed=observer.push(part.value);requireThat(!observed.invalidReason,'unsupported_original_stream');controller.enqueue(part.value);
+              const observed=observer.push(part.value);requireThat(!observed.invalidReason,'unsupported_original_stream');nativeCodec?.push(part.value);controller.enqueue(part.value);
             }catch(error){
-              if(transportClosed)return;transportClosed=true;finalize('error');ctx.cancel.abort(error);
+              if(transportClosed)return;transportClosed=true;try{finalize('error');}catch{/* Keep the original debit unknown if receipt persistence fails. */}ctx.cancel.abort(error);
               void dispose(error);controller.error(error);
             }
           },
-          start(controller){cancelObservation=()=>{if(transportClosed)return;transportClosed=true;finalize('cancel');controller.error(ctx.cancel.signal.reason||new Error('original_transport_cancelled'));};},
+          start(controller){cancelObservation=()=>{if(transportClosed)return;transportClosed=true;try{finalize('cancel');}catch{/* Durable operation remains unknown. */}controller.error(ctx.cancel.signal.reason||new Error('original_transport_cancelled'));};},
           async cancel(reason){cancelObservation();await dispose(reason);}
         }),{status:response.status,headers:response.headers});
       } catch (error) { stop('unknown','transport_error');ctx.cancel.abort(error);await dispose(error);throw error; }
     },
     // Deliberately private-process API; the HTTP service never exposes writer callbacks.
-    close: () => { instance.fence(); db.close(); }
+    close: () => { instance.fence();void dispatcher?.destroy();db.close(); }
   });
   return guarded;
 }

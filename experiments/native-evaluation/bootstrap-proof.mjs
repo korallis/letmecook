@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { readFileSync,writeFileSync,existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { profile } from './fixtures.mjs';
+import { digest } from '../router-authority-extension/overlay/native-profile.mjs';
+const scenario=process.argv[2],n=profile(),hash=path=>createHash('sha256').update(readFileSync(path)).digest('hex');
+const manifest={files:{'experiments/native-evaluation/gateway.mjs':hash('/gaffer/experiments/native-evaluation/gateway.mjs')},runtime:{node:process.version,arch:process.arch}};
+if(scenario==='bootstrap-source')manifest.files['experiments/native-evaluation/gateway.mjs']='0'.repeat(64);
+if(scenario==='bootstrap-runtime')manifest.runtime.node='v0.0.0';
+n.deployment.overlay=digest(manifest.files);n.deployment.runtime=digest(manifest.runtime);n.deployment.sourceLock=scenario==='bootstrap-lock'?'0'.repeat(64):hash('/probe/source-lock.json');
+writeFileSync('/config/profile.json',JSON.stringify(n));writeFileSync('/config/source-manifest.json',JSON.stringify(manifest));
+const child=spawnSync(process.execPath,['--experimental-loader','/probe/loader.mjs','/gaffer/experiments/native-evaluation/bootstrap.mjs'],{encoding:'utf8',timeout:5000});assert.notEqual(child.status,0);assert.match(child.stderr,scenario==='bootstrap-source'?/deployment_source_mismatch/:scenario==='bootstrap-runtime'?/deployment_runtime_manifest_mismatch/:/deployment_source_lock_mismatch/);assert.equal(existsSync('/state/deployment-owner.lock'),false);assert.equal(existsSync(process.env.DATA_DIR),false);
+console.log(JSON.stringify({scenario,result:'passed',live:false,ownerAndDatabaseUntouched:true}));

@@ -5,6 +5,7 @@ import { Denial, TOOL, type Policy } from './types.ts';
 const callId = (id: unknown): id is string => typeof id === 'string' && /^call_[a-zA-Z0-9_-]{1,64}$/.test(id);
 export function validateRequest(value: unknown, policy: Policy): string {
   try {
+    if(policy.schema===3)throw new Denial('unsupported_request',400);
     const native = policy.profile === OPENCODE_PROFILE;
     const opencodeRouter = policy.schema === 2 && policy.profile === OPENCODE_ROUTER_PROFILE;
     const edits = native || opencodeRouter;

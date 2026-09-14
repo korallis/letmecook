@@ -26,6 +26,7 @@ export interface Binding {
   attemptId: string; grantId: string; taskId: string; leaseId: string; fence: number;
   role: 'worker' | 'planner' | 'reviewer'; routerId: string; routeId: string;
   revision: string; epoch: number; expiresAt: number; leaseExpiresAt: number;
+  native?: {profileDigest:string;scopeId:string;authorizationDigest:string};
 }
 export type Outcome = 'completed' | 'failed_before_output' | 'partial_failure' | 'cancelled_unknown';
 export type Reason = 'unauthorized' | 'policy_denied' | 'unsupported_request' | 'request_limit' | 'response_limit' |
@@ -38,7 +39,7 @@ export class Denial extends Error {
 export const ref = (value: unknown): value is string => typeof value === 'string' && /^[a-z][a-z0-9_-]{0,63}$/.test(value);
 export const fingerprint = (value: Policy) => createHash('sha256').update(canonical(value)).digest('hex');
 export function validatePolicy(policy: Policy): Policy {
-  if (policy?.schema === 2) return validateRouterPolicy(policy);
+  if (policy?.schema === 2 || policy?.schema === 3) return validateRouterPolicy(policy);
   keys(policy, ['schema', 'routerId', 'routeId', 'revision', 'epoch', 'routerModel', 'profile', 'graph', 'limits'], ['schema', 'routerId', 'routeId', 'revision', 'epoch', 'routerModel', 'profile', 'graph', 'limits']);
   if (policy.schema !== 1 || ![policy.routerId, policy.routeId, policy.revision].every(ref) || !Number.isSafeInteger(policy.epoch) || policy.epoch < 1 || !/^[a-zA-Z0-9_/-]{1,128}$/.test(policy.routerModel) || !['chat-text-tools-v1', OPENCODE_PROFILE].includes(policy.profile)) throw new Denial('policy_denied');
   const graph = { evidence: 'synthetic', provider: 'fixture_provider', model: 'fixture_model', billing: 'subscription', fusion: false, capabilityAdapters: false, remoteResources: false, compressionHelpers: false };
@@ -51,7 +52,8 @@ export function validatePolicy(policy: Policy): Policy {
   return structuredClone(policy);
 }
 export function validateBinding(binding: Binding) {
-  keys(binding, ['attemptId', 'grantId', 'taskId', 'leaseId', 'fence', 'role', 'routerId', 'routeId', 'revision', 'epoch', 'expiresAt', 'leaseExpiresAt'], ['attemptId', 'grantId', 'taskId', 'leaseId', 'fence', 'role', 'routerId', 'routeId', 'revision', 'epoch', 'expiresAt', 'leaseExpiresAt']);
+  keys(binding, ['attemptId', 'grantId', 'taskId', 'leaseId', 'fence', 'role', 'routerId', 'routeId', 'revision', 'epoch', 'expiresAt', 'leaseExpiresAt','native'], ['attemptId', 'grantId', 'taskId', 'leaseId', 'fence', 'role', 'routerId', 'routeId', 'revision', 'epoch', 'expiresAt', 'leaseExpiresAt']);
+  if(binding.native){keys(binding.native,['profileDigest','scopeId','authorizationDigest'],['profileDigest','scopeId','authorizationDigest']);if(!ref(binding.native.scopeId)||![binding.native.profileDigest,binding.native.authorizationDigest].every(v=>/^[a-f0-9]{64}$/.test(v)))throw new Denial('policy_denied');}
   if (![binding.attemptId, binding.grantId, binding.taskId, binding.leaseId, binding.routerId, binding.routeId, binding.revision].every(ref) || !['worker', 'planner', 'reviewer'].includes(binding.role) || ![binding.fence, binding.epoch, binding.expiresAt, binding.leaseExpiresAt].every(n => Number.isSafeInteger(n) && n > 0)) throw new Denial('policy_denied');
 }
 export function fixturePolicy(overrides: Partial<Limits> = {}): FixturePolicy {

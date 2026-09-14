@@ -1,9 +1,11 @@
+import { assertNativeBinding } from './native-policy.ts';
 import { createServer, request, type IncomingMessage, type ServerResponse } from 'node:http';
 import { chmod } from 'node:fs/promises';
 import { createHash, randomBytes } from 'node:crypto';
 import { once } from 'node:events';
 import { parseJSON } from './json.ts';
 import { OPENCODE_PROFILE, OPENCODE_ROUTER_PROFILE } from './profile-ids.ts';
+import { NativeResponsesStream, validateNativeRequest } from '../router-authority-extension/overlay/native-responses.mjs';
 import { ChatStream, validateRequest } from './protocol.ts';
 import { PolicyGate } from './policy.ts';
 import { hashDocument } from './router-policy.ts';
@@ -47,6 +49,7 @@ export class Boundary {
   async listen(socket: string) { this.server.listen(socket); await once(this.server, 'listening'); await chmod(socket, 0o600); }
   issue(binding: Binding): string {
     validateBinding(binding);
+    const policy=this.gate.snapshot().policy;if(policy?.schema===3)assertNativeBinding(binding,policy);
     if (this.closed || this.scopes.size >= 64 || this.attempts.has(binding.attemptId) || Object.hasOwn(this.gate.snapshot().counts, binding.attemptId)) throw new Denial('policy_denied');
     const token = randomBytes(32).toString('hex');
     this.scopes.set(hash(token), { binding: structuredClone(binding), born: Date.now(), revoked: false });
@@ -123,7 +126,7 @@ export class Boundary {
     res.once('close', cancel);
     try {
       if (this.closed) throw new Denial('boundary_closed', 503);
-      if (req.method !== 'POST' || req.url !== CHAT_PATH) throw new Denial('unsupported_request', 404);
+      if (req.method !== 'POST' || ![CHAT_PATH,'/v1/responses'].includes(req.url ?? '')) throw new Denial('unsupported_request', 404);
       scope = this.authenticate(req);
       this.pending.set(abort, scope);
       const policy = this.gate.snapshot().policy;
@@ -133,21 +136,22 @@ export class Boundary {
       const raw = await this.body(req, policy.limits.requestBytes, abort.signal);
       let value: any;
       try { value = parseJSON(raw); } catch { throw new Denial('unsupported_request', 400); }
-      const body = validateRequest(value, policy);
-      const admission = await this.gate.admit(scope.binding, () => this.current(scope!) && !abort.signal.aborted, abort.signal, hashDocument(body));
+      if(req.url !== (policy.schema===3?'/v1/responses':CHAT_PATH))throw new Denial('unsupported_request',404);
+      const body = policy.schema===3?JSON.stringify(validateNativeRequest(value,policy.native,policy.routerModel,this.gate.nativePrevious(scope.binding.attemptId))):validateRequest(value, policy);
+      const admission = await this.gate.admit(scope.binding, () => this.current(scope!) && !abort.signal.aborted, abort.signal, hashDocument(body),policy.schema===3?JSON.parse(body):undefined);
       requestId = admission.reservation.requestId;
       this.active.set(requestId, { scope, abort });
       // Recheck after durable admission. A stop during I/O must never start a request.
       if (!this.current(scope) || abort.signal.aborted) throw new Denial('cancelled', 409);
-      const decoder = new ChatStream(requestId, policy.routerModel, !!value.tools && value.tool_choice !== 'none', policy.profile === 'router-native-chat-translation-synthetic-v1' ? 'receipt-gated-eof' : policy.schema === 2 ? 'router-done' : 'done', policy.profile);
+      const decoder = policy.schema===3 ? new NativeResponsesStream(policy.native) : new ChatStream(requestId, policy.routerModel, !!value.tools && value.tool_choice !== 'none', policy.profile === 'router-native-chat-translation-synthetic-v1' ? 'receipt-gated-eof' : policy.schema === 2 ? 'router-done' : 'done', policy.profile);
       const firstOutput = setTimeout(() => abort.abort(new Denial('deadline', 408)), policy.limits.firstOutputMs); timers.push(firstOutput);
       let idle: NodeJS.Timeout | undefined;
-      if (policy.schema === 2) await this.gate.markSend(requestId);
+      if (policy.schema !== 1) await this.gate.markSend(requestId);
       if (!this.current(scope) || abort.signal.aborted) throw new Denial('cancelled',409);
-      const upstream = request({ socketPath: this.upstreamSocket, path: CHAT_PATH, method: 'POST', agent: false, signal: abort.signal, headers: {
-        host: policy.schema === 2 ? '127.0.0.1' : 'localhost', authorization: `Bearer ${this.routerKey}`, 'content-type': 'application/json', 'content-length': Buffer.byteLength(body),
+      const upstream = request({ socketPath: this.upstreamSocket, path: policy.schema===3?'/v1/responses':CHAT_PATH, method: 'POST', agent: false, signal: abort.signal, headers: {
+        host: policy.schema !== 1 ? '127.0.0.1' : 'localhost', authorization: `Bearer ${this.routerKey}`, 'content-type': 'application/json', 'content-length': Buffer.byteLength(body),
         'x-gaffer-request-id': requestId,
-        ...(policy.schema === 2 ? { 'x-gaffer-generation': String(admission.reservation.router!.policy.authority.generation), 'x-gaffer-revision': admission.reservation.router!.policy.revision } : { 'x-gaffer-task-id': scope.binding.taskId, 'x-gaffer-attempt-id': scope.binding.attemptId, 'x-gaffer-policy-revision': scope.binding.revision }),
+        ...(policy.schema !== 1 ? { 'x-gaffer-generation': String(admission.reservation.router!.policy.authority.generation), 'x-gaffer-revision': admission.reservation.router!.policy.revision } : { 'x-gaffer-task-id': scope.binding.taskId, 'x-gaffer-attempt-id': scope.binding.attemptId, 'x-gaffer-policy-revision': scope.binding.revision }),
       } });
       const responsePromise = once(upstream, 'response', { signal: abort.signal }) as Promise<[IncomingMessage]>;
       upstream.on('error', () => {}); // Errors are consumed by the response promise/iterator and sanitized below.
@@ -177,13 +181,13 @@ export class Boundary {
         }
         const completion = decoder.end();
         if (responseBytes + completion.reduce((n,output) => n + Buffer.byteLength(output),0) > policy.limits.responseBytes) throw new Denial('response_limit',502);
-        if (policy.schema === 2) {
+        if (policy.schema !== 1) {
           clearTimeout(firstOutput); if (idle) clearTimeout(idle);
-          await this.gate.finalize(requestId,hashDocument(completion),() => this.current(scope!) && !abort.signal.aborted,abort.signal);
+          await this.gate.finalize(requestId,hashDocument(completion),() => this.current(scope!) && !abort.signal.aborted,abort.signal,decoder instanceof NativeResponsesStream?decoder.nativeOutput??undefined:undefined);
         }
         for (const output of completion) {
           if (!this.current(scope) || abort.signal.aborted) throw new Denial('cancelled',409);
-          if (policy.schema === 2) this.gate.assertRelease(requestId);
+          if (policy.schema !== 1) this.gate.assertRelease(requestId);
           responseBytes += Buffer.byteLength(output);
           if (responseBytes > policy.limits.responseBytes) throw new Denial('response_limit', 502);
           if (!res.write(output)) await once(res, 'drain', { signal: abort.signal });
