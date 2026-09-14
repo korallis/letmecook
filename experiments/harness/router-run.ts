@@ -13,6 +13,7 @@ import { assertRuntime, selectedProfile, IMAGE } from '../isolation/profile.ts';
 import { probe, pins } from './adapter.ts';
 import { hashDocument } from '../inference-boundary/router-policy.ts';
 import { canonical } from '../inference-boundary/json.ts';
+import { codecOverlayFiles, routerWorkerFiles, stageFiles } from './staging.ts';
 const exec = promisify(execFile), root = resolve(import.meta.dirname, '../..');
 const context = process.env.GAFFER_BRIDGE_DOCKER_CONTEXT ?? 'desktop-linux';
 const source = process.env.GAFFER_BRIDGE_ROUTER_SOURCE, binary = process.env.GAFFER_HARNESS_BINARY;
@@ -21,6 +22,7 @@ const image = process.env.GAFFER_BRIDGE_IMAGE ?? 'gaffer-router-extension-deps:0
 const output = resolve(process.argv[2] ?? join(root, 'docs/evidence/first-harness-router-run.json'));
 const runId = 'gaffer-harness-router-' + randomBytes(6).toString('hex'), ids: string[] = [], volumes: string[] = [];
 const staging = await mkdtemp(join(tmpdir(), runId));
+const workerStaging = join(staging, 'worker'), gatewayStaging = join(staging, 'gateway');
 const stop = new AbortController(); for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => stop.abort()); let cleaning = false;
 const evidence: any = { schema: 1, observedAt: new Date().toISOString(), runId, result: 'blocked', variant: ROUTER_VARIANT, selectedProfile, pins, realProviderCalled: false, syntheticUpstreamCalled: true, privateDataUsed: false, liveAdmission: false, issueComplete: false, independentReview: 'required', sources: {}, cases: [], cleanup: { verified: false } };
 await mkdir(dirname(output), { recursive: true });
@@ -44,10 +46,11 @@ try {
   for (const dir of ['experiments/harness', 'tests/fixtures/harness', 'experiments/inference-boundary', 'experiments/router-boundary-bridge', 'experiments/router-authority-extension']) await digestTree(dir);
   // Worker gets only client/validation files. Authority, journal, router source and
   // synthetic credentials are exclusively mounted in the gateway's namespace.
-  const files = ['experiments/harness/adapter.ts', 'experiments/harness/pins.json', 'tests/fixtures/harness/router-worker.ts', 'tests/fixtures/harness/containment.ts', ...['json.ts', 'types.ts', 'profile-ids.ts', 'router-policy.ts'].map(n => 'experiments/inference-boundary/' + n)];
-  for (const file of files) { await mkdir(dirname(join(staging, file)), { recursive: true }); await copyFile(join(root, file), join(staging, file)); }
-  await writeFile(join(staging, 'package.json'), '{"type":"module"}\n'); await copyFile(binary, join(staging, 'opencode')); probe(join(staging, 'opencode'));
-  evidence.workerStagedFiles = [...files, 'package.json', 'opencode'];
+  await stageFiles(root, workerStaging, routerWorkerFiles);
+  await stageFiles(root, gatewayStaging, codecOverlayFiles);
+  await copyFile(binary, join(workerStaging, 'opencode')); probe(join(workerStaging, 'opencode'));
+  evidence.workerStagedFiles = [...routerWorkerFiles, 'package.json', 'opencode'];
+  evidence.gatewayPureStagedFiles = codecOverlayFiles;
   const version = JSON.parse(await docker(['version', '--format', '{{json .}}'])), info = JSON.parse(await docker(['info', '--format', '{{json .}}'])); assertRuntime(version, info);
   evidence.runtime = { server: version.Server, cgroupVersion: info.CgroupVersion, securityOptions: info.SecurityOptions, hostNode: process.version, gatewayImage: JSON.parse(await docker(['image', 'inspect', image]))[0].Id, workerImage: JSON.parse(await docker(['image', 'inspect', IMAGE]))[0].Id };
   assert.equal(evidence.runtime.gatewayImage, JSON.parse(await readFile(join(root, 'experiments/router-authority-extension/runtime-identity.json'), 'utf8')).imageId);
@@ -58,7 +61,7 @@ try {
     stop.signal.throwIfAborted(); const volume = runId + '-' + scenario + '-socket'; volumes.push(volume);
     await docker(['volume', 'create', '--label', `${LABEL}=${runId}`, '--driver', 'local', '--opt', 'type=tmpfs', '--opt', 'device=tmpfs', '--opt', 'o=size=1m,uid=1000,gid=1000,mode=0700', volume]);
     const gateway = runId + '-' + scenario + '-gateway'; ids.push(gateway);
-    const binds = { '/harness': join(root, 'experiments/harness'), '/router-boundary-bridge': join(root, 'experiments/router-boundary-bridge'), '/inference-boundary': join(root, 'experiments/inference-boundary'), '/probe': join(root, 'experiments/router-authority-extension'), '/router-source': source };
+    const binds = { '/harness': join(root, 'experiments/harness'), '/router-boundary-bridge': join(root, 'experiments/router-boundary-bridge'), '/inference-boundary': join(root, 'experiments/inference-boundary'), '/router-authority-extension': join(gatewayStaging, 'experiments/router-authority-extension'), '/probe': join(root, 'experiments/router-authority-extension'), '/router-source': source };
     const args = routerHarnessArgs(gateway, runId, true);
     for (const [target, path] of Object.entries(binds)) args.push('--mount', `type=bind,source=${path},target=${target},readonly`);
     args.push('--mount', `type=volume,source=${volume},target=/router,volume-nocopy`, '--env', 'DATA_DIR=/work/router-db', '--env', 'GAFFER_SYNTHETIC_OPENCODE=1', image, 'node', '/harness/router-supervise.ts', scenario);
@@ -66,8 +69,8 @@ try {
     const grant = await event(gateway, 'ready'); secrets.push(grant.token);
     const worker = runId + '-' + scenario + '-worker'; ids.push(worker);
     const wargs = routerHarnessArgs(worker, runId, false);
-    wargs.push('--interactive', '--mount', `type=bind,source=${staging},target=/fixture,readonly`, '--mount', `type=volume,source=${volume},target=/router,readonly,volume-nocopy`, '--env', 'HOST_SENTINEL=/nonexistent-host-sentinel', IMAGE, 'node', '/fixture/tests/fixtures/harness/router-worker.ts', scenario);
-    await docker(wargs); const workerProfile = inspectRouterHarness(await inspect(worker), IMAGE, runId, false, volume, { '/fixture': staging });
+    wargs.push('--interactive', '--mount', `type=bind,source=${workerStaging},target=/fixture,readonly`, '--mount', `type=volume,source=${volume},target=/router,readonly,volume-nocopy`, '--env', 'HOST_SENTINEL=/nonexistent-host-sentinel', IMAGE, 'node', '/fixture/tests/fixtures/harness/router-worker.ts', scenario);
+    await docker(wargs); const workerProfile = inspectRouterHarness(await inspect(worker), IMAGE, runId, false, volume, { '/fixture': workerStaging });
     const running = inputProcess('docker', ['--context', context, 'start', '--attach', '--interactive', worker], JSON.stringify(grant), stop.signal, 35000).catch((e: any) => ({ error: String(e.message) }));
     if (scenario === 'tree') { const until = Date.now() + 30000; while (!(await docker(['logs', worker])).includes('"type":"finished"')) { assert(Date.now() < until); await delay(100); } evidence.treeTeardown = { before: await docker(['top', worker, '-eo', 'pid,ppid,comm']) }; await docker(['stop', '--timeout', '1', worker]); }
     const workerInputResult = await running;
