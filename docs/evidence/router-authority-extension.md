@@ -53,7 +53,7 @@ are not a new worker-isolation certification.
 | Original error and refresh cleanup | Oversized, malformed UTF-8/JSON, wrong content type and invalid refresh bodies abort the request and close the original response after one physical send. Neither later retries nor credential persistence occur. |
 | Deadline and cancellation before original EOF | Stalled error JSON and Codex's first-event peek obey the real 30-second request deadline. Cancelling complete JSON without EOF retains unknown evidence; local disposal never supplies remote quiescence. |
 | Native streamed tool consistency | Added tool identity, incremental arguments and complete snapshots must agree. The review's identity/delta drift and duplicate argument keys reject before successful output or terminal settlement. |
-| Request envelope and ordinary continuation | Both profiles reject 38 unsupported request shapes with zero sends and no receipt. Ordinary function declarations and matched two-call continuation preserve the tested native/compatible wire fields. |
+| Request envelope and ordinary continuation | Both profiles reject 38 unsupported body shapes and 47 header/alternate-metadata cases with zero sends and no receipt. Five positive requests per profile preserve ordinary tools, matched continuation, complete tool lists, HTTP metadata handling and router API authentication. |
 | Unsupported graph | Enabled default adapters, unsupported native live profiles, MITM bypass and non-loopback/unclassified production endpoints fail closed. |
 
 Fifty original-stream observer tests pass in the locked isolated runtime, covering
@@ -122,6 +122,30 @@ continuation with exact relevant upstream wire assertions. Those positives inclu
 preserved escaped literal patterns and a property actually named `pattern`. All
 50 observer tests were rerun after the envelope correction. A new independent
 final review is still required for this corrected commit.
+
+The fourth fresh review at `88f82c421b6da88d81bc0a0a2ee6aca5bf51b53e` found
+a grouped P2 header/metadata defect. Codex client headers selected native passthrough,
+so the physical request lost system/user content and historical calls/results;
+Claude client headers caused both profiles to remove a declared WebSearch function
+when an Exa MCP search function was present. These requests still returned HTTP 200
+and completed receipts. The [original observations and five reproduction/log hashes](router-authority-extension-review-88f82c4.json)
+are retained unchanged. This demonstrated payload/control loss, not unapproved
+provider/account/model selection, hosted-tool execution or false remote quiescence.
+
+The correction validates a closed header envelope and reconstructs minimal stock
+headers, preserving only router authentication, Gaffer correlation and canonical
+content negotiation. Validated automatic HTTP metadata is discarded; other client,
+session, provider and token-saver hints reject. Caller-provided `clientRawRequest`
+is also refused before admission so separate metadata cannot bypass reconstruction.
+The source audit covers `clientDetector`, `sessionManager`, chat raw-header/accept/
+token-saver handling and the native executor's session/header paths. The exact
+accepted transport forms are in the candidate README; no general CLI ingress is
+claimed. Per profile, 47 negative header/metadata cases produce zero sends/no receipt,
+early rejection cancels a stalled body, and five positive requests preserve the
+tested system/user/call/result/tool fields, complete WebSearch/MCP declarations,
+normal Node metadata and alternate API-key authentication. Existing actual HTTP
+gateway tests retain their automatic headers. Full integration and 50 observer
+tests were rerun; a new independent final review remains required.
 
 ## Remaining gates
 

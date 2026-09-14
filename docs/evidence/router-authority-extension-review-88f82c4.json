@@ -1,0 +1,502 @@
+{
+  "schema": 1,
+  "reviewedCommit": "88f82c421b6da88d81bc0a0a2ee6aca5bf51b53e",
+  "classification": "independent_review_failed",
+  "severity": "P2",
+  "liveAcceptance": false,
+  "unapprovedProviderAccountModelOrHostedExecutionDemonstrated": false,
+  "falseRemoteQuiescenceDemonstrated": false,
+  "observations": [
+    {
+      "head": "88f82c421b6da88d81bc0a0a2ee6aca5bf51b53e",
+      "scenario": "independent_header_adversarial",
+      "observations": [
+        {
+          "kind": "plain",
+          "status": 200,
+          "sends": 1,
+          "input": [
+            {
+              "type": "message",
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "Read synthetic text"
+                }
+              ]
+            },
+            {
+              "type": "function_call",
+              "call_id": "call_synthetic_1",
+              "name": "read_file",
+              "arguments": "{\"path\":\"synthetic-one.txt\"}"
+            },
+            {
+              "type": "function_call",
+              "call_id": "call_synthetic_2",
+              "name": "read_file",
+              "arguments": "{\"path\":\"synthetic-two.txt\"}"
+            },
+            {
+              "type": "function_call_output",
+              "call_id": "call_synthetic_2",
+              "output": ""
+            },
+            {
+              "type": "function_call_output",
+              "call_id": "call_synthetic_1",
+              "output": "Synthetic file contents"
+            }
+          ],
+          "instructionsPreserved": true,
+          "callCount": 2,
+          "resultCount": 2,
+          "userTextPreserved": true,
+          "receipt": {
+            "id": "header_plain",
+            "boot": "8cb73600-2542-4421-b801-21411487107f",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "header_plain",
+                "ordinal": 1,
+                "boot": "8cb73600-2542-4421-b801-21411487107f",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "kind": "codex_tui",
+          "status": 200,
+          "sends": 1,
+          "input": [
+            {
+              "type": "message",
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "..."
+                }
+              ]
+            }
+          ],
+          "instructionsPreserved": false,
+          "callCount": 0,
+          "resultCount": 0,
+          "userTextPreserved": false,
+          "receipt": {
+            "id": "header_codex_tui",
+            "boot": "8cb73600-2542-4421-b801-21411487107f",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "header_codex_tui",
+                "ordinal": 1,
+                "boot": "8cb73600-2542-4421-b801-21411487107f",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "kind": "codex_originator",
+          "status": 200,
+          "sends": 1,
+          "input": [
+            {
+              "type": "message",
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "..."
+                }
+              ]
+            }
+          ],
+          "instructionsPreserved": false,
+          "callCount": 0,
+          "resultCount": 0,
+          "userTextPreserved": false,
+          "receipt": {
+            "id": "header_codex_originator",
+            "boot": "8cb73600-2542-4421-b801-21411487107f",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "header_codex_originator",
+                "ordinal": 1,
+                "boot": "8cb73600-2542-4421-b801-21411487107f",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "kind": "claude",
+          "status": 200,
+          "sends": 1,
+          "input": [
+            {
+              "type": "message",
+              "role": "user",
+              "content": [
+                {
+                  "type": "input_text",
+                  "text": "Read synthetic text"
+                }
+              ]
+            },
+            {
+              "type": "function_call",
+              "call_id": "call_synthetic_1",
+              "name": "read_file",
+              "arguments": "{\"path\":\"synthetic-one.txt\"}"
+            },
+            {
+              "type": "function_call",
+              "call_id": "call_synthetic_2",
+              "name": "read_file",
+              "arguments": "{\"path\":\"synthetic-two.txt\"}"
+            },
+            {
+              "type": "function_call_output",
+              "call_id": "call_synthetic_2",
+              "output": ""
+            },
+            {
+              "type": "function_call_output",
+              "call_id": "call_synthetic_1",
+              "output": "Synthetic file contents"
+            }
+          ],
+          "instructionsPreserved": true,
+          "callCount": 2,
+          "resultCount": 2,
+          "userTextPreserved": true,
+          "receipt": {
+            "id": "header_claude",
+            "boot": "8cb73600-2542-4421-b801-21411487107f",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "header_claude",
+                "ordinal": 1,
+                "boot": "8cb73600-2542-4421-b801-21411487107f",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        }
+      ]
+    },
+    {
+      "head": "88f82c421b6da88d81bc0a0a2ee6aca5bf51b53e",
+      "scenario": "independent_header_tool_dedupe",
+      "native": true,
+      "observations": [
+        {
+          "kind": "plain",
+          "status": 200,
+          "sends": 1,
+          "suppliedToolNames": [
+            "read_file",
+            "WebSearch",
+            "mcp__exa__web_search_exa"
+          ],
+          "physicalToolNames": [
+            "read_file",
+            "WebSearch",
+            "mcp__exa__web_search_exa"
+          ],
+          "receipt": {
+            "id": "dedupe_plain",
+            "boot": "52380470-73b3-4e33-9657-84bfec22c183",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "dedupe_plain",
+                "ordinal": 1,
+                "boot": "52380470-73b3-4e33-9657-84bfec22c183",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "kind": "claude_code",
+          "status": 200,
+          "sends": 1,
+          "suppliedToolNames": [
+            "read_file",
+            "WebSearch",
+            "mcp__exa__web_search_exa"
+          ],
+          "physicalToolNames": [
+            "read_file",
+            "mcp__exa__web_search_exa"
+          ],
+          "receipt": {
+            "id": "dedupe_claude_code",
+            "boot": "52380470-73b3-4e33-9657-84bfec22c183",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "dedupe_claude_code",
+                "ordinal": 1,
+                "boot": "52380470-73b3-4e33-9657-84bfec22c183",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "kind": "x_app_cli",
+          "status": 200,
+          "sends": 1,
+          "suppliedToolNames": [
+            "read_file",
+            "WebSearch",
+            "mcp__exa__web_search_exa"
+          ],
+          "physicalToolNames": [
+            "read_file",
+            "mcp__exa__web_search_exa"
+          ],
+          "receipt": {
+            "id": "dedupe_x_app_cli",
+            "boot": "52380470-73b3-4e33-9657-84bfec22c183",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "dedupe_x_app_cli",
+                "ordinal": 1,
+                "boot": "52380470-73b3-4e33-9657-84bfec22c183",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        }
+      ]
+    },
+    {
+      "head": "88f82c421b6da88d81bc0a0a2ee6aca5bf51b53e",
+      "scenario": "independent_header_tool_dedupe",
+      "native": false,
+      "observations": [
+        {
+          "kind": "plain",
+          "status": 200,
+          "sends": 1,
+          "suppliedToolNames": [
+            "read_file",
+            "WebSearch",
+            "mcp__exa__web_search_exa"
+          ],
+          "physicalToolNames": [
+            "read_file",
+            "WebSearch",
+            "mcp__exa__web_search_exa"
+          ],
+          "receipt": {
+            "id": "dedupe_plain",
+            "boot": "31e3a0c7-8dd6-4ed2-b526-0e1822f83ae7",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "dedupe_plain",
+                "ordinal": 1,
+                "boot": "31e3a0c7-8dd6-4ed2-b526-0e1822f83ae7",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_terminal",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "kind": "claude_code",
+          "status": 200,
+          "sends": 1,
+          "suppliedToolNames": [
+            "read_file",
+            "WebSearch",
+            "mcp__exa__web_search_exa"
+          ],
+          "physicalToolNames": [
+            "read_file",
+            "mcp__exa__web_search_exa"
+          ],
+          "receipt": {
+            "id": "dedupe_claude_code",
+            "boot": "31e3a0c7-8dd6-4ed2-b526-0e1822f83ae7",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "dedupe_claude_code",
+                "ordinal": 1,
+                "boot": "31e3a0c7-8dd6-4ed2-b526-0e1822f83ae7",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_terminal",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        },
+        {
+          "kind": "x_app_cli",
+          "status": 200,
+          "sends": 1,
+          "suppliedToolNames": [
+            "read_file",
+            "WebSearch",
+            "mcp__exa__web_search_exa"
+          ],
+          "physicalToolNames": [
+            "read_file",
+            "mcp__exa__web_search_exa"
+          ],
+          "receipt": {
+            "id": "dedupe_x_app_cli",
+            "boot": "31e3a0c7-8dd6-4ed2-b526-0e1822f83ae7",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "dedupe_x_app_cli",
+                "ordinal": 1,
+                "boot": "31e3a0c7-8dd6-4ed2-b526-0e1822f83ae7",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_request_account",
+                "terminal": "provider_terminal",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        }
+      ]
+    }
+  ],
+  "provenance": {
+    "header-probe.mjs": "8708ef678276869b7a11eb6962ae13ac8a2c6115753be16bc6dc4c8bd595c3ac",
+    "header-probe.log": "30ed7b41f086e72819bd831cc5f811821d4f61523ee87d4556cad4451523144f",
+    "header-dedupe-probe.mjs": "41ad886a00cc444ad4006051f493d79727476b9f40eca39c973889cfc545fa25",
+    "header-dedupe-native.log": "e0884397fb92854524a6cdcf7721fa2653174557c5c286180e2cf4c7972e1462",
+    "header-dedupe-compatible.log": "0b9bd9e2c617b12a9827433bfb34d451c2c31a91262f45241bdd7a91d8d0bfc4"
+  }
+}

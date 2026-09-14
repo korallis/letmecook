@@ -26,6 +26,39 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 const toolName = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(value);
 const toolId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,64}$/.test(value);
 
+function admittedHeaders(request) {
+  const forwarded=['authorization','x-api-key','x-gaffer-request-id','x-gaffer-generation','x-gaffer-revision'];
+  const transport={
+    'content-type': value=>/^application\/json(?:;\s*charset=utf-8)?$/i.test(value),
+    accept:value=>['*/*','text/event-stream'].includes(value),
+    'accept-language':value=>value==='*',
+    'user-agent':value=>['node','undici','gaffer-boundary/1'].includes(value),
+    host:value=>/^127\.0\.0\.1(?::[0-9]{1,5})?$/.test(value) && (!value.includes(':') || Number(value.split(':')[1])>=1 && Number(value.split(':')[1])<=65535),
+    connection:value=>['keep-alive','close'].includes(value.toLowerCase()),
+    'content-length':value=>/^(0|[1-9][0-9]{0,5})$/.test(value) && Number(value)<=65536,
+    'transfer-encoding':value=>value.toLowerCase()==='chunked',
+    'accept-encoding':value=>/^(?:gzip|deflate|br|identity)(?:,\s*(?:gzip|deflate|br|identity))*$/.test(value),
+    'sec-fetch-mode':value=>['cors','same-origin','no-cors'].includes(value)
+  };
+  let bytes=0,count=0;
+  for(const [name,value] of request.headers){
+    bytes+=Buffer.byteLength(name)+Buffer.byteLength(value);count++;
+    requireThat(bytes<=8192 && count<=32,'request_headers_limit');
+    if(forwarded.includes(name))continue;
+    requireThat(Object.hasOwn(transport,name) && transport[name](value),'unsupported_request_header');
+  }
+  requireThat(request.headers.has('content-type'),'unsupported_request_header');
+  requireThat(!(request.headers.has('content-length') && request.headers.has('transfer-encoding')),'ambiguous_request_framing');
+  requireThat(!(request.headers.has('authorization') && request.headers.has('x-api-key')),'ambiguous_api_auth');
+  if(request.headers.has('authorization'))requireThat(/^Bearer [^\s,]{1,4096}$/.test(request.headers.get('authorization')),'unsupported_api_auth');
+  if(request.headers.has('x-api-key'))requireThat(/^[^\s,]{1,4096}$/.test(request.headers.get('x-api-key')),'unsupported_api_auth');
+  // Never pass client identity, framing or session metadata to router detection,
+  // normalization or credentials.rawHeaders. Authentication remains router-owned.
+  const headers=new Headers({'content-type':'application/json',accept:'text/event-stream'});
+  for(const name of forwarded)if(request.headers.has(name))headers.set(name,request.headers.get(name));
+  return headers;
+}
+
 function validateRequest(body) {
   // Explicit tool_choice and temperature are unsupported by this common profile:
   // the pinned native path drops them, so they are outside this envelope.
@@ -247,14 +280,18 @@ export function installAuthority(db) {
       db.transaction(() => { state(); db.run("UPDATE gaffer_authority SET phase='closed', generation=generation+1 WHERE id=1"); });
       for (const ctx of active.values()) ctx.cancel.abort(new Error('request_fenced'));
     },
-    async admission(request, call) {
+    async admission(request, call, clientRawRequest = null) {
       requireThat(request.body, 'missing_body');
       const input=request.body.getReader();const chunks=[];let inputBytes=0;
+      let headers;
       const ingressAbort=new AbortController();
       const abortIngress=()=>ingressAbort.abort(new Error('ingress_cancelled'));
       request.signal.addEventListener('abort',abortIngress,{once:true});if(request.signal.aborted)abortIngress();
       const ingressTimer=setTimeout(abortIngress,3000);
       try {
+        requireThat(clientRawRequest===null,'unsupported_raw_request');
+        requireThat(request.method==='POST','unsupported_request_method');
+        headers=admittedHeaders(request);
         while(true) {
           ingressAbort.signal.throwIfAborted();
           const part=await new Promise((resolve,reject)=>{
@@ -265,10 +302,11 @@ export function installAuthority(db) {
           if(part.done)break;
           inputBytes+=part.value.byteLength;requireThat(inputBytes<=65536,'request_bytes');chunks.push(Buffer.from(part.value));
         }
+        if(request.headers.has('content-length'))requireThat(Number(request.headers.get('content-length'))===inputBytes,'request_length_mismatch');
       } catch(error) {void input.cancel(error).catch(()=>{});throw error;}
       finally {clearTimeout(ingressTimer);request.signal.removeEventListener('abort',abortIngress);}
       const bodyText = new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks));
-      const admittedRequest=new Request(request.url,{method:request.method,headers:request.headers,body:bodyText,signal:request.signal});
+      const admittedRequest=new Request(request.url,{method:'POST',headers,body:bodyText,signal:request.signal});
       const body = JSON.parse(bodyText);
       requireThat(new URL(request.url).pathname === '/v1/chat/completions', 'unsupported_request');
       validateRequest(body);

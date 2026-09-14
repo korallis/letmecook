@@ -36,7 +36,7 @@ async function updateProviderCredentialsUnfenced(connectionId, newCredentials) {
     text = `import { authority } from '../../../gaffer-extension/authority.mjs';\n${text}`;
     replace('export async function handleChat(request, clientRawRequest = null) {', `export async function handleChat(request, clientRawRequest = null) {
   await getSettings();
-  try { return await authority().admission(request, admittedRequest => handleChatUnfenced(admittedRequest, clientRawRequest)); }
+  try { return await authority().admission(request, admittedRequest => handleChatUnfenced(admittedRequest), clientRawRequest); }
   catch { return new Response(JSON.stringify({error:{message:'authority_denied'}}), {status:503,headers:{'content-type':'application/json'}}); }
 }
 async function handleChatUnfenced(request, clientRawRequest = null) {`);

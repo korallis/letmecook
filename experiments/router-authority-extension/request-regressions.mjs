@@ -31,7 +31,11 @@ const base={model:'gaffer-synthetic',stream:true,max_tokens:64,messages:[{role:'
 const call={id:'call_synthetic_1',type:'function',function:{name:'read_file',arguments:'{"path":"synthetic-one.txt"}'}};
 const secondCall={id:'call_synthetic_2',type:'function',function:{name:'read_file',arguments:'{"path":"synthetic-two.txt"}'}};
 const history=[...base.messages,{role:'assistant',content:null,tool_calls:[call,secondCall]},{role:'tool',tool_call_id:secondCall.id,content:''},{role:'tool',tool_call_id:call.id,content:'Synthetic file contents'}];
-const request=(id,body)=>handleChat(new Request('http://127.0.0.1/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer synthetic_gateway_key','x-gaffer-request-id':id,'x-gaffer-generation':String(a.state().generation),'x-gaffer-revision':a.state().revision},body:JSON.stringify(body)}));
+const request=(id,body,extraHeaders={},raw=null)=>{
+  const headers=new Headers({'content-type':'application/json',authorization:'Bearer synthetic_gateway_key','x-gaffer-request-id':id,'x-gaffer-generation':String(a.state().generation),'x-gaffer-revision':a.state().revision});
+  for(const [name,value] of Object.entries(extraHeaders))if(value===null)headers.delete(name);else headers.set(name,value);
+  return handleChat(new Request('http://127.0.0.1/v1/chat/completions',{method:'POST',headers,body:JSON.stringify(body)}),raw);
+};
 const rejected=[];
 const cases=[
   ['strict_true',{tools:[{...tool,function:{...tool.function,strict:true}}]}],
@@ -74,18 +78,49 @@ for(const [id,patch] of cases){
   assert.equal(sends.length,count);assert.deepEqual(a.receipt(id),{id,known:false,quiescent:false});assert.equal(a.state().phase,'active');
   rejected.push({id,status:503,sends:0,receiptKnown:false,quiescent:false});
 }
+const headerRejected=[];
+const fullTools=[tool,...['WebSearch','mcp__exa__web_search_exa'].map(name=>({...tool,function:{...tool.function,name}}))];
+const headerBody={...base,tools:fullTools,messages:history};
+const headerCases=[
+  ...['codex-tui/1.0','codex-cli/1.0','codex_cli_rs','Codex Desktop','claude-code/1.0','claude-cli/1.0','gemini-cli','githubcopilotchat','deepseek-tui','unreviewed-client/1'].map((ua,n)=>['client_'+n,{'user-agent':ua}]),
+  ...['originator','x-app','openai-intent','x-initiator','x-session-id','session-id','session_id','x-amp-thread-id','x-claude-code-session-id','x-client-request-id','x-9router-token-saver','chatgpt-account-id','openai-organization','x-connection-id','x-provider','anthropic-beta','cookie','forwarded','x-forwarded-host','x-gaffer-unreviewed','constructor','__proto__'].map(name=>[name.replaceAll('-','_'),{[name]:name==='originator'?'codex_work_desktop':name==='x-app'?'cli':name==='openai-intent'?'conversation-panel':name==='x-initiator'?'user':'synthetic_unreviewed'}]),
+  ['mixed_case_client',{'UsEr-AgEnT':'codex-tui/1.0'}],
+  ['json_accept',{accept:'application/json'}],['wrong_content_type',{'content-type':'text/plain'}],
+  ['content_encoding',{'content-encoding':'gzip'}],['foreign_host',{host:'unreviewed.example'}],
+  ['header_connection_control',{connection:'keep-alive, originator'}],
+  ['duplicate_content_length',{'content-length':'1, 1'}],['mismatched_content_length',{'content-length':'1'}],
+  ['ambiguous_framing',{'content-length':'1','transfer-encoding':'chunked'}],
+  ['unknown_encoding',{'transfer-encoding':'gzip'}],['combined_auth',{'x-api-key':'synthetic_gateway_key'}],
+  ['header_bytes_limit',{'authorization':'Bearer '+ 'x'.repeat(9000)}]
+];
+for(const [name,headers] of headerCases){
+  const id='header_'+name,count=sends.length;const response=await request(id,headerBody,headers);assert.equal(response.status,503);await response.text();
+  assert.equal(sends.length,count);assert.deepEqual(a.receipt(id),{id,known:false,quiescent:false});headerRejected.push({id,status:503,sends:0,receiptKnown:false});
+}
+for(const [name,raw] of [['codex',{headers:{'user-agent':'codex-tui/1.0'},body:headerBody,endpoint:'/v1/responses'}],['claude',{headers:{'x-app':'cli'},body:headerBody}],['empty',{}]]){
+  const id='raw_'+name,count=sends.length;const response=await request(id,headerBody,{},raw);assert.equal(response.status,503);await response.text();
+  assert.equal(sends.length,count);assert.equal(a.receipt(id).known,false);headerRejected.push({id,status:503,sends:0,receiptKnown:false});
+}
+let earlyBodyCancelled=false;
+const earlyStart=Date.now();
+const early=await handleChat(new Request('http://127.0.0.1/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json','user-agent':'codex-tui/1.0'},duplex:'half',body:new ReadableStream({start(controller){controller.enqueue(new TextEncoder().encode('{'));},cancel(){earlyBodyCancelled=true;}})}));
+assert.equal(early.status,503);await early.text();assert.equal(earlyBodyCancelled,true);assert.ok(Date.now()-earlyStart<2500);
+for(const [id,headers] of [['missing_auth',{authorization:null}],['invalid_auth',{authorization:'Bearer wrong_synthetic_key'}]]){
+  const count=sends.length;const response=await request(id,headerBody,headers);assert.equal(response.status,401);await response.text();assert.equal(sends.length,count);assert.equal(a.receipt(id).operations.length,0);
+}
 const accepted=[];
-for(const [id,body] of [['ordinary_tools',base],['matched_continuation',{...base,messages:history}]]){
-  const count=sends.length;const response=await request(id,body);assert.equal(response.status,200);await response.text();assert.equal(sends.length,count+1);
+for(const [id,body] of [['ordinary_tools',base],['matched_continuation',{...base,messages:history}],['neutral_tool_set',headerBody],['http_metadata',headerBody],['alternate_api_auth',headerBody]]){
+  const metadata=id==='http_metadata'?{'user-agent':'node',host:'127.0.0.1:12345',connection:'keep-alive',accept:'*/*','accept-language':'*','accept-encoding':'gzip, deflate','sec-fetch-mode':'cors','content-length':String(Buffer.byteLength(JSON.stringify(body)))}:id==='alternate_api_auth'?{authorization:null,'x-api-key':'synthetic_gateway_key'}:{};
+  const count=sends.length;const response=await request(id,body,metadata);assert.equal(response.status,200);await response.text();assert.equal(sends.length,count+1);
   const wire=sends.at(-1);assert.equal(wire.tool_choice,undefined);assert.equal(wire.temperature,undefined);
   if(native){
-    assert.deepEqual(wire.tools,[{type:'function',name:tool.function.name,description:tool.function.description,parameters}]);assert.equal(wire.instructions,base.messages[0].content);
+    assert.deepEqual(wire.tools,body.tools.map(tool=>({type:'function',name:tool.function.name,description:tool.function.description,parameters:tool.function.parameters})));assert.equal(wire.instructions,base.messages[0].content);
     const calls=wire.input.filter(item=>item.type==='function_call');const results=wire.input.filter(item=>item.type==='function_call_output');
-    assert.deepEqual(calls,id==='matched_continuation'?[call,secondCall].map(call=>({type:'function_call',call_id:call.id,name:call.function.name,arguments:call.function.arguments})):[]);
-    assert.deepEqual(results,id==='matched_continuation'?history.filter(m=>m.role==='tool').map(m=>({type:'function_call_output',call_id:m.tool_call_id,output:m.content})):[]);
+    assert.deepEqual(calls,id!=='ordinary_tools'?[call,secondCall].map(call=>({type:'function_call',call_id:call.id,name:call.function.name,arguments:call.function.arguments})):[]);
+    assert.deepEqual(results,id!=='ordinary_tools'?history.filter(m=>m.role==='tool').map(m=>({type:'function_call_output',call_id:m.tool_call_id,output:m.content})):[]);
   }else{assert.deepEqual(wire.tools,body.tools);assert.deepEqual(wire.messages,body.messages);}
   assert.equal(a.receipt(id).quiescent,true);assert.equal(a.receipt(id).operations.length,1);
   accepted.push({id,wire:{tools:wire.tools,...(native?{input:wire.input,instructions:wire.instructions}:{messages:wire.messages})},receipt:a.receipt(id)});
 }
-console.log(JSON.stringify({scenario:native?'request-native':'request-compatible',regressionOf:'461cb2f372d88689dd6aed6cd3e1fe3ed060bd7e',native,rejected,accepted,sends:sends.length,liveAcceptance:false}));
+console.log(JSON.stringify({scenario:native?'request-native':'request-compatible',regressionOf:'461cb2f372d88689dd6aed6cd3e1fe3ed060bd7e',native,rejected,headerRejected,earlyBodyCancelled,routerAuthStillEnforced:true,accepted,sends:sends.length,liveAcceptance:false}));
 await new Promise(resolve=>backend.close(resolve));process.exit(0);

@@ -129,6 +129,29 @@ trusted boundary may supply them through exclusive ingress; they are not grants
 when supplied by an arbitrary worker. `digest(policy)` exports the deterministic
 SHA-256 fingerprint of the retained full sanitized policy document.
 
+Admission also closes the header envelope before reading the body. It accepts
+only POST, at most 32 header entries totaling 8 KiB, and the forms below. It creates
+a fresh Request containing canonical JSON/SSE content headers, the three Gaffer
+correlation headers, and the supplied router API credential. No other incoming
+header reaches stock client detection, request normalization or `credentials.rawHeaders`.
+Caller-supplied `clientRawRequest` metadata is refused; stock reconstructs it from
+the admitted Request. Rejection cancels the incoming reader without waiting for a
+stalled body, and performs no inference admission or send.
+
+| Incoming header group | Accepted forms |
+| --- | --- |
+| Router authentication | One of `authorization: Bearer <token>` or `x-api-key: <token>`; both together reject. The router still validates the credential. Missing/invalid credentials return its 401 without a physical send. |
+| Authority correlation | `x-gaffer-request-id`, `x-gaffer-generation`, `x-gaffer-revision`, with the existing ID/generation/revision checks. |
+| Content negotiation | Required `content-type: application/json` (optional UTF-8 charset); optional `accept` is `*/*` or `text/event-stream`. Stock receives canonical JSON/SSE values. |
+| Discarded HTTP metadata | `host` is `127.0.0.1` with optional port 1–65535; `connection` is keep-alive/close; `content-length` is the actual bounded body length; `transfer-encoding` is chunked, without content-length. |
+| Discarded fetch metadata | `user-agent` is `node`, `undici` or `gaffer-boundary/1`; `accept-language` is `*`; `accept-encoding` is a comma-separated subset of gzip/deflate/br/identity; `sec-fetch-mode` is cors/same-origin/no-cors. |
+
+Every other header or value is unsupported, including CLI/client identities,
+originator, session/cache hints, provider/account controls, cookies, forwarded
+headers, and token-saver overrides. `localhost` is not an accepted Host value in
+this disposable profile; #79 must deliberately construct its reviewed ingress.
+The actual HTTP gateway regressions retain Node's automatic transport headers.
+
 ## Exact profiles and limitations
 
 Both profiles accept the same deliberately narrow Chat request envelope: `model`,
@@ -210,12 +233,13 @@ outcomes.
 
 The [evidence record](../../docs/evidence/router-authority-extension.md) preserves
 two blocking defects found in the first independent review, the second review's
-P2 reserved-key policy-projection bypass, and the third review's P2 silently dropped
-native request controls, alongside their corrected actual-router regressions.
-The latter reviews demonstrated changed alias/pricing lookups and lost request
-controls, respectively; neither demonstrated unapproved inference or hosted-tool
-execution. Passing a previous suite did not establish conformance; the corrected
-commit requires a fresh final review.
+P2 reserved-key policy-projection bypass, the third review's P2 silently dropped
+native request controls, and the fourth review's P2 header-selected translation/tool
+removal, alongside their corrected actual-router regressions. The latter reviews
+demonstrated changed alias/pricing lookups, lost request controls and changed
+request payloads, respectively; none demonstrated unapproved inference or
+hosted-tool execution. Passing a previous suite did not establish conformance;
+the corrected commit requires a fresh final review.
 
 No deployment was selected, configuration/credentials copied, provider inference
 sent, package published, upstream repository changed, or human baseline invented.
