@@ -43,10 +43,13 @@ retention and cleanup passed. This demonstrates packaging, not live subscription
 continuity.
 
 See the [fixture README](../../experiments/router-continuity/README.md) for commands,
-source pins, exact declaration, failure matrix and limitations. Final parent-stack
-integration, shared suite sequencing and fresh controls review remain; none of
-these offline results activates a live deployment. The
-full reviewed initial suite must share one aggregate 10-physical-attempt,
+source pins, exact declaration, failure matrix and limitations. The
+[prepared initial suite](router-initial-suite.md) now integrates the final worker
+and planner parents, complete staged dependencies, finite timing, candidate
+acknowledgement and storage-failure retention. The compact continuity record above
+is retained as a historical capture. Fresh controls review remains; none of these
+offline results activates a live deployment. The full reviewed initial suite must
+share one aggregate 10-physical-attempt,
 600,000-ms scope with retries charged, no refresh and no paid fallback. Private
 proof of two distinct existing Codex subscriptions, credential expiry, concrete
 isolation/egress review, #6/#7 live results and actual bounded live continuity are
