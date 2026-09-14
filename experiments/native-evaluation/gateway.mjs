@@ -11,6 +11,8 @@ import { RouterAuthority } from '../router-boundary-bridge/authority.ts';
 import { digest,validateNativeProfile } from '../router-authority-extension/overlay/native-profile.mjs';
 import { events,frames } from './fixtures.mjs';
 import { evidenceControls } from './evidence-control.mjs';
+import { plannerEvents } from './planner-fixtures.mjs';
+import { PLANNER_PROTOCOL, validatePlannerCandidate } from '../router-authority-extension/overlay/native-planner.mjs';
 import { persistImmutable } from './durable-records.mjs';
 const {acquireDeploymentOwner}=await import('/router-source/gaffer-extension/deployment-owner.mjs');
 const owner=acquireDeploymentOwner('/state');process.env.GAFFER_NATIVE_DEPLOYMENT='1';
@@ -34,7 +36,7 @@ let synthetic;
 if(n.evidence==='synthetic'){
  synthetic=createServer(async(req,res)=>{let text='';for await(const c of req){text+=c;if(text.length>n.local.requestBytes){res.writeHead(413).end();return;}}const body=JSON.parse(text);observed.sends.push({path:req.url,body});
   if(req.url!=='/responses')throw Error('unexpected_refresh_egress');
-  res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(events(observed.sends.length===1)));for(let i=0;i<bytes.length;i+=17)res.write(bytes.subarray(i,i+17));res.end();
+  res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(n.protocol===PLANNER_PROTOCOL?plannerEvents(body,n):events(!body.input.some(x=>x.type==='function_call_output'))));for(let i=0;i<bytes.length;i+=17)res.write(bytes.subarray(i,i+17));res.end();
  });synthetic.listen(47771,'127.0.0.1');await once(synthetic,'listening');
 }
 const router=createServer(async(req,res)=>{const abort=new AbortController();res.on('close',()=>{if(!res.writableEnded)abort.abort();});try{const result=await handleChat(new Request('http://127.0.0.1'+req.url,{method:req.method,headers:req.headers,body:Readable.toWeb(req),duplex:'half',signal:abort.signal}));res.writeHead(result.status,Object.fromEntries(result.headers));if(result.body)for await(const c of result.body)res.write(c);res.end();}catch{res.destroy();}});
@@ -42,7 +44,7 @@ router.listen('/state/router.sock');await once(router,'listening');chmodSync('/s
 let boundary=new Boundary(gate,'/state/router.sock',key);await boundary.listen('/router/inference.sock');
 const packet={schema:1,policy,profiles:a.nativeProfiles(),registryDigest:digest(a.nativeProfiles()),capabilities:{providerOutputTokens:'unavailable',providerMonetaryCap:'unavailable',refresh:'denied'},scopeStatusAtPreparation:'not_started'};
 const packetRecord=persistImmutable('/state','deployment-packet',packet),packetDigest=packetRecord.digest;
-const evidenceApi=evidenceControls({policy:()=>policy,gate:()=>gate,authority:a,packetDigest,observed,persistCandidate:value=>persistImmutable('/state','candidate',value)});
+const evidenceApi=evidenceControls({policy:()=>policy,gate:()=>gate,authority:a,packetDigest,observed,persistCandidate:value=>persistImmutable('/state','candidate',value),validateProposal:validatePlannerCandidate});
 let stopping=false,selecting=false;
 async function stop(){
  if(stopping)return;stopping=true;

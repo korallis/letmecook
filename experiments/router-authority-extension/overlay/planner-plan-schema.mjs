@@ -1,0 +1,211 @@
+// Pinned plan-v1 schema. Parity with the consumer schema is checked in tests.
+export const PLANNER_PLAN_SCHEMA = {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gaffer.invalid/experiments/planner/plan-v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "kind",
+    "input_revision",
+    "outcome",
+    "constraints",
+    "exclusions",
+    "criteria",
+    "allowed_paths",
+    "allowed_systems",
+    "assumptions",
+    "unresolved_questions",
+    "steps",
+    "assessment"
+  ],
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "kind": {
+      "const": "plan_proposal"
+    },
+    "input_revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "outcome": {
+      "$ref": "#/definitions/text"
+    },
+    "constraints": {
+      "$ref": "#/definitions/texts"
+    },
+    "exclusions": {
+      "$ref": "#/definitions/texts"
+    },
+    "criteria": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "statement",
+          "evidence_required"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^c[1-8]$"
+          },
+          "statement": {
+            "$ref": "#/definitions/text"
+          },
+          "evidence_required": {
+            "$ref": "#/definitions/text"
+          }
+        }
+      }
+    },
+    "allowed_paths": {
+      "type": "array",
+      "maxItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "const": "fixture.txt"
+      }
+    },
+    "allowed_systems": {
+      "type": "array",
+      "maxItems": 0,
+      "items": {
+        "type": "string"
+      }
+    },
+    "assumptions": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "statement",
+          "source_refs",
+          "status"
+        ],
+        "properties": {
+          "statement": {
+            "$ref": "#/definitions/text"
+          },
+          "source_refs": {
+            "$ref": "#/definitions/refs"
+          },
+          "status": {
+            "enum": [
+              "proposed",
+              "unknown"
+            ]
+          }
+        }
+      }
+    },
+    "unresolved_questions": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/definitions/text"
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "description",
+          "criterion_ids",
+          "source_refs"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^s[1-8]$"
+          },
+          "description": {
+            "$ref": "#/definitions/text"
+          },
+          "criterion_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^c[1-8]$"
+            }
+          },
+          "source_refs": {
+            "$ref": "#/definitions/refs"
+          }
+        }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "work_class",
+        "consequence",
+        "unknowns",
+        "source_refs"
+      ],
+      "properties": {
+        "work_class": {
+          "enum": [
+            "text_edit",
+            "uncertain"
+          ]
+        },
+        "consequence": {
+          "enum": [
+            "low",
+            "uncertain"
+          ]
+        },
+        "unknowns": {
+          "$ref": "#/definitions/texts"
+        },
+        "source_refs": {
+          "$ref": "#/definitions/refs"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "texts": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/definitions/text"
+      }
+    },
+    "refs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "capture",
+          "fixture.txt"
+        ]
+      }
+    }
+  }
+};
