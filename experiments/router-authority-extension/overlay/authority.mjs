@@ -9,6 +9,8 @@ import { CODEX_DEFAULT_INSTRUCTIONS } from 'open-sse/config/codexInstructions.js
 import { evaluationScopes } from './evaluation-scope.mjs';
 import { validateNativeProfile } from './native-profile.mjs';
 import { validateNativeRequest, expectedPhysicalRequest, NativeResponsesStream } from './native-responses.mjs';
+import { deploymentOwner } from './deployment-owner.mjs';
+import { nativeDispatcher } from './native-transport.mjs';
 
 const context = new AsyncLocalStorage();
 let instance;
@@ -205,6 +207,8 @@ function payloadFromDb(db) {
 
 export function installAuthority(db) {
   requireThat(!instance && db.driver === 'node:sqlite', 'unsupported_runtime');
+  const ownerAtBoot=process.env.GAFFER_NATIVE_DEPLOYMENT==='1'?deploymentOwner():null;
+  let dispatcher;
   for (const key of ['HTTP_PROXY','HTTPS_PROXY','ALL_PROXY','http_proxy','https_proxy','all_proxy','HEADROOM_URL']) requireThat(!process.env[key], 'unsupported_environment');
   db.exec(`PRAGMA synchronous=FULL;
     CREATE TABLE IF NOT EXISTS gaffer_authority (id INTEGER PRIMARY KEY CHECK(id=1), boot TEXT NOT NULL, generation INTEGER NOT NULL, phase TEXT NOT NULL, revision TEXT, policy TEXT);
@@ -222,7 +226,7 @@ export function installAuthority(db) {
     db.run("UPDATE gaffer_operations SET local_stop='crash_unknown' WHERE terminal='unknown'");
   });
   const active = new Map();
-  const state = () => { const s = db.get('SELECT * FROM gaffer_authority WHERE id=1'); requireThat(s.boot === boot, 'stale_boot'); return s; };
+  const state = () => { ownerAtBoot?.assertCurrent();const s = db.get('SELECT * FROM gaffer_authority WHERE id=1'); requireThat(s.boot === boot, 'stale_boot'); return s; };
   const snapshot = () => project(payloadFromDb(db));
   const receipt = id => {
     const r = db.get('SELECT * FROM gaffer_receipts WHERE id=?', [id]);
@@ -272,6 +276,10 @@ export function installAuthority(db) {
       requireThat(state().phase==='closed'&&allQuiet()&&!nativeProfile,'native_configuration_closed');
       const next=validateNativeProfile(profile);
       requireThat(next.evidence!=='synthetic'||nativeSynthetic,'native_synthetic_transport_required');
+      if(next.evidence==='reviewed-deployment'){
+        requireThat(ownerAtBoot&&ownerAtBoot.digest===next.deployment.writerFence&&!nativeSynthetic,'native_deployment_owner_required');
+        dispatcher=nativeDispatcher('/egress/provider.sock');
+      }
       db.transaction(()=>{
         const previous=db.get('SELECT digest FROM gaffer_native_authorizations WHERE id=?',[next.authorization.id]);
         requireThat(!previous||previous.digest===digest(next.authorization),'native_authorization_changed');
@@ -454,6 +462,7 @@ export function installAuthority(db) {
       const ctx = context.getStore(); assertContext(ctx); requireThat(ctx.executor, 'untracked_fetch');
       if(db.all('SELECT terminal FROM gaffer_operations WHERE request_id=?',[ctx.id]).some(o=>o.terminal==='unknown')){ctx.cancel.abort(new Error('prior_operation_unknown'));deny('prior_operation_unknown');}
       const conn = ctx.policy.connections.find(c => c.id === ctx.executor.connection);
+      if(nativeProfile)requireThat(!['dispatcher','agent','ca','key','cert','rejectUnauthorized'].some(key=>Object.hasOwn(options,key)),'native_transport_override_denied');
       requireThat(String(url) === (ctx.executor.kind==='refresh' ? conn.refreshEndpoint : conn.endpoint) && !proxyOptions?.connectionProxyEnabled && !proxyOptions?.vercelRelayUrl && !proxyOptions?.enabled, 'unapproved_transport');
       requireThat(!mitmHosts.some(host => new URL(url).hostname.includes(host)), 'unsupported_mitm_transport');
       let ordinal;
@@ -494,7 +503,11 @@ export function installAuthority(db) {
       const onAbort=()=>{void dispose(ctx.cancel.signal.reason);};
       ctx.transports.add(dispose);ctx.cancel.signal.addEventListener('abort',onAbort,{once:true});
       try {
-        response = await call(url, {...options, signal: AbortSignal.any([ctx.cancel.signal,transportAbort.signal,...(options.signal ? [options.signal] : [])]), redirect:'error'}, proxyOptions);
+        // Synchronous FULL SQLite commit can consume the remaining elapsed or
+        // credential window before timer callbacks run. Keep its debit, but
+        // recheck immediately before handing bytes to the transport.
+        assertContext(ctx);
+        response = await call(url, {...options,...(dispatcher?{dispatcher}:{}),signal: AbortSignal.any([ctx.cancel.signal,transportAbort.signal,...(options.signal ? [options.signal] : [])]), redirect:'error'}, proxyOptions);
         assertContext(ctx);
         if (!response.ok || ctx.executor.kind==='refresh') {
           reader = response.body?.getReader(); let bytes = 0; const chunks = [];
@@ -539,7 +552,7 @@ export function installAuthority(db) {
       } catch (error) { stop('unknown','transport_error');ctx.cancel.abort(error);await dispose(error);throw error; }
     },
     // Deliberately private-process API; the HTTP service never exposes writer callbacks.
-    close: () => { instance.fence(); db.close(); }
+    close: () => { instance.fence();void dispatcher?.destroy();db.close(); }
   });
   return guarded;
 }

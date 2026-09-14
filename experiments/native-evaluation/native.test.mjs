@@ -30,3 +30,7 @@ test('invalid, contradictory, fabricated, missing EOF and incomplete terminals r
  const p=profile();for(const mutate of [e=>e.pop(),e=>e.push(e.at(-1)),e=>e[4].item_id='fc_other',e=>e[3].item.call_id='different',e=>e[4].sequence_number=1,e=>e.at(-1).response.output.reverse(),e=>e.at(-1).response.output[0].encrypted_content='drift',e=>e.at(-1).response.output[1].arguments=JSON.stringify({patchText:patch.replace('greeting.txt','../escape')}),e=>e.at(-1).response.model='different',e=>e.at(-1).response.status='incomplete',e=>e.at(-1).response.error={message:'failure'},e=>e.at(-1).response.output[1].type='custom_tool_call']){const e=events(true);mutate(e);const s=new NativeResponsesStream(p);assert.deepEqual(s.push(Buffer.from(frames(e))).output,[]);assert.throws(()=>s.end());}
  const open=new NativeResponsesStream(p);assert.deepEqual(open.push(Buffer.from(frames(events(true)))).output,[]);assert.equal(open.nativeOutput,null);
 });
+
+test('CR-only and split CRLF framing preserve validation and semantic deadlines',()=>{
+ for(const separator of ['\r','\r\n']){const wire=Buffer.from(frames(events(true)).replace(/\n/g,separator));const codec=new NativeResponsesStream(profile());for(const byte of wire)assert.deepEqual(codec.push(Buffer.from([byte])).output,[]);assert.equal(codec.end().join(''),wire.toString());assert.equal(codec.nativeOutput.length,2);}
+});

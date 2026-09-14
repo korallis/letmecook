@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "purpose": "gaffer-native-egress-namespace-setup-helper",
+  "targetArchitecture": "arm64",
+  "base": {
+    "reference": "node@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0",
+    "imageId": "sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0",
+    "installedPackagesSha256": "db9fdfd3c70d11b561864cb326dabd58bcdeba6a37f719ec18448a5235fbf32f",
+    "keyringPackage": {
+      "version": "2023.3+deb12u2",
+      "architecture": "all"
+    },
+    "satisfiedDirectDependencies": {
+      "libc6": {
+        "version": "2.36-9+deb12u14",
+        "architecture": "arm64"
+      },
+      "libgmp10": {
+        "version": "2:6.2.1+dfsg1-1.1",
+        "architecture": "arm64"
+      },
+      "libjansson4": {
+        "version": "2.14-2",
+        "architecture": "arm64"
+      },
+      "libedit2": {
+        "version": "3.1-20221030-2",
+        "architecture": "arm64"
+      }
+    }
+  },
+  "repository": {
+    "releaseUrl": "https://deb.debian.org/debian/dists/bookworm/InRelease",
+    "releaseSha256": "77737fa4b34f2693e982cc9ee35736816c35a7778fc2d326cc1bbf5b301fe1aa",
+    "indexPath": "main/binary-arm64/Packages.xz",
+    "indexSha256": "2ddb1737692e8c45c53e8d57c0ce4cd21c78c5703b830c3226b1423566a06c00",
+    "indexBytes": 8689464,
+    "indexUrl": "https://deb.debian.org/debian/dists/bookworm/main/binary-arm64/by-hash/SHA256/2ddb1737692e8c45c53e8d57c0ce4cd21c78c5703b830c3226b1423566a06c00"
+  },
+  "signatureVerification": {
+    "keyring": "/usr/share/keyrings/debian-archive-keyring.gpg",
+    "exitCode": 0,
+    "validSigningFingerprints": [
+      "4CB50190207B4758A3F73A796ED0E7B82643E131",
+      "B8E5F13176D2A7A75220028078DBA3BC47EF2265",
+      "4D64FEC119C2029067D6E791F8D2585B8783D481"
+    ],
+    "releaseDate": "2026-07-11T10:16:37Z",
+    "codename": "bookworm",
+    "version": "12.15"
+  },
+  "installation": {
+    "method": "verified-deb-payload-extraction",
+    "maintainerScriptsExecuted": false,
+    "aptExecuted": false,
+    "networkDuringBuild": "none",
+    "packageDatabaseUpdated": false
+  },
+  "packages": [
+    {
+      "name": "libmnl0",
+      "version": "1.0.4-3",
+      "architecture": "arm64",
+      "source": "libmnl",
+      "depends": "libc6 (>= 2.17)",
+      "preDepends": "",
+      "filename": "pool/main/libm/libmnl/libmnl0_1.0.4-3_arm64.deb",
+      "localFilename": "libmnl0_1.0.4-3_arm64.deb",
+      "size": 12116,
+      "sha256": "d63aafb6f2c07db8fcb135b00ff915baf72ef8a3397e773c9c24d67950c6a46c",
+      "url": "https://deb.debian.org/debian/pool/main/libm/libmnl/libmnl0_1.0.4-3_arm64.deb"
+    },
+    {
+      "name": "libnftnl11",
+      "version": "1.2.4-2",
+      "architecture": "arm64",
+      "source": "libnftnl",
+      "depends": "libc6 (>= 2.34), libmnl0 (>= 1.0.3-4~)",
+      "preDepends": "",
+      "filename": "pool/main/libn/libnftnl/libnftnl11_1.2.4-2_arm64.deb",
+      "localFilename": "libnftnl11_1.2.4-2_arm64.deb",
+      "size": 57632,
+      "sha256": "fd8b6f2ea21d60e25b07dfee8804ece79c2b18309df7773b091a587135565b9f",
+      "url": "https://deb.debian.org/debian/pool/main/libn/libnftnl/libnftnl11_1.2.4-2_arm64.deb"
+    },
+    {
+      "name": "libxtables12",
+      "version": "1.8.9-2",
+      "architecture": "arm64",
+      "source": "iptables",
+      "depends": "libc6 (>= 2.34)",
+      "preDepends": "",
+      "filename": "pool/main/i/iptables/libxtables12_1.8.9-2_arm64.deb",
+      "localFilename": "libxtables12_1.8.9-2_arm64.deb",
+      "size": 29572,
+      "sha256": "8884a42f98b989e5ba2e91d931b5c6e9eb72568e5d3001d97d73d7913890a7b3",
+      "url": "https://deb.debian.org/debian/pool/main/i/iptables/libxtables12_1.8.9-2_arm64.deb"
+    },
+    {
+      "name": "libnftables1",
+      "version": "1.0.6-2+deb12u2",
+      "architecture": "arm64",
+      "source": "nftables",
+      "depends": "libc6 (>= 2.34), libgmp10 (>= 2:6.2.1+dfsg1), libjansson4 (>= 2.14), libmnl0 (>= 1.0.3-4~), libnftnl11 (>= 1.2.2), libxtables12 (>= 1.6.0+snapshot20161117)",
+      "preDepends": "",
+      "filename": "pool/main/n/nftables/libnftables1_1.0.6-2+deb12u2_arm64.deb",
+      "localFilename": "libnftables1_1.0.6-2+deb12u2_arm64.deb",
+      "size": 276100,
+      "sha256": "7470db9de55d13b40bf7d4c928adce4b1e58aada8a22d614907b52a9724906b2",
+      "url": "https://deb.debian.org/debian/pool/main/n/nftables/libnftables1_1.0.6-2+deb12u2_arm64.deb"
+    },
+    {
+      "name": "nftables",
+      "version": "1.0.6-2+deb12u2",
+      "architecture": "arm64",
+      "source": "nftables",
+      "depends": "libnftables1 (= 1.0.6-2+deb12u2), libc6 (>= 2.34), libedit2 (>= 3.1-20130611-0)",
+      "preDepends": "",
+      "filename": "pool/main/n/nftables/nftables_1.0.6-2+deb12u2_arm64.deb",
+      "localFilename": "nftables_1.0.6-2+deb12u2_arm64.deb",
+      "size": 70032,
+      "sha256": "f5906f44fffdb190f84e3fdd6c07cba399205de5173f67e8742876a7865e2fc9",
+      "url": "https://deb.debian.org/debian/pool/main/n/nftables/nftables_1.0.6-2+deb12u2_arm64.deb"
+    }
+  ]
+}

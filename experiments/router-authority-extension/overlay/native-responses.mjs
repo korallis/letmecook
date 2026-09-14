@@ -69,14 +69,14 @@ export class NativeResponsesStream {
  push(bytes){
    const state=this.observer.push(bytes);this.chunks.push(Buffer.from(bytes));let semantic=false;
    if(!state.invalidReason){
-     this.semanticBuffer+=this.semanticDecoder.decode(bytes,{stream:true});this.semanticBuffer=this.semanticBuffer.replace(/\r\n/g,'\n');let end;
+     let decoded=(this.pendingCR?'\r':'')+this.semanticDecoder.decode(bytes,{stream:true});this.pendingCR=decoded.endsWith('\r');if(this.pendingCR)decoded=decoded.slice(0,-1);this.semanticBuffer+=decoded.replace(/\r\n|\r/g,'\n');let end;
      while((end=this.semanticBuffer.indexOf('\n\n'))>=0){const block=this.semanticBuffer.slice(0,end);this.semanticBuffer=this.semanticBuffer.slice(end+2);const data=block.split('\n').filter(l=>l.startsWith('data:')).map(l=>l.slice(5).replace(/^ /,'')).join('\n');if(!data)continue;if(data==='[DONE]'){check(this.completedEvent&&!this.doneSentinel,'invalid_native_done');this.doneSentinel=true;continue;}const event=parseUnambiguousJSON(data);if(event.type==='response.completed')this.completedEvent=true;semantic ||= ['response.output_text.delta','response.function_call_arguments.delta','response.reasoning_summary_text.delta','response.reasoning_text.delta'].includes(event.type)&&typeof event.delta==='string'&&event.delta.length>0;}
    }
    this.semanticOutput ||= semantic;return {output:[],semantic,...(state.invalidReason?{error:Error(state.invalidReason)}:{})};
  }
  end(){
    const state=this.observer.finish({reason:'eof'});check(state.disposition==='provider_terminal'&&state.terminal.kind==='completed','native_original_success_required');
-   const raw=Buffer.concat(this.chunks).toString('utf8');const frames=raw.replace(/\r\n/g,'\n').split('\n\n');let complete;
+   const raw=Buffer.concat(this.chunks).toString('utf8');const frames=raw.replace(/\r\n|\r/g,'\n').split('\n\n');let complete;
    for(const frame of frames){const data=frame.split('\n').filter(l=>l.startsWith('data:')).map(l=>l.slice(5).replace(/^ /,'')).join('\n');if(!data||data==='[DONE]')continue;const event=parseUnambiguousJSON(data);if(event.type==='response.completed')complete=event.response;}
    check(complete&&complete.model==='gpt-6-astra'&&complete.status==='completed'&&complete.error===null&&complete.incomplete_details===null,'native_terminal_mismatch');
    continuationOutput(complete.output,this.profile);this.nativeOutput=structuredClone(complete.output);

@@ -1,0 +1,64 @@
+// Container-only trusted bootstrap. Source manifest validation belongs to the
+// launcher before execution; upstream's loader validates every router source.
+import { createServer } from 'node:http';
+import { Readable } from 'node:stream';
+import { once } from 'node:events';
+import { readFileSync,writeFileSync,openSync,fsyncSync,closeSync,mkdirSync,chmodSync } from 'node:fs';
+import { randomBytes } from 'node:crypto';
+import { Boundary } from '../inference-boundary/boundary.ts';
+import { PolicyGate } from '../inference-boundary/policy.ts';
+import { RouterAuthority } from '../router-boundary-bridge/authority.ts';
+import { digest,validateNativeProfile } from '../router-authority-extension/overlay/native-profile.mjs';
+import { events,frames } from './fixtures.mjs';
+const {acquireDeploymentOwner}=await import('/router-source/gaffer-extension/deployment-owner.mjs');
+const owner=acquireDeploymentOwner('/state');process.env.GAFFER_NATIVE_DEPLOYMENT='1';
+const n=JSON.parse(readFileSync('/config/profile.json','utf8'));n.deployment.writerFence=owner.digest;validateNativeProfile(n);
+const {handleChat}=await import('/router-source/src/sse/handlers/chat.js');
+const {getAdapter}=await import('/router-source/src/lib/db/driver.js');
+const repository=await import('/router-source/src/lib/db/index.js');
+const {authority,project}=await import('/router-source/gaffer-extension/authority.mjs');
+await getAdapter();const a=authority();a.configureNative(n);
+const config=JSON.parse(readFileSync('/private/config.json','utf8')),key=randomBytes(32).toString('hex');
+config.apiKeys=[{id:'native_private_ingress',key,name:'Private native boundary',isActive:true}];
+if(!await a.replace(a.state().generation,'native_revision',project(config),()=>repository.importDb(config)))throw Error('native_initial_policy_refused');
+const state=a.state(),route=a.snapshot().routes[0];
+const policy={schema:3,routerId:'native_router',routeId:route.id,revision:state.revision,epoch:1,routerModel:route.name,profile:'router-native-responses-local-v1',evidence:n.evidence,liveAdmission:n.evidence==='reviewed-deployment',graph:a.snapshot(),limits:{...n.local,outputTokens:null},authority:{deploymentId:n.deployment.id,boot:state.boot,generation:state.generation,revision:state.revision,graphDigest:digest(a.snapshot())},native:n};
+const bridge=new RouterAuthority(a,policy),gate=await PolicyGate.open('/state/boundary',bridge,1000);await gate.activate();
+const observed={sends:[],decisions:[],artifacts:[]};
+const persist=(path,value)=>{const fd=openSync(path,'w',0o600);try{writeFileSync(fd,JSON.stringify(value));fsyncSync(fd);}finally{closeSync(fd);}const dir=openSync('/state','r');try{fsyncSync(dir);}finally{closeSync(dir);}};
+const finalize=gate.finalize.bind(gate);gate.finalize=async(...args)=>{await finalize(...args);observed.decisions.push({requestId:args[0],at:Date.now()});};
+let synthetic;
+if(n.evidence==='synthetic'){
+ synthetic=createServer(async(req,res)=>{let text='';for await(const c of req){text+=c;if(text.length>n.local.requestBytes){res.writeHead(413).end();return;}}const body=JSON.parse(text);observed.sends.push({path:req.url,body});
+  if(req.url!=='/responses')throw Error('unexpected_refresh_egress');
+  res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(events(observed.sends.length===1)));for(let i=0;i<bytes.length;i+=17)res.write(bytes.subarray(i,i+17));res.end();
+ });synthetic.listen(47771,'127.0.0.1');await once(synthetic,'listening');
+}
+const router=createServer(async(req,res)=>{const abort=new AbortController();res.on('close',()=>{if(!res.writableEnded)abort.abort();});try{const result=await handleChat(new Request('http://127.0.0.1'+req.url,{method:req.method,headers:req.headers,body:Readable.toWeb(req),duplex:'half',signal:abort.signal}));res.writeHead(result.status,Object.fromEntries(result.headers));if(result.body)for await(const c of result.body)res.write(c);res.end();}catch{res.destroy();}});
+router.listen('/state/router.sock');await once(router,'listening');chmodSync('/state/router.sock',0o600);
+const boundary=new Boundary(gate,'/state/router.sock',key);await boundary.listen('/router/inference.sock');
+const packet={schema:1,policy,capabilities:{providerOutputTokens:'unavailable',providerMonetaryCap:'unavailable',refresh:'denied'},scopeStarted:false};
+persist('/state/deployment-packet.json',packet);const packetDigest=digest(packet);
+let stopping=false;
+async function stop(){
+ if(stopping)return;stopping=true;
+ await boundary.close();router.closeAllConnections();await new Promise(r=>router.close(r));
+ synthetic?.closeAllConnections();if(synthetic)await new Promise(r=>synthetic.close(r));
+ const journal=gate.snapshot(),ids=[...new Set([...journal.reservations,...(journal.decisions??[])].map(r=>r.requestId))],receipts=ids.map(id=>a.receipt(id));
+ const result={schema:1,packetDigest,evidence:n.evidence,observed,policy,journal,receipts,scope:a.evaluationScope(n.scope.id)??null};persist('/state/result.json',result);
+ const quiet=a.quiescent(ids);a.close();if(quiet)owner.release(true);
+ control.close();console.log(JSON.stringify({event:'gateway_stopped',quiescent:quiet,resultDigest:digest(result)}));process.exit(0);
+}
+const control=createServer(async(req,res)=>{
+ try{
+  if(req.method!=='POST'||req.url!=='/control')throw Error('unsupported_control');let text='';for await(const c of req){text+=c;if(Buffer.byteLength(text)>2097152)throw Error('control_bytes');}const message=JSON.parse(text);let result;
+  if(message.command==='inspect'&&Object.keys(message).length===1)result={packet,packetDigest,current:{boot:a.state().boot,generation:a.state().generation,revision:a.state().revision,scope:a.evaluationScope(n.scope.id)??null,journal:gate.snapshot()}};
+  else if(message.command==='start'&&Object.keys(message).length===2&&message.packetDigest===packetDigest){result=a.startEvaluation();}
+  else if(message.command==='grant'&&Object.keys(message).length===2){const binding=message.binding;if(!a.evaluationScope(n.scope.id))throw Error('evaluation_not_started');result={token:boundary.issue(binding),model:policy.routerModel};}
+  else if(message.command==='artifact'&&Object.keys(message).length===2){const value=message.value;if(!value||typeof value.path!=='string'||!n.toolPaths.includes(value.path)||typeof value.content!=='string'||Buffer.byteLength(value.content)>1048576)throw Error('unsupported_artifact');const artifact={...value,digest:digest(value)};persist('/state/artifact-'+observed.artifacts.length+'.json',artifact);observed.artifacts.push({path:value.path,digest:artifact.digest});result={acknowledged:true,digest:artifact.digest};}
+  else if(message.command==='stop'&&Object.keys(message).length===1){res.writeHead(200,{'content-type':'application/json'}).end('{}');void stop();return;}
+  else throw Error('unsupported_control');
+  res.writeHead(200,{'content-type':'application/json'}).end(JSON.stringify(result));
+ }catch{res.writeHead(403,{'content-type':'application/json'}).end('{"error":"control_denied"}');}
+});control.listen('/control/gateway.sock');await once(control,'listening');chmodSync('/control/gateway.sock',0o600);
+process.on('SIGTERM',()=>void stop());process.on('SIGINT',()=>void stop());console.log(JSON.stringify({event:'gateway_ready',packetDigest}));

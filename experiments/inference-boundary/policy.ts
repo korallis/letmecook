@@ -218,8 +218,10 @@ export class PolicyGate {
       if (evidence.disposition !== 'original_success') throw new Denial('receipt_unverified',502);
       if (!current()) throw new Denial('cancelled',409);
       this.receipts().assertCurrent(r);
+      // Validate the original/translated join before mutating decision history.
+      if(r.router.policy.schema===3){if(!nativeOutput||hashDocument(nativeOutput)!==evidence.operations.at(-1)?.output_digest)throw new Denial('invalid_stream',502);continuationOutput(nativeOutput,r.router.policy.native);}
       const decision=this.recordDecision(r,evidence,'validated_success',completionDigest);
-      if(r.router.policy.schema===3){if(!nativeOutput||hashDocument(nativeOutput)!==evidence.operations.at(-1)?.output_digest)throw new Denial('invalid_stream',502);continuationOutput(nativeOutput,r.router.policy.native);decision.nativeOutput=structuredClone(nativeOutput);}
+      if(r.router.policy.schema===3)decision.nativeOutput=structuredClone(nativeOutput);
       await this.persist();
       this.check(signal); if (!current()) throw new Denial('cancelled',409);
       this.receipts().assertCurrent(r);
