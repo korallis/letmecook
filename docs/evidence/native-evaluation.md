@@ -182,7 +182,10 @@ and acknowledged artifacts outside disposable tmpfs. Artifacts use immutable
 content-addressed files: exclusive temporary write, file fsync, atomic no-replace
 link, content verification and directory fsync precede acknowledgement. Retrying
 the same payload after restart returns its original identity; later content never
-overwrites it. A fresh fenced boot uses a new startup revision, allowing a new
+overwrites it. A separate immutable acknowledgement binds each blob to its
+packet, selected policy/authority/profile, started scope and authorization. The
+packet itself remains immutable, so both old acknowledgement identity and content
+survive later baselines. A fresh fenced boot uses a new startup revision, allowing a new
 approved baseline on the same preserved store while earlier scopes stay closed.
 Normal stop persists state;
 container/process-tree checks verify exit, no OOM and denied post-stop execution.

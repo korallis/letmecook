@@ -41,7 +41,7 @@ const router=createServer(async(req,res)=>{const abort=new AbortController();res
 router.listen('/state/router.sock');await once(router,'listening');chmodSync('/state/router.sock',0o600);
 let boundary=new Boundary(gate,'/state/router.sock',key);await boundary.listen('/router/inference.sock');
 const packet={schema:1,policy,profiles:a.nativeProfiles(),registryDigest:digest(a.nativeProfiles()),capabilities:{providerOutputTokens:'unavailable',providerMonetaryCap:'unavailable',refresh:'denied'},scopeStatusAtPreparation:'not_started'};
-persist('/state/deployment-packet.json',packet);const packetDigest=digest(packet);
+const packetRecord=persistImmutable('/state','deployment-packet',packet),packetDigest=packetRecord.digest;
 const evidenceApi=evidenceControls({policy:()=>policy,gate:()=>gate,authority:a,packetDigest,observed,persistCandidate:value=>persistImmutable('/state','candidate',value)});
 let stopping=false,selecting=false;
 async function stop(){
@@ -65,7 +65,10 @@ const control=createServer(async(req,res)=>{
   else if(message.command==='grant'&&Object.keys(message).length===2){const binding=message.binding;if(!a.evaluationScope(n.scope.id))throw Error('evaluation_not_started');result={token:boundary.issue(binding),model:policy.routerModel};}
   else if(message.command==='evidence'&&Object.keys(message).length===2)result=evidenceApi.evidence(message.attemptId);
   else if(message.command==='candidate'&&Object.keys(message).length===2)result=evidenceApi.candidate(message.value);
-  else if(message.command==='artifact'&&Object.keys(message).length===2){const value=message.value;if(!value||typeof value.path!=='string'||!n.toolPaths.includes(value.path)||typeof value.content!=='string'||Buffer.byteLength(value.content)>1048576)throw Error('unsupported_artifact');const saved=persistImmutable('/state','artifact',value);observed.artifacts.push({path:value.path,digest:saved.digest,file:saved.file});result={acknowledged:true,digest:saved.digest,file:saved.file};}
+  else if(message.command==='artifact'&&Object.keys(message).length===2){const value=message.value;if(!value||typeof value.path!=='string'||!n.toolPaths.includes(value.path)||typeof value.content!=='string'||Buffer.byteLength(value.content)>1048576)throw Error('unsupported_artifact');const scope=a.evaluationScope(n.scope.id);if(!scope)throw Error('evaluation_not_started');
+   const saved=persistImmutable('/state','artifact',value);
+   const acknowledgement=persistImmutable('/state','artifact-ack',{schema:1,packetDigest,packetFile:packetRecord.file,policyDigest:digest(policy),authority:policy.authority,profileDigest:digest(n),scope:{id:scope.id,caseRef:n.scope.caseRef,phase:scope.phase,boot:scope.boot,started:scope.started,deadline:scope.deadline,authorizationDigest:n.scope.authorizationDigest},artifact:{path:value.path,digest:saved.digest,file:saved.file}});
+   const identity={digest:acknowledgement.digest,file:acknowledgement.file};observed.artifacts.push({path:value.path,digest:saved.digest,file:saved.file,acknowledgement:identity});result={acknowledged:true,digest:saved.digest,file:saved.file,acknowledgement:identity};}
   else if(message.command==='stop'&&Object.keys(message).length===1){res.writeHead(200,{'content-type':'application/json'}).end('{}');void stop();return;}
   else throw Error('unsupported_control');
   res.writeHead(200,{'content-type':'application/json'}).end(JSON.stringify(result));
