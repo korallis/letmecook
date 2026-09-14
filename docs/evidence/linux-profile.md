@@ -1,15 +1,17 @@
-# Linux isolation experiment: fixture passes, unattended gate remains closed
+# Linux isolation experiment: containment passes, acceptance awaits review
 
 Related to [issue #5](https://github.com/korallis/letmecook/issues/5).
 Observed **14 September 2026**. This is an independent M0 experiment, with no
 application runtime, harness adapter, account router or publication path.
 
-The real Linux containers passed the containment probes below. **This does not
-enable unattended execution or close #5.** The prerequisite
-[9Router contract](../contracts/9router.md) is a proposal awaiting independent
-review/acceptance, and this run uses a synthetic inference fixture. A real, pinned
-9Router deployment, its scoped forwarding boundary and an authorized model route
-have not been tested through this profile. A synthetic HTTP 200 is not model output.
+The real Linux containers passed the containment probes below, including the
+scoped inference endpoint's isolation and resource checks. **Acceptance of #5
+awaits its accepted #2 prerequisite and independent review.** The linked
+[9Router contract](../contracts/9router.md) defines the integration boundary.
+This run deliberately uses a synthetic inference fixture; a synthetic HTTP 200
+is not model output. Combined live harness/router/model proof belongs to #6/#7,
+and is not an additional acceptance criterion for this isolation experiment.
+The experiment does not enable a product unattended runner.
 
 ## Exact profile and prerequisites
 
@@ -106,7 +108,9 @@ it. A failed runtime check creates no container. Failure during a probe refuses
 further launches. CLI operations have deadlines; cleanup runs even after failure.
 The result is accepted only after removing the run's containers/volume and checking
 that none with its exact run label remain. The gate always records
-`unattendedSupported: false` while the missing integration evidence remains.
+`unattendedSupported: false`: this is an experiment, not a product execution
+enablement switch. The report identifies required independent review and #2's
+prerequisite without attempting to infer GitHub acceptance status at runtime.
 
 If the supervisor is killed or the Docker daemon becomes unavailable, the initial
 record remains blocked with cleanup unverified. **Quarantine that execution profile**:
@@ -147,14 +151,14 @@ request-byte, output-token and attempt-count checks demonstrate the exposed sock
 limited surface; they do not implement the complete #2 grant, JSON parsing,
 revocation, streaming or admission contract. The worker cannot reach the actual
 router management network because it has no IP network; the fixture separately
-rejects management paths. Actual router configuration/authentication still needs
-the deployment-specific negative tests.
+rejects management paths. Actual router configuration/authentication is outside
+this isolation proof and is exercised by the combined harness tests in #6/#7.
 
-Before enabling an unattended profile: accept/reconcile #2, implement and test its
-trusted forwarding boundary against the selected 9Router build and approved route,
-repeat the containment/admission tests using that real endpoint, and independently
-review the complete evidence. Other native Linux hosts require their own
-observed runtime pin and proof; this run does not certify them.
+For #5 acceptance, accept the #2 prerequisite and independently review this
+containment evidence. Combined live harness/router/model tests remain in #6/#7;
+they do not change the observations or add an acceptance criterion here. Product
+execution enablement is outside this experiment. Other native Linux hosts require
+their own observed runtime pin and proof; this run does not certify them.
 
 Docker documents the [container execution and namespace controls](https://docs.docker.com/engine/containers/run/)
 and [resource controls](https://docs.docker.com/engine/containers/resource_constraints/).

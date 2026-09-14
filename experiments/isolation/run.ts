@@ -21,7 +21,9 @@ const ids: string[] = [];
 let volume: string | undefined;
 const evidence: any = { schema: 1, profile: PROFILE, selectedProfile, dockerContext: context, runId, observedAt: new Date().toISOString(), image: IMAGE,
   syntheticInference: true, unattendedSupported: false, result: 'blocked', commands: [], observations: {},
-  blockers: ['Prerequisite #2 requires independent review and acceptance.', 'Live pinned 9Router/auth/model integration has not been configured or demonstrated.'] };
+  acceptance: { independentReview: 'required', prerequisiteIssue: 2, prerequisiteAcceptance: 'not-evaluated-by-experiment' },
+  limitations: ['Synthetic inference fixture. Combined live harness/model integration belongs to #6/#7. This experiment does not enable a product unattended runner.'],
+  blockers: [] };
 // Persist a blocked run marker before any Docker mutation. SIGKILL/host loss cannot leave a prior pass.
 await mkdir(dirname(output), { recursive: true });
 await writeFile(output, JSON.stringify({ ...evidence, cleanup: { verified: false } }, null, 2) + '\n');

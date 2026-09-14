@@ -9,8 +9,8 @@
     "image": "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0"
   },
   "dockerContext": "desktop-linux",
-  "runId": "gaffer-isolation-03cf3486e2ba",
-  "observedAt": "2026-09-14T11:40:05.374Z",
+  "runId": "gaffer-isolation-eef61d490089",
+  "observedAt": "2026-09-14T11:49:07.619Z",
   "image": "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0",
   "syntheticInference": true,
   "unattendedSupported": false,
@@ -47,7 +47,7 @@
       "volume",
       "create",
       "--label",
-      "dev.gaffer.isolation-experiment=gaffer-isolation-03cf3486e2ba",
+      "dev.gaffer.isolation-experiment=gaffer-isolation-eef61d490089",
       "--driver",
       "local",
       "--opt",
@@ -56,7 +56,7 @@
       "device=tmpfs",
       "--opt",
       "o=size=1m,uid=1000,gid=1000,mode=0700",
-      "gaffer-isolation-03cf3486e2ba-socket"
+      "gaffer-isolation-eef61d490089-socket"
     ],
     [
       "docker",
@@ -64,9 +64,9 @@
       "desktop-linux",
       "create",
       "--name",
-      "gaffer-isolation-03cf3486e2ba-gateway",
+      "gaffer-isolation-eef61d490089-gateway",
       "--label",
-      "dev.gaffer.isolation-experiment=gaffer-isolation-03cf3486e2ba",
+      "dev.gaffer.isolation-experiment=gaffer-isolation-eef61d490089",
       "--platform",
       "linux/arm64",
       "--pull",
@@ -106,7 +106,7 @@
       "--mount",
       "type=bind,source=<host-fixture>/fixture,target=/fixture,readonly",
       "--mount",
-      "type=volume,source=gaffer-isolation-03cf3486e2ba-socket,target=/router,volume-nocopy",
+      "type=volume,source=gaffer-isolation-eef61d490089-socket,target=/router,volume-nocopy",
       "--workdir",
       "/work",
       "--env",
@@ -137,35 +137,35 @@
       "--context",
       "desktop-linux",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-gateway"
+      "gaffer-isolation-eef61d490089-gateway"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "start",
-      "gaffer-isolation-03cf3486e2ba-gateway"
+      "gaffer-isolation-eef61d490089-gateway"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "logs",
-      "gaffer-isolation-03cf3486e2ba-gateway"
+      "gaffer-isolation-eef61d490089-gateway"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-gateway"
+      "gaffer-isolation-eef61d490089-gateway"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "logs",
-      "gaffer-isolation-03cf3486e2ba-gateway"
+      "gaffer-isolation-eef61d490089-gateway"
     ],
     [
       "docker",
@@ -173,9 +173,9 @@
       "desktop-linux",
       "create",
       "--name",
-      "gaffer-isolation-03cf3486e2ba-probe",
+      "gaffer-isolation-eef61d490089-probe",
       "--label",
-      "dev.gaffer.isolation-experiment=gaffer-isolation-03cf3486e2ba",
+      "dev.gaffer.isolation-experiment=gaffer-isolation-eef61d490089",
       "--platform",
       "linux/arm64",
       "--pull",
@@ -215,7 +215,7 @@
       "--mount",
       "type=bind,source=<host-fixture>/fixture,target=/fixture,readonly",
       "--mount",
-      "type=volume,source=gaffer-isolation-03cf3486e2ba-socket,target=/router,volume-nocopy,readonly",
+      "type=volume,source=gaffer-isolation-eef61d490089-socket,target=/router,volume-nocopy,readonly",
       "--workdir",
       "/work",
       "--env",
@@ -246,28 +246,28 @@
       "--context",
       "desktop-linux",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-probe"
+      "gaffer-isolation-eef61d490089-probe"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "start",
-      "gaffer-isolation-03cf3486e2ba-probe"
+      "gaffer-isolation-eef61d490089-probe"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "wait",
-      "gaffer-isolation-03cf3486e2ba-probe"
+      "gaffer-isolation-eef61d490089-probe"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "logs",
-      "gaffer-isolation-03cf3486e2ba-probe"
+      "gaffer-isolation-eef61d490089-probe"
     ],
     [
       "docker",
@@ -275,9 +275,9 @@
       "desktop-linux",
       "create",
       "--name",
-      "gaffer-isolation-03cf3486e2ba-oom",
+      "gaffer-isolation-eef61d490089-oom",
       "--label",
-      "dev.gaffer.isolation-experiment=gaffer-isolation-03cf3486e2ba",
+      "dev.gaffer.isolation-experiment=gaffer-isolation-eef61d490089",
       "--platform",
       "linux/arm64",
       "--pull",
@@ -317,7 +317,7 @@
       "--mount",
       "type=bind,source=<host-fixture>/fixture,target=/fixture,readonly",
       "--mount",
-      "type=volume,source=gaffer-isolation-03cf3486e2ba-socket,target=/router,volume-nocopy,readonly",
+      "type=volume,source=gaffer-isolation-eef61d490089-socket,target=/router,volume-nocopy,readonly",
       "--workdir",
       "/work",
       "--env",
@@ -348,28 +348,28 @@
       "--context",
       "desktop-linux",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-oom"
+      "gaffer-isolation-eef61d490089-oom"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "start",
-      "gaffer-isolation-03cf3486e2ba-oom"
+      "gaffer-isolation-eef61d490089-oom"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "wait",
-      "gaffer-isolation-03cf3486e2ba-oom"
+      "gaffer-isolation-eef61d490089-oom"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-oom"
+      "gaffer-isolation-eef61d490089-oom"
     ],
     [
       "docker",
@@ -377,9 +377,9 @@
       "desktop-linux",
       "create",
       "--name",
-      "gaffer-isolation-03cf3486e2ba-cancel",
+      "gaffer-isolation-eef61d490089-cancel",
       "--label",
-      "dev.gaffer.isolation-experiment=gaffer-isolation-03cf3486e2ba",
+      "dev.gaffer.isolation-experiment=gaffer-isolation-eef61d490089",
       "--platform",
       "linux/arm64",
       "--pull",
@@ -419,7 +419,7 @@
       "--mount",
       "type=bind,source=<host-fixture>/fixture,target=/fixture,readonly",
       "--mount",
-      "type=volume,source=gaffer-isolation-03cf3486e2ba-socket,target=/router,volume-nocopy,readonly",
+      "type=volume,source=gaffer-isolation-eef61d490089-socket,target=/router,volume-nocopy,readonly",
       "--workdir",
       "/work",
       "--env",
@@ -450,42 +450,42 @@
       "--context",
       "desktop-linux",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-cancel"
+      "gaffer-isolation-eef61d490089-cancel"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "start",
-      "gaffer-isolation-03cf3486e2ba-cancel"
+      "gaffer-isolation-eef61d490089-cancel"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "logs",
-      "gaffer-isolation-03cf3486e2ba-cancel"
+      "gaffer-isolation-eef61d490089-cancel"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-cancel"
+      "gaffer-isolation-eef61d490089-cancel"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "logs",
-      "gaffer-isolation-03cf3486e2ba-cancel"
+      "gaffer-isolation-eef61d490089-cancel"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "top",
-      "gaffer-isolation-03cf3486e2ba-cancel",
+      "gaffer-isolation-eef61d490089-cancel",
       "-eo",
       "pid,ppid,comm"
     ],
@@ -496,21 +496,21 @@
       "stop",
       "--timeout",
       "1",
-      "gaffer-isolation-03cf3486e2ba-cancel"
+      "gaffer-isolation-eef61d490089-cancel"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-cancel"
+      "gaffer-isolation-eef61d490089-cancel"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "exec",
-      "gaffer-isolation-03cf3486e2ba-cancel",
+      "gaffer-isolation-eef61d490089-cancel",
       "true"
     ],
     [
@@ -518,7 +518,7 @@
       "--context",
       "desktop-linux",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-gateway"
+      "gaffer-isolation-eef61d490089-gateway"
     ],
     [
       "docker",
@@ -526,14 +526,14 @@
       "desktop-linux",
       "rm",
       "-f",
-      "gaffer-isolation-03cf3486e2ba-gateway"
+      "gaffer-isolation-eef61d490089-gateway"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-probe"
+      "gaffer-isolation-eef61d490089-probe"
     ],
     [
       "docker",
@@ -541,14 +541,14 @@
       "desktop-linux",
       "rm",
       "-f",
-      "gaffer-isolation-03cf3486e2ba-probe"
+      "gaffer-isolation-eef61d490089-probe"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-oom"
+      "gaffer-isolation-eef61d490089-oom"
     ],
     [
       "docker",
@@ -556,14 +556,14 @@
       "desktop-linux",
       "rm",
       "-f",
-      "gaffer-isolation-03cf3486e2ba-oom"
+      "gaffer-isolation-eef61d490089-oom"
     ],
     [
       "docker",
       "--context",
       "desktop-linux",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-cancel"
+      "gaffer-isolation-eef61d490089-cancel"
     ],
     [
       "docker",
@@ -571,7 +571,7 @@
       "desktop-linux",
       "rm",
       "-f",
-      "gaffer-isolation-03cf3486e2ba-cancel"
+      "gaffer-isolation-eef61d490089-cancel"
     ],
     [
       "docker",
@@ -579,7 +579,7 @@
       "desktop-linux",
       "volume",
       "inspect",
-      "gaffer-isolation-03cf3486e2ba-socket"
+      "gaffer-isolation-eef61d490089-socket"
     ],
     [
       "docker",
@@ -587,7 +587,7 @@
       "desktop-linux",
       "volume",
       "rm",
-      "gaffer-isolation-03cf3486e2ba-socket"
+      "gaffer-isolation-eef61d490089-socket"
     ],
     [
       "docker",
@@ -596,7 +596,7 @@
       "ps",
       "-aq",
       "--filter",
-      "label=dev.gaffer.isolation-experiment=gaffer-isolation-03cf3486e2ba"
+      "label=dev.gaffer.isolation-experiment=gaffer-isolation-eef61d490089"
     ],
     [
       "docker",
@@ -606,7 +606,7 @@
       "ls",
       "-q",
       "--filter",
-      "label=dev.gaffer.isolation-experiment=gaffer-isolation-03cf3486e2ba"
+      "label=dev.gaffer.isolation-experiment=gaffer-isolation-eef61d490089"
     ]
   ],
   "observations": {
@@ -630,14 +630,14 @@
       },
       "mounts": [
         {
-          "type": "volume",
-          "destination": "/router",
-          "writable": true
-        },
-        {
           "type": "bind",
           "destination": "/fixture",
           "writable": false
+        },
+        {
+          "type": "volume",
+          "destination": "/router",
+          "writable": true
         }
       ]
     },
@@ -1122,8 +1122,8 @@
       {
         "name": "cpu-throttled",
         "observation": {
-          "before": "usage_usec 264773\nuser_usec 224039\nsystem_usec 40734\nnice_usec 0\nnr_periods 5\nnr_throttled 5\nthrottled_usec 639611\nnr_bursts 0\nburst_usec 0",
-          "after": "usage_usec 1014018\nuser_usec 971809\nsystem_usec 42209\nnice_usec 0\nnr_periods 20\nnr_throttled 20\nthrottled_usec 1390980\nnr_bursts 0\nburst_usec 0"
+          "before": "usage_usec 281394\nuser_usec 240357\nsystem_usec 41036\nnice_usec 0\nnr_periods 5\nnr_throttled 5\nthrottled_usec 678137\nnr_bursts 0\nburst_usec 0",
+          "after": "usage_usec 1023597\nuser_usec 982259\nsystem_usec 41337\nnice_usec 0\nnr_periods 20\nnr_throttled 20\nthrottled_usec 1437106\nnr_bursts 0\nburst_usec 0"
         }
       },
       {
@@ -1232,8 +1232,8 @@
       ]
     },
     "cancellation": {
-      "treeBefore": "PID                 PPID                COMMAND\n5200                5177                docker-init\n5213                5200                MainThread\n5223                5213                sh\n5224                5223                sh\n5225                5223                sleep\n5226                5224                sleep",
-      "elapsedMs": 1089,
+      "treeBefore": "PID                 PPID                COMMAND\n7788                7764                docker-init\n7802                7788                MainThread\n7811                7802                sh\n7812                7811                sh\n7813                7811                sleep\n7814                7812                sleep",
+      "elapsedMs": 1086,
       "running": false,
       "initPid": 0,
       "exit": 137,
@@ -1241,10 +1241,15 @@
     },
     "hostSentinelsUnchanged": true
   },
-  "blockers": [
-    "Prerequisite #2 requires independent review and acceptance.",
-    "Live pinned 9Router/auth/model integration has not been configured or demonstrated."
+  "acceptance": {
+    "independentReview": "required",
+    "prerequisiteIssue": 2,
+    "prerequisiteAcceptance": "not-evaluated-by-experiment"
+  },
+  "limitations": [
+    "Synthetic inference fixture. Combined live harness/model integration belongs to #6/#7. This experiment does not enable a product unattended runner."
   ],
+  "blockers": [],
   "runtime": {
     "clientVersion": "29.7.2",
     "server": {
