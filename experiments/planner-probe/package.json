@@ -12,8 +12,10 @@
     "prove": "node prove.ts",
     "prove:router": "node router-prove.ts",
     "check:native": "tsc --project tsconfig.native.json --noEmit",
-    "test:native": "node --test native-planner.test.ts",
-    "prove:native": "node native-prove.ts"
+    "test:native": "node --test native-planner.test.ts native-shared.test.ts",
+    "prove:native": "node native-prove.ts",
+    "prove:native-router": "node native-router-prove.ts",
+    "prove:native-gateway": "node native-gateway-prove.ts"
   },
   "dependencies": {
     "ajv": "8.20.0"

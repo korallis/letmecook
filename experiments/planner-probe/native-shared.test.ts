@@ -116,6 +116,7 @@ test('proposal callback matches completed durable decision, revision, named outp
  const {requests,responses,n}=await chain(true,true),request=requests.at(-1),text=responses.at(-1)[0].content[0].text;
  const input={text,policy:{native:n},binding:{role:'planner'},decisions:[{verdict:'validated_success',delivery:'completed',router:{nativeRequest:request},nativeOutput:responses.at(-1)}],artifact:{path:'plan-proposal.json',content:text,metadata:{authority:'proposal_only',inputRevision:packet(request).input_revision}}};
  assert(validatePlannerCandidate(input));
+ assert(validatePlannerCandidate({...input,artifact:{...input.artifact,content:JSON.stringify(JSON.parse(text),null,2)}}));
  for(const mutate of [(x:any):any=>x.binding.role='worker',(x:any):any=>x.artifact.path='fixture.txt',(x:any):any=>x.artifact.metadata.execution=true,(x:any):any=>x.artifact.metadata.inputRevision='b'.repeat(64),(x:any):any=>x.decisions[0].delivery='unobserved',(x:any):any=>x.decisions[0].nativeOutput=nativeText('different').output]){
   const x=structuredClone(input);mutate(x);assert(!validatePlannerCandidate(x));
  }

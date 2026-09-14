@@ -119,10 +119,10 @@ export function validatePlannerOutput(output,profile,request){
 }
 export function validatePlannerCandidate({text,policy,binding,decisions,artifact}){
  try{
-  check(policy.native.protocol===PLANNER_PROTOCOL&&binding.role==='planner'&&artifact.path==='plan-proposal.json'&&artifact.content===text);
+  check(policy.native.protocol===PLANNER_PROTOCOL&&binding.role==='planner'&&artifact.path==='plan-proposal.json'&&typeof artifact.content==='string');
   exact(artifact.metadata,['inputRevision','authority']);check(artifact.metadata.authority==='proposal_only');
   const last=decisions.at(-1);check(last&&last.verdict==='validated_success'&&last.delivery==='completed');
   const state=plannerRequestState(last.router.nativeRequest,policy.native),output=plannerOutputText(last.nativeOutput);
-  check(artifact.metadata.inputRevision===state.inputRevision&&plannerPlanValid(text,state.inputRevision,state.fileRead)&&canonical(parseUnambiguousJSON(text))===canonical(parseUnambiguousJSON(output)));return true;
+  check(artifact.metadata.inputRevision===state.inputRevision&&plannerPlanValid(artifact.content,state.inputRevision,state.fileRead)&&canonical(parseUnambiguousJSON(artifact.content))===canonical(parseUnambiguousJSON(output))&&text===output);return true;
  }catch{return false;}
 }

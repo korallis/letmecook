@@ -10,7 +10,7 @@ import { ProbeError, sha256 } from './reader.ts';
 import { NativePlannerTransport, type NativePlannerBoundaryPort, type NativePlannerPolicy, type ReleasedNativeCompletion } from './native-transport.ts';
 
 export function plannerRuntimeIdentity(): string {
-  const files = ['planner.ts','transport.ts','native-transport.ts','native-boundary-port.ts','reader.ts','public-fixture.ts','package-lock.json'];
+  const files = ['planner.ts','transport.ts','native-transport.ts','native-boundary-port.ts','native-consumer.ts','reader.ts','public-fixture.ts','package-lock.json'];
   const manifest = Object.fromEntries(files.map(file => [file, sha256(readFileSync(new URL(file,import.meta.url)))]));
   const schema = JSON.parse(readFileSync(new URL('../../tests/fixtures/planner/plan.schema.json',import.meta.url),'utf8'));
   if(sha256(canonical(schema))!==PLANNER_SCHEMA_DIGEST)throw new ProbeError('native_profile_denied');

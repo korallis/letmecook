@@ -236,7 +236,8 @@ test('full schema-2 policy identity, graph and envelope are revision inputs; tra
   const { BoundaryTransport } = await import('./transport.ts');
   const { PlannerSession } = await import('./planner.ts');
   const { BRIEF } = await import('./public-fixture.ts');
-  const policy = routerPolicyFixture(); policy.limits.outputTokens = 1024;
+  const fixture = routerPolicyFixture(); assert.equal(fixture.schema, 2); if (fixture.schema !== 2) throw new Error('legacy_fixture_schema');
+  const policy = fixture; policy.limits.outputTokens = 1024;
   const file = await snapshot(FIXTURE_ROOT, 'fixture.txt', FIXTURE_HASH, 4096, AbortSignal.timeout(1000));
   const revision = (p: typeof policy) => new PlannerSession(new BoundaryTransport('/unused', '0'.repeat(64), p), file, BRIEF).inputRevision;
   const original = revision(policy);

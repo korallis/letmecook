@@ -6,6 +6,7 @@ on:
       - 'experiments/inference-boundary/**'
       - 'experiments/router-boundary-bridge/**'
       - 'experiments/router-authority-extension/overlay/**'
+      - 'experiments/native-evaluation/**'
       - 'tests/fixtures/planner/**'
       - '.github/workflows/planner-probe.yml'
   push:
@@ -15,6 +16,7 @@ on:
       - 'experiments/inference-boundary/**'
       - 'experiments/router-boundary-bridge/**'
       - 'experiments/router-authority-extension/overlay/**'
+      - 'experiments/native-evaluation/**'
       - 'tests/fixtures/planner/**'
       - '.github/workflows/planner-probe.yml'
 permissions:
@@ -33,6 +35,7 @@ jobs:
       - run: npm --prefix experiments/planner-probe run check
       - run: npm --prefix experiments/planner-probe test
       - run: npm --prefix experiments/planner-probe run check:native
+      - run: npm --prefix experiments/planner-probe run test:native
       - run: node experiments/planner-probe/prove.ts /tmp/planner-probe-run.json
       - run: node experiments/planner-probe/native-prove.ts /tmp/planner-native-preparation-run.json
       - name: Retain the redacted proof even after failure
