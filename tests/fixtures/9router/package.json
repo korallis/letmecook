@@ -1,0 +1,8 @@
+{
+  "name": "gaffer-9router-contract-fixtures",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": { "test": "node check.ts" },
+  "devDependencies": { "ajv": "8.20.0", "ajv-formats": "3.0.1" }
+}

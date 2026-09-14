@@ -13,7 +13,7 @@ placement and packaging issues retain their milestone dependencies.
 ## Start here
 
 - [#1 Define representative fixtures and record the standalone baseline](https://github.com/korallis/letmecook/issues/1) — Establish the task/capture fixture and measurement method before tuning the product, so later value claims have a fair comparator.
-- [#2 Specify the pinned 9Router integration contract](https://github.com/korallis/letmecook/issues/2) — Make the shared model-access boundary implementable without duplicating provider-account management.
+- [#2 Specify the pinned 9Router integration contract](https://github.com/korallis/letmecook/issues/2) — Make the shared model-access boundary implementable without duplicating provider-account management. Read the [contract proposal and evidence gates](contracts/9router.md) and [synthetic conformance corpus](../tests/fixtures/9router/README.md).
 
 The [ready queue](https://github.com/korallis/letmecook/issues?q=is%3Aissue%20is%3Aopen%20label%3Astatus%3Aready) starts with those two items. Readiness describes issue dependencies, not the availability of operator-labelled examples, configured test subscriptions, isolated hosts or evaluation participants. Required external inputs must be recorded honestly.
 

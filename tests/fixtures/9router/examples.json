@@ -1,0 +1,224 @@
+{
+  "schema_version": 1,
+  "evidence": "synthetic",
+  "deployment": {
+    "inspected_commit": "69724d86d4486fa5d722e63ebb6c9700e71aebff",
+    "inspected_package_version": "0.3.98",
+    "deployed_commit": null,
+    "deployed_artifact_digest": null,
+    "private_origin": null,
+    "credential_reference": null,
+    "reconciliation": "blocked_missing_deployment_inputs"
+  },
+  "policy": {
+    "router_id": "router_primary",
+    "route_id": "coding",
+    "policy_revision": "policy_1",
+    "epoch": 1,
+    "router_model": "gaffer-coding",
+    "protocols": [
+      "chat_completions",
+      "messages",
+      "responses"
+    ],
+    "envelope": [
+      {
+        "provider_ref": "provider_primary",
+        "models": [
+          "fixture-model"
+        ],
+        "billing": "subscription",
+        "connection_class": "reviewed_subscription"
+      }
+    ],
+    "capabilities_required": [
+      "streaming",
+      "tool_calls",
+      "tool_result_continuation",
+      "validated_json"
+    ],
+    "strict_schema_required": false,
+    "limits": {
+      "request_bytes": 1048576,
+      "output_tokens": 4096,
+      "response_bytes": 8388608,
+      "in_flight": 1,
+      "request_count": 32,
+      "total_ms": 120000,
+      "first_output_ms": 30000,
+      "semantic_idle_ms": 15000,
+      "boundary_retries": 0
+    },
+    "policy_write_mode": "freeze_and_drain",
+    "ready_for_deployment": false
+  },
+  "attempt_binding": {
+    "attempt_id": "attempt_fixture_1",
+    "grant_id": "grant_fixture_1",
+    "lease_id": "lease_fixture_1",
+    "fence": 1,
+    "router_id": "router_primary",
+    "route_id": "coding",
+    "policy_revision": "policy_1",
+    "epoch": 1,
+    "expires_at": "2026-09-14T10:02:00Z",
+    "credential": "opaque token delivered separately; never a router key"
+  },
+  "requests": [
+    {
+      "id": "chat-tools",
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gaffer-coding",
+        "stream": true,
+        "max_completion_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Read fixture.txt using read_file."
+          }
+        ],
+        "tools": [
+          {
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "description": "Read one authorized fixture path",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        ],
+        "tool_choice": "required"
+      }
+    },
+    {
+      "id": "chat-continuation",
+      "method": "POST",
+      "path": "/v1/chat/completions",
+      "body": {
+        "model": "gaffer-coding",
+        "stream": true,
+        "max_completion_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Read fixture.txt using read_file."
+          },
+          {
+            "role": "assistant",
+            "content": null,
+            "tool_calls": [
+              {
+                "id": "call_fixture_1",
+                "type": "function",
+                "function": {
+                  "name": "read_file",
+                  "arguments": "{\"path\":\"fixture.txt\"}"
+                }
+              }
+            ]
+          },
+          {
+            "role": "tool",
+            "tool_call_id": "call_fixture_1",
+            "content": "fixture content"
+          }
+        ]
+      }
+    },
+    {
+      "id": "messages-tools",
+      "method": "POST",
+      "path": "/v1/messages",
+      "headers": {
+        "anthropic-version": "2023-06-01"
+      },
+      "body": {
+        "model": "gaffer-coding",
+        "stream": true,
+        "max_tokens": 256,
+        "messages": [
+          {
+            "role": "user",
+            "content": "Read fixture.txt using read_file."
+          }
+        ],
+        "tools": [
+          {
+            "name": "read_file",
+            "description": "Read one authorized fixture path",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "enum": [
+                    "fixture.txt"
+                  ]
+                }
+              },
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "responses-json",
+      "method": "POST",
+      "path": "/v1/responses",
+      "body": {
+        "model": "gaffer-coding",
+        "stream": true,
+        "max_output_tokens": 256,
+        "input": [
+          {
+            "role": "user",
+            "content": "Return the fixture name as JSON."
+          }
+        ],
+        "text": {
+          "format": {
+            "type": "json_schema",
+            "name": "fixture_name",
+            "strict": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "enum": [
+                    "fixture.txt"
+                  ]
+                }
+              },
+              "required": [
+                "name"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      "admission": "deny until this exact deployed path proves strict schema; prompt translation does not qualify"
+    }
+  ]
+}
