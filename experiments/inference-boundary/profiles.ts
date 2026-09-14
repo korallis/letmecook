@@ -2,14 +2,14 @@ import { readFileSync } from 'node:fs';
 import { canonical, keys, object, parseJSON } from './json.ts';
 
 export const OPENCODE_PROFILE = 'opencode-1.18.30-chat-edit-v1' as const;
-export type ProtocolProfile = 'chat-text-tools-v1' | typeof OPENCODE_PROFILE;
+export type ProtocolProfile = 'chat-text-tools-v1' | typeof OPENCODE_PROFILE | 'router-chat-text-tools-synthetic-v1' | 'router-native-chat-translation-synthetic-v1';
 // Exact public binary request, not a general-purpose JSON Schema validator.
 export const OPENCODE_TOOLS: unknown = JSON.parse(readFileSync(new URL('./opencode-tools.json', import.meta.url), 'utf8'));
 export const FIXTURE_PATH = '/work/repo/greeting.txt';
 export function validateArguments(name: string, text: unknown, profile: ProtocolProfile) {
   if (typeof text !== 'string' || Buffer.byteLength(text) > 16384) throw new Error('unsupported_tool');
   const args = parseJSON(text); object(args);
-  if (profile === 'chat-text-tools-v1') {
+  if (profile !== OPENCODE_PROFILE) {
     if (name !== 'read_file' || canonical(args) !== canonical({ path: 'fixture.txt' })) throw new Error('unsupported_tool');
     return;
   }

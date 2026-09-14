@@ -1,0 +1,330 @@
+{
+  "schema": 1,
+  "reviewedCommit": "c245c899c8d2562cb771f1f71258477fbaa88f77",
+  "classification": "independent-isolated-synthetic-review-failures",
+  "liveAcceptance": false,
+  "provenance": {
+    "sourceCommit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+    "runtimeImageId": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a",
+    "originalArtifactSha256": {
+      "extra.mjs": "37a0b53062c31c196f0747c5a43cb02d6e251538e3ba9114154cf1fd1681cb2e",
+      "extra-results.log": "b0c0684bf4cd3e3d2b56f354a4db18d3b5102ad8298d4bb19424ad13cb1556ca",
+      "native-extra.mjs": "ac20786222596fa8126bdc5b0087912ddee9fc94f77635f26dc46d195991681b",
+      "native-identity-results.log": "5a788e8e0d1f79a26be950acf2d0cf402057c828ca866d90bedcceec38ea9efa",
+      "native-delta-results.log": "ec72187d412f9a02fe1654cde1c9725dc141f5e8494b6ecabaec1820be590726"
+    }
+  },
+  "observations": [
+    {
+      "artifact": "extra-results.log",
+      "records": [
+        {
+          "audit": "changed_call_identity",
+          "state": {
+            "responseId": "resp_synthetic_astra_01",
+            "terminalCandidate": {
+              "kind": "completed",
+              "responseId": "resp_synthetic_astra_01",
+              "status": "completed",
+              "endTurn": true
+            },
+            "terminal": {
+              "kind": "completed",
+              "responseId": "resp_synthetic_astra_01",
+              "status": "completed",
+              "endTurn": true
+            },
+            "disposition": "provider_terminal",
+            "invalidReason": null,
+            "localEnd": "eof",
+            "bytes": 929,
+            "events": 4
+          }
+        },
+        {
+          "audit": "changed_delta_arguments",
+          "state": {
+            "responseId": "resp_synthetic_astra_01",
+            "terminalCandidate": {
+              "kind": "completed",
+              "responseId": "resp_synthetic_astra_01",
+              "status": "completed",
+              "endTurn": true
+            },
+            "terminal": {
+              "kind": "completed",
+              "responseId": "resp_synthetic_astra_01",
+              "status": "completed",
+              "endTurn": true
+            },
+            "disposition": "provider_terminal",
+            "invalidReason": null,
+            "localEnd": "eof",
+            "bytes": 1098,
+            "events": 5
+          }
+        },
+        {
+          "audit": "duplicate_argument_keys",
+          "state": {
+            "responseId": "resp_synthetic_astra_01",
+            "terminalCandidate": {
+              "kind": "completed",
+              "responseId": "resp_synthetic_astra_01",
+              "status": "completed",
+              "endTurn": true
+            },
+            "terminal": {
+              "kind": "completed",
+              "responseId": "resp_synthetic_astra_01",
+              "status": "completed",
+              "endTurn": true
+            },
+            "disposition": "provider_terminal",
+            "invalidReason": null,
+            "localEnd": "eof",
+            "bytes": 485,
+            "events": 2
+          }
+        },
+        {
+          "audit": "oversized_error_returned",
+          "status": 503,
+          "sends": 4,
+          "closed": 0,
+          "receipt": {
+            "id": "oversized_error",
+            "boot": "33522379-4fba-4a40-90d8-9a8ffd3026a7",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "oversized_error",
+                "ordinal": 1,
+                "boot": "33522379-4fba-4a40-90d8-9a8ffd3026a7",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_account_1",
+                "terminal": "unknown",
+                "local_stop": "transport_error"
+              },
+              {
+                "request_id": "oversized_error",
+                "ordinal": 2,
+                "boot": "33522379-4fba-4a40-90d8-9a8ffd3026a7",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_account_1",
+                "terminal": "unknown",
+                "local_stop": "transport_error"
+              },
+              {
+                "request_id": "oversized_error",
+                "ordinal": 3,
+                "boot": "33522379-4fba-4a40-90d8-9a8ffd3026a7",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_account_1",
+                "terminal": "unknown",
+                "local_stop": "transport_error"
+              },
+              {
+                "request_id": "oversized_error",
+                "ordinal": 4,
+                "boot": "33522379-4fba-4a40-90d8-9a8ffd3026a7",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_account_1",
+                "terminal": "unknown",
+                "local_stop": "transport_error"
+              }
+            ],
+            "quiescent": false
+          }
+        },
+        {
+          "audit": "oversized_error_cancel_after_finish",
+          "sends": 4,
+          "closed": 0,
+          "receipt": {
+            "id": "oversized_error",
+            "boot": "33522379-4fba-4a40-90d8-9a8ffd3026a7",
+            "generation": 2,
+            "revision": "revision_1",
+            "route": "gaffer-synthetic",
+            "local_stop": "cancelled_unknown",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "oversized_error",
+                "ordinal": 1,
+                "boot": "33522379-4fba-4a40-90d8-9a8ffd3026a7",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_account_1",
+                "terminal": "unknown",
+                "local_stop": "transport_error"
+              },
+              {
+                "request_id": "oversized_error",
+                "ordinal": 2,
+                "boot": "33522379-4fba-4a40-90d8-9a8ffd3026a7",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_account_1",
+                "terminal": "unknown",
+                "local_stop": "transport_error"
+              },
+              {
+                "request_id": "oversized_error",
+                "ordinal": 3,
+                "boot": "33522379-4fba-4a40-90d8-9a8ffd3026a7",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_account_1",
+                "terminal": "unknown",
+                "local_stop": "transport_error"
+              },
+              {
+                "request_id": "oversized_error",
+                "ordinal": 4,
+                "boot": "33522379-4fba-4a40-90d8-9a8ffd3026a7",
+                "generation": 2,
+                "revision": "revision_1",
+                "provider": "openai-compatible-synthetic",
+                "model": "synthetic-model",
+                "connection_id": "synthetic_account_1",
+                "terminal": "unknown",
+                "local_stop": "transport_error"
+              }
+            ],
+            "quiescent": false
+          }
+        }
+      ]
+    },
+    {
+      "artifact": "native-identity-results.log",
+      "records": [
+        {
+          "audit": "call_identity",
+          "reply": {
+            "status": 200,
+            "text": "data: {\"id\":\"chatcmpl-1789397667943\",\"object\":\"chat.completion.chunk\",\"created\":1789397667,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_previous\",\"type\":\"function\",\"function\":{\"name\":\"previous_tool\",\"arguments\":\"\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1789397667943\",\"object\":\"chat.completion.chunk\",\"created\":1789397667,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":1,\"id\":\"call_02\",\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"arguments\":\"\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1789397667943\",\"object\":\"chat.completion.chunk\",\"created\":1789397667,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\\\"path\\\":\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1789397667943\",\"object\":\"chat.completion.chunk\",\"created\":1789397667,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"{\\\"path\\\":\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1789397667943\",\"object\":\"chat.completion.chunk\",\"created\":1789397667,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"one.txt\\\"}\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1789397667943\",\"object\":\"chat.completion.chunk\",\"created\":1789397667,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"two.txt\\\"}\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1789397667943\",\"object\":\"chat.completion.chunk\",\"created\":1789397667,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\n"
+          }
+        },
+        {
+          "schema": 1,
+          "scenario": "tools",
+          "nativeAuthorityOnly": true,
+          "providerOutputBound": false,
+          "liveAcceptance": false,
+          "sends": [
+            {
+              "path": "/responses",
+              "model": "gpt-6-astra",
+              "maxOutputFieldPresent": false,
+              "account": "synthetic_workspace_1"
+            }
+          ],
+          "receipt": {
+            "id": "native_tools",
+            "boot": "2976fa4b-7904-4dc0-8c0f-4a00f15c8971",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "route": "gaffer-native",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "native_tools",
+                "ordinal": 1,
+                "boot": "2976fa4b-7904-4dc0-8c0f-4a00f15c8971",
+                "generation": 2,
+                "revision": "native_revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_native_1",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        }
+      ]
+    },
+    {
+      "artifact": "native-delta-results.log",
+      "records": [
+        {
+          "audit": "delta_arguments",
+          "reply": {
+            "status": 200,
+            "text": "data: {\"id\":\"chatcmpl-1789397682198\",\"object\":\"chat.completion.chunk\",\"created\":1789397682,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"call_01\",\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"arguments\":\"\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1789397682198\",\"object\":\"chat.completion.chunk\",\"created\":1789397682,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":1,\"id\":\"call_02\",\"type\":\"function\",\"function\":{\"name\":\"read_file\",\"arguments\":\"\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1789397682198\",\"object\":\"chat.completion.chunk\",\"created\":1789397682,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"{\\\"path\\\":\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1789397682198\",\"object\":\"chat.completion.chunk\",\"created\":1789397682,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"{\\\"path\\\":\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1789397682198\",\"object\":\"chat.completion.chunk\",\"created\":1789397682,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":0,\"function\":{\"arguments\":\"\\\"different.txt\\\"}\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1789397682198\",\"object\":\"chat.completion.chunk\",\"created\":1789397682,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{\"tool_calls\":[{\"index\":1,\"function\":{\"arguments\":\"\\\"two.txt\\\"}\"}}]},\"finish_reason\":null}]}\n\ndata: {\"id\":\"chatcmpl-1789397682198\",\"object\":\"chat.completion.chunk\",\"created\":1789397682,\"model\":\"gpt-6-astra\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\n"
+          }
+        },
+        {
+          "schema": 1,
+          "scenario": "tools",
+          "nativeAuthorityOnly": true,
+          "providerOutputBound": false,
+          "liveAcceptance": false,
+          "sends": [
+            {
+              "path": "/responses",
+              "model": "gpt-6-astra",
+              "maxOutputFieldPresent": false,
+              "account": "synthetic_workspace_1"
+            }
+          ],
+          "receipt": {
+            "id": "native_tools",
+            "boot": "1f55826e-65f3-4c57-abd1-ee220cc6eae4",
+            "generation": 2,
+            "revision": "native_revision_1",
+            "route": "gaffer-native",
+            "local_stop": "local_eof",
+            "handler_done": 1,
+            "known": true,
+            "operations": [
+              {
+                "request_id": "native_tools",
+                "ordinal": 1,
+                "boot": "1f55826e-65f3-4c57-abd1-ee220cc6eae4",
+                "generation": 2,
+                "revision": "native_revision_1",
+                "provider": "codex",
+                "model": "gpt-6-astra",
+                "connection_id": "synthetic_native_1",
+                "terminal": "provider_completed",
+                "local_stop": "original_eof"
+              }
+            ],
+            "quiescent": true
+          }
+        }
+      ]
+    }
+  ]
+}

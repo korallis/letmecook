@@ -6,6 +6,7 @@ import { parseJSON } from './json.ts';
 import { OPENCODE_PROFILE } from './profiles.ts';
 import { ChatStream, validateRequest } from './protocol.ts';
 import { PolicyGate } from './policy.ts';
+import { hashDocument } from './router-policy.ts';
 import { CHAT_PATH, Denial, validateBinding, type Binding, type Outcome, type Reason } from './types.ts';
 
 interface Scope { binding: Binding; born: number; revoked: boolean }
@@ -14,6 +15,7 @@ export interface Audit {
   policyRevision: string; outcome: Outcome; reason: Reason | null;
   source: 'boundary'; providerAttribution: 'unavailable';
   quiescence: 'verified' | 'unknown';
+  receipt?: { digest: string; authorityDigest: string; verdict: string };
 }
 const hash = (token: string) => createHash('sha256').update(token).digest('hex');
 const safeError = (error: unknown) => error instanceof Denial ? error : new Denial('upstream_failure', 502);
@@ -115,6 +117,7 @@ export class Boundary {
     let semantic = false; let outcome: Outcome = 'failed_before_output'; let reason: Reason | null = null;
     const abort = new AbortController(); const timers: NodeJS.Timeout[] = [];
     const rejectAborted = () => this.reject(req, res, safeError(abort.signal.reason), requestId);
+    abort.signal.addEventListener('abort', () => { if (requestId) { try { this.gate.cancel(requestId); } catch { /* Preserve reservation if private control is unavailable. */ } } }, { once: true });
     abort.signal.addEventListener('abort', rejectAborted, { once: true });
     const cancel = () => { if (!res.writableEnded) abort.abort(new Denial('cancelled', 409)); };
     res.once('close', cancel);
@@ -131,18 +134,20 @@ export class Boundary {
       let value: any;
       try { value = parseJSON(raw); } catch { throw new Denial('unsupported_request', 400); }
       const body = validateRequest(value, policy);
-      const admission = await this.gate.admit(scope.binding, () => this.current(scope!) && !abort.signal.aborted, abort.signal);
+      const admission = await this.gate.admit(scope.binding, () => this.current(scope!) && !abort.signal.aborted, abort.signal, hashDocument(body));
       requestId = admission.reservation.requestId;
       this.active.set(requestId, { scope, abort });
       // Recheck after durable admission. A stop during I/O must never start a request.
       if (!this.current(scope) || abort.signal.aborted) throw new Denial('cancelled', 409);
-      const decoder = new ChatStream(requestId, policy.routerModel, !!value.tools && value.tool_choice !== 'none', policy.profile);
+      const decoder = new ChatStream(requestId, policy.routerModel, !!value.tools && value.tool_choice !== 'none', policy.profile === 'router-native-chat-translation-synthetic-v1' ? 'receipt-gated-eof' : policy.schema === 2 ? 'router-done' : 'done', policy.profile);
       const firstOutput = setTimeout(() => abort.abort(new Denial('deadline', 408)), policy.limits.firstOutputMs); timers.push(firstOutput);
       let idle: NodeJS.Timeout | undefined;
+      if (policy.schema === 2) await this.gate.markSend(requestId);
+      if (!this.current(scope) || abort.signal.aborted) throw new Denial('cancelled',409);
       const upstream = request({ socketPath: this.upstreamSocket, path: CHAT_PATH, method: 'POST', agent: false, signal: abort.signal, headers: {
-        host: 'localhost', authorization: `Bearer ${this.routerKey}`, 'content-type': 'application/json', 'content-length': Buffer.byteLength(body),
-        'x-gaffer-task-id': scope.binding.taskId, 'x-gaffer-attempt-id': scope.binding.attemptId,
-        'x-gaffer-request-id': requestId, 'x-gaffer-policy-revision': scope.binding.revision,
+        host: policy.schema === 2 ? '127.0.0.1' : 'localhost', authorization: `Bearer ${this.routerKey}`, 'content-type': 'application/json', 'content-length': Buffer.byteLength(body),
+        'x-gaffer-request-id': requestId,
+        ...(policy.schema === 2 ? { 'x-gaffer-generation': String(admission.reservation.router!.policy.authority.generation), 'x-gaffer-revision': admission.reservation.router!.policy.revision } : { 'x-gaffer-task-id': scope.binding.taskId, 'x-gaffer-attempt-id': scope.binding.attemptId, 'x-gaffer-policy-revision': scope.binding.revision }),
       } });
       const responsePromise = once(upstream, 'response', { signal: abort.signal }) as Promise<[IncomingMessage]>;
       upstream.on('error', () => {}); // Errors are consumed by the response promise/iterator and sanitized below.
@@ -170,7 +175,15 @@ export class Boundary {
           }
           if (parsed.error) throw parsed.error;
         }
-        for (const output of decoder.end()) {
+        const completion = decoder.end();
+        if (responseBytes + completion.reduce((n,output) => n + Buffer.byteLength(output),0) > policy.limits.responseBytes) throw new Denial('response_limit',502);
+        if (policy.schema === 2) {
+          clearTimeout(firstOutput); if (idle) clearTimeout(idle);
+          await this.gate.finalize(requestId,hashDocument(completion),() => this.current(scope!) && !abort.signal.aborted,abort.signal);
+        }
+        for (const output of completion) {
+          if (!this.current(scope) || abort.signal.aborted) throw new Denial('cancelled',409);
+          if (policy.schema === 2) this.gate.assertRelease(requestId);
           responseBytes += Buffer.byteLength(output);
           if (responseBytes > policy.limits.responseBytes) throw new Denial('response_limit', 502);
           if (!res.write(output)) await once(res, 'drain', { signal: abort.signal });
@@ -190,8 +203,9 @@ export class Boundary {
         try { if (await this.gate.finish(requestId, outcome, !forwarded)) quiescence = 'verified'; }
         catch { reason = 'boundary_closed'; }
         this.active.delete(requestId);
+        const decision = this.gate.snapshot().decisions?.find(d => d.requestId === requestId);
         this.audit.push({ taskId: scope.binding.taskId, attemptId: scope.binding.attemptId, requestId, role: scope.binding.role,
-          routeId: scope.binding.routeId, policyRevision: scope.binding.revision, outcome, reason, source: 'boundary', providerAttribution: 'unavailable', quiescence });
+          routeId: scope.binding.routeId, policyRevision: scope.binding.revision, outcome, reason, source: 'boundary', providerAttribution: 'unavailable', quiescence, ...(decision?.evidence.receiptDigest ? {receipt:{digest:decision.evidence.receiptDigest,authorityDigest:decision.router.policy.authority.graphDigest,verdict:decision.verdict}} : {}) });
         if (this.audit.length > 128) this.audit.shift();
       }
     }
@@ -201,12 +215,13 @@ export class Boundary {
     this.closed = true;
     for (const abort of this.pending.keys()) abort.abort(new Denial('cancelled', 409));
     for (const { abort } of this.active.values()) abort.abort(new Denial('cancelled', 409));
-    const closeGate = this.gate.close();
-    void closeGate.catch(() => {});
+    // Cancel handlers first so bounded receipt/persistence cleanup retains durable uncertainty.
+    const closeGate = this.gate.snapshot().schema === 1 ? this.gate.close() : undefined;
+    void closeGate?.catch(() => {});
     this.server.closeAllConnections();
     this.closing = (async () => {
       if (this.server.listening) await new Promise<void>(resolve => this.server.close(() => resolve()));
-      await Promise.allSettled([...this.handlers]); await closeGate;
+      await Promise.allSettled([...this.handlers]); await (closeGate ?? this.gate.close());
     })();
     return this.closing;
   }

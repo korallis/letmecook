@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "reviewedCommit": "4294e66649a981c9d227d8e1323ac9eaee4efe85",
+  "classification": "independent-isolated-synthetic-review-failure",
+  "severity": "P2-policy-projection",
+  "unapprovedInferenceDemonstrated": false,
+  "liveAcceptance": false,
+  "provenance": {
+    "sourceCommit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+    "runtimeImageId": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a",
+    "originalArtifactSha256": {
+      "policy-probe.mjs": "b8cef33a71378078ef423605a77622aafb7c8a0561f6a17075314c975ad89e5b",
+      "policy-results.log": "1e7e940542cebd8d4a8a3e254ba80cd918fa908c432b6058947b986c131b597d"
+    }
+  },
+  "observations": [
+    {
+      "audit": "policy_projection_prototype_keys",
+      "observations": [
+        {
+          "key": "ordinary_alias",
+          "result": "rejected",
+          "error": "unsupported_graph",
+          "phase": "active",
+          "projectionUnchanged": true,
+          "storedRows": [],
+          "visibleKeys": [],
+          "hiddenAlias": null
+        },
+        {
+          "key": "__proto__",
+          "result": "accepted",
+          "phase": "active",
+          "projectionUnchanged": true,
+          "storedRows": [
+            {
+              "scope": "modelAliases",
+              "key": "__proto__"
+            }
+          ],
+          "visibleKeys": [],
+          "hiddenAlias": "openai-compatible-synthetic/other-model"
+        },
+        {
+          "kind": "inherited_pricing",
+          "result": "accepted",
+          "phase": "active",
+          "projectionUnchanged": true,
+          "storedRows": [
+            {
+              "scope": "modelAliases",
+              "key": "__proto__"
+            },
+            {
+              "scope": "pricing",
+              "key": "__proto__"
+            }
+          ],
+          "resolvedAlias": {
+            "provider": "openai-compatible-synthetic",
+            "model": "other-model"
+          },
+          "beforePrice": null,
+          "afterPrice": {
+            "input": 999,
+            "output": 888
+          }
+        }
+      ]
+    }
+  ]
+}

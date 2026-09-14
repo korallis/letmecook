@@ -1,0 +1,20 @@
+{
+  "imageId": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a",
+  "architecture": "arm64",
+  "baseImage": "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0",
+  "sourceCommit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+  "packageLockSha256": "87551d12f5d946cc1c98cf8e01cb4ec7d632f67dff0fb3554d0f556881843d05",
+  "scriptsRun": false,
+  "optionalDependenciesOmitted": true,
+  "packageVersions": {
+    "next": "16.3.5",
+    "react": "19.2.4",
+    "uuid": "13.0.2",
+    "sql.js": "1.14.2",
+    "undici": "7.29.1",
+    "jose": "6.2.12"
+  },
+  "packageLockEntries": 671,
+  "installCommand": "npm ci --ignore-scripts --omit=optional --no-audit --no-fund",
+  "imageTag": "gaffer-router-extension-deps:0.5.75-locked"
+}

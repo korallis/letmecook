@@ -1,0 +1,70 @@
+name: Router authority source experiment
+on:
+  pull_request:
+    paths:
+      - 'experiments/router-authority/**'
+      - 'docs/evidence/router-authority*'
+      - '.github/workflows/router-authority.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'experiments/router-authority/**'
+      - 'docs/evidence/router-authority*'
+      - '.github/workflows/router-authority.yml'
+permissions:
+  contents: read
+jobs:
+  authority-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          repository: decolua/9router
+          ref: 17c4cc76877bd1755030a8414f8d0083f48dcccf
+          path: .router-source
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: experiments/router-authority/package-lock.json
+      - run: npm ci --prefix experiments/router-authority --ignore-scripts
+      - run: npm --prefix experiments/router-authority run check
+      - name: Execute pinned source in isolated container
+        env:
+          PROBE_IMAGE: node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0
+        run: |
+          docker pull "$PROBE_IMAGE"
+          run_probe() {
+            docker run --rm --name "gaffer-authority-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            --network none --user 1000:1000 --cap-drop ALL \
+            --security-opt no-new-privileges=true --read-only --init \
+            --cgroupns private --ipc private --cpus 0.5 \
+            --memory 128m --memory-swap 128m --pids-limit 64 \
+            --ulimit nofile=256:256 --ulimit core=0:0 \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/experiments/router-authority,target=/probe,readonly" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/.router-source,target=/router-source,readonly" \
+            --env HOME=/nonexistent --env NODE_OPTIONS= --pull never "$PROBE_IMAGE" \
+            timeout --signal=TERM --kill-after=1s 15s \
+            node --experimental-vm-modules /probe/probe.ts /router-source
+          }
+          run_probe
+          printf '\n// Deliberate digest mismatch for refusal test.\n' >> .router-source/src/lib/db/repos/usageRepo.js
+          if run_probe > "$RUNNER_TEMP/authority-mutation.out" 2> "$RUNNER_TEMP/authority-mutation.err"; then
+            exit 1
+          else
+            probe_status=$?
+          fi
+          test "$probe_status" -eq 1
+          test ! -s "$RUNNER_TEMP/authority-mutation.out"
+          node --input-type=module -e "import assert from 'node:assert/strict'; import {readFileSync} from 'node:fs'; assert.ok(readFileSync(process.env.RUNNER_TEMP + '/authority-mutation.err', 'utf8').includes('source_digest_mismatch:src/lib/db/repos/usageRepo.js'));"
+      - name: Remove only this job's container if interrupted
+        if: always()
+        run: |
+          if docker container inspect "gaffer-authority-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" >/dev/null 2>&1; then
+            docker rm --force "gaffer-authority-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          fi

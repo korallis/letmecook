@@ -7,16 +7,26 @@ export function validateRequest(value: unknown, policy: Policy): string {
   try {
     const native = policy.profile === OPENCODE_PROFILE;
     const cap = native ? 'max_tokens' : 'max_completion_tokens';
+    if (policy.schema === 2) {
+      object(value);
+      if (Object.hasOwn(value, 'tool_choice')) throw new Denial('unsupported_request', 400);
+    }
     keys(value, ['model', 'messages', 'stream', cap, 'tools', 'tool_choice', ...(native ? ['stream_options'] : [])], ['model', 'messages', 'stream', cap, ...(native ? ['stream_options'] : [])]);
     if (native && canonical((value as any).stream_options) !== canonical({ include_usage: true })) throw new Error();
     object(value);
     if (value.model !== policy.routerModel) throw new Denial('policy_denied');
     if (value.stream !== true || !Number.isInteger(value[cap]) || value[cap] < 1 || value[cap] > policy.limits.outputTokens) throw new Denial('request_limit', 422);
     if (!Array.isArray(value.messages) || !value.messages.length || value.messages.length > 64) throw new Error();
+    let systemSeen = false;
     const pending = new Set<string>();
     const seen = new Set<string>();
     for (const message of value.messages) {
       object(message);
+      if (policy.schema === 2 && message.role === 'assistant' && (pending.size || message.content !== null && (typeof message.content !== 'string' || !message.content.trim()) || message.content === null && !message.tool_calls)) throw new Error();
+      if (policy.schema === 2 && ['system', 'user'].includes(message.role)) {
+        if (typeof message.content !== 'string' || !message.content.trim()) throw new Error();
+        if (message.role === 'system') { if (systemSeen || message !== value.messages[0] || value.messages.length < 2) throw new Error(); systemSeen = true; }
+      }
       if (message.role === 'assistant') {
         keys(message, ['role', 'content', 'tool_calls'], ['role', 'content']);
         if (message.content !== null && typeof message.content !== 'string') throw new Error();
@@ -25,7 +35,7 @@ export function validateRequest(value: unknown, policy: Policy): string {
           for (const call of message.tool_calls) {
             keys(call, ['id', 'type', 'function'], ['id', 'type', 'function']);
             keys(call.function, ['name', 'arguments'], ['name', 'arguments']);
-            if (!callId(call.id) || seen.has(call.id) || call.type !== 'function') throw new Error();
+            if (!callId(call.id) || policy.schema === 2 && call.id.length > 64 || seen.has(call.id) || call.type !== 'function') throw new Error();
             validateArguments(call.function.name, call.function.arguments, policy.profile); pending.add(call.id); seen.add(call.id);
           }
         }
@@ -40,6 +50,7 @@ export function validateRequest(value: unknown, policy: Policy): string {
     if (pending.size) throw new Error();
     if (value.tools !== undefined && canonical(value.tools) !== canonical(native ? OPENCODE_TOOLS : [TOOL])) throw new Error();
     if (value.tool_choice !== undefined && (!value.tools || !['auto', 'required', 'none'].includes(value.tool_choice))) throw new Error();
+    if (policy.schema === 2) { const { max_completion_tokens, ...rest } = value; return JSON.stringify({ ...rest, max_tokens: max_completion_tokens }); }
     return JSON.stringify(value);
   } catch (error) {
     if (error instanceof Denial) throw error;
@@ -54,6 +65,7 @@ export class ChatStream {
   private finish: 'stop' | 'tool_calls' | undefined;
   private tools = new Map<number, { id: string; name: string; arguments: string }>();
   private terminal = false;
+  private duplicateDone = false;
   private pendingOutput: string[] = [];
   private completionOutput: string[] = [];
   semanticOutput = false;
@@ -61,8 +73,13 @@ export class ChatStream {
   private readonly model: string;
   private readonly toolsAllowed: boolean;
   private readonly profile: ProtocolProfile;
+  private readonly terminalProfile: 'done' | 'router-done' | 'receipt-gated-eof';
   private usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | undefined;
-  constructor(requestId: string, model: string, toolsAllowed: boolean, profile: ProtocolProfile = 'chat-text-tools-v1') { this.requestId = requestId; this.model = model; this.toolsAllowed = toolsAllowed; this.profile = profile; }
+  constructor(requestId: string, model: string, toolsAllowed: boolean, mode: ProtocolProfile | 'done' | 'router-done' | 'receipt-gated-eof' = 'done', profile: ProtocolProfile = 'chat-text-tools-v1') {
+    this.terminalProfile = mode === 'router-done' || mode === 'receipt-gated-eof' ? mode : 'done';
+    this.profile = mode === OPENCODE_PROFILE ? mode : profile;
+    this.requestId = requestId; this.model = model; this.toolsAllowed = toolsAllowed;
+  }
   private chunk(delta: unknown, finish_reason: string | null = null) {
     return `data: ${JSON.stringify({ id: this.requestId, object: 'chat.completion.chunk', model: this.model, choices: [{ index: 0, delta, finish_reason }] })}\n\n`;
   }
@@ -92,8 +109,11 @@ export class ChatStream {
       }
       if (!data.length) continue;
       if (event && event !== 'message') throw new Denial('upstream_failure', 502);
-      if (this.terminal) throw new Denial('invalid_stream', 502);
       const text = data.join('\n');
+      if (this.terminal) {
+        if (this.terminalProfile === 'router-done' && text === '[DONE]' && !this.duplicateDone) { this.duplicateDone = true; continue; }
+        throw new Denial('invalid_stream', 502);
+      }
       if (text === '[DONE]') {
         if (!this.finish) throw new Denial('invalid_stream', 502);
         if (this.finish === 'tool_calls') {
@@ -162,6 +182,9 @@ export class ChatStream {
   }
   end() {
     try { this.buffer += this.decoder.decode(); } catch { throw new Denial('invalid_stream', 502); }
+    // The pinned native Responses→Chat translator has no [DONE]. This profile
+    // only prepares canonical output; the caller must still require a receipt.
+    if (this.terminalProfile === 'receipt-gated-eof' && !this.terminal && this.finish && !this.buffer.trim()) this.consume(new TextEncoder().encode('data: [DONE]\n\n'));
     if (!this.terminal || this.buffer.trim()) throw new Denial('invalid_stream', 502);
     return this.completionOutput;
   }
