@@ -3,6 +3,7 @@ import { chmod } from 'node:fs/promises';
 import { createHash, randomBytes } from 'node:crypto';
 import { once } from 'node:events';
 import { parseJSON } from './json.ts';
+import { OPENCODE_PROFILE } from './profiles.ts';
 import { ChatStream, validateRequest } from './protocol.ts';
 import { PolicyGate } from './policy.ts';
 import { CHAT_PATH, Denial, validateBinding, type Binding, type Outcome, type Reason } from './types.ts';
@@ -61,6 +62,13 @@ export class Boundary {
   }
   private authenticate(req: IncomingMessage): Scope {
     const allowed = ['host', 'authorization', 'content-type', 'content-length', 'connection', 'transfer-encoding', 'accept', 'user-agent'];
+    if (this.gate.snapshot().policy?.profile === OPENCODE_PROFILE) {
+      allowed.push('x-session-affinity', 'x-session-id', 'accept-encoding');
+      const session = req.headers['x-session-id'];
+      if (session !== undefined && (typeof session !== 'string' || !/^ses_[a-zA-Z0-9]{1,64}$/.test(session))) throw new Denial('unsupported_request', 400);
+      if (req.headers['x-session-affinity'] !== undefined && req.headers['x-session-affinity'] !== session) throw new Denial('unsupported_request', 400);
+      if (req.headers['accept-encoding'] !== undefined && req.headers['accept-encoding'] !== 'gzip, deflate, br, zstd') throw new Denial('unsupported_request', 400);
+    }
     const names = req.rawHeaders.filter((_, i) => i % 2 === 0).map(s => s.toLowerCase());
     if (names.some(name => !allowed.includes(name)) || new Set(names).size !== names.length || req.headers.host !== 'localhost') throw new Denial('unsupported_request', 400);
     const header = req.headers.authorization;
@@ -128,7 +136,7 @@ export class Boundary {
       this.active.set(requestId, { scope, abort });
       // Recheck after durable admission. A stop during I/O must never start a request.
       if (!this.current(scope) || abort.signal.aborted) throw new Denial('cancelled', 409);
-      const decoder = new ChatStream(requestId, policy.routerModel, !!value.tools && value.tool_choice !== 'none');
+      const decoder = new ChatStream(requestId, policy.routerModel, !!value.tools && value.tool_choice !== 'none', policy.profile);
       const firstOutput = setTimeout(() => abort.abort(new Denial('deadline', 408)), policy.limits.firstOutputMs); timers.push(firstOutput);
       let idle: NodeJS.Timeout | undefined;
       const upstream = request({ socketPath: this.upstreamSocket, path: CHAT_PATH, method: 'POST', agent: false, signal: abort.signal, headers: {

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { OPENCODE_PROFILE, type ProtocolProfile } from './profiles.ts';
 import { canonical, keys } from './json.ts';
 
 export const CHAT_PATH = '/v1/chat/completions';
@@ -14,7 +15,7 @@ export interface Limits {
 }
 export interface Policy {
   schema: 1; routerId: string; routeId: string; revision: string; epoch: number;
-  routerModel: string; profile: 'chat-text-tools-v1';
+  routerModel: string; profile: ProtocolProfile;
   // This closed graph is deliberately a synthetic fixture, not a live-deployment attestation.
   graph: { evidence: 'synthetic'; provider: 'fixture_provider'; model: 'fixture_model'; billing: 'subscription'; fusion: false; capabilityAdapters: false; remoteResources: false; compressionHelpers: false };
   limits: Limits;
@@ -36,7 +37,7 @@ export const ref = (value: unknown): value is string => typeof value === 'string
 export const fingerprint = (value: Policy) => createHash('sha256').update(canonical(value)).digest('hex');
 export function validatePolicy(policy: Policy): Policy {
   keys(policy, ['schema', 'routerId', 'routeId', 'revision', 'epoch', 'routerModel', 'profile', 'graph', 'limits'], ['schema', 'routerId', 'routeId', 'revision', 'epoch', 'routerModel', 'profile', 'graph', 'limits']);
-  if (policy.schema !== 1 || ![policy.routerId, policy.routeId, policy.revision].every(ref) || !Number.isSafeInteger(policy.epoch) || policy.epoch < 1 || !/^[a-zA-Z0-9_/-]{1,128}$/.test(policy.routerModel) || policy.profile !== 'chat-text-tools-v1') throw new Denial('policy_denied');
+  if (policy.schema !== 1 || ![policy.routerId, policy.routeId, policy.revision].every(ref) || !Number.isSafeInteger(policy.epoch) || policy.epoch < 1 || !/^[a-zA-Z0-9_/-]{1,128}$/.test(policy.routerModel) || !['chat-text-tools-v1', OPENCODE_PROFILE].includes(policy.profile)) throw new Denial('policy_denied');
   const graph = { evidence: 'synthetic', provider: 'fixture_provider', model: 'fixture_model', billing: 'subscription', fusion: false, capabilityAdapters: false, remoteResources: false, compressionHelpers: false };
   if (canonical(policy.graph) !== canonical(graph)) throw new Denial('policy_denied');
   const maximum: Limits = { requestBytes: 1048576, responseBytes: 8388608, outputTokens: 4096, concurrency: 4, requestCount: 32, totalMs: 120000, firstOutputMs: 30000, idleMs: 15000, attemptMs: 600000 };

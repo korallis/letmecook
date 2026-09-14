@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "harness": "opencode",
+  "version": "1.18.30",
+  "sourceCommit": "3104c1428ec91f809e5ab86631300de41eb6952e",
+  "binarySHA256": "01edb5839aa10d5b09133fedcb335a062ecad6e82552933bb14f71756f2b296b",
+  "archiveSHA256": "4111a55c2a02c0fac314bd51e9a2330280e6d29d2b85b9554fff6d62612566ed",
+  "download": "https://github.com/anomalyco/opencode/releases/download/v1.18.30/opencode-linux-arm64.tar.gz",
+  "profile": "opencode-1.18.30-chat-edit-v1",
+  "isolationVariant": "docker-linux-arm64-opencode512-v1",
+  "workerMemoryMiB": 512,
+  "gatewayMemoryMiB": 128,
+  "nativeProtocol": "opencode-run-json/1.18.30"
+}

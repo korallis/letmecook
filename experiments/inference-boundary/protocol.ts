@@ -1,16 +1,17 @@
 import { canonical, keys, object, parseJSON } from './json.ts';
+import { OPENCODE_PROFILE, OPENCODE_TOOLS, validateArguments, type ProtocolProfile } from './profiles.ts';
 import { Denial, TOOL, type Policy } from './types.ts';
 
 const callId = (id: unknown): id is string => typeof id === 'string' && /^call_[a-zA-Z0-9_-]{1,64}$/.test(id);
-function argumentsForTool(text: unknown) {
-  if (typeof text !== 'string' || canonical(parseJSON(text)) !== canonical({ path: 'fixture.txt' })) throw new Denial('unsupported_request', 400);
-}
 export function validateRequest(value: unknown, policy: Policy): string {
   try {
-    keys(value, ['model', 'messages', 'stream', 'max_completion_tokens', 'tools', 'tool_choice'], ['model', 'messages', 'stream', 'max_completion_tokens']);
+    const native = policy.profile === OPENCODE_PROFILE;
+    const cap = native ? 'max_tokens' : 'max_completion_tokens';
+    keys(value, ['model', 'messages', 'stream', cap, 'tools', 'tool_choice', ...(native ? ['stream_options'] : [])], ['model', 'messages', 'stream', cap, ...(native ? ['stream_options'] : [])]);
+    if (native && canonical((value as any).stream_options) !== canonical({ include_usage: true })) throw new Error();
     object(value);
     if (value.model !== policy.routerModel) throw new Denial('policy_denied');
-    if (value.stream !== true || !Number.isInteger(value.max_completion_tokens) || value.max_completion_tokens < 1 || value.max_completion_tokens > policy.limits.outputTokens) throw new Denial('request_limit', 422);
+    if (value.stream !== true || !Number.isInteger(value[cap]) || value[cap] < 1 || value[cap] > policy.limits.outputTokens) throw new Denial('request_limit', 422);
     if (!Array.isArray(value.messages) || !value.messages.length || value.messages.length > 64) throw new Error();
     const pending = new Set<string>();
     const seen = new Set<string>();
@@ -24,8 +25,8 @@ export function validateRequest(value: unknown, policy: Policy): string {
           for (const call of message.tool_calls) {
             keys(call, ['id', 'type', 'function'], ['id', 'type', 'function']);
             keys(call.function, ['name', 'arguments'], ['name', 'arguments']);
-            if (!callId(call.id) || seen.has(call.id) || call.type !== 'function' || call.function.name !== 'read_file') throw new Error();
-            argumentsForTool(call.function.arguments); pending.add(call.id); seen.add(call.id);
+            if (!callId(call.id) || seen.has(call.id) || call.type !== 'function') throw new Error();
+            validateArguments(call.function.name, call.function.arguments, policy.profile); pending.add(call.id); seen.add(call.id);
           }
         }
       } else if (message.role === 'tool') {
@@ -37,7 +38,7 @@ export function validateRequest(value: unknown, policy: Policy): string {
       }
     }
     if (pending.size) throw new Error();
-    if (value.tools !== undefined && canonical(value.tools) !== canonical([TOOL])) throw new Error();
+    if (value.tools !== undefined && canonical(value.tools) !== canonical(native ? OPENCODE_TOOLS : [TOOL])) throw new Error();
     if (value.tool_choice !== undefined && (!value.tools || !['auto', 'required', 'none'].includes(value.tool_choice))) throw new Error();
     return JSON.stringify(value);
   } catch (error) {
@@ -46,7 +47,7 @@ export function validateRequest(value: unknown, policy: Policy): string {
   }
 }
 
-// Only this tested Chat profile is implemented. Metadata is reconstructed, never copied.
+// Only the separately versioned tested Chat profiles are implemented. Metadata is reconstructed.
 export class ChatStream {
   private decoder = new TextDecoder('utf-8', { fatal: true });
   private buffer = '';
@@ -59,7 +60,9 @@ export class ChatStream {
   private readonly requestId: string;
   private readonly model: string;
   private readonly toolsAllowed: boolean;
-  constructor(requestId: string, model: string, toolsAllowed: boolean) { this.requestId = requestId; this.model = model; this.toolsAllowed = toolsAllowed; }
+  private readonly profile: ProtocolProfile;
+  private usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | undefined;
+  constructor(requestId: string, model: string, toolsAllowed: boolean, profile: ProtocolProfile = 'chat-text-tools-v1') { this.requestId = requestId; this.model = model; this.toolsAllowed = toolsAllowed; this.profile = profile; }
   private chunk(delta: unknown, finish_reason: string | null = null) {
     return `data: ${JSON.stringify({ id: this.requestId, object: 'chat.completion.chunk', model: this.model, choices: [{ index: 0, delta, finish_reason }] })}\n\n`;
   }
@@ -97,19 +100,31 @@ export class ChatStream {
           if (!this.tools.size) throw new Denial('invalid_stream', 502);
           if (new Set([...this.tools.values()].map(call => call.id)).size !== this.tools.size) throw new Denial('invalid_stream', 502);
           const calls = [...this.tools].sort(([a], [b]) => a - b).map(([index, call], position) => {
-            if (index !== position || !callId(call.id) || call.name !== 'read_file') throw new Denial('invalid_stream', 502);
-            try { argumentsForTool(call.arguments); } catch { throw new Denial('invalid_stream', 502); }
+            if (index !== position || !callId(call.id)) throw new Denial('invalid_stream', 502);
+            try { validateArguments(call.name, call.arguments, this.profile); } catch { throw new Denial('invalid_stream', 502); }
             // Local IDs avoid exposing unchecked upstream identifiers and retain continuation support.
             return { index, id: `call_${this.requestId}_${index}`, type: 'function', function: { name: call.name, arguments: call.arguments } };
           });
           this.completionOutput.push(this.chunk({ tool_calls: calls }));
         } else if (this.tools.size) throw new Denial('invalid_stream', 502);
-        this.completionOutput.push(this.chunk({}, this.finish), 'data: [DONE]\n\n'); this.terminal = true; continue;
+        this.completionOutput.push(this.chunk({}, this.finish));
+        if (this.usage) this.completionOutput.push(`data: ${JSON.stringify({ id: this.requestId, object: 'chat.completion.chunk', model: this.model, choices: [], usage: this.usage })}\n\n`);
+        this.completionOutput.push('data: [DONE]\n\n'); this.terminal = true; continue;
       }
-      if (this.finish) throw new Denial('invalid_stream', 502);
       let value: any;
       try { value = parseJSON(text); object(value); } catch { throw new Denial('invalid_stream', 502); }
       if (value.error) throw new Denial('upstream_failure', 502);
+      if (this.profile === OPENCODE_PROFILE && this.finish && Array.isArray(value.choices) && value.choices.length === 0) {
+        if (this.usage) throw new Denial('invalid_stream', 502);
+        try {
+          keys(value.usage, ['prompt_tokens', 'completion_tokens', 'total_tokens'], ['prompt_tokens', 'completion_tokens', 'total_tokens']);
+          for (const n of Object.values(value.usage)) if (!Number.isSafeInteger(n) || (n as number) < 0 || (n as number) > 10000000) throw new Error();
+          if (value.usage.total_tokens !== value.usage.prompt_tokens + value.usage.completion_tokens) throw new Error();
+          this.usage = { prompt_tokens: value.usage.prompt_tokens, completion_tokens: value.usage.completion_tokens, total_tokens: value.usage.total_tokens };
+        } catch { throw new Denial('invalid_stream', 502); }
+        continue;
+      }
+      if (this.finish) throw new Denial('invalid_stream', 502);
       if (!Array.isArray(value.choices) || value.choices.length !== 1) throw new Denial('invalid_stream', 502);
       const choice = value.choices[0];
       if (choice.index !== 0 || !choice.delta || typeof choice.delta !== 'object' || Array.isArray(choice.delta)) throw new Denial('invalid_stream', 502);
