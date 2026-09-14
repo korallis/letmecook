@@ -1,0 +1,2138 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "missing-observations",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": null,
+        "availability": null
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "discovery-is-not-readiness",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "models": {
+          "object": "list",
+          "data": [
+            {
+              "id": "gaffer-coding",
+              "owned_by": "combo"
+            }
+          ]
+        },
+        "providers": {
+          "connections": []
+        },
+        "availability": {
+          "models": [],
+          "unavailableCount": 0
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "discovery_only",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "eligible-is-not-ready",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            },
+            {
+              "id": "raw-connection-b",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            }
+          ]
+        },
+        "availability": {
+          "models": [],
+          "unavailableCount": 0
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "eligible",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "eligible",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "nested-secrets-and-new-fields",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null,
+              "name": "PRIVATE_NAME_SENTINEL",
+              "email": "PRIVATE_EMAIL_SENTINEL@example.invalid",
+              "reasonDetail": "UPSTREAM_SECRET_SENTINEL_ERROR",
+              "accessToken": "UPSTREAM_SECRET_SENTINEL_TOP",
+              "providerSpecificData": {
+                "copilotToken": "UPSTREAM_SECRET_SENTINEL_NESTED",
+                "nested": {
+                  "apiKey": "UPSTREAM_SECRET_SENTINEL_DEEP"
+                },
+                "connectionProxyUrl": "https://UPSTREAM_SECRET_SENTINEL_PROXY@proxy.invalid"
+              },
+              "unexpected": [
+                "UPSTREAM_SECRET_SENTINEL_ARRAY"
+              ]
+            },
+            {
+              "id": "raw-connection-b",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            }
+          ],
+          "apiKey": "UPSTREAM_SECRET_SENTINEL_ROOT",
+          "providerSummaries": {
+            "UPSTREAM_SECRET_SENTINEL_KEY": {
+              "apiKey": "UPSTREAM_SECRET_SENTINEL_USAGE"
+            }
+          }
+        },
+        "availability": {
+          "models": [],
+          "unavailableCount": 0
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "eligible",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "eligible",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "fresh-confirmed-ready",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": true,
+        "policy_epoch_active": true,
+        "capability_record": {
+          "state": "verified",
+          "observed_at": "2026-09-14T09:00:00Z",
+          "policy_revision": "policy_1",
+          "deployment_digest": "fixture-digest",
+          "protocol": "chat_completions",
+          "harness_version": "fixture-harness"
+        },
+        "probe": {
+          "result": "completed",
+          "observed_at": "2026-09-14T10:00:00Z",
+          "policy_revision": "policy_1"
+        },
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            },
+            {
+              "id": "raw-connection-b",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            }
+          ]
+        },
+        "availability": {
+          "models": [],
+          "unavailableCount": 0
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "available",
+          "readiness": "ready",
+          "reason": "conformance_ready",
+          "source": "bounded_inference",
+          "observed_at": "2026-09-14T10:00:00Z",
+          "validity_until": "2026-09-14T10:00:30Z"
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "eligible",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "eligible",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "verified",
+          "source": "conformance_record",
+          "observed_at": "2026-09-14T09:00:00Z",
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "stale-does-not-refresh-on-poll",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": {
+          "result": "completed",
+          "observed_at": "2026-09-14T09:59:00Z",
+          "policy_revision": "policy_1"
+        },
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T09:59:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            },
+            {
+              "id": "raw-connection-b",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T09:59:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            }
+          ]
+        },
+        "availability": {
+          "models": [],
+          "unavailableCount": 0
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "stale_observation",
+          "source": "bounded_inference",
+          "observed_at": "2026-09-14T09:59:00Z",
+          "validity_until": "2026-09-14T09:59:30Z"
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T09:59:00Z",
+            "validity_until": "2026-09-14T09:59:30.000Z",
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T09:59:00Z",
+            "validity_until": "2026-09-14T09:59:30.000Z",
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "malformed-scalar",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": "true",
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            },
+            {
+              "id": "raw-connection-b",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            }
+          ]
+        },
+        "availability": {
+          "models": [],
+          "unavailableCount": 0
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "malformed_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "eligible",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "unknown-status-enum",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "super_ready",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            },
+            {
+              "id": "raw-connection-b",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            }
+          ]
+        },
+        "availability": {
+          "models": [],
+          "unavailableCount": 0
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "malformed_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "eligible",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "future-source-time",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T11:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            },
+            {
+              "id": "raw-connection-b",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            }
+          ]
+        },
+        "availability": {
+          "models": [],
+          "unavailableCount": 0
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "malformed_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "eligible",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "invalid-source-time",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "not-a-date",
+              "nextRetryAt": null,
+              "resetAt": null
+            },
+            {
+              "id": "raw-connection-b",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            }
+          ]
+        },
+        "availability": {
+          "models": [],
+          "unavailableCount": 0
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "malformed_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "eligible",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "negative-beats-eligible",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "invalid",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            },
+            {
+              "id": "raw-connection-b",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "exhausted",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": "2026-09-14T10:01:00Z"
+            }
+          ]
+        },
+        "availability": {
+          "models": [],
+          "unavailableCount": 0
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "not_ready",
+          "reason": "connection_unavailable",
+          "source": "router_snapshot",
+          "observed_at": "2026-09-14T10:00:00Z",
+          "validity_until": "2026-09-14T10:00:30Z"
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "blocked",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "exhausted",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": "2026-09-14T10:01:00Z"
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "missing-connection-remains-unknown",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            }
+          ]
+        },
+        "availability": {
+          "models": [],
+          "unavailableCount": 0
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "eligible",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30.000Z",
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "malformed-container",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": {
+            "UPSTREAM_SECRET_SENTINEL_KEY": {
+              "accessToken": "UPSTREAM_SECRET_SENTINEL_VALUE"
+            }
+          }
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "malformed_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "duplicate-connection-identity",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            },
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "malformed_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "unmapped-identities",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "UNTRUSTED_IDENTIFIER_SENTINEL",
+              "provider": "UNTRUSTED_PROVIDER_SENTINEL",
+              "isActive": true,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "nextRetryAt": null,
+              "resetAt": null
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "malformed_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-active-is-unknown",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "testStatus": "active",
+              "lastErrorAt": null
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-ignores-historical-fields",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "testStatus": "active",
+              "lastErrorAt": null,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "providerSpecificData": {
+                "apiKey": "UPSTREAM_SECRET_SENTINEL_DEPLOYED"
+              }
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-fresh-negative",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "testStatus": "unavailable",
+              "lastErrorAt": "2026-09-14T10:00:00Z",
+              "lastError": "UPSTREAM_SECRET_SENTINEL_ERROR"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "blocked",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30Z",
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-negative-without-time",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "testStatus": "error",
+              "lastErrorAt": null
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-disabled-configuration",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": false,
+              "testStatus": "active",
+              "lastErrorAt": null
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "disabled",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:10Z",
+            "validity_until": "2026-09-14T10:00:40Z",
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-unknown-enum",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "testStatus": "super_ready",
+              "lastErrorAt": null
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "malformed_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-stale-negative",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "testStatus": "unavailable",
+              "lastErrorAt": "2026-09-14T09:59:00Z"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "stale_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T09:59:00Z",
+            "validity_until": "2026-09-14T09:59:30Z",
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    }
+  ]
+}

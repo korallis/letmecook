@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gaffer.invalid/contracts/9router/status-v1",
+  "title": "Gaffer 9Router status projection v1 (proposed)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "router_id", "route_id", "policy_revision", "projected_at", "route", "connections", "capabilities"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "router_id": { "$ref": "#/definitions/ref" },
+    "route_id": { "$ref": "#/definitions/ref" },
+    "policy_revision": { "$ref": "#/definitions/ref" },
+    "projected_at": { "type": "string", "format": "date-time" },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "readiness", "reason", "source", "observed_at", "validity_until"],
+      "properties": {
+        "state": { "enum": ["available", "degraded", "exhausted", "unknown"] },
+        "readiness": { "enum": ["ready", "not_ready", "unknown"] },
+        "reason": { "enum": ["no_observation", "discovery_only", "stale_observation", "malformed_observation", "router_unreachable", "policy_unverified", "policy_draining", "authentication_failed", "route_failure", "connection_unavailable", "conformance_failed", "conformance_ready", "observed_success"] },
+        "source": { "enum": ["none", "router_snapshot", "bounded_inference"] },
+        "observed_at": { "$ref": "#/definitions/time" },
+        "validity_until": { "$ref": "#/definitions/time" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "readiness": { "const": "ready" } }, "required": ["readiness"] },
+          "then": { "properties": {
+            "state": { "enum": ["available", "degraded"] },
+            "reason": { "const": "conformance_ready" },
+            "source": { "const": "bounded_inference" },
+            "observed_at": { "type": "string" },
+            "validity_until": { "type": "string" }
+          } }
+        },
+        {
+          "if": { "properties": { "source": { "const": "none" } }, "required": ["source"] },
+          "then": { "properties": { "observed_at": { "type": "null" }, "validity_until": { "type": "null" } } }
+        }
+      ]
+    },
+    "connections": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["connection_ref", "provider_ref", "state", "source", "observed_at", "validity_until", "retry_after"],
+        "properties": {
+          "connection_ref": { "$ref": "#/definitions/ref" },
+          "provider_ref": { "$ref": "#/definitions/ref" },
+          "state": { "enum": ["eligible", "blocked", "exhausted", "disabled", "unknown"] },
+          "source": { "enum": ["none", "router_snapshot"] },
+          "observed_at": { "$ref": "#/definitions/time" },
+          "validity_until": { "$ref": "#/definitions/time" },
+          "retry_after": { "$ref": "#/definitions/time" }
+        },
+        "allOf": [{
+          "if": { "properties": { "source": { "const": "none" } }, "required": ["source"] },
+          "then": { "properties": {
+            "state": { "const": "unknown" },
+            "observed_at": { "type": "null" },
+            "validity_until": { "type": "null" },
+            "retry_after": { "type": "null" }
+          } }
+        }, {
+          "if": { "properties": { "state": { "enum": ["eligible", "blocked", "exhausted", "disabled"] } }, "required": ["state"] },
+          "then": { "properties": { "source": { "const": "router_snapshot" }, "observed_at": { "type": "string" }, "validity_until": { "type": "string" } } }
+        }]
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "source", "observed_at", "validity_until"],
+      "properties": {
+        "state": { "enum": ["verified", "failed", "unknown"] },
+        "source": { "enum": ["none", "conformance_record"] },
+        "observed_at": { "$ref": "#/definitions/time" },
+        "validity_until": { "$ref": "#/definitions/time" }
+      },
+      "allOf": [{
+        "if": { "properties": { "source": { "const": "none" } }, "required": ["source"] },
+        "then": { "properties": { "state": { "const": "unknown" }, "observed_at": { "type": "null" }, "validity_until": { "type": "null" } } }
+      }, {
+        "if": { "properties": { "state": { "enum": ["verified", "failed"] } }, "required": ["state"] },
+        "then": { "properties": { "source": { "const": "conformance_record" }, "observed_at": { "type": "string" } } }
+      }]
+    }
+  },
+  "allOf": [{
+    "if": { "properties": { "route": { "type": "object", "properties": { "readiness": { "const": "ready" } }, "required": ["readiness"] } }, "required": ["route"] },
+    "then": { "properties": { "capabilities": { "type": "object", "properties": { "state": { "const": "verified" }, "source": { "const": "conformance_record" }, "observed_at": { "type": "string" } } } } }
+  }],
+  "definitions": {
+    "ref": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$" },
+    "time": { "type": ["string", "null"], "format": "date-time" }
+  }
+}

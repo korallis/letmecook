@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "profiles": [
+    {
+      "id": "rickicode-0.3.98-69724d8",
+      "repository": "https://github.com/rickicode/9router",
+      "source_commit": "69724d86d4486fa5d722e63ebb6c9700e71aebff",
+      "package_version": "0.3.98",
+      "selected_deployment": false,
+      "provider_scalar_fields": ["id", "provider", "isActive", "routingStatus", "authState", "quotaState", "healthStatus", "lastCheckedAt", "nextRetryAt", "resetAt"],
+      "positive_status_requires": "valid_fresh_canonical_observation",
+      "route_readiness_from_provider_snapshot": false
+    },
+    {
+      "id": "decolua-0.5.75-17c4cc7",
+      "repository": "https://github.com/decolua/9router",
+      "source_commit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+      "package_version": "0.5.75",
+      "package_integrity": "sha512-dyFdRBvDZT48nFCr0Du48phnKMIDOuSE0Q0VSk8xTXyaSNpRUaJ0K8y2JELcRuTkY1tXwuuUqOm5i6ZNZLB48Q==",
+      "selected_deployment": true,
+      "provider_scalar_fields": ["id", "provider", "isActive", "testStatus", "lastErrorAt"],
+      "minimal_subset": "disabled_configuration_else_unknown",
+      "optional_extension": "fresh_error_or_unavailable_maps_to_blocked",
+      "positive_status_requires": "not_supported_by_provider_snapshot",
+      "route_readiness_from_provider_snapshot": false
+    }
+  ],
+  "unknown_profile_action": "fail_closed",
+  "profile_selection": "trusted_deployment_identity_never_payload_claim"
+}

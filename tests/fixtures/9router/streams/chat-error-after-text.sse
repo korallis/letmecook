@@ -1,0 +1,5 @@
+data: {"id":"chat_fixture_1","object":"chat.completion.chunk","choices":[{"index":0,"delta":{"content":"partial output"},"finish_reason":null}]}
+
+event: error
+data: {"error":{"type":"upstream_failure","message":"UPSTREAM_SECRET_SENTINEL_ERROR"}}
+
