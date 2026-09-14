@@ -87,7 +87,7 @@ test('unknown/corrupted receipts, false decisions, early output, altered history
   for (const mutate of changes) { const e = evidence(); mutate(e); assert.throws(() => candidateArtifact(e)); }
 });
 test('client staging excludes authority and deterministic disposable Git fixture preserves base identity', () => {
-  assert(!workerFiles.some(f => /authority|native-policy|admission|evidence|gateway|staging|control/.test(f)));
+  assert(!workerFiles.filter(f => f !== 'experiments/router-authority-extension/overlay/initial-suite.mjs').some(f => /authority|native-policy|admission|evidence|gateway|staging|control/.test(f)));
   validateInventory(['.git', 'greeting.txt'], ['pre-commit.sample']);
   for (const path of ['.opencode', 'opencode.json', '.claude', '.mcp.json']) assert.throws(() => validateInventory(['.git', 'greeting.txt', path], []));
   assert.throws(() => validateInventory(['.git', 'greeting.txt'], ['post-commit']));

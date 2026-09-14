@@ -151,6 +151,86 @@ timers and independent controls review remain prerequisites to live use. Source-
 credential and billing mutations remain outside this fixture; routine fixture
 implementation does not create an additional operator approval flow.
 
+## Prepared initial suite
+
+`suite-prepare.ts INPUT_DIRECTORY` prepares the worker, planner and continuity
+closures before the clock starts. The directory must be private and initially
+contain the reviewed schema-1 common `profile.json`, `config.json` and `relay.json`.
+The pinned binary is supplied through `GAFFER_OPENCODE_BINARY`. Preparation derives
+three closed schema-2 profiles and writes their registry, suite/continuity
+declarations and staged public fixtures. It imports no credentials and makes no
+provider calls. The staging manifest includes the binary, fixture/schema, and the
+actual copied bytes of the five locked Ajv runtime packages. Symlinks are refused.
+
+The coordinator then uses the existing deployment preparation and one explicit
+start-bound command:
+
+```sh
+node experiments/router-continuity/suite-prepare.ts /private/inputs
+node experiments/native-evaluation/deployment.ts prepare \
+  /private/deployment.json /private/inputs /absolute/pinned/public/router
+# Review the concrete packet, source, isolation and egress before this command.
+node experiments/router-continuity/suite-run.ts \
+  /private/deployment.json REVIEWED_PACKET_DIGEST /private/suite-result.json
+```
+
+The suite coordinator checks the complete packet and staged bytes before its only
+start, then attaches the default worker, read-only planner and two continuity
+members serially. A one-use local marker prevents rerunning it. Consumers never
+receive private controls or create a scope. Worker artifact and planner proposal
+acknowledgements use `candidate RECORD FILE` through the existing command lock and
+gateway validator. Proposal acknowledgement grants no execution authority.
+
+The schema-2 timing tag is exactly `initial-suite-v1`; schema-1 worker/continuity
+walls remain at most 30 seconds and the old planner budget remains 5 seconds.
+These new finite ceilings are engineering selections, not measured live latency:
+
+| Consumer | Session wall | Request total | First semantic output | Semantic idle |
+| --- | ---: | ---: | ---: | ---: |
+| Worker | 180 s | 120 s | 90 s | 45 s |
+| Planner | 150 s | 120 s | 90 s | 45 s |
+| Each continuity member | 90 s | 75 s | 60 s | 30 s |
+
+The four walls total 510 seconds. Scheduling reserves 15 seconds of acknowledgement
+time per phase and 15 seconds for stop, requiring 585 seconds at worker admission;
+the remaining 15 seconds cover startup. It rechecks the original remaining scope
+and physical allowance before each phase. Fixed session and grant deadlines never
+renew during a continuation or repair. The selected planner budget participates
+in its settings and input-revision identities. Provider caps, tool schemas, byte
+limits, roles and classifiers are unchanged.
+
+The ordinary synthetic path uses six physical sends. The general coordinator
+instead joins all qualified original operations to the actual scope debit and
+enforces the aggregate ceiling of ten, allowing the already-supported direct or
+repaired planner proposal and router-owned charged fallback. It creates no replay
+entitlement. An operation marked `unknown/running` remains in flight; the watcher
+stops on an ended unknown original, or qualification, budget or deadline failure.
+Even a successful phase sequence is reported failed when required stop or cleanup
+fails. Shared deployment stop runs independently of report persistence.
+
+If observation storage fails, the coordinator physically stops consumers but
+retains their container logs and staging references. Stopping destroys `/work`
+tmpfs; a retained container does **not** preserve the worktree. Independent artifact
+durability remains unavailable and the run remains unaccepted. Logs cannot replace
+the trusted artifact observation. Ordinary failure logs are durably saved before
+test resources are removed.
+
+The production-source synthetic suite can be reproduced with:
+
+```sh
+GAFFER_ROUTER_SOURCE=/absolute/pinned/public/router \
+GAFFER_OPENCODE_BINARY=/absolute/pinned/linux-arm64/opencode \
+node experiments/router-continuity/suite-proof.ts /tmp/private-suite-proof
+```
+
+Its fake planner responses wait six seconds, exercising the new variant beyond the
+old five-second fixture limit. `stale` and `dependency` proof cases refuse before
+start. The explicit offline host/gateway fault loaders exercise partial originals,
+storage failure, stop failure, direct proposals and repair; production preparation
+never selects them. Reports identify fault injection separately. Synthetic test
+cleanup happens only after diagnostic retention, and is distinct from a consumer's
+decision to preserve resources following failed storage.
+
 Prepare every consumer and its failure evidence first. The intended initial suite
 is worker edit/final (two expected sends), planner read/proposal (two), then this
 continuity pair (two), sharing one gateway/store/owner and the same aggregate

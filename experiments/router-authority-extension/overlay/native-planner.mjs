@@ -17,7 +17,7 @@ export const PLANNER_SYSTEM = 'You are a restricted planner. Produce only a JSON
 export const PLANNER_BUDGET = {assessments:1,repairs:1,requests:3,files:1,readBytes:4096,requestBytes:32768,responseBytes:32768,outputTokens:null,totalMs:5000};
 export const PLANNER_SCHEMA_DIGEST = digest(PLANNER_PLAN_SCHEMA);
 export const PLANNER_SETTINGS_DIGEST = digest({protocol:PLANNER_PROTOCOL,model:'gpt-6-astra',reasoning:{effort:'xhigh',summary:'auto'},stream:true,store:false,include:['reasoning.encrypted_content'],tools:[PLANNER_TOOL],budget:PLANNER_BUDGET,system:PLANNER_SYSTEM,repair:PLANNER_REPAIR});
-export function plannerBudget(profile){const t=suiteTiming(profile);return t?{...PLANNER_BUDGET,totalMs:t.wallMs}:PLANNER_BUDGET;}
+export function plannerBudget(profile){check(profile?.protocol===PLANNER_PROTOCOL,'planner_identity_mismatch');const t=suiteTiming(profile);return t?{...PLANNER_BUDGET,totalMs:t.wallMs}:PLANNER_BUDGET;}
 export function plannerSettingsDigest(profile){return suiteTiming(profile)?digest({base:PLANNER_SETTINGS_DIGEST,timing:profile.timing,budget:plannerBudget(profile)}):PLANNER_SETTINGS_DIGEST;}
 export function validatePlannerDescriptor(profile) {
  exact(profile.planner,['source','settings','schema']);
