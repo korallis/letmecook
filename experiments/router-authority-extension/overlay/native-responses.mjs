@@ -1,7 +1,6 @@
 // The one reviewed consumer subset. Never forwards a tool event provisionally.
 import { createResponsesTerminalObserver, parseUnambiguousJSON } from './responses-terminal.mjs';
 import { canonical, safePath } from './native-profile.mjs';
-import { PLANNER_PROTOCOL, plannerContinuation, validatePlannerRequest, validatePlannerOutput } from './native-planner.mjs';
 const check=(value,why='unsupported_native_request')=>{if(!value)throw Error(why);};
 const exact=(value,names,optional=[])=>check(value&&typeof value==='object'&&!Array.isArray(value)&&names.every(k=>Object.hasOwn(value,k))&&Object.keys(value).every(k=>[...names,...optional].includes(k)));
 const text=x=>typeof x==='string'&&Buffer.byteLength(x)<=262144;
@@ -20,7 +19,6 @@ export function validatePatch(argumentsText,profile){
  check(files>0&&files<=64,'invalid_patch_files');return value;
 }
 export function continuationOutput(output,profile){
- if(profile.protocol===PLANNER_PROTOCOL)return plannerContinuation(output);
  check(Array.isArray(output)&&output.length>0&&output.length<=16,'invalid_native_output');
  const ids=new Set(),calls=new Set();
  return output.map(item=>{
@@ -40,7 +38,6 @@ export function continuationOutput(output,profile){
  });
 }
 export function validateNativeRequest(body,profile,model,previous=null){
- if(profile.protocol===PLANNER_PROTOCOL)return validatePlannerRequest(body,profile,model,previous);
  exact(body,['model','input','stream','store','include','reasoning','tools','tool_choice','prompt_cache_key']);
  check(body.model===model&&body.stream===true&&body.store===false&&body.tool_choice==='auto');
  check(canonical(body.reasoning)===canonical({effort:'xhigh',summary:'auto'})&&canonical(body.include)===canonical(['reasoning.encrypted_content']),'exact_reasoning_required');
@@ -68,7 +65,7 @@ export function expectedPhysicalRequest(ingress,model,instructions){
  b.tools=b.tools.map(({strict,...tool})=>tool);b.instructions=instructions;return b;
 }
 export class NativeResponsesStream {
- constructor(profile,request=null){this.profile=profile;this.request=request;if(profile.protocol===PLANNER_PROTOCOL)check(request,'planner_request_required');this.observer=createResponsesTerminalObserver({maxBytes:profile.local.responseBytes,maxOutputItems:16});this.chunks=[];this.semanticOutput=false;this.nativeOutput=null;this.semanticBuffer='';this.semanticDecoder=new TextDecoder('utf-8',{fatal:true});}
+ constructor(profile){this.profile=profile;this.observer=createResponsesTerminalObserver({maxBytes:profile.local.responseBytes,maxOutputItems:16});this.chunks=[];this.semanticOutput=false;this.nativeOutput=null;this.semanticBuffer='';this.semanticDecoder=new TextDecoder('utf-8',{fatal:true});}
  push(bytes){
    const state=this.observer.push(bytes);this.chunks.push(Buffer.from(bytes));let semantic=false;
    if(!state.invalidReason){
@@ -82,11 +79,9 @@ export class NativeResponsesStream {
    const raw=Buffer.concat(this.chunks).toString('utf8');const frames=raw.replace(/\r\n|\r/g,'\n').split('\n\n');let complete;
    for(const frame of frames){const data=frame.split('\n').filter(l=>l.startsWith('data:')).map(l=>l.slice(5).replace(/^ /,'')).join('\n');if(!data||data==='[DONE]')continue;const event=parseUnambiguousJSON(data);if(event.type==='response.completed')complete=event.response;}
    check(complete&&complete.model==='gpt-6-astra'&&complete.status==='completed'&&complete.error===null&&complete.incomplete_details===null,'native_terminal_mismatch');
-   validateNativeOutput(complete.output,this.profile,this.request);this.nativeOutput=structuredClone(complete.output);
+   continuationOutput(complete.output,this.profile);this.nativeOutput=structuredClone(complete.output);
    // Byte-for-byte frames are bounded and schema checked. The caller releases
    // this entire sequence only after durable original-receipt acceptance.
    return [raw];
  }
 }
-
-export function validateNativeOutput(output,profile,request){return profile.protocol===PLANNER_PROTOCOL?validatePlannerOutput(output,profile,request):continuationOutput(output,profile);}

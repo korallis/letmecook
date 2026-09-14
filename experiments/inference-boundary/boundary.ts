@@ -147,7 +147,7 @@ export class Boundary {
       // Recheck after durable admission. A stop during I/O must never start a request.
       if (!withinRequest()) throw new Denial('deadline',408);
       if (!this.current(scope) || abort.signal.aborted) throw new Denial('cancelled', 409);
-      const decoder = policy.schema===3 ? new NativeResponsesStream(policy.native,value) : new ChatStream(requestId, policy.routerModel, !!value.tools && value.tool_choice !== 'none', policy.profile === 'router-native-chat-translation-synthetic-v1' ? 'receipt-gated-eof' : policy.schema === 2 ? 'router-done' : 'done', policy.profile);
+      const decoder = policy.schema===3 ? new NativeResponsesStream(policy.native) : new ChatStream(requestId, policy.routerModel, !!value.tools && value.tool_choice !== 'none', policy.profile === 'router-native-chat-translation-synthetic-v1' ? 'receipt-gated-eof' : policy.schema === 2 ? 'router-done' : 'done', policy.profile);
       const firstOutput = setTimeout(() => abort.abort(new Denial('deadline', 408)), policy.limits.firstOutputMs); timers.push(firstOutput);
       let idle: NodeJS.Timeout | undefined;
       if (policy.schema !== 1) await this.gate.markSend(requestId);
