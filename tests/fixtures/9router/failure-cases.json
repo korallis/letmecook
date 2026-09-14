@@ -44,7 +44,7 @@
     {
       "id": "request-bounds",
       "layer": "boundary",
-      "input": "Exceed request bytes, output tokens, response bytes, concurrent count, total request count and each deadline independently; omit output limit; send an unbounded compressed body",
+      "input": "Under strict-provider-output-v1, exceed request bytes, output tokens, response bytes, concurrent count, total request count and each deadline independently; omit output limit; send an unbounded compressed body",
       "expect": [
         "reject before forwarding when preflight-detectable",
         "abort at streaming/deadline bound otherwise",
@@ -298,6 +298,48 @@
         "active is not eligible or ready",
         "new version requires explicit reconciled profile"
       ]
+    },
+    {
+      "id": "strict-default-no-native-downgrade",
+      "layer": "boundary",
+      "input": "Use an existing strict grant with a missing, zero, invalid or excessive provider cap, or a native route that drops it; omit or change the discriminator in a newly encoded grant; separately read a legacy grant with no stored discriminator and a valid cap",
+      "expect": ["invalid cap or newly encoded profile rejects before inference", "legacy grant retains strict cap semantics and all existing eligibility checks", "no implicit native migration or unsupported cap stripping"]
+    },
+    {
+      "id": "native-explicit-authority-and-hard-bounds",
+      "layer": "boundary",
+      "input": "Select native-subscription-local-v1 without resolvable operator authorization; separately use a task or grant requiring a hard provider output bound or monetary cap",
+      "expect": ["deny each case before inference", "unavailable provider bounds remain unavailable", "subscription preference cannot grant authority or override the hard requirement"]
+    },
+    {
+      "id": "native-entire-fallback-compatibility",
+      "layer": "policy",
+      "input": "Start with a compatible native primary then add paid, unclassified, wrong-effort, incompatible harness/protocol/tool or unverified connections and fallback paths separately",
+      "expect": ["exclude route before inference for every mandatory mismatch", "review every reachable connection and fallback", "9Router retains account selection, refresh and fallback ownership"]
+    },
+    {
+      "id": "native-profile-identity-and-drain",
+      "layer": "policy",
+      "input": "Change strict to native while work is active, change the limits profile or exact protocol/harness/settings evidence under an old grant, then retry after restart with unresolved work",
+      "expect": ["explicit operator authority and new policy/grant identity required", "full graph/build/profile/evidence identity bound at admission", "fenced freeze/drain applies", "restart recovers closed and old grants cannot reopen admission"]
+    },
+    {
+      "id": "native-local-and-evaluation-allowances",
+      "layer": "boundary",
+      "input": "Exceed each native byte, concurrency, request, physical inference-subattempt, retry and deadline limit; consume the aggregate evaluation ceiling through failed calls, fallback and planner/reviewer work; restart or repeat a case",
+      "expect": ["preflight-detectable excess rejects before inference and streaming/time excess stops forwarding", "all retries and physical inference attempts consume the shared finite allowance", "heartbeats do not reset semantic deadlines", "restart or repeated checks do not renew authority", "unknown remote work retains reservation and prevents replacement"]
+    },
+    {
+      "id": "native-local-stop-is-not-quiescence",
+      "layer": "deployed_router",
+      "input": "Stop before headers, midstream, during retry and refresh; force local byte/time expiry, EOF, process exit, missing receipts, stale fences and durable-write failures without trustworthy remote stop evidence",
+      "expect": ["no later subattempt after stop/fence", "unknown remote work remains cancelled_unknown or unreconciled", "no refund, transparent retry, route swap, replacement or completed policy drain", "failed writes and recovery remain closed", "preserve acknowledged tool results and provisional artifacts"]
+    },
+    {
+      "id": "native-original-terminal-independent-of-cap",
+      "layer": "protocol",
+      "input": "With provider caps unavailable, observe trustworthy original success, failure/incomplete, explicit remote cancellation acknowledgement and translated fabricated success as separate cases",
+      "expect": ["only verified original remote evidence may establish request quiescence", "quiescent failure/incomplete remains stopped failure", "successful final/tool release still requires local schema validation, scoped authority and matching durable successful original decision", "quiescence does not claim a configurable provider cap or monetary bound"]
     }
   ]
 }

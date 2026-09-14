@@ -1,8 +1,9 @@
 # 9Router integration contract v1
 
-For [issue #2](https://github.com/korallis/letmecook/issues/2). Contract
-proposal, **14 September 2026**. This specifies the boundary to implement in the
-M0 experiments; it does not implement or certify a deployment. The reviewed v0.4
+For [issue #2](https://github.com/korallis/letmecook/issues/2), amended by the
+operator-approved [issue #81](https://github.com/korallis/letmecook/issues/81)
+limits profiles on **14 September 2026**. This specifies the boundary to implement
+in the M0 experiments; it does not implement or certify a deployment. The reviewed v0.4
 [ownership and authority requirements](../spec.md#8-9router-integration-and-task-capacity)
 remain in force. Fixture identifiers below are in
 [the conformance corpus](../../tests/fixtures/9router/README.md).
@@ -92,8 +93,9 @@ Gaffer policy identity scoped to that router, not a display label or account ID.
 string sent in the JSON `model` field. Prefer named combos. Renaming/deleting a
 combo or reusing its name never silently retargets an existing grant.
 
-A policy has an immutable `policy_revision`, a configuration `epoch`, protocol and
-capability requirements, a complete permitted provider/model/billing envelope and
+A policy has an immutable `policy_revision`, a configuration `epoch`, exact router
+build, protocol/harness/settings profile, limits profile and its explicit authority,
+capability evidence, a complete permitted provider/model/billing envelope and
 request bounds. Its fingerprint is SHA-256 over a deterministic canonical policy
 document; retain that document as evidence. The epoch is an enforced admission and
 mutation generation, not a hash. Reject unresolved aliases, nested combo cycles,
@@ -115,8 +117,10 @@ a provider, endpoint, model or billing possibility is a policy change.
 
 The boundary authenticates an opaque, revocable attempt token. Its server-side
 binding contains attempt ID, lease/fence identity, grant ID, router/route IDs,
-policy revision, epoch, expiry, capabilities and reserved limits. It checks current
-lease/revocation state on admission and cancellation; a token is never authority
+policy revision, epoch, expiry, capabilities, full graph fingerprint, exact router
+build and protocol/harness/settings profile, limits profile, authorization policy
+reference and reserved limits. It checks current lease/revocation state on admission
+and cancellation; a token is never authority
 for a later attempt. Coordinator/planner/reviewer calls use the same boundary with
 their own bounded identity. Tokens and router keys are excluded from durable
 events, fixtures, subprocess command lines and logs.
@@ -157,32 +161,63 @@ Containment is an OS/network policy with negative tests, not an environment vari
 or Git worktree. The trusted boundary is outside the worker sandbox. See issue #5
 for the selected Linux profile; this contract does not claim it is implemented.
 
-Every grant explicitly sets request bytes, output-token cap, response bytes,
-concurrency, request count, total deadline, first-output deadline, idle-stream
-deadline and attempt-wide retry/time budget. Start with the conservative
-[example policy](../../tests/fixtures/9router/examples.json): 1 MiB request, 4,096
-output tokens, 8 MiB response, one in-flight request, 32 requests per attempt,
-120 s total, 30 s first output and 15 s idle. These are Gaffer defaults to test,
-not router/provider limits or guaranteed harness compatibility. Heartbeats do not
-reset first-output or semantic-idle deadlines. Smaller task/provider bounds win.
+Every grant selects a versioned **limits profile** and explicitly sets enforced,
+finite request bytes, response bytes, concurrency, request count, total deadline,
+first-output deadline, semantic-idle deadline and attempt-wide retry/time budget.
+Router/harness retry and physical inference-subattempt counts also have finite
+ceilings; retries and fallback consume the shared attempt allowance. Heartbeats
+do not reset semantic deadlines. Smaller applicable task, router and provider
+limits win. The limits profile is distinct from the protocol/harness profile;
+both must be compatible and bound into the policy revision and grant.
 
-Reject missing/invalid/excessive output limits; map the approved limit to the
-selected protocol (`max_completion_tokens` or a profile's tested `max_tokens`,
-Messages `max_tokens`, Responses `max_output_tokens`). Prove the deployed path
-preserves it. A boundary timeout/byte cap bounds local exposure, not necessarily
-provider execution or billing. Hard monetary caps require a separately verified
-maximum cost across hidden router retries/fallback, reservations and enforceable
-router/provider caps; otherwise hard-cap admission is denied. Advisory spend can
-remain unknown. The boundary itself makes **one** upstream request per admitted
-request and never retries a provider or selects an account. Router and harness
-retry limits must fit the attempt-wide budget; unbounded upstream work cannot be
-represented as a bounded-cost route.
+`strict-provider-output-v1` is the default and the interpretation of existing
+grants, including legacy grants without a stored profile field. Those grants keep
+their required cap; omission never selects native limits. New grants encode the
+profile explicitly. Strict additionally requires a positive finite integer provider output-token
+cap. Reject missing, invalid or excessive caps; map the approved cap to the tested
+protocol field (`max_completion_tokens` or a profile's tested `max_tokens`, Messages
+`max_tokens`, Responses `max_output_tokens`). Prove that the deployed path preserves
+and enforces it across **every** approved fallback and retry. There is no automatic
+downgrade or migration to another limits profile.
+
+`native-subscription-local-v1` requires explicit operator authorization in the grant
+or its standing policy. Every reachable connection and fallback needs reviewed
+subscription billing classification and all other mandatory capability evidence.
+Provider output-token and monetary bounds are explicitly **unavailable**. Reject
+this profile for tasks or grants requiring either hard provider bound. Subscription
+preference cannot override that exclusion. The approved profile is specified in
+[native subscription local limits](native-subscription-limits.md); it is not an
+implemented or live-certified route.
+
+A boundary timeout, response-byte limit, visible-text count, prompt instruction or
+reasoning/verbosity preference is not a provider-generation limit. A request with
+a required output-token cap cannot be silently downgraded or have that requirement
+stripped. An incompatible harness stays ineligible until a reviewed request profile
+represents the selected limits honestly. Hard monetary caps require separately
+verified maximum-cost evidence across hidden retries/fallback, reservations and
+enforceable router/provider controls; otherwise hard-cap admission is denied.
+Strict output limits alone do not prove a monetary cap. Subscription classification
+means neither zero cost nor a known remaining allowance. Unknown usage/cost is not
+measured zero. The boundary makes **one** upstream request per admitted request and
+never retries a provider or selects an account. Residual remote work is tracked
+separately and may remain unknown after local budgets expire.
+
+The conservative [example policy](../../tests/fixtures/9router/examples.json)
+remains a **strict** example: 1 MiB request, 4,096 provider output tokens, 8 MiB
+response, one in-flight request, 32 requests/inference subattempts per attempt,
+120 s per request, 30 s first output, 15 s idle and 10 minutes per attempt. These
+are defaults to test, not verified provider or harness compatibility. The separate
+[native example](../../tests/fixtures/9router/native-limits-example.json) declares
+concrete local controls and unavailable provider bounds; it sets no native product
+defaults. The operator's [bounded evaluation envelope](native-subscription-limits.md#approved-evaluation-envelope)
+is separate from public installation defaults.
 
 ## Capability, completion and cancellation
 
-Capability evidence is keyed by deployed build, policy revision, protocol,
-harness version and model/fallback path. Test the full path for streaming UTF-8
-and SSE fragmentation, multiple tool-call IDs and fragmented JSON arguments,
+Capability evidence is keyed by deployed build, full graph and policy revision,
+limits profile, exact protocol/harness/settings versions and model/fallback path.
+Test the full path for streaming UTF-8 and SSE fragmentation, multiple tool-call
+IDs and fragmented JSON arguments,
 tool-result continuation, reasoning/model settings, structured output, truncation,
 refusal and cancellation. Every possible fallback must satisfy required
 capabilities. Endpoint presence is not that proof.
@@ -194,8 +229,9 @@ requirement, even if one example happens to validate. Do not silently downgrade.
 
 The response state is `awaiting_output` → `streaming` → `completed`,
 `failed_before_output`, `partial_failure` or `cancelled_unknown`. HTTP 2xx opens a
-stream; it is not completion. Complete tool arguments and a valid protocol terminal
-are required before dispatching a tool; tool effects also require Gaffer's separate
+stream; it is not completion. Complete schema-valid tool arguments and a trustworthy
+successful original protocol terminal are required before dispatching a tool;
+tool effects also require Gaffer's separate
 execution authority and durable action identity. Invalid/incomplete arguments must
 never execute. Preserve already acknowledged tool results across continuation.
 
@@ -225,6 +261,17 @@ upstream error text/headers/body in a UI error. Use enumerated reason codes and 
 opaque internal correlation ID. End-to-end cancellation requires fault tests before
 headers, midstream and during fallback; local socket close alone is not proof.
 
+Configurable provider output caps and evidence that an individual original request
+ended are different capabilities. A trustworthy original provider terminal or
+explicit remote cancellation acknowledgement may establish that request's
+quiescence without establishing a configurable token or monetary cap. Verify that
+evidence on the actual deployed path. A finite model maximum, local timeout,
+process exit or EOF does not prove remote stop, release its reservation or refund
+work. Quiescent failed/incomplete requests remain stopped failures, not successful
+output. Preserve acknowledged tool results and provisional artifacts; durable
+admission and successful completion decisions still bind scope, grant, lease/fence,
+policy identity and request ID before router work or final/tool release.
+
 ## Atomic policy changes
 
 Decision for both inspected pins: **freeze and drain at the trusted configuration
@@ -241,8 +288,10 @@ The admission boundary and every policy writer share one fenced epoch controller
 3. Wait for all router work to finish, including fallback and work whose clients
    disconnected. Track `cancelled_unknown` separately. A gateway count of zero,
    a deadline expiring or an unavailable management API is not proof of quiescence.
-   If the pin cannot expose it, keep the gate closed; an operator may use a verified
-   router stop and provider-side bound to establish quiescence before proceeding.
+   Without sufficient evidence, keep the gate closed indefinitely. A verified
+   router stop plus provider-side bound may help prove quiescence only where that
+   capability exists; the native profile cannot assume such a bound. Original
+   terminal or explicit remote cancellation evidence must itself be verified.
 4. Once quiescent, make the reviewed configuration change, read back/validate the
    full graph, persist its document/fingerprint and increment epoch/revision.
    Issue fresh grants before reopening admission. Old grants fail even if a name
@@ -261,6 +310,12 @@ or a reachable fallback's identity/cost cannot be enumerated, the route cannot b
 admitted for policies needing this guarantee. A preflight hash plus polling is not
 an acceptable substitute. A future upstream immutable-version API needs separate
 evidence and must not silently change this contract.
+
+Changing limits profile requires explicit operator authority, a new policy/grant
+identity and this same freeze/drain procedure, including changes from strict to
+native local limits. An assessor/model cannot authorize the change. Neither local
+timeout nor process exit permits replacement, route swap, refund or drain completion
+while remote work remains `cancelled_unknown`/unreconciled.
 
 The pinned 0.5.75 [executable authority experiment](../evidence/router-authority.md)
 demonstrates counter expiry without completion, disconnect accounting before local
@@ -357,8 +412,9 @@ pin, so unclassified totals must not be reported as exact provider accounting.
 
 ## Examples, verification and handoff
 
-The corpus includes illustrative request/continuation examples, synthetic hostile
-management payloads, status projection pairs and protocol/policy failure traces.
+The corpus includes strict/default and explicitly authorized native local-limits
+logical examples, request/continuation examples, synthetic hostile management
+payloads, status projection pairs and protocol/policy failure traces.
 These are reproducible specification inputs, **not live probe recordings**.
 Run `npm --prefix tests/fixtures/9router ci` then
 `npm --prefix tests/fixtures/9router test` to validate the closed output schema,

@@ -10,7 +10,9 @@ record. The normative proposal and source evidence are in
 | `status.schema.json` | Closed outgoing status v1; validate after allowlist projection |
 | `input-profiles.json` | Explicit source/artifact identity and scalar allowlists for each inspected input profile |
 | `status-cases.json` | Source payload/context and exact expected projection; malformed, hostile, stale and missing observations |
-| `examples.json` | Example policy, attempt binding and three protocol requests, tool continuation and strict-output requirement |
+| `examples.json` | Strict/default policy and bound profile identity, three protocol requests, tool continuation and strict-output requirement |
+| `native-limits-example.json` | Explicit native local-limits logical policy/grant example; unavailable provider bounds and synthetic references; not a runtime API or live grant |
+| `limits-profile.schema.json` | Discriminated logical profile shape used only to validate contract examples |
 | `failure-cases.json` | Required fault/race experiments and expected decisions, including zero unauthorized forwards/tool replays |
 | `streams/*.sse` | Byte fixtures for success, fragmented tool output, error and deceptive completion |
 
@@ -23,7 +25,11 @@ npm --prefix tests/fixtures/9router test
 
 The checker validates the JSON schema, all expected status objects, negative
 mutations of those objects, safe expected references, timestamps and referenced
-stream files. It does **not** run an adapter or claim live failure-path behavior.
+stream files. It also checks both limits-profile examples, their finite local
+controls and matching grant identities, and rejects ambiguous/missing cap or native
+authorization-reference shapes. Schema-valid references are not evidence of actual
+authority or conformance. It does **not** run an adapter, authorize a request or
+claim live failure-path behavior.
 Issues #3–#8 must execute the specified cases against their real boundary/adapter,
 use a deterministic clock for freshness tests, and save redacted actual results.
 
@@ -50,3 +56,12 @@ the observation clock and source, a ready result needs deployment/policy/capabil
 evidence, and semantic correctness must be checked against the expected pair.
 Each failure case declares its layer and assertions so a mock result cannot be
 mistaken for a provider or containment proof.
+
+The [#81 amendment](../../../docs/contracts/native-subscription-limits.md) approves
+the native option but leaves current experimental runtimes unchanged. Existing
+grants retain strict semantics; there is no implicit migration. The original
+`request-bounds` case is explicitly strict. Added native refusal, authority,
+fallback and quiescence cases are requirements for future execution, not recorded
+passes. The native request illustration needs a separately reviewed compatible
+harness/profile before use. Evaluation allowances are documented separately from
+these synthetic examples and from public product defaults.
