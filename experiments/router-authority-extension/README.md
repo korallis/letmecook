@@ -247,3 +247,29 @@ The operator's integration/build choice and live credential/data authorization
 remain separate. Live native admission additionally needs an accepted resolution
 of the provider-output-bound contract gap. Keep the issue's PR draft until all
 required review and integration criteria have been assessed honestly.
+
+## OpenCode-compatible synthetic consumer profile (#6)
+
+The issue-6 launcher additionally opts into
+`9router-0.5.75-synthetic-opencode-edit-v1` with the private gateway environment
+`GAFFER_SYNTHETIC_OPENCODE=1`. It is incompatible with native opt-in and still
+requires synthetic loopback compatible routes, `liveAdmission:false` and
+`nativeLiveAdmission:false`. The existing common/native profiles keep refusing
+all explicit tool choices and empty-string tool-only history.
+
+This profile requires `tool_choice:auto`, the exact captured OpenCode 1.18.30
+edit/write tool schema digest and bounded operations on
+`/work/repo/greeting.txt`. It permits the captured empty-string assistant tool
+turn only with complete matching tool results. It preserves `max_tokens`;
+stream options, other choice values, effort, strict flags and schema changes are
+refused. The actual client explicitly configures `includeUsage:false`; no
+accepted setting is removed by the extension. The original observer's strict
+usage-frame refusal stays in place, and missing usage remains unknown.
+
+The new boundary policy records a digest over every overlay module plus the
+loader/patches, alongside the pinned public source lock and runtime identity.
+The [harness experiment](../harness/README.md#actual-router-synthetic-proof)
+contains the binary capture, actual-router task, negative ingress matrix,
+durable tool/terminal join and independently measured worker topology. These
+are synthetic consumer evidence, not deployed conformance or native output-cap
+support.

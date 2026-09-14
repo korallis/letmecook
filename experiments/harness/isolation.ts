@@ -16,3 +16,21 @@ export function assertHarnessContainer(state: any, staging: string, volume: stri
   assertContainer(legacy, staging, volume, gateway);
   return { variant: VARIANT, predecessor: PROFILE, workerMemoryMiB: 512, gatewayMemoryMiB: 128 };
 }
+
+// Actual-router topology: accepted 768 MiB gateway plus the separately measured
+// 512 MiB OpenCode worker. The full effective controls are checked and recorded.
+import { commonArgs, inspectProfile } from '../router-boundary-bridge/isolation.ts';
+export const ROUTER_VARIANT = 'm0-opencode512-router768-uds-v1';
+export function routerHarnessArgs(name: string, run: string, gateway: boolean) {
+  const args = commonArgs(name, run, gateway);
+  if (!gateway) for (const flag of ['--memory', '--memory-swap']) args[args.indexOf(flag) + 1] = '512m';
+  return args;
+}
+export function inspectRouterHarness(state: any, image: string, run: string, gateway: boolean, volume: string, binds: Record<string, string>) {
+  assert.equal(state.HostConfig.Memory, (gateway ? 768 : 512) * 1048576);
+  assert.equal(state.HostConfig.MemorySwap, state.HostConfig.Memory);
+  const predecessor = structuredClone(state);
+  if (!gateway) predecessor.HostConfig.Memory = predecessor.HostConfig.MemorySwap = 128 * 1048576;
+  const measured = inspectProfile(predecessor, image, run, gateway, volume, binds);
+  return { ...measured, variant: ROUTER_VARIANT, memory: state.HostConfig.Memory, memorySwap: state.HostConfig.MemorySwap };
+}

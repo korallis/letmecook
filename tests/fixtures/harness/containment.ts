@@ -4,19 +4,19 @@ import { connect } from 'node:net';
 import { networkInterfaces } from 'node:os';
 import { spawn } from 'node:child_process';
 import { Resolver } from 'node:dns/promises';
-export async function containment() {
+export async function containment(router = false) {
   const evidence: Record<string, unknown> = {};
   assert.equal(process.getuid!(), 1000);
   const status = readFileSync('/proc/self/status', 'utf8');
   for (const cap of ['CapInh', 'CapPrm', 'CapEff', 'CapBnd', 'CapAmb']) assert.match(status, new RegExp(`${cap}:\\s+0000000000000000`));
   assert.match(status, /NoNewPrivs:\s+1/); assert.match(status, /Seccomp:\s+2/);
   const blocked = (action: () => unknown) => { let code = ''; try { action(); } catch (error: any) { code = error.code; } assert(['ENOENT', 'EPERM', 'EACCES', 'EROFS'].includes(code), code); return code; };
-  const paths = ['/var/run/docker.sock', '/run/host-services/ssh-auth.sock', '/root/.ssh/id_ed25519', '/work/upstream.sock', '/work/journal/state.json', process.env.HOST_SENTINEL!];
+  const paths = ['/var/run/docker.sock', '/run/host-services/ssh-auth.sock', '/root/.ssh/id_ed25519', '/work/upstream.sock', '/work/journal/state.json', process.env.HOST_SENTINEL!, ...(router ? ['/router-source/package.json','/probe/overlay/authority.mjs','/bridge/authority.ts','/inference-boundary/boundary.ts','/work/router.sock','/work/router-db/db.sqlite','/work/approved.json'] : [])];
   evidence.deniedReads = Object.fromEntries(paths.map(path => [path, blocked(() => readFileSync(path))]));
   evidence.deniedWrites = Object.fromEntries(['/etc/escape', '/fixture/opencode', '/router/escape'].map(path => [path, blocked(() => writeFileSync(path, 'escaped'))]));
   evidence.cannotUnlinkBoundary = blocked(() => unlinkSync('/router/inference.sock'));
   evidence.cannotBecomeRoot = blocked(() => process.setuid!(0));
-  assert.deepEqual(readdirSync('/router').sort(), ['grant.json', 'inference.sock']);
+  assert.deepEqual(readdirSync('/router').sort(), router ? ['inference.sock'] : ['grant.json', 'inference.sock']);
   symlinkSync(process.env.HOST_SENTINEL!, '/work/host-link'); evidence.symlinkDenied = blocked(() => readFileSync('/work/host-link'));
   symlinkSync('/proc/1/root' + process.env.HOST_SENTINEL, '/work/proc-link'); evidence.procDenied = blocked(() => readFileSync('/work/proc-link'));
   assert.deepEqual(Object.keys(networkInterfaces()), ['lo']); evidence.interfaces = ['lo'];

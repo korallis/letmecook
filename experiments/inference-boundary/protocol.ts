@@ -1,13 +1,15 @@
 import { canonical, keys, object, parseJSON } from './json.ts';
-import { OPENCODE_PROFILE, OPENCODE_TOOLS, validateArguments, type ProtocolProfile } from './profiles.ts';
+import { OPENCODE_PROFILE, OPENCODE_ROUTER_PROFILE, openCodeTools, validateArguments, type ProtocolProfile } from './profiles.ts';
 import { Denial, TOOL, type Policy } from './types.ts';
 
 const callId = (id: unknown): id is string => typeof id === 'string' && /^call_[a-zA-Z0-9_-]{1,64}$/.test(id);
 export function validateRequest(value: unknown, policy: Policy): string {
   try {
     const native = policy.profile === OPENCODE_PROFILE;
-    const cap = native ? 'max_tokens' : 'max_completion_tokens';
-    if (policy.schema === 2) {
+    const opencodeRouter = policy.schema === 2 && policy.profile === OPENCODE_ROUTER_PROFILE;
+    const edits = native || opencodeRouter;
+    const cap = edits ? 'max_tokens' : 'max_completion_tokens';
+    if (policy.schema === 2 && !opencodeRouter) {
       object(value);
       if (Object.hasOwn(value, 'tool_choice')) throw new Denial('unsupported_request', 400);
     }
@@ -22,9 +24,9 @@ export function validateRequest(value: unknown, policy: Policy): string {
     const seen = new Set<string>();
     for (const message of value.messages) {
       object(message);
-      if (policy.schema === 2 && message.role === 'assistant' && (pending.size || message.content !== null && (typeof message.content !== 'string' || !message.content.trim()) || message.content === null && !message.tool_calls)) throw new Error();
+      if (policy.schema === 2 && message.role === 'assistant' && (pending.size || message.content !== null && (typeof message.content !== 'string' || !message.content.trim() && !(opencodeRouter && message.content === '' && message.tool_calls)) || message.content === null && !message.tool_calls)) throw new Error();
       if (policy.schema === 2 && ['system', 'user'].includes(message.role)) {
-        if (typeof message.content !== 'string' || !message.content.trim()) throw new Error();
+        if (typeof message.content !== 'string' || !message.content.trim() && !(opencodeRouter && message.content === '' && message.tool_calls)) throw new Error();
         if (message.role === 'system') { if (systemSeen || message !== value.messages[0] || value.messages.length < 2) throw new Error(); systemSeen = true; }
       }
       if (message.role === 'assistant') {
@@ -48,9 +50,10 @@ export function validateRequest(value: unknown, policy: Policy): string {
       }
     }
     if (pending.size) throw new Error();
-    if (value.tools !== undefined && canonical(value.tools) !== canonical(native ? OPENCODE_TOOLS : [TOOL])) throw new Error();
+    if (value.tools !== undefined && canonical(value.tools) !== canonical(edits ? openCodeTools() : [TOOL])) throw new Error();
+    if (opencodeRouter && (value.tool_choice !== 'auto' || !value.tools)) throw new Error();
     if (value.tool_choice !== undefined && (!value.tools || !['auto', 'required', 'none'].includes(value.tool_choice))) throw new Error();
-    if (policy.schema === 2) { const { max_completion_tokens, ...rest } = value; return JSON.stringify({ ...rest, max_tokens: max_completion_tokens }); }
+    if (policy.schema === 2 && !opencodeRouter) { const { max_completion_tokens, ...rest } = value; return JSON.stringify({ ...rest, max_tokens: max_completion_tokens }); }
     return JSON.stringify(value);
   } catch (error) {
     if (error instanceof Denial) throw error;
@@ -77,7 +80,7 @@ export class ChatStream {
   private usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | undefined;
   constructor(requestId: string, model: string, toolsAllowed: boolean, mode: ProtocolProfile | 'done' | 'router-done' | 'receipt-gated-eof' = 'done', profile: ProtocolProfile = 'chat-text-tools-v1') {
     this.terminalProfile = mode === 'router-done' || mode === 'receipt-gated-eof' ? mode : 'done';
-    this.profile = mode === OPENCODE_PROFILE ? mode : profile;
+    this.profile = mode === OPENCODE_PROFILE || mode === OPENCODE_ROUTER_PROFILE ? mode : profile;
     this.requestId = requestId; this.model = model; this.toolsAllowed = toolsAllowed;
   }
   private chunk(delta: unknown, finish_reason: string | null = null) {

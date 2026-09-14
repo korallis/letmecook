@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { OPENCODE_PROFILE, type ProtocolProfile } from './profiles.ts';
+import { OPENCODE_PROFILE, type ProtocolProfile } from './profile-ids.ts';
 import { canonical, keys } from './json.ts';
 import { validateRouterPolicy, type RouterPolicy } from './router-policy.ts';
 

@@ -6,6 +6,64 @@ attempt-scoped boundary and a **synthetic** router authority. It cannot launch a
 live route, accept arbitrary repositories, resume sessions or publish changes.
 See [the evidence and remaining criteria](../../docs/evidence/first-harness.md).
 
+## Actual-router synthetic proof
+
+`router-run.ts` runs the pinned OpenCode binary through the shared schema-2
+`Boundary` / `RouterAuthority`, actual pinned overlaid 9Router modules and SQLite,
+and synthetic original HTTP. It uses the new
+`router-opencode-1.18.30-chat-edit-synthetic-v1` profile; both the earlier fixture
+and accepted common/native router profiles remain separately enforced.
+
+```sh
+GAFFER_BRIDGE_DOCKER_CONTEXT=desktop-linux \
+GAFFER_BRIDGE_ROUTER_SOURCE=/absolute/public/router-at-17c4cc76877bd1755030a8414f8d0083f48dcccf \
+GAFFER_BRIDGE_IMAGE=gaffer-router-extension-deps:0.5.75-locked \
+GAFFER_HARNESS_BINARY=/absolute/path/to/pinned/opencode \
+node experiments/harness/router-run.ts /absolute/path/to/new-evidence.json
+```
+
+The launcher verifies the locked gateway image ID, binary hash and selected
+engine/kernel/architecture. `GAFFER_HARNESS_ROUTER_CASES=edit,receipt-stop`
+selects a diagnostic subset and reports only `selected-cases-passed`.
+Source digests and failed observations are retained before cleanup. Never
+replace the historical `first-harness-run.json` when running this new mode.
+
+The actual binary configuration is explicitly versioned as
+`opencode-1.18.30-usage-disabled-edit-v1`. Its configured
+`provider.scoped.options.includeUsage:false` omits `stream_options` at source;
+no admitted control is removed in transit. The exact captured `max_tokens:128`,
+`tool_choice:auto`, edit/write schemas and empty-string tool-only assistant
+continuation are preserved at both router hops. Other tool choice values,
+stream options, effort, strict schemas, temperature and altered tool schemas
+remain refused. Missing usage stays unknown, including when native step events
+report zero. The original Chat observer remains strict and rejects usage-only
+frames; this new profile does not request them.
+
+The approved route/model/profile now come from an immutable validated synthetic
+policy. The actual proof deliberately binds `harness_coding` /
+`gaffer-harness-edit`, proving that the predecessor's route labels are not
+hardcoded. Its full graph, identities and envelope remain authority-owned;
+worker-controlled request headers never select a provider/account or affect the
+private router hop.
+
+`m0-opencode512-router768-uds-v1` retains the accepted bridge's 768 MiB gateway
+and the separately measured 512 MiB OpenCode worker. Only `inference.sock` is
+shared. The worker receives its scoped grant and sanitized approved binding over
+stdin and mounts an explicit small client fixture plus the pinned binary.
+Router source, authority/control code, SQLite, journal, approved private state and
+synthetic credentials remain exclusively in the measured gateway. Worker mounts
+contain no trusted router or boundary server implementation.
+
+The trusted supervisor joins exact base/head, changed file/diff/artifact digest,
+native completed tool/final event, both boundary request IDs and their durable
+validated-success decisions. The boundary withholds executable tool and terminal
+frames until original receipts and the local decision are durably accepted. A
+candidate still is not independent acceptance, publication, or live admission.
+The failure matrix also runs approval, uncertainty, corruption, persistence,
+cancellation/crash/descendant, ambient discovery and containment cases. Native
+Responses failure handling remains a shared bridge regression, not a new OpenCode
+Responses codec; this compatible profile cannot select a native route.
+
 ## Run the offline checks
 
 ```sh
@@ -17,7 +75,7 @@ npm --prefix experiments/inference-boundary run check
 npm --prefix experiments/inference-boundary test
 ```
 
-## Run the pinned container proof
+## Run the historical fixture container proof
 
 Use the image and exact Docker engine/kernel/architecture from
 [the predecessor profile](../isolation/profile.json). Unsupported runtime versions
@@ -106,8 +164,9 @@ The first failed fresh-review replay is retained in the evidence directory.
 There is deliberately no live command or boolean that upgrades this synthetic
 profile. `probe(...).liveBlockers` provides the required missing evidence:
 
-1. An accepted live `FrozenAuthority` with exclusive gated policy writers and
-   trustworthy request/provider quiescence; see [#74](https://github.com/korallis/letmecook/issues/74).
+1. Deployed conformance of the accepted shared `RouterAuthority` with exclusive
+   gated policy writers and original-work receipts; accepted synthetic #77/#79
+   evidence does not prove the selected live deployment.
 2. A verified named route with exact model/settings and **every** fallback within
    the approved data/billing/tool/protocol/effort envelope. The #71 known-shape
    Astra → Terra → Opus `xhigh` preference is not a capability attestation; this

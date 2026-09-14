@@ -3,7 +3,7 @@ import { chmod } from 'node:fs/promises';
 import { createHash, randomBytes } from 'node:crypto';
 import { once } from 'node:events';
 import { parseJSON } from './json.ts';
-import { OPENCODE_PROFILE } from './profiles.ts';
+import { OPENCODE_PROFILE, OPENCODE_ROUTER_PROFILE } from './profile-ids.ts';
 import { ChatStream, validateRequest } from './protocol.ts';
 import { PolicyGate } from './policy.ts';
 import { hashDocument } from './router-policy.ts';
@@ -64,7 +64,7 @@ export class Boundary {
   }
   private authenticate(req: IncomingMessage): Scope {
     const allowed = ['host', 'authorization', 'content-type', 'content-length', 'connection', 'transfer-encoding', 'accept', 'user-agent'];
-    if (this.gate.snapshot().policy?.profile === OPENCODE_PROFILE) {
+    if ([OPENCODE_PROFILE, OPENCODE_ROUTER_PROFILE].includes(this.gate.snapshot().policy?.profile as any)) {
       allowed.push('x-session-affinity', 'x-session-id', 'accept-encoding');
       const session = req.headers['x-session-id'];
       if (session !== undefined && (typeof session !== 'string' || !/^ses_[a-zA-Z0-9]{1,64}$/.test(session))) throw new Denial('unsupported_request', 400);

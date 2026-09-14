@@ -14,6 +14,72 @@ The [reproduction instructions](../../experiments/harness/README.md),
 [preparatory probe summary](first-harness-preparatory.json) retain the boundaries
 between independent preparation, combined synthetic proof and unproved live use.
 
+## Actual pinned router integration
+
+The new [actual-router proof](first-harness-router-run.json) uses the accepted
+#77/#79 shared authority and durable receipt gates, real pinned router modules and
+SQLite, and synthetic original HTTP. It is a separate proof from the historical
+active-set fixture below. The mandatory authorized live task, deployed conformance,
+exact selected live tuple/fallback envelope and live egress evidence remain unmet;
+issue #6 and PR #75 must stay incomplete/draft.
+
+The [usage-disabled binary capture](opencode-usage-disabled-capture.json) was run
+before choosing the compatible extension. Both real OpenCode requests omitted
+`stream_options` with explicit `includeUsage:false`; both preserved
+`max_tokens:128`, `tool_choice:auto` and exact edit/write schemas. The second
+preserved assistant `content:""` plus the correlated tool call/result. The new
+router profile admits only those deliberate differences from the existing common
+profile. Original Chat observation still rejects usage-only frames, and usage is
+unknown. Historical usage-enabled evidence remains unchanged.
+
+The new `m0-opencode512-router768-uds-v1` profile checks the effective 768 MiB
+locked gateway and 512 MiB pinned OpenCode worker, separate network/PID namespaces,
+network none, nonroot/no capabilities/no-new-privileges/seccomp, read-only mounts,
+bounded CPU/PIDs/tmpfs/logs and complete owned-resource cleanup. Only the boundary
+socket is shared; the scoped grant arrives on worker stdin. Router source,
+control/SQLite/journal/credentials are inaccessible to the worker.
+
+Successful edit and write runs preserve base/head
+`e0c05a1793f5d3719e608bef690e28531a38c33c`, change only `greeting.txt`, retain the
+exact diff and artifact digest, and join native completed tool/final stop events
+with both request IDs and durably persisted `validated_success` decisions before
+tool/terminal release. The approved route is `harness_coding`, model name
+`gaffer-harness-edit`, through the compatible synthetic provider graph. The
+request cap, choice, tools and message history are checked for preservation at
+each actual hop; model substitution is the approved router combo resolution.
+
+The proof covers original EOF and receipt-visibility delays, approval rejection,
+unknown/mismatched receipts, actual journal temporary-file obstruction and
+post-rename directory-sync failure, cancellation during receipt wait and after
+persistence, authority changes, router authentication failure, partial/forbidden
+tools, router errors, process cancellation/crash/descendant teardown, OOM,
+ambient canaries and worker containment. Every failed worker observation is
+saved before assertions and cleanup. Source identities and [failed development
+observations](first-harness-router-development.json) are retained separately from
+the final successful matrix.
+
+The final source-matched matrix passed **24/24** cases, including **17** actual
+router ingress refusals before original dispatch. The
+[regression replay](first-harness-router-regressions.json) retains the old
+13-case harness proof, 34-case shared bridge proof and 40-case original router
+suite, all with verified cleanup. Portable checks passed: boundary **54/54**,
+harness **13/13**, bridge lifecycle **4/4**, original observers **50/50**, isolation
+**14/14**, all relevant type/syntax checks, docs build/check and whitespace checks.
+The final harness record's 71 source digests and bridge record's 52 source digests
+were compared with the working files. The new envelope's overlay identity covers
+all four overlay modules, loader and patches. No historical run file was replaced.
+
+No native-output-bound waiver, paid substitute, live provider, real account,
+private repository or core application is used. OpenCode JSONL is native harness
+output, not a Responses request/continuation implementation. Existing native
+terminal/fallback/refresh failures are rechecked through the shared bridge.
+
+## Historical fixture evidence
+
+The following sections and linked original run describe the earlier 128 MiB
+synthetic gateway with its separate 512 MiB worker. They remain part of the record
+and are not relabelled as actual-router execution.
+
 ## Selected candidate and topology
 
 Observed 14 September 2026 at 13:56 UTC: OpenCode **1.18.30**, binary SHA-256
