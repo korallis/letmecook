@@ -4,11 +4,12 @@ import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { mkdir, readFile, writeFile, readdir, open, rename, mkdtemp, rm } from 'node:fs/promises';
+import { readFileSync as readFileLocal } from 'node:fs';
 import { dirname, resolve, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { createHash, randomBytes } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
-import { commonArgs, LABEL } from '../../router-boundary-bridge/isolation.ts';
+import { commonArgs, inspectProfile, LABEL } from '../../router-boundary-bridge/isolation.ts';
 import { inputProcess } from '../../router-boundary-bridge/lifecycle.ts';
 import { assertRuntime } from '../../isolation/profile.ts';
 import { profile } from '../../native-evaluation/fixtures.mjs';
@@ -20,6 +21,7 @@ import { workerArgs, inspectWorker } from './isolation.ts';
 import { createFixture } from './fixture.ts';
 import { BRIEF, CONTENT } from './run.ts';
 import type { Binding } from '../../inference-boundary/types.ts';
+const digestBytes = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 const execute = promisify(execFile), root = resolve(import.meta.dirname, '../../..'), context = process.env.GAFFER_DOCKER_CONTEXT ?? 'desktop-linux';
 const source = process.env.GAFFER_ROUTER_SOURCE, binary = process.env.GAFFER_OPENCODE_BINARY;
 assert(source?.startsWith('/') && binary?.startsWith('/'), 'absolute public router and pinned binary paths required');
@@ -33,6 +35,11 @@ const secrets: string[] = [], report: any = { schema: 1, run, evidence: 'actual-
 const redact = (text: string) => { for (const [value, replacement] of [[root, '<gaffer-source>'], [source!, '<public-router-source>'], [binary!, '<pinned-opencode>'], [staging, '<synthetic-staging>'], ...secrets.map(x => [x, '<scoped-grant>'])]) text = text.replaceAll(value, replacement); return text; };
 async function save() { await mkdir(dirname(output), { recursive: true }); const fd = await open(output + '.next', 'w', 0o600); try { await fd.writeFile(redact(JSON.stringify(report, null, 2)) + '\n'); await fd.sync(); } finally { await fd.close(); } await rename(output + '.next', output); const dir = await open(dirname(output), 'r'); try { await dir.sync(); } finally { await dir.close(); } }
 async function docker(args: string[], timeout = 15000) { report.commands ??= []; report.commands.push(args); const value = await execute('docker', ['--context', context, ...args], { timeout, maxBuffer: 8 * 1048576 }); return (value.stdout + (args[0] === 'logs' ? value.stderr : '')).trim(); }
+async function staleGrant(socketVolume: string, token: string) {
+  const name = run + '-stale-' + randomBytes(4).toString('hex'); containers.add(name);
+  const args = commonArgs(name, run, false); args.push('--interactive', '--mount', `type=volume,source=${socketVolume},target=/router,readonly,volume-nocopy`, image, 'node', '-e', "let token='';process.stdin.on('data',c=>token+=c);process.stdin.on('end',()=>{const q=require('node:http').request({socketPath:'/router/inference.sock',path:'/v1/responses',method:'POST',headers:{host:'localhost',authorization:'Bearer '+token,'content-type':'application/json','content-length':2}},r=>{r.resume();r.on('end',()=>console.log(r.statusCode))});q.setTimeout(2000,()=>q.destroy());q.on('error',()=>process.exit(1));q.end('{}')})");
+  await docker(args); const status = Number(await inputProcess('docker', ['--context', context, 'start', '--attach', '--interactive', name], token, stop.signal, 5000)); await owned(name); await docker(['rm', name]); containers.delete(name); return status;
+}
 const inspect = async (id: string) => JSON.parse(await docker(['inspect', id]))[0];
 async function owned(id: string) { const s = await inspect(id); assert.equal(s.Config.Labels[LABEL], run); return s; }
 async function event(id: string, name: string, limit = 40000) { const until = Date.now() + limit; while (Date.now() < until) { stop.signal.throwIfAborted(); const text = await docker(['logs', id]); const found = text.split('\n').flatMap(line => { try { return [JSON.parse(line)]; } catch { return []; } }).find(x => x.event === name); if (found) return found; if (!(await owned(id)).State.Running) throw Error('exited_before_' + name + ':' + text); await delay(50); } throw Error('event_timeout:' + name); }
@@ -71,17 +78,17 @@ try {
     const caseVolumes = ['state', 'socket', 'control'].map(x => run + '-' + scenario + '-' + x);
     for (const volume of caseVolumes) { volumes.add(volume); await docker(['volume', 'create', '--label', LABEL + '=' + run, volume]); await docker(['run', '--rm', '--label', LABEL + '=' + run, '--network', 'none', '--user', '0:0', '--cap-drop', 'ALL', '--cap-add', 'CHOWN', '--security-opt', 'no-new-privileges=true', '--read-only', '--mount', `type=volume,source=${volume},target=/volume,volume-nocopy`, image, 'chown', '1000:1000', '/volume']); }
     const [stateVolume, socketVolume, controlVolume] = caseVolumes, gateway = run + '-' + scenario + '-gateway'; containers.add(gateway);
-    const args = commonArgs(gateway, run, true);
-    for (const [destination, path] of [['/gaffer', root], ['/probe', join(root, 'experiments/router-authority-extension')], ['/router-source', source!], ['/config', inputs], ['/private', inputs]]) args.push('--mount', `type=bind,source=${path},target=${destination},readonly`);
+    const args = commonArgs(gateway, run, true), gatewayBinds = { '/gaffer': root, '/probe': join(root, 'experiments/router-authority-extension'), '/router-source': source!, '/config': inputs, '/private': inputs };
+    for (const [destination, path] of Object.entries(gatewayBinds)) args.push('--mount', `type=bind,source=${path},target=${destination},readonly`);
     for (const [destination, volume] of [['/state', stateVolume], ['/router', socketVolume], ['/control', controlVolume]]) args.push('--mount', `type=volume,source=${volume},target=${destination},volume-nocopy`);
     args.push('--env', 'DATA_DIR=/state/router-db', '--env', 'GAFFER_SYNTHETIC_NATIVE=1', '--env', 'GAFFER_TEST_FAULT=' + scenario, '--env', 'GAFFER_HARNESS_NATIVE_FAULT=' + scenario, image, 'node', '--experimental-loader', '/gaffer/experiments/harness/native/fault-loader.mjs', '/gaffer/experiments/native-evaluation/bootstrap.mjs'); await docker(args);
-    current.gatewayInspect = await owned(gateway); const h = current.gatewayInspect.HostConfig; assert.equal(current.gatewayInspect.Image, report.runtime.image); assert.equal(h.Memory, 768 * 1048576); assert.equal(h.MemorySwap, h.Memory); assert.equal(h.NetworkMode, 'none'); assert.equal(h.Privileged, false); assert.deepEqual(h.CapDrop, ['ALL']); assert.deepEqual(h.SecurityOpt, ['no-new-privileges=true']); assert.equal(h.ReadonlyRootfs, true); assert.equal(current.gatewayInspect.Mounts.length, 8); assert(current.gatewayInspect.Mounts.filter((m: any) => m.Type === 'bind').every((m: any) => !m.RW));
+    current.gatewayInspect = await owned(gateway); current.gatewayMeasured = inspectProfile({ ...current.gatewayInspect, Mounts: current.gatewayInspect.Mounts.filter((m: any) => !['/state', '/control'].includes(m.Destination)) }, image, run, true, socketVolume, gatewayBinds); for (const [destination, volume] of [['/state', stateVolume], ['/control', controlVolume]]) assert(current.gatewayInspect.Mounts.some((m: any) => m.Type === 'volume' && m.Destination === destination && m.Name === volume && m.RW)); const h = current.gatewayInspect.HostConfig; assert.equal(current.gatewayInspect.Image, report.runtime.image); assert.equal(h.Memory, 768 * 1048576); assert.equal(h.MemorySwap, h.Memory); assert.equal(h.NetworkMode, 'none'); assert.equal(h.Privileged, false); assert.deepEqual(h.CapDrop, ['ALL']); assert.deepEqual(h.SecurityOpt, ['no-new-privileges=true']); assert.equal(h.ReadonlyRootfs, true); assert.equal(current.gatewayInspect.Mounts.length, 8); assert(current.gatewayInspect.Mounts.filter((m: any) => m.Type === 'bind').every((m: any) => !m.RW));
     await docker(['start', gateway]); await event(gateway, 'gateway_ready', 10000);
     const prepared = await call(controlVolume, { command: 'inspect' }); current.packet = prepared.packet; current.packetDigest = prepared.packetDigest; assert.equal(prepared.current.scope, null);
     current.scopeStarted = await call(controlVolume, { command: 'start', packetDigest: prepared.packetDigest });
     let policy = prepared.selectedPolicy;
     for (const [index, mode] of (scenario === 'registry' ? ['edit', 'ask'] : [scenario]).entries()) {
-      if (mode === 'ask') { const selected = prepared.packet.profiles.find((p: any) => p.harness.settings === settingsDigest('ask')); const before = await call(controlVolume, { command: 'inspect' }); const response = await call(controlVolume, { command: 'select', packetDigest: prepared.packetDigest, profileDigest: digest(selected) }); policy = response.policy; assert.equal(response.scope.spent, before.current.scope.spent); assert.equal(response.scope.deadline, before.current.scope.deadline); current.selection = response; }
+      if (mode === 'ask') { const selected = prepared.packet.profiles.find((p: any) => p.harness.settings === settingsDigest('ask')); const before = await call(controlVolume, { command: 'inspect' }); const response = await call(controlVolume, { command: 'select', packetDigest: prepared.packetDigest, profileDigest: digest(selected) }); policy = response.policy; assert.equal(response.scope.spent, before.current.scope.spent); assert.equal(response.scope.deadline, before.current.scope.deadline); current.selection = response; if (current.workers.length) { current.staleGrantStatus = await staleGrant(socketVolume, secrets.at(-1)!); assert.equal(current.staleGrantStatus, 401); const old = await control(controlVolume, { command: 'grant', binding: current.workers.at(-1).binding }); assert.equal(old.status, 403); current.staleBindingGrantStatus = old.status; } }
       const binding: Binding = { attemptId: 'worker_attempt_' + index, grantId: 'worker_grant_' + index, taskId: 'worker_task_' + index, leaseId: 'worker_lease_' + index, fence: 1, role: 'worker', routerId: policy.routerId, routeId: policy.routeId, revision: policy.revision, epoch: policy.epoch, expiresAt: Date.now() + 45000, leaseExpiresAt: Date.now() + 45000, native: { profileDigest: digest(policy.native), scopeId: policy.native.scope.id, authorizationDigest: policy.native.scope.authorizationDigest } };
       const grant = await call(controlVolume, { command: 'grant', binding }); secrets.push(grant.token);
       const request = prepareRun(policy, binding, { baseSHA, brief: BRIEF, approval: mode === 'ask' ? 'ask' : 'allow', limits: { wallMs: 30000, outputBytes: 262144 }, token: grant.token });
@@ -90,7 +97,7 @@ try {
       const child = spawn('docker', ['--context', context, 'start', '--attach', '--interactive', worker], { stdio: ['pipe', 'pipe', 'pipe'] }); let stdout = '', stderr = ''; child.stdout.on('data', b => stdout += b); child.stderr.on('data', b => stderr += b); child.stdin.on('error', () => {}); child.stdin.end(JSON.stringify(request)); const exited = new Promise(resolve => child.once('exit', (code, signal) => resolve({ code, signal })));
       const watchdog = setTimeout(() => { void stopWorker(worker, true).finally(() => child.kill('SIGKILL')).catch(() => {}); }, 42000);
       try {
-        if (mode === 'oom') { await docker(['wait', worker], 15000); entry.state = (await owned(worker)).State; assert.equal(entry.state.OOMKilled, true); assert.equal(entry.state.ExitCode, 137); entry.outcome = 'oom_observed'; }
+        if (mode === 'oom') { entry.observation = await event(worker, 'native_worker_observation', 15000); assert(entry.observation.oom.after.oom_kill > entry.observation.oom.before.oom_kill); assert.equal(entry.observation.oom.exit.signal, 'SIGKILL'); entry.state = await stopWorker(worker); entry.outcome = 'cgroup_oom_observed'; }
         else {
           entry.observation = await event(worker, 'native_worker_observation'); await save();
           const artifact = JSON.parse(await docker(['exec', worker, 'node', '/fixture/experiments/harness/native/inspect-artifact.ts', baseSHA])); entry.observedArtifact = artifact;
@@ -106,7 +113,7 @@ try {
           else if (['ambient', 'auth'].includes(mode)) { assert.equal(entry.observation.admission, 'refused'); assert.equal(entry.evidence.decisions.length + entry.evidence.reservations.length, 0); entry.outcome = 'ambient_admission_refused'; }
           else if (mode === 'transport') { assert(entry.observation.transport.length >= 10); assert.equal(entry.evidence.decisions.length + entry.evidence.reservations.length, 0); entry.outcome = 'transport_refused'; }
           else if (mode === 'containment') { assert(entry.observation.containment); entry.outcome = 'containment_observed'; }
-          else if (mode === 'disabled-hook') { assert(entry.observation.requests.length > 0); assert(entry.observation.requests.every((r: any) => r.body.max_output_tokens === 128)); assert.equal(artifact.content, 'hello\n'); entry.outcome = 'cap_request_refused'; }
+          else if (mode === 'disabled-hook') { assert.equal(entry.observation.requests.length, 0); assert(entry.observation.rejected.length > 0); assert(entry.observation.rejected.every((r: any) => r.body.max_output_tokens === 128)); assert.equal(artifact.content, 'hello\n'); entry.outcome = 'cap_request_refused'; }
           else { assert.notEqual(entry.observation.result.outcome, 'completed_candidate'); assert.equal(artifact.content, 'hello\n'); assert(!entry.observation.result.events.some((e: any) => e.type === 'tool_use' && e.native.part.state.status === 'completed')); entry.outcome = entry.observation.result.outcome; }
           if (mode === 'tree') entry.treeBeforeStop = await docker(['top', worker, '-eo', 'pid,ppid,comm']);
           entry.state = await stopWorker(worker, mode === 'tree'); assert.equal(entry.state.OOMKilled, false);
@@ -123,6 +130,7 @@ try {
     for (const id of [...containers]) { await owned(id); await docker(['rm', '--force', id]); containers.delete(id); }
     for (const volume of caseVolumes) { const v = JSON.parse(await docker(['volume', 'inspect', volume]))[0]; assert.equal(v.Labels[LABEL], run); await docker(['volume', 'rm', volume]); volumes.delete(volume); }
   }
+  report.sourcesVerifiedAfterRun = Object.entries(report.sources).every(([path, expected]) => digestBytes(readFileLocal(join(root, path))) === expected); assert(report.sourcesVerifiedAfterRun);
   report.result = cases.length === all.length ? 'passed' : 'selected-cases-passed';
 } catch (error: any) { report.result = 'failed'; report.error = String(error.stack ?? error); process.exitCode = 1; report.failureLogs = []; for (const id of containers) try { report.failureLogs.push({ id, state: (await owned(id)).State, logs: await docker(['logs', id]) }); } catch {} }
 finally {

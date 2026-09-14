@@ -15,7 +15,12 @@ const emit = (value: any) => new Promise<void>((resolve, reject) => process.stdo
 let handle: RunHandle | undefined, parked = false;
 process.on('SIGTERM', () => { if (parked) process.exit(0); else void handle?.cancel(); });
 process.on('SIGINT', () => { if (parked) process.exit(0); else void handle?.cancel(); });
-if (mode === 'oom') { const buffers: Buffer[] = []; setInterval(() => buffers.push(Buffer.alloc(16 * 1048576, 97)), 20); }
+if (mode === 'oom') {
+  const counters = () => Object.fromEntries(readFileSync('/sys/fs/cgroup/memory.events', 'utf8').trim().split('\n').map(line => { const [key, value] = line.split(' '); return [key, Number(value)]; }));
+  const before = counters(), child = spawn('node', ['-e', 'const buffers=[];setInterval(()=>buffers.push(Buffer.alloc(16*1048576,97)),20)'], { env: environment(), stdio: 'ignore' });
+  const exit = await new Promise(resolve => child.once('exit', (code, signal) => resolve({ code, signal })));
+  const after = counters(); assert(after.oom_kill > before.oom_kill); await emit({ event: 'native_worker_observation', oom: { before, after, exit } }); parked = true;
+}
 else if (mode === 'containment') {
   const result = await containment(true, 768); await emit({ event: 'native_worker_observation', containment: result }); parked = true;
 } else if (mode === 'transport') {
@@ -64,7 +69,7 @@ else if (mode === 'containment') {
     const child = spawn('/fixture/opencode', ['run', '--format', 'json', '--model', 'openai/gpt-6-astra', '--title', 'Disabled-hook negative', request.brief], { cwd: '/work/repo', env: { ...environment(), OPENCODE_DISABLE_DEFAULT_PLUGINS: 'true' }, stdio: ['ignore', 'pipe', 'pipe'] });
     let output = '', stderr = ''; child.stdout.on('data', b => output += b); child.stderr.on('data', b => stderr += b);
     const timer = setTimeout(() => child.kill('SIGKILL'), 30000); const exit = await new Promise(r => child.once('close', (code, signal) => r({ code, signal }))); clearTimeout(timer);
-    await emit({ event: 'native_worker_observation', disabledHook: true, exit, output, stderr, requests: transport.observations });
+    await emit({ event: 'native_worker_observation', disabledHook: true, exit, output, stderr, requests: transport.observations, rejected: transport.rejected });
   } else {
     handle = start(request); const result = await handle.done;
     await emit({ event: 'native_worker_observation', result, requests: transport.observations, childEnvironment: environment(), processes: execFileSync('ps', ['-eo', 'pid,ppid,comm'], { encoding: 'utf8' }) });

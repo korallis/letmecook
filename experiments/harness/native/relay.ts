@@ -11,7 +11,7 @@ export function validateHeaders(rawHeaders: string[], body: any, token: string, 
   const { authorization, ...observed } = headers; return observed;
 }
 export async function relay(token: string, maxBytes: number, onRequest?: (observation: RequestObservation) => void) {
-  const observations: RequestObservation[] = [];
+  const observations: RequestObservation[] = [], rejected: { rawBody: string; body: unknown; reason: string }[] = [];
   let pending = false;
   const server = createServer(async (req: IncomingMessage, res) => {
     let ownsRequest = false;
@@ -22,7 +22,8 @@ export async function relay(token: string, maxBytes: number, onRequest?: (observ
       const chunks: Buffer[] = []; let size = 0;
       for await (const chunk of req) { size += chunk.length; if (size > maxBytes) throw Error('client_request_limit'); chunks.push(chunk); }
       const rawBody = new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks)), body = parseJSON(rawBody);
-      const headers = validateHeaders(req.rawHeaders, body, token, rawBody);
+      let headers: Record<string, string>;
+      try { headers = validateHeaders(req.rawHeaders, body, token, rawBody); } catch (error) { if (rejected.length < 32) rejected.push({ rawBody, body, reason: String(error) }); throw error; }
       const observation: RequestObservation = { path: req.url, headers, body, rawBody, startedAt: Date.now(), requestId: null, status: null }; observations.push(observation);
       const upstream = request({ socketPath: '/router/inference.sock', path: req.url, method: 'POST', headers: { host: 'localhost', authorization: 'Bearer ' + token, 'content-type': 'application/json', 'content-length': Buffer.byteLength(rawBody) } });
       upstream.on('error', () => res.destroy()); res.on('close', () => upstream.destroy());
@@ -40,5 +41,5 @@ export async function relay(token: string, maxBytes: number, onRequest?: (observ
     }
   });
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(8765, '127.0.0.1', resolve); });
-  return { observations, async close() { server.closeAllConnections(); await new Promise<void>((resolve, reject) => server.close(e => e ? reject(e) : resolve())); } };
+  return { observations, rejected, async close() { server.closeAllConnections(); await new Promise<void>((resolve, reject) => server.close(e => e ? reject(e) : resolve())); } };
 }

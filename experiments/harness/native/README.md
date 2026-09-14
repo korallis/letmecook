@@ -1,9 +1,9 @@
 # Native OpenCode adapter preparation
 
 This separately named `opencode-native-m0-v1` adapter prepares issue #6 for the
-shared `router-native-responses-local-v1` policy from issue #83. It remains an
-offline preparation in draft PR #75. Its dependency is not merged into this
-branch yet. The compatible Chat adapter, its 128-token requests, edit/write
+shared `router-native-responses-local-v1` policy from issue #83. It is integrated locally with the frozen shared runtime and remains an
+offline experiment in draft PR #75. Dependency acceptance and publication are
+coordinated separately. The compatible Chat adapter, its 128-token requests, edit/write
 tools, 512 MiB worker and historical evidence remain unchanged.
 
 The public native task is fixed: a disposable Git repository containing
@@ -57,34 +57,61 @@ The supervisor must obtain `observedArtifact`, the complete attempt decisions an
 receipts, pending reservations and decision times from its trusted artifact read
 and shared gateway records. Pending reservations block qualification. Feeding the
 worker's own report back as independent evidence does not satisfy that contract.
-Failed or missing observations must be retained before cleanup. The gateway's
-control protocol is deliberately not copied here; the prepared multi-consumer
-registry/start/grant/stop handshake must use the accepted issue #83 version.
+Failed or missing observations must be retained before cleanup. The multi-consumer registry/start/grant/stop handshake uses the shared issue #83
+implementation; the adapter does not maintain a separate protocol or counter.
 
-## Checks and remaining execution
+## Actual synthetic integration
 
-After the shared dependency is present:
+`router-run.ts` stages only the enumerated client files into a 768 MiB worker,
+starts a separately measured 768 MiB shared gateway, and uses its private
+inspect/start/select/grant/evidence/candidate/stop controls. Its profiles and
+credentials are synthetic. The pinned real OpenCode binary sends through the
+worker relay, actual boundary, patched public 9Router and durable SQLite original
+receipts. A separately invoked, read-only artifact inspector observes the parked
+worker's tmpfs after the binary exits. No worker mount exposes private controls.
+
+The gateway evidence query returns the complete attempt's original receipts,
+durable decisions, pending reservations, decision times, selected policy and
+scope. The closed candidate envelope binds packet, scope, policy, grant, ordered
+requests, receipts, decisions and independently observed artifact. The private
+candidate control validates those links again and uses shared `persistImmutable`
+to retain the entire envelope as `candidate-<digest>.json`. Retries verify and
+sync that record; they cannot overwrite it. After gateway shutdown the supervisor
+reads the actual immutable file and verifies its identity/content before cleanup.
+Planner proposal validation is supplied by the separately reviewed planner codec
+and cannot grant repository-write authority.
+
+The synthetic failure matrix covers edit/final, delayed original EOF, CLI ask
+rejection, same-scope profile selection with old-token/old-binding refusal,
+cancellation, binary crash, detached/TERM-ignoring descendants, receipt and
+boundary journal failures, immutable candidate write failure, incomplete/forbidden
+output, router retries, disabled builtin hooks, ambient plugins/auth/Git hooks,
+network/filesystem/process containment, native transport bypass and cgroup OOM.
+Every retry is an actual counted original attempt. Failures are saved before
+cleanup, including a failed gateway stop: read-only retention saves the journal
+and immutable records when the final result file is absent, and records unknown
+quiescence. An OOM child is measured through kernel cgroup memory.events and
+SIGKILL; Docker's top-level OOMKilled flag alone is not the evidence.
 
 ```sh
 npm --prefix experiments/harness run check:native
 npm --prefix experiments/harness run test:native
+GAFFER_ROUTER_SOURCE=/absolute/pinned/public/router \
+GAFFER_OPENCODE_BINARY=/absolute/pinned/opencode \
+npm --prefix experiments/harness run prove:native -- /tmp/native-harness.json
 ```
 
-The preparation was checked in an archive of exact shared commit
-`70bacc54cce839e5d0b6e168dceee10977a4eecb` with these adapter files overlaid.
-The native fixture retains a real pinned-binary/shared-router synthetic capture
-whose 75 recorded source digests match that commit. Its clocks/base/diff additions
-inside the tests are explicitly constructed fixtures. They are not a new adapter
-runtime or live result. Existing native source tests pass only in that combined
-snapshot until #83 is integrated; ordinary Chat checks still run on this branch.
+This launcher is synthetic-only. Its fault loader is test staging, never a
+deployment launcher or a way to alter a reviewed production response. It checks
+all recorded source hashes again after execution. It is intentionally a fixed
+public toy task, not a production supervisor for arbitrary repositories.
 
-Required next work is actual new-adapter/shared-gateway integration, fresh
-independent review and final CI, including native ask, cancellation/descendants,
-crash, receipt/persistence failures, ambient builtin/plugin/auth discovery and
-ingress/egress negatives. The prior direct-loopback 512 MiB capture and its
-OOM-killed concurrent control are historical; 512 MiB is not the accepted
-integrated native memory profile. The completed disabled-hook shared control
-observed cap 128 and zero original sends.
+The retained `captured.json` is earlier proof from shared commit `70bacc54…`,
+with all 75 source identities checked. Constructed clocks/base/diff additions in
+unit tests remain labelled fixtures. Historical evidence is not reclassified as
+new adapter execution. See [the integration record](../../../docs/evidence/first-harness-native-integration.md)
+for actual current runs and [the builtin audit](../../../docs/evidence/first-harness-native-builtins.md)
+for source observations and their limits.
 
 Prepare and review every intended public consumer and the concrete deployment
 before starting the one initial scope: at most 10 physical inference attempts

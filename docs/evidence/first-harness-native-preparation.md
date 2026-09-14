@@ -1,5 +1,8 @@
 # First harness: native adapter preparation
 
+Historical preparation record. Later local execution is recorded separately in
+[first-harness-native-integration.md](first-harness-native-integration.md).
+
 Issue #6 / draft PR #75 remains incomplete. The native adapter is prepared
 against frozen issue #83 contract `70bacc54cce839e5d0b6e168dceee10977a4eecb`.
 That intermediate dependency was not merged into the PR branch for preparation.

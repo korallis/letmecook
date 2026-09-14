@@ -14,7 +14,7 @@ export function candidateArtifact(e: CandidateEvidence) {
   validateRunRequest(e.request);
   const p = validateRouterPolicy(e.policy); requireValue(p.schema === 3, 'native_policy_required');
   validateBinding(e.binding); assertNativeBinding(e.binding, e.policy);
-  requireValue(e.binding.role === 'worker' && e.binding.routerId === p.routerId && e.binding.routeId === p.routeId && e.binding.revision === p.revision && e.binding.epoch === p.epoch && e.request.bindingDigest === digest(e.binding) && e.result.bindingDigest === digest(e.binding) && e.request.settingsDigest === e.policy.native.harness.settings && e.result.settingsDigest === e.request.settingsDigest, 'candidate_binding_mismatch');
+  requireValue(e.binding.role === 'worker' && e.binding.routerId === p.routerId && e.binding.routeId === p.routeId && e.binding.revision === p.revision && e.binding.epoch === p.epoch && e.request.bindingDigest === digest(e.binding) && e.result.bindingDigest === digest(e.binding) && e.request.settingsDigest === e.policy.native.harness?.settings && e.result.settingsDigest === e.request.settingsDigest, 'candidate_binding_mismatch');
   const parsed = new NativeEvents(e.request.limits.outputBytes);
   for (const event of e.result.events) parsed.push(Buffer.from(event.raw + '\n')); parsed.end();
   requireValue(canonical(parsed.values) === canonical(e.result.events), 'native_event_record_mismatch');
