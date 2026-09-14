@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "read_only_deployment_inspection",
+  "observed_on": "2026-09-14",
+  "deployment_ref": "operator_selected_router",
+  "host_selection": "optional_operator_configuration",
+  "origin_reference": "operator_private_router_origin",
+  "public_host_address_omitted": true,
+  "package": {
+    "name": "9router",
+    "version": "0.5.75",
+    "tarball": "https://registry.npmjs.org/9router/-/9router-0.5.75.tgz",
+    "sha256": "f0913397dcffbca440056b28925ec58fb575f074813ae5e8032cbd23315b03d4",
+    "integrity": "sha512-dyFdRBvDZT48nFCr0Du48phnKMIDOuSE0Q0VSk8xTXyaSNpRUaJ0K8y2JELcRuTkY1tXwuuUqOm5i6ZNZLB48Q==",
+    "installed_regular_files_compared": 3253,
+    "changed_files": 0,
+    "missing_files": 0,
+    "next_build_id": "lT_m29PZoyMEswZrqhKVs"
+  },
+  "source": {
+    "repository": "https://github.com/decolua/9router",
+    "commit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+    "association": "npm_registry_gitHead",
+    "inspection": "focused_source_review",
+    "independent_source_rebuild": false
+  },
+  "historical_review": {
+    "repository": "https://github.com/rickicode/9router",
+    "commit": "69724d86d4486fa5d722e63ebb6c9700e71aebff",
+    "package_version": "0.3.98"
+  },
+  "runtime": {
+    "entrypoint": "packaged_next_cli",
+    "go_wrapper_environment_flags": "unset",
+    "exclusive_private_listener_binding": false,
+    "broader_firewall_reachability": "unassessed"
+  },
+  "configuration_observations": {
+    "active_connection_count": 12,
+    "provider_count": 7,
+    "named_combo_count": 0,
+    "router_key_count": 1,
+    "require_api_key_effective": true,
+    "require_login_effective": true,
+    "settings_evidence": "compiled_and_source_defaults_with_no_persisted_override",
+    "jwt_secret": "installation_generated_private_file",
+    "gaffer_route_selected": false
+  },
+  "unauthenticated_get_observations": [
+    {
+      "path": "/dashboard",
+      "status": 307,
+      "vantage": [
+        "host_loopback",
+        "operator_private_network"
+      ]
+    },
+    {
+      "path": "/api/settings",
+      "status": 401,
+      "vantage": [
+        "host_loopback"
+      ]
+    },
+    {
+      "path": "/api/providers",
+      "status": 401,
+      "vantage": [
+        "host_loopback",
+        "operator_private_network"
+      ]
+    },
+    {
+      "path": "/api/combos",
+      "status": 401,
+      "vantage": [
+        "host_loopback"
+      ]
+    },
+    {
+      "path": "/api/models/availability",
+      "status": 401,
+      "vantage": [
+        "host_loopback"
+      ]
+    },
+    {
+      "path": "/v1/models",
+      "status": 200,
+      "vantage": [
+        "host_loopback"
+      ]
+    }
+  ],
+  "runtime_conformance": {
+    "discovery_side_effects": "not_observed_catalog_refresh_possible",
+    "authenticated_inference": "not_run",
+    "invalid_or_disabled_inference_keys": "not_run",
+    "streaming_and_tools": "not_run",
+    "strict_schema": "not_run",
+    "cancellation": "not_run",
+    "worker_egress": "not_run",
+    "atomic_policy_fencing": "not_implemented",
+    "two_subscription_fallback": "not_run",
+    "scoped_status_credential_reference": null
+  },
+  "changes_performed": {
+    "deliberate_router_account_mutations": false,
+    "deliberate_router_configuration_mutations": false,
+    "export_import": false
+  },
+  "interpretation": "package_identity_reconciled_runtime_readiness_unknown"
+}

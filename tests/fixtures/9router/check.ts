@@ -9,14 +9,16 @@ import addFormats from 'ajv-formats';
 // implement the status adapter, forwarding boundary or stream state machine.
 const directory = dirname(fileURLToPath(import.meta.url));
 const readJSON = async (name: string) => JSON.parse(await readFile(join(directory, name), 'utf8'));
-const [schema, statuses, examples, failures] = await Promise.all([
+const [schema, statuses, examples, failures, profiles, deployment] = await Promise.all([
   readJSON('status.schema.json'), readJSON('status-cases.json'),
   readJSON('examples.json'), readJSON('failure-cases.json'),
+  readJSON('input-profiles.json'), readJSON('../../../docs/contracts/9router-deployment-2026-09-14.json'),
 ]);
 const ajv = new Ajv({ allErrors: true, strict: true, strictRequired: false, allowUnionTypes: true });
 addFormats(ajv);
 const validate = ajv.compile(schema);
 const ids = new Set<string>();
+const profileIds = new Set(profiles.profiles.map((profile: any) => profile.id));
 let mutationCount = 0;
 
 function rejectMutation(original: unknown, change: (value: any) => void, label: string) {
@@ -31,6 +33,7 @@ for (const fixture of statuses.cases) {
   assert(!ids.has(fixture.id), `duplicate fixture ${fixture.id}`);
   ids.add(fixture.id);
   const expected = fixture.expected;
+  assert(profileIds.has(fixture.context.adapter_profile), `${fixture.id}: missing input profile`);
   assert(validate(expected), `${fixture.id}: ${ajv.errorsText(validate.errors)}`);
   const encoded = JSON.stringify(expected);
   assert(!/SENTINEL|raw-connection|fixture-provider|@|providerSpecificData|apiKey|accessToken|refreshToken|reasonDetail/.test(encoded), `${fixture.id}: unsafe expected output`);
@@ -62,6 +65,17 @@ for (const fixture of statuses.cases) {
   rejectMutation(expected, value => { value.capabilities.raw = { key: 'UPSTREAM_SECRET_SENTINEL' }; }, `${fixture.id}: extra capability object`);
   rejectMutation(expected, value => { value.route.readiness = 'ready'; value.capabilities.state = 'unknown'; }, `${fixture.id}: ready without proof`);
 }
+
+const selectedProfile = profiles.profiles.find((profile: any) => profile.selected_deployment);
+assert.equal(deployment.evidence_kind, 'read_only_deployment_inspection');
+assert.equal(deployment.host_selection, 'optional_operator_configuration');
+assert.equal(deployment.package.version, selectedProfile.package_version);
+assert.equal(deployment.source.commit, selectedProfile.source_commit);
+assert.equal(deployment.package.integrity, selectedProfile.package_integrity);
+assert.equal(deployment.package.changed_files, 0);
+assert.equal(deployment.package.missing_files, 0);
+assert.equal(deployment.runtime_conformance.authenticated_inference, 'not_run');
+assert(!/matilda|100\.75\.|\/Users\/|\/home\/|\/data\//i.test(JSON.stringify(deployment)), 'public deployment record contains operator host/address/path');
 
 assert.equal(examples.evidence, 'synthetic');
 assert.equal(examples.deployment.deployed_commit, null);

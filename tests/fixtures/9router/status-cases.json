@@ -28,7 +28,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": null,
@@ -103,7 +104,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "models": {
@@ -192,7 +194,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -297,7 +300,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -433,7 +437,8 @@
           "result": "completed",
           "observed_at": "2026-09-14T10:00:00Z",
           "policy_revision": "policy_1"
-        }
+        },
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -542,7 +547,8 @@
           "result": "completed",
           "observed_at": "2026-09-14T09:59:00Z",
           "policy_revision": "policy_1"
-        }
+        },
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -647,7 +653,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -752,7 +759,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -857,7 +865,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -962,7 +971,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -1067,7 +1077,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -1172,7 +1183,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -1265,7 +1277,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -1345,7 +1358,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -1446,7 +1460,8 @@
         "deployment_accepted": false,
         "policy_epoch_active": false,
         "capability_record": null,
-        "probe": null
+        "probe": null,
+        "adapter_profile": "rickicode-0.3.98-69724d8"
       },
       "inputs": {
         "providers": {
@@ -1488,6 +1503,617 @@
             "source": "none",
             "observed_at": null,
             "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-active-is-unknown",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "testStatus": "active",
+              "lastErrorAt": null
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-ignores-historical-fields",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "testStatus": "active",
+              "lastErrorAt": null,
+              "routingStatus": "eligible",
+              "authState": "ok",
+              "quotaState": "ok",
+              "healthStatus": "healthy",
+              "lastCheckedAt": "2026-09-14T10:00:00Z",
+              "providerSpecificData": {
+                "apiKey": "UPSTREAM_SECRET_SENTINEL_DEPLOYED"
+              }
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-fresh-negative",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "testStatus": "unavailable",
+              "lastErrorAt": "2026-09-14T10:00:00Z",
+              "lastError": "UPSTREAM_SECRET_SENTINEL_ERROR"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "blocked",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:00Z",
+            "validity_until": "2026-09-14T10:00:30Z",
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-negative-without-time",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "testStatus": "error",
+              "lastErrorAt": null
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-disabled-configuration",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": false,
+              "testStatus": "active",
+              "lastErrorAt": null
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "no_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "disabled",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T10:00:10Z",
+            "validity_until": "2026-09-14T10:00:40Z",
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-unknown-enum",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "testStatus": "super_ready",
+              "lastErrorAt": null
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "malformed_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          },
+          {
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "none",
+            "observed_at": null,
+            "validity_until": null,
+            "retry_after": null
+          }
+        ],
+        "capabilities": {
+          "state": "unknown",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        }
+      }
+    },
+    {
+      "id": "deployed-stale-negative",
+      "evidence": "synthetic",
+      "context": {
+        "now": "2026-09-14T10:00:10Z",
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "router_model": "gaffer-coding",
+        "ttl_ms": 30000,
+        "connections": [
+          {
+            "upstream_connection_id": "raw-connection-a",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary"
+          },
+          {
+            "upstream_connection_id": "raw-connection-b",
+            "upstream_provider_id": "fixture-provider",
+            "connection_ref": "subscription_b",
+            "provider_ref": "provider_primary"
+          }
+        ],
+        "deployment_accepted": false,
+        "policy_epoch_active": false,
+        "capability_record": null,
+        "probe": null,
+        "adapter_profile": "decolua-0.5.75-17c4cc7",
+        "providers_retrieved_at": "2026-09-14T10:00:10Z"
+      },
+      "inputs": {
+        "providers": {
+          "connections": [
+            {
+              "id": "raw-connection-a",
+              "provider": "fixture-provider",
+              "isActive": true,
+              "testStatus": "unavailable",
+              "lastErrorAt": "2026-09-14T09:59:00Z"
+            }
+          ]
+        }
+      },
+      "expected": {
+        "schema_version": 1,
+        "router_id": "router_primary",
+        "route_id": "coding",
+        "policy_revision": "policy_1",
+        "projected_at": "2026-09-14T10:00:10Z",
+        "route": {
+          "state": "unknown",
+          "readiness": "unknown",
+          "reason": "stale_observation",
+          "source": "none",
+          "observed_at": null,
+          "validity_until": null
+        },
+        "connections": [
+          {
+            "connection_ref": "subscription_a",
+            "provider_ref": "provider_primary",
+            "state": "unknown",
+            "source": "router_snapshot",
+            "observed_at": "2026-09-14T09:59:00Z",
+            "validity_until": "2026-09-14T09:59:30Z",
             "retry_after": null
           },
           {

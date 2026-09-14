@@ -2,30 +2,302 @@
   "schema_version": 1,
   "evidence": "synthetic_specification",
   "cases": [
-    { "id": "no-attempt-token", "layer": "boundary", "input": "POST a permitted path without an attempt token", "expect": ["HTTP 401", "zero upstream requests"] },
-    { "id": "expired-revoked-or-fenced", "layer": "boundary", "input": "Repeat a valid request after token expiry, stop, revocation, lease expiry, fence replacement, and epoch change, separately", "expect": ["deny each request", "zero upstream requests after its denial linearization point", "cancel previously active request without claiming provider completion"] },
-    { "id": "route-override", "layer": "boundary", "input": "Use a valid coding token with model=paid-fallback or an account/provider override", "expect": ["deny", "zero upstream requests", "no account selection by Gaffer"] },
-    { "id": "path-and-header-bypass", "layer": "boundary", "input": "Try /api/v1/chat/completions, /v1/v1/responses, /codex/test, encoded slash/dot paths, duplicate model keys, query overrides, absolute URLs, CONNECT, forged Host and forwarding headers", "expect": ["deny each noncanonical request", "zero unauthorized upstream requests", "configured upstream origin remains fixed"] },
-    { "id": "request-bounds", "layer": "boundary", "input": "Exceed request bytes, output tokens, response bytes, concurrent count, total request count and each deadline independently; omit output limit; send an unbounded compressed body", "expect": ["reject before forwarding when preflight-detectable", "abort at streaming/deadline bound otherwise", "do not release unknown provider work as completed", "no boundary retry"] },
-    { "id": "router-key-required", "layer": "deployed_router", "input": "Call each selected inference protocol with absent, invalid and disabled router key through the trusted test boundary", "expect": ["each rejected as unauthenticated", "record deployed build and requireApiKey setting", "never expose router key to worker or evidence"] },
-    { "id": "router-preoutput-fallback", "layer": "deployed_router", "input": "Make subscription A fail before output; let the same-provider subscription B complete", "expect": ["one boundary request", "one Gaffer attempt", "9Router selects B", "no account credential enters Gaffer", "attribute fallback only with proven correlation"] },
-    { "id": "all-connections-terminal", "layer": "boundary", "input": "Router returns HTTP 429 or 503 and a valid Retry-After before output", "expect": ["failed_before_output", "sanitize reason", "park/backoff bounded by remaining task budget", "no automatic boundary retry"] },
-    { "id": "transport-unknown-before-output", "layer": "boundary", "input": "Upstream socket closes before response headers after request write", "expect": ["unknown provider outcome", "retain request correlation and reservation", "reconcile before retry", "do not assume no billing"] },
-    { "id": "chat-tool-complete", "layer": "protocol", "stream": "streams/chat-tool-complete.sse", "input": "Split every SSE byte boundary in turn, including inside JSON and UTF-8 in a separate non-ASCII test", "expect": ["one complete read_file call with call_fixture_1", "assemble path=fixture.txt", "dispatch only after complete arguments and trustworthy terminal", "execution still needs separate authority"] },
-    { "id": "chat-tool-partial", "layer": "protocol", "stream": "streams/chat-tool-partial.sse", "input": "End transport during arguments", "expect": ["partial_failure", "zero tool dispatches", "preserve bytes and action journal", "zero transparent replay"] },
-    { "id": "synthetic-done-is-not-success", "layer": "protocol", "stream": "streams/chat-synthetic-done.sse", "input": "Router flush appends DONE after incomplete tool arguments", "expect": ["partial_failure", "zero tool dispatches", "DONE alone does not prove provider completion"] },
-    { "id": "error-after-output", "layer": "protocol", "stream": "streams/chat-error-after-text.sse", "input": "Upstream emits an error after text", "expect": ["partial_failure", "preserve text", "do not expose raw error", "zero transparent replay"] },
-    { "id": "messages-tool-partial", "layer": "protocol", "stream": "streams/messages-partial.sse", "input": "End transport before content_block_stop and message_stop", "expect": ["partial_failure", "zero tool dispatches"] },
-    { "id": "responses-incomplete", "layer": "protocol", "stream": "streams/responses-incomplete.sse", "input": "Receive response.incomplete with max_output_tokens", "expect": ["partial_failure", "structured result not accepted", "no hidden retry"] },
-    { "id": "translated-false-terminal", "layer": "deployed_router", "input": "Truncate a provider stream before its real completion while using each selected translator; inspect whether translation synthesizes finish_reason/message_stop/response.completed", "expect": ["no successful conformance claim from synthetic terminal", "reject affected capability until upstream provenance or a tested fix distinguishes truncated completion", "record actual path/build"] },
-    { "id": "strict-schema-downgrade", "layer": "deployed_router", "input": "Request strict structured output on OpenAI-to-Claude translation that injects JSON instructions; force invalid output and refusal separately", "expect": ["strict-schema capability rejected for prompt-only translation", "validate every completed JSON result", "do not accept invalid/refused output as requested schema"] },
-    { "id": "acknowledged-tool-then-stream-loss", "layer": "harness", "input": "Persist a completed tool action/result, then fail its continuation stream", "expect": ["retain action identity/result", "reconcile continuation", "do not replay acknowledged external effect"] },
-    { "id": "cancel-three-phases", "layer": "deployed_router", "input": "Cancel before headers, midstream and during fallback independently", "expect": ["no new work after revocation", "record upstream cancellation/quiescence separately from local disconnect", "unknown quiescence retains drain reservation", "never claim a refund"] },
-    { "id": "atomic-drain-race", "layer": "policy", "input": "Interleave admission with a provider/model/billing-widening combo edit at every gate step while requests and fallback are active", "expect": ["writer and admission serialize on one fenced epoch gate", "no old-grant request can resolve widened graph", "drain waits for all old work", "new graph opens only with new epoch and grants"] },
-    { "id": "unknown-cancel-does-not-drain", "layer": "policy", "input": "Gateway closes client/socket; router continues hidden work; operator requests combo edit", "expect": ["cancelled_unknown reservation retained", "edit remains blocked", "client count zero does not prove router quiescence"] },
-    { "id": "crash-and-alternate-writer", "layer": "policy", "input": "Crash gate during drain/update, fail readback, or try dashboard/import/CLI/direct-storage/alias/provider-node writes outside gate", "expect": ["recover closed", "all alternate policy writes fenced or route rejected for guaranteed authority", "a detected out-of-band edit reports invariant breach", "fingerprint polling is not atomic proof"] },
-    { "id": "private-management", "layer": "containment", "input": "From worker try management GETs and writes, raw inference aliases, router origin, provider URLs, host loopback/services and alternate proxy routes; from status identity try POST availability and GET usage/connection", "expect": ["each unauthorized path denied", "no provider/router-management secret mounted", "status identity cannot mutate or actively refresh", "record OS/network evidence"] },
-    { "id": "router-unreachable", "layer": "boundary", "input": "Stop reachability to the configured router", "expect": ["park inference work with router_unreachable", "capture/review/stop still usable", "no direct provider bypass"] },
-    { "id": "status-projection-corpus", "layer": "status", "input": "Execute every status-cases.json pair against the adapter, including new nested fields, duplicate identities and stale timestamps", "expect": ["exact expected safe projection", "closed schema passes", "no sentinel, raw key, email, error text or unchecked identifier leaks", "zero POST or usage-refresh requests"] }
+    {
+      "id": "no-attempt-token",
+      "layer": "boundary",
+      "input": "POST a permitted path without an attempt token",
+      "expect": [
+        "HTTP 401",
+        "zero upstream requests"
+      ]
+    },
+    {
+      "id": "expired-revoked-or-fenced",
+      "layer": "boundary",
+      "input": "Repeat a valid request after token expiry, stop, revocation, lease expiry, fence replacement, and epoch change, separately",
+      "expect": [
+        "deny each request",
+        "zero upstream requests after its denial linearization point",
+        "cancel previously active request without claiming provider completion"
+      ]
+    },
+    {
+      "id": "route-override",
+      "layer": "boundary",
+      "input": "Use a valid coding token with model=paid-fallback or an account/provider override",
+      "expect": [
+        "deny",
+        "zero upstream requests",
+        "no account selection by Gaffer"
+      ]
+    },
+    {
+      "id": "path-and-header-bypass",
+      "layer": "boundary",
+      "input": "Try /api/v1/chat/completions, /v1/v1/responses, /codex/test, encoded slash/dot paths, duplicate model keys, query overrides, absolute URLs, CONNECT, forged Host and forwarding headers",
+      "expect": [
+        "deny each noncanonical request",
+        "zero unauthorized upstream requests",
+        "configured upstream origin remains fixed"
+      ]
+    },
+    {
+      "id": "request-bounds",
+      "layer": "boundary",
+      "input": "Exceed request bytes, output tokens, response bytes, concurrent count, total request count and each deadline independently; omit output limit; send an unbounded compressed body",
+      "expect": [
+        "reject before forwarding when preflight-detectable",
+        "abort at streaming/deadline bound otherwise",
+        "do not release unknown provider work as completed",
+        "no boundary retry"
+      ]
+    },
+    {
+      "id": "router-key-required",
+      "layer": "deployed_router",
+      "input": "Call each selected inference protocol with absent, invalid and disabled router key through the trusted test boundary",
+      "expect": [
+        "each rejected as unauthenticated",
+        "record deployed build and requireApiKey setting",
+        "never expose router key to worker or evidence"
+      ]
+    },
+    {
+      "id": "router-preoutput-fallback",
+      "layer": "deployed_router",
+      "input": "Make subscription A fail before output; let the same-provider subscription B complete",
+      "expect": [
+        "one boundary request",
+        "one Gaffer attempt",
+        "9Router selects B",
+        "no account credential enters Gaffer",
+        "attribute fallback only with proven correlation"
+      ]
+    },
+    {
+      "id": "all-connections-terminal",
+      "layer": "boundary",
+      "input": "Router returns HTTP 429 or 503 and a valid Retry-After before output",
+      "expect": [
+        "failed_before_output",
+        "sanitize reason",
+        "park/backoff bounded by remaining task budget",
+        "no automatic boundary retry"
+      ]
+    },
+    {
+      "id": "transport-unknown-before-output",
+      "layer": "boundary",
+      "input": "Upstream socket closes before response headers after request write",
+      "expect": [
+        "unknown provider outcome",
+        "retain request correlation and reservation",
+        "reconcile before retry",
+        "do not assume no billing"
+      ]
+    },
+    {
+      "id": "chat-tool-complete",
+      "layer": "protocol",
+      "stream": "streams/chat-tool-complete.sse",
+      "input": "Split every SSE byte boundary in turn, including inside JSON and UTF-8 in a separate non-ASCII test",
+      "expect": [
+        "one complete read_file call with call_fixture_1",
+        "assemble path=fixture.txt",
+        "dispatch only after complete arguments and trustworthy terminal",
+        "execution still needs separate authority"
+      ]
+    },
+    {
+      "id": "chat-tool-partial",
+      "layer": "protocol",
+      "stream": "streams/chat-tool-partial.sse",
+      "input": "End transport during arguments",
+      "expect": [
+        "partial_failure",
+        "zero tool dispatches",
+        "preserve bytes and action journal",
+        "zero transparent replay"
+      ]
+    },
+    {
+      "id": "synthetic-done-is-not-success",
+      "layer": "protocol",
+      "stream": "streams/chat-synthetic-done.sse",
+      "input": "Router flush appends DONE after incomplete tool arguments",
+      "expect": [
+        "partial_failure",
+        "zero tool dispatches",
+        "DONE alone does not prove provider completion"
+      ]
+    },
+    {
+      "id": "error-after-output",
+      "layer": "protocol",
+      "stream": "streams/chat-error-after-text.sse",
+      "input": "Upstream emits an error after text",
+      "expect": [
+        "partial_failure",
+        "preserve text",
+        "do not expose raw error",
+        "zero transparent replay"
+      ]
+    },
+    {
+      "id": "messages-tool-partial",
+      "layer": "protocol",
+      "stream": "streams/messages-partial.sse",
+      "input": "End transport before content_block_stop and message_stop",
+      "expect": [
+        "partial_failure",
+        "zero tool dispatches"
+      ]
+    },
+    {
+      "id": "responses-incomplete",
+      "layer": "protocol",
+      "stream": "streams/responses-incomplete.sse",
+      "input": "Receive response.incomplete with max_output_tokens",
+      "expect": [
+        "partial_failure",
+        "structured result not accepted",
+        "no hidden retry"
+      ]
+    },
+    {
+      "id": "translated-false-terminal",
+      "layer": "deployed_router",
+      "input": "Truncate a provider stream before its real completion while using each selected translator; inspect whether translation synthesizes finish_reason/message_stop/response.completed",
+      "expect": [
+        "no successful conformance claim from synthetic terminal",
+        "reject affected capability until upstream provenance or a tested fix distinguishes truncated completion",
+        "record actual path/build"
+      ]
+    },
+    {
+      "id": "strict-schema-downgrade",
+      "layer": "deployed_router",
+      "input": "Request strict structured output on OpenAI-to-Claude translation that injects JSON instructions; force invalid output and refusal separately",
+      "expect": [
+        "strict-schema capability rejected for prompt-only translation",
+        "validate every completed JSON result",
+        "do not accept invalid/refused output as requested schema"
+      ]
+    },
+    {
+      "id": "acknowledged-tool-then-stream-loss",
+      "layer": "harness",
+      "input": "Persist a completed tool action/result, then fail its continuation stream",
+      "expect": [
+        "retain action identity/result",
+        "reconcile continuation",
+        "do not replay acknowledged external effect"
+      ]
+    },
+    {
+      "id": "cancel-three-phases",
+      "layer": "deployed_router",
+      "input": "Cancel before headers, midstream and during fallback independently",
+      "expect": [
+        "no new work after revocation",
+        "record upstream cancellation/quiescence separately from local disconnect",
+        "unknown quiescence retains drain reservation",
+        "never claim a refund"
+      ]
+    },
+    {
+      "id": "atomic-drain-race",
+      "layer": "policy",
+      "input": "Interleave admission with a provider/model/billing-widening combo edit at every gate step while requests and fallback are active",
+      "expect": [
+        "writer and admission serialize on one fenced epoch gate",
+        "no old-grant request can resolve widened graph",
+        "drain waits for all old work",
+        "new graph opens only with new epoch and grants"
+      ]
+    },
+    {
+      "id": "unknown-cancel-does-not-drain",
+      "layer": "policy",
+      "input": "Gateway closes client/socket; router continues hidden work; operator requests combo edit",
+      "expect": [
+        "cancelled_unknown reservation retained",
+        "edit remains blocked",
+        "client count zero does not prove router quiescence"
+      ]
+    },
+    {
+      "id": "crash-and-alternate-writer",
+      "layer": "policy",
+      "input": "Crash gate during drain/update, fail readback, or try dashboard/import/CLI/direct-storage/alias/provider-node writes outside gate",
+      "expect": [
+        "recover closed",
+        "all alternate policy writes fenced or route rejected for guaranteed authority",
+        "a detected out-of-band edit reports invariant breach",
+        "fingerprint polling is not atomic proof"
+      ]
+    },
+    {
+      "id": "private-management",
+      "layer": "containment",
+      "input": "From worker try management GETs and writes, raw inference aliases, router origin, provider URLs, host loopback/services and alternate proxy routes; from status identity try POST availability and GET usage/connection",
+      "expect": [
+        "each unauthorized path denied",
+        "no provider/router-management secret mounted",
+        "status identity cannot mutate or actively refresh",
+        "record OS/network evidence"
+      ]
+    },
+    {
+      "id": "router-unreachable",
+      "layer": "boundary",
+      "input": "Stop reachability to the configured router",
+      "expect": [
+        "park inference work with router_unreachable",
+        "capture/review/stop still usable",
+        "no direct provider bypass"
+      ]
+    },
+    {
+      "id": "status-projection-corpus",
+      "layer": "status",
+      "input": "Execute every status-cases.json pair against the adapter, including new nested fields, duplicate identities and stale timestamps",
+      "expect": [
+        "exact expected safe projection",
+        "closed schema passes",
+        "no sentinel, raw key, email, error text or unchecked identifier leaks",
+        "zero POST or usage-refresh requests"
+      ]
+    },
+    {
+      "id": "deployed-capacity-default-fallback",
+      "layer": "policy",
+      "input": "Use a single-model or combo route with an enabled empty capability pool and a modality its model cannot handle; inspect oc/mimo-v2.5-free insertion before forwarding",
+      "expect": [
+        "effective defaults included in approved graph",
+        "no unapproved provider/model/billing fallback",
+        "deny profile or unsupported modality before forwarding"
+      ]
+    },
+    {
+      "id": "deployed-fusion-is-not-single-request-cost",
+      "layer": "policy",
+      "input": "Set fusion strategy with multiple panel models and a different judge",
+      "expect": [
+        "initial M0 profile denies fusion",
+        "do not treat one gateway request as one provider request or bounded cost",
+        "changed strategy/judge requires drained policy revision"
+      ]
+    },
+    {
+      "id": "deployed-input-profile-mismatch",
+      "layer": "status",
+      "input": "Supply 0.5.75 providers payload to historical canonical-status parser, or select unknown source/artifact profile",
+      "expect": [
+        "fail closed rather than infer compatibility from version range",
+        "active is not eligible or ready",
+        "new version requires explicit reconciled profile"
+      ]
+    }
   ]
 }

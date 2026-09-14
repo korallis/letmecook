@@ -1,6 +1,6 @@
 # 9Router integration contract v1
 
-Related to [issue #2](https://github.com/korallis/letmecook/issues/2). Contract
+For [issue #2](https://github.com/korallis/letmecook/issues/2). Contract
 proposal, **14 September 2026**. This specifies the boundary to implement in the
 M0 experiments; it does not implement or certify a deployment. The reviewed v0.4
 [ownership and authority requirements](../spec.md#8-9router-integration-and-task-capacity)
@@ -16,22 +16,28 @@ remain in force. Fixture identifiers below are in
 | Package version at that commit | `9router-app` **0.3.98**, read from `package.json`; not a unique deployment identity |
 | Method | Read-only clone, detached checkout, focused source inspection; no upstream install, server launch, provider login or inference |
 | v0.4 reconciliation | Same commit as the evaluation; the additional limitations below come from inspecting that exact source |
-| Selected deployment | **Unknown**: endpoint, source/build identity, wrapper configuration and scoped credential reference have not been supplied |
-| Deployment reconciliation / live results | **Not performed**. No claim of live authentication, containment, fallback, readiness or cancellation |
+| Selected deployment | Existing operator-selected npm `9router@0.5.75`; registry source association `decolua/9router` commit `17c4cc76877bd1755030a8414f8d0083f48dcccf`; Next build `lT_m29PZoyMEswZrqhKVs` |
+| Artifact verification | All 3,253 installed regular package files matched the registry tarball by SHA-256, with no changed/missing files. Tarball SHA-512 verified; see the [redacted deployment record](9router-deployment-2026-09-14.json) |
+| Reconciliation / live results | Both pinned sources inspected below. Read-only management denial/discovery observations exist; no inference, fallback, cancellation or containment conformance was run |
 
 The inspected pin is a reproducible reference, not an instruction to install it.
-A deployment record must supply router ID, private origin, exact source commit or
+A deployment record must supply router ID, private origin reference, exact source commit or
 artifact digest and its source mapping, package version, local patches, enabled
 Go/wrapper/relay path, and operator-provided credential **references**. Record no
 credential values. Reinspect differences from the pin before accepting the adapter.
 Version strings alone, a successful discovery call, and a dashboard screenshot do
-not satisfy this gate. The first acceptance criterion of #2 remains open until that
-record and reconciliation exist. The remaining sections are normative **proposed
-Gaffer requirements**; source observations are explicitly identified.
+not satisfy this gate. The selected record supplies artifact identity and source
+reconciliation; this completes the version investigation without making that
+instance ready for unattended work. Its host is optional operator infrastructure,
+never a required product host, network or installation location. Every installation
+supplies its own origin and credential references. The remaining sections are
+normative **proposed Gaffer requirements**; source observations are identified.
 
 ### Inspected source observations
 
-Links below pin each finding to the inspected commit, not upstream `main`.
+This table is the historical `rickicode` 0.3.98 profile, retained to reconcile the
+v0.4 review. It is not a description of the selected 0.5.75 deployment. Links below
+pin each finding to the inspected commit, not upstream `main`.
 
 | Finding | Source |
 | --- | --- |
@@ -45,6 +51,38 @@ Links below pin each finding to the inspected commit, not upstream `main`.
 | Combo PUT updates a mutable record without a request-scoped policy revision. Model resolution also reads mutable aliases/provider nodes. No atomic authority barrier was found on the inspected inference/configuration paths. | [combo mutation](https://github.com/rickicode/9router/blob/69724d86d4486fa5d722e63ebb6c9700e71aebff/src/app/api/combos/%5Bid%5D/route.js), [resolution](https://github.com/rickicode/9router/blob/69724d86d4486fa5d722e63ebb6c9700e71aebff/src/sse/services/model.js) |
 | Streaming success is recorded before body consumption. Disconnect detection creates its own AbortController; the incoming request signal is not passed into `handleChatCore`. The stream cancel path delays abort by 500 ms. End-to-end cancellation, especially before headers, is unproved. | [core](https://github.com/rickicode/9router/blob/69724d86d4486fa5d722e63ebb6c9700e71aebff/open-sse/handlers/chatCore.js), [stream response](https://github.com/rickicode/9router/blob/69724d86d4486fa5d722e63ebb6c9700e71aebff/open-sse/handlers/chatCore/streamingHandler.js), [disconnect handling](https://github.com/rickicode/9router/blob/69724d86d4486fa5d722e63ebb6c9700e71aebff/open-sse/utils/streamHandler.js) |
 | Stream flush synthesizes `[DONE]`, invokes translator flush and may estimate usage; transport EOF/200/usage are not proof of complete provider output. OpenAI-to-Claude JSON schema is converted into prompt instructions. | [stream flush](https://github.com/rickicode/9router/blob/69724d86d4486fa5d722e63ebb6c9700e71aebff/open-sse/utils/stream.js), [JSON-schema translation](https://github.com/rickicode/9router/blob/69724d86d4486fa5d722e63ebb6c9700e71aebff/open-sse/translator/request/openai-to-claude.js) |
+
+### Selected 0.5.75 source reconciliation
+
+The [npm artifact](https://registry.npmjs.org/9router/-/9router-0.5.75.tgz) publishes
+the `gitHead` above. Its build ID matches the inspected deployment. Registry
+metadata associates the package with this source; no independent source rebuild
+was performed. The file comparison proves equality to the distributed package,
+not absence of upstream defects. No local package patches were found. The observed
+runtime is the packaged Next CLI; Go-wrapper environment flags were unset.
+
+| Boundary | Change at `decolua/9router@17c4cc7` and decision |
+| --- | --- |
+| Management authentication | The matcher now covers nearly all paths and `/api/*` defaults to authenticated access. Production local-peer trust uses custom-server stamped headers with a per-process token rather than trusting Host alone. CLI-token and dashboard sessions remain broad authorities, and disabling login still weakens management auth. Retain a separate private GET-only status ingress; no CLI token or dashboard cookie belongs in a worker. [guard](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/dashboardGuard.js), [trusted peer](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/lib/auth/trustedPeer.js), [server stamping](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/custom-server.js) |
+| Inference authentication | Defaults now set `requireApiKey=true` and `requireLogin=true`; nonlocal inference is also gated by middleware. The chat handler still conditionally enforces keys; key validation still has no route scope. Generated JWT secrets replace the earlier fixed fallback. Missing/invalid/disabled-key inference tests remain unrun. [defaults](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/lib/db/repos/settingsRepo.js), [key validation](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/lib/db/repos/apiKeysRepo.js), [session secrets](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/lib/auth/dashboardSession.js) |
+| Status schema | Provider GET returns `{connections}` and retains arbitrary nested data; canonical `routingStatus/authState/quotaState/lastCheckedAt` semantics from the historical fork are absent from its routing path. Availability now reports model locks as `cooldown` or legacy `testStatus=unavailable`. Use the separate conservative 0.5.75 adapter profile below; never reinterpret `active` as readiness. [providers](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/app/api/providers/route.js), [availability](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/app/api/models/availability/route.js), [selection](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/sse/services/auth.js) |
+| Endpoints / discovery | The three inference handlers still call `handleChat`; `/responses` adds another alias to deny at the Gaffer boundary. Model discovery can call live provider catalogs and persist refreshed credentials. Exclude `/v1/models` from passive status polling; a discovery GET is not necessarily read-only. [rewrites](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/next.config.mjs), [discovery and refresh callbacks](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/app/api/v1/models/route.js) |
+| Hidden model paths | Capability adapters can prepend globally configured modality models even to a single-model request. An enabled empty pool defaults to `oc/mimo-v2.5-free`; fusion runs parallel panel models and a configurable judge. Combo members alone no longer enumerate the envelope. M0 rejects fusion and unapproved capability-adapter pools; inspect effective defaults as well as persisted overrides. [capacity adapter](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/open-sse/services/capacityAdapter.js), [fusion](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/open-sse/services/combo.js), [dispatch](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/sse/handlers/chat.js) |
+| Streaming and cancellation | Responses passthrough now synthesizes `response.failed` on abort/stall; a watchdog measures upstream byte activity. Successful HTTP setup still precedes stream completion, flush still emits completion sentinels, and `handleChatCore` still creates its own signal rather than accepting the incoming request signal. Keep the existing partial-stream and cancellation gates; watchdog activity is not the semantic idle deadline. [stream response](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/open-sse/handlers/chatCore/streamingHandler.js), [watchdog](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/open-sse/utils/streamHandler.js), [flush](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/open-sse/utils/stream.js) |
+| Payload and external effects | OpenAI-to-Claude JSON schema still becomes prompt instructions. The core can prefetch remote image URLs and run configured compression helpers. Review those destinations/settings as part of data policy, and exclude these features from the initial text/tool-only profile unless explicitly proven. [schema translation](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/open-sse/translator/request/openai-to-claude.js), [core](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/open-sse/handlers/chatCore.js) |
+| Policy mutation / active reads | Combo updates reset rotation but still have no request-scoped atomic authority epoch. Usage GET still refreshes credentials/provider state. Router-owned SQLite and export/import replace the older storage layout; neither is the Gaffer integration API. [combo update](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/app/api/combos/%5Bid%5D/route.js), [usage GET](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/app/api/usage/%5BconnectionId%5D/route.js), [storage](https://github.com/decolua/9router/blob/17c4cc76877bd1755030a8414f8d0083f48dcccf/src/lib/db/index.js) |
+
+Read-only deployment inspection found 12 active configured connections across
+seven providers and **zero named combos**. These are configuration counts, not
+authenticated inference/capacity observations. No route was created or selected for
+Gaffer, and no inference POST was made. A discovery GET was observed; its possible
+provider-catalog/credential-refresh side effects were not measured. The listener is not bound exclusively to
+a private interface; broader firewall exposure was not assessed. Therefore private
+ingress, scoped status access, route authority, named-route setup and runtime
+conformance remain explicit downstream gates despite a reconciled package pin.
+Operators who choose to move an existing configuration can use the
+[optional router-owned migration procedure](9router-migration.md); it is independent
+of Gaffer installation and was not executed during this inspection.
 
 ## Named route and attempt identity
 
@@ -63,7 +101,8 @@ unknown endpoints, unclassified billing and any unenumerated fallback edge.
 
 Resolve the whole reachable graph: combo members and strategy, model aliases,
 provider-node endpoint/prefix, model remapping, relay destination, provider-level
-model settings and billing-affecting connection class. An endpoint URL alone does
+model settings, capability-adapter pools and defaults, fusion panel/judge,
+compression/helper destinations and billing-affecting connection class. An endpoint URL alone does
 not establish provider identity. A subscription-only grant excludes paid API and
 unclassified fallthrough. API-key/OAuth authentication type is not sufficient proof
 of billing class. Use operator-reviewed policy evidence for that classification.
@@ -96,7 +135,7 @@ authentication by itself does not authorize direct worker-to-router access.
 | `POST /v1/chat/completions` | Chat Completions profile, only when granted |
 | `POST /v1/messages` | Messages profile, only when granted |
 | `POST /v1/responses` | Responses profile, only when granted |
-| Everything else | Deny, including raw `/api/v1/*`, `/v1/v1/*`, `/codex/*`, query routing overrides, absolute-form URLs, redirects, CONNECT and management paths |
+| Everything else | Deny, including raw `/api/v1/*`, `/v1/v1/*`, `/codex/*`, `/responses`, query routing overrides, absolute-form URLs, redirects, CONNECT and management paths |
 
 Select the upstream origin from trusted configuration, never from headers/body.
 Parse and validate a single JSON object; reject duplicate keys, compressed bodies
@@ -188,7 +227,7 @@ headers, midstream and during fallback; local socket close alone is not proof.
 
 ## Atomic policy changes
 
-Decision for the inspected pin: **freeze and drain at the trusted configuration
+Decision for both inspected pins: **freeze and drain at the trusted configuration
 write boundary**, because immutable upstream route versions were not found. This
 is a required integration capability, not an already available 9Router feature.
 The admission boundary and every policy writer share one fenced epoch controller.
@@ -255,7 +294,8 @@ The canonical outgoing shape is
 - A capability observation with the same provenance/freshness fields; `unknown`
   until a route/protocol/harness conformance record exists.
 
-For the pin, parse only known scalar fields from matching `connections`: `id`,
+For historical profile `rickicode-0.3.98-69724d8`, parse only known scalar fields
+from matching `connections`: `id`,
 `provider`, `isActive`, `routingStatus`, `authState`, `quotaState`, `healthStatus`,
 `lastCheckedAt`, `nextRetryAt` and `resetAt`. Negative model observations may use
 `models[].{connectionId,provider,model,status,until}` from the availability GET.
@@ -265,12 +305,30 @@ or unexpected enum in an inspected field invalidate that observation to `unknown
 Unrecognized extra upstream fields are ignored, not passed through. Outgoing schema
 violation fails the projection closed and serves a minimal schema-valid unknown.
 
-Use router-reported canonical states as observations, not a recreated account
+For selected profile `decolua-0.5.75-17c4cc7`, initially permit only mapped `id`,
+`provider`, boolean `isActive`, `testStatus` (`active | error | unavailable | unknown`)
+and ISO `lastErrorAt` from provider GET. `active` and missing status produce
+`unknown`, never `eligible`. `isActive=false` can produce `disabled` as a fresh
+configuration observation at the adapter's authenticated retrieval time. For
+`error`/`unavailable` with valid fresh `lastErrorAt`, project only `blocked` with that
+source time and `retry_after=null`; the label does not establish quota exhaustion.
+Without that timestamp, remain unknown. Unknown enum/type/identity invalidates the
+observation. Do not consume incidental historical canonical fields in this profile.
+The initial implementation may omit availability GET; consuming its model-specific
+cooldowns needs separate fixture coverage and never creates positive readiness.
+An implementation may explicitly declare only the disabled/unknown subset supported;
+unsupported negative observations remain unknown until the matching corpus is implemented.
+Its `until` cannot be used as the time an error happened. Profile selection is
+explicitly keyed to source/artifact identity; unknown builds fail closed. The public
+outgoing v1 shape stays the same, and fixtures name their input profile.
+
+Use router-reported canonical states in the historical profile as observations, not a recreated account
 selector. Preserve known negative states conservatively; conflicting eligible and
 blocked/exhausted observations do not imply readiness. A model lock may make that
 connection exhausted for the scoped route without implying its other models are
 exhausted. Lack of an availability entry and an empty discovery list say nothing
-positive. Model discovery is optional inventory outside the passive status poll.
+positive. Model discovery is optional inventory outside the passive status poll and,
+for the selected release, may actively refresh provider credentials.
 
 Default freshness is at most 30 seconds for live route/connection observations;
 clamp to any shorter source expiry. Capability conformance evidence may remain

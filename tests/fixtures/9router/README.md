@@ -8,6 +8,7 @@ record. The normative proposal and source evidence are in
 | File | Downstream use |
 | --- | --- |
 | `status.schema.json` | Closed outgoing status v1; validate after allowlist projection |
+| `input-profiles.json` | Explicit source/artifact identity and scalar allowlists for each inspected input profile |
 | `status-cases.json` | Source payload/context and exact expected projection; malformed, hostile, stale and missing observations |
 | `examples.json` | Example policy, attempt binding and three protocol requests, tool continuation and strict-output requirement |
 | `failure-cases.json` | Required fault/race experiments and expected decisions, including zero unauthorized forwards/tool replays |
@@ -25,6 +26,14 @@ mutations of those objects, safe expected references, timestamps and referenced
 stream files. It does **not** run an adapter or claim live failure-path behavior.
 Issues #3–#8 must execute the specified cases against their real boundary/adapter,
 use a deterministic clock for freshness tests, and save redacted actual results.
+
+Input profiles are separate: `rickicode-0.3.98-69724d8` covers the historical
+canonical fields, while `decolua-0.5.75-17c4cc7` covers the selected release's
+legacy fields. Its `active` never becomes eligible. The optional negative-state
+extension has separate fixtures; a declared disabled/unknown-only implementation
+may leave negative observations unknown. Changing profiles never widens readiness.
+The independently observed deployment metadata lives in the contract directory;
+the synthetic `examples.json` deployment placeholders are not that live record.
 
 Unknown source fields are ignored. Unknown/malformed values in inspected scalar
 fields invalidate their observation, while a malformed top-level response becomes
