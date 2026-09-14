@@ -17,7 +17,7 @@ test('private evidence and idempotent durable candidate ack preserve original re
   assert.deepEqual(x.api.candidate(x.value), ack); assert.equal(x.writes.length, 2); assert.equal(x.api.evidence(x.value.attemptId).artifacts.length, 1);
 });
 test('candidate controls refuse unknown, changed, partial, cross-binding and unrelated artifact claims', () => {
-  for (const mutate of [x => x.value.requestIds.reverse(), x => x.value.bindingDigest = 'b'.repeat(64), x => x.value.policyDigest = 'c'.repeat(64), x => x.journal.reservations.push({ attemptId: x.value.attemptId, requestId: x.value.requestIds[0] }), x => x.f.gateway.receipts[0].operations[0].terminal = 'unknown', x => x.journal.decisions[0].delivery = 'unobserved', x => x.value.artifact.path = 'not-approved', x => x.value.kind = 'plan_proposal', x => x.value.extra = true]) {
+  for (const mutate of [x => x.value.packetDigest = 'f'.repeat(64), x => x.value.scopeDigest = 'f'.repeat(64), x => x.value.requestIds.reverse(), x => x.value.bindingDigest = 'b'.repeat(64), x => x.value.policyDigest = 'c'.repeat(64), x => x.journal.reservations.push({ attemptId: x.value.attemptId, requestId: x.value.requestIds[0] }), x => x.f.gateway.receipts[0].operations[0].terminal = 'unknown', x => x.journal.decisions[0].delivery = 'unobserved', x => x.value.artifact.path = 'not-approved', x => x.value.kind = 'plan_proposal', x => x.value.extra = true]) {
     const x = setup(); mutate(x); assert.throws(() => x.api.candidate(x.value)); assert.equal(x.writes.length, 0);
   }
 });
