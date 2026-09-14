@@ -16,6 +16,7 @@ async function run(file,scenario,{native=false,data=scenario,expectedSignal=null
   console.error(`Passed ${file}: ${scenario}`);return record;
 }
 results.push(await run('integration.mjs','main'));
+results.push(await run('policy-regressions.mjs','policy-reserved-keys'));
 results.push(await run('integration.mjs','unknown'));
 results.push(await run('integration.mjs','crash',{data:'crash',expectedSignal:'SIGKILL'}));
 results.push(await run('integration.mjs','restart',{data:'crash'}));

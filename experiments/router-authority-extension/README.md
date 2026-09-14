@@ -83,6 +83,13 @@ recovery that discards such uncertainty.
 `quiescent(ids)` also checks the whole router. A failed/partial operation is never
 settled merely because a later fallback succeeds.
 
+All KV-backed policy maps are disabled in the current profiles. Readback checks
+the raw stored row inventory and rejects every row before reconstructing maps;
+reserved keys such as `__proto__` cannot disappear through plain-object assignment.
+An active repository write rolls back, and a privileged replacement containing
+such rows stays closed. Supporting any of these maps later requires an explicit
+profile extension with complete key-safe decoding and effective-policy evidence.
+
 Each original physical transport registers a disposer shared across executor and
 refresh contexts. Size, UTF-8, JSON/schema, content-type or stream-validation failure
 aborts the request and cancels the original reader/body before releasing ownership;
@@ -175,9 +182,11 @@ consume that integration. Quiescence alone also includes provider failure/incomp
 outcomes.
 
 The [evidence record](../../docs/evidence/router-authority-extension.md) preserves
-two blocking defects found in independent review of the first candidate commit,
-alongside their corrected actual-router HTTP regressions. Passing a previous suite
-did not establish conformance; the corrected commit requires a fresh final review.
+two blocking defects found in the first independent review and the second review's
+P2 reserved-key policy-projection bypass, alongside their corrected actual-router
+regressions. The second review demonstrated changed effective alias/pricing lookups,
+not unapproved inference. Passing a previous suite did not establish conformance;
+the corrected commit requires a fresh final review.
 
 No deployment was selected, configuration/credentials copied, provider inference
 sent, package published, upstream repository changed, or human baseline invented.

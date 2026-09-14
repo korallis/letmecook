@@ -41,6 +41,7 @@ are not a new worker-isolation certification.
 | Admission and every supported physical send | Durable receipts bind ID, boot, generation, revision, route, connection and each Base/Codex/refresh ordinal. |
 | Stock account and model fallback | Compatible two-account fallback and native Astra/account → Sol fallback retain all operations and synthetic workspace attribution. |
 | Repository/import/raw-SQL writers | Active policy changes roll back. A drained private writer advances generation and must match full readback before reopening. |
+| Disabled maps and reserved database keys | All stored KV rows are rejected before map reconstruction. Repository and direct-adapter writes for four disabled maps and six ordinary/reserved keys roll back; unsupported privileged writes leave admission closed. |
 | Admission/writer races | New admission is denied during mutation. Existing admitted work can finish during drain; late writers fail after their generation ends. |
 | Delayed ingress and unknown IDs | Old-generation ingress is rejected before dispatch. Unknown IDs never become quiescent; presenting one to quiescence durably blocks replacement. |
 | Mutation exception / incorrect readback | Both remain closed. Explicit trusted replacement and successful readback are required to recover. |
@@ -81,11 +82,25 @@ The correction owns each physical transport until original EOF or local disposal
 aborts and cancels every size/decode/validation failure, fences later retries, and
 retains active cancellation/deadline bookkeeping until outstanding local cleanup
 settles. Native item identities and per-index content channels are now reconciled
-through incremental and completed events. The recorded run includes 37 scenarios,
+through incremental and completed events. The recorded run includes 38 scenarios,
 including 12 actual HTTP cleanup/deadline cases and three native review regressions.
 Closing the synthetic HTTP response is local cleanup evidence; affected remote
 operations remain unknown and block replacement. A new independent final review
 of the corrected commit is still required.
+
+The next independent review of `4294e66649a981c9d227d8e1323ac9eaee4efe85`
+found a P2 policy-projection bypass: assigning stored `__proto__` keys into plain
+objects hid alias and pricing rows from the snapshot, while actual router lookups
+resolved an inherited alias and changed effective pricing. No unapproved inference
+was demonstrated. The [failed observations](router-authority-extension-review-4294e66.json)
+retain that distinction. Since every KV-backed map is disabled in the supported
+profile, the projection now rejects any stored row before constructing maps.
+The added actual-repository regression covers four maps and six key forms through
+both repository and direct-adapter writes (48 rollback checks), unchanged real
+alias/pricing lookups, allowed health writes, and four privileged-writer readback
+failures that leave admission closed. The full integration replay also retains
+successful stock native refresh behavior. This correction again requires a new
+independent final review.
 
 ## Remaining gates
 

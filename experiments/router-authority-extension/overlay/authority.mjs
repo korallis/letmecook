@@ -95,11 +95,11 @@ function payloadFromDb(db) {
     providerConnections: db.all('SELECT * FROM providerConnections').map(r => ({...data(r), isActive: r.isActive === 1})),
     combos: db.all('SELECT * FROM combos').map(r => ({...r, models: JSON.parse(r.models)})),
     proxyPools: db.all('SELECT * FROM proxyPools'), customModels: [], modelAliases: {}, mitmAlias: {}, pricing: {} };
-  for (const row of db.all('SELECT * FROM kv')) {
-    requireThat(['customModels','modelAliases','mitmAlias','pricing'].includes(row.scope), 'unsupported_kv_scope');
-    if (Array.isArray(result[row.scope])) result[row.scope].push(JSON.parse(row.value));
-    else result[row.scope][row.key] = JSON.parse(row.value);
-  }
+  // Every KV-backed map is disabled in this profile. Check stored rows directly:
+  // rebuilding a plain object loses __proto__ keys and can hide effective policy.
+  const rows = db.all('SELECT scope FROM kv');
+  requireThat(rows.every(row => ['customModels','modelAliases','mitmAlias','pricing'].includes(row.scope)), 'unsupported_kv_scope');
+  requireThat(rows.length === 0, 'unsupported_graph');
   return result;
 }
 

@@ -42,7 +42,7 @@
           "result": "passed",
           "receipt": {
             "id": "complete_request",
-            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
             "generation": 2,
             "revision": "revision_1",
             "route": "gaffer-synthetic",
@@ -53,7 +53,7 @@
               {
                 "request_id": "complete_request",
                 "ordinal": 1,
-                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
                 "generation": 2,
                 "revision": "revision_1",
                 "provider": "openai-compatible-synthetic",
@@ -93,7 +93,7 @@
           "result": "passed",
           "receipt": {
             "id": "fallback_request",
-            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
             "generation": 3,
             "revision": "revision_2",
             "route": "gaffer-synthetic",
@@ -104,7 +104,7 @@
               {
                 "request_id": "fallback_request",
                 "ordinal": 1,
-                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
                 "generation": 3,
                 "revision": "revision_2",
                 "provider": "openai-compatible-synthetic",
@@ -116,7 +116,7 @@
               {
                 "request_id": "fallback_request",
                 "ordinal": 2,
-                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
                 "generation": 3,
                 "revision": "revision_2",
                 "provider": "openai-compatible-synthetic",
@@ -134,7 +134,7 @@
           "result": "passed",
           "receipt": {
             "id": "retry_cancel",
-            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
             "generation": 3,
             "revision": "revision_2",
             "route": "gaffer-synthetic",
@@ -145,7 +145,7 @@
               {
                 "request_id": "retry_cancel",
                 "ordinal": 1,
-                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
                 "generation": 3,
                 "revision": "revision_2",
                 "provider": "openai-compatible-synthetic",
@@ -190,7 +190,7 @@
           "result": "passed",
           "receipt": {
             "id": "identity_drift",
-            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
             "generation": 10,
             "revision": "revision_5",
             "route": "gaffer-synthetic",
@@ -201,7 +201,7 @@
               {
                 "request_id": "identity_drift",
                 "ordinal": 1,
-                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
                 "generation": 10,
                 "revision": "revision_5",
                 "provider": "openai-compatible-synthetic",
@@ -219,7 +219,7 @@
           "result": "passed",
           "receipt": {
             "id": "error_with_finish",
-            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
             "generation": 10,
             "revision": "revision_5",
             "route": "gaffer-synthetic",
@@ -230,7 +230,7 @@
               {
                 "request_id": "error_with_finish",
                 "ordinal": 1,
-                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
                 "generation": 10,
                 "revision": "revision_5",
                 "provider": "openai-compatible-synthetic",
@@ -248,7 +248,7 @@
           "result": "passed",
           "receipt": {
             "id": "incomplete_tool",
-            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
             "generation": 10,
             "revision": "revision_5",
             "route": "gaffer-synthetic",
@@ -259,7 +259,7 @@
               {
                 "request_id": "incomplete_tool",
                 "ordinal": 1,
-                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
                 "generation": 10,
                 "revision": "revision_5",
                 "provider": "openai-compatible-synthetic",
@@ -277,7 +277,7 @@
           "result": "passed",
           "receipt": {
             "id": "partial_request",
-            "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+            "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
             "generation": 10,
             "revision": "revision_5",
             "route": "gaffer-synthetic",
@@ -288,7 +288,7 @@
               {
                 "request_id": "partial_request",
                 "ordinal": 1,
-                "boot": "5012339f-342b-4939-b510-388a9465cd8b",
+                "boot": "3e34aeaa-b4ff-4508-9114-f3342b8b801c",
                 "generation": 10,
                 "revision": "revision_5",
                 "provider": "openai-compatible-synthetic",
@@ -321,6 +321,184 @@
       ]
     },
     {
+      "scenario": "policy-reserved-keys",
+      "regressionOf": "4294e66649a981c9d227d8e1323ac9eaee4efe85",
+      "severity": "P2-policy-projection",
+      "unapprovedInferenceDemonstrated": false,
+      "statements": [
+        {
+          "scope": "modelAliases",
+          "key": "ordinary_key",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "modelAliases",
+          "key": "__proto__",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "modelAliases",
+          "key": "constructor",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "modelAliases",
+          "key": "prototype",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "modelAliases",
+          "key": "toString",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "modelAliases",
+          "key": "hasOwnProperty",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "pricing",
+          "key": "ordinary_key",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "pricing",
+          "key": "__proto__",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "pricing",
+          "key": "constructor",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "pricing",
+          "key": "prototype",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "pricing",
+          "key": "toString",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "pricing",
+          "key": "hasOwnProperty",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "ordinary_key",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "__proto__",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "constructor",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "prototype",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "toString",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "hasOwnProperty",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "customModels",
+          "key": "ordinary_key",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "customModels",
+          "key": "__proto__",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "customModels",
+          "key": "constructor",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "customModels",
+          "key": "prototype",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "customModels",
+          "key": "toString",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        },
+        {
+          "scope": "customModels",
+          "key": "hasOwnProperty",
+          "repositoryRejected": true,
+          "rawRowRejected": true
+        }
+      ],
+      "failedReadbacks": [
+        {
+          "scope": "modelAliases",
+          "key": "__proto__",
+          "admission": "closed"
+        },
+        {
+          "scope": "pricing",
+          "key": "__proto__",
+          "admission": "closed"
+        },
+        {
+          "scope": "mitmAlias",
+          "key": "__proto__",
+          "admission": "closed"
+        },
+        {
+          "scope": "customModels",
+          "key": "__proto__",
+          "admission": "closed"
+        }
+      ],
+      "aliasResolution": null,
+      "effectivePricing": null,
+      "healthWriteAllowed": true,
+      "unknownScopeRejected": true
+    },
+    {
       "scenario": "unknown",
       "unknownIdBlocksReplacement": true,
       "receipt": {
@@ -333,7 +511,7 @@
       "scenario": "crash",
       "receipt": {
         "id": "crash_request",
-        "boot": "bcb93879-9bd4-4486-b575-83243a5e3569",
+        "boot": "95d7eceb-f32d-43ea-b2da-12594d4ca936",
         "generation": 3,
         "revision": "revision_2",
         "route": "gaffer-synthetic",
@@ -344,7 +522,7 @@
           {
             "request_id": "crash_request",
             "ordinal": 1,
-            "boot": "bcb93879-9bd4-4486-b575-83243a5e3569",
+            "boot": "95d7eceb-f32d-43ea-b2da-12594d4ca936",
             "generation": 3,
             "revision": "revision_2",
             "provider": "openai-compatible-synthetic",
@@ -362,7 +540,7 @@
       "phase": "closed",
       "crashReceipt": {
         "id": "crash_request",
-        "boot": "bcb93879-9bd4-4486-b575-83243a5e3569",
+        "boot": "95d7eceb-f32d-43ea-b2da-12594d4ca936",
         "generation": 3,
         "revision": "revision_2",
         "route": "gaffer-synthetic",
@@ -373,7 +551,7 @@
           {
             "request_id": "crash_request",
             "ordinal": 1,
-            "boot": "bcb93879-9bd4-4486-b575-83243a5e3569",
+            "boot": "95d7eceb-f32d-43ea-b2da-12594d4ca936",
             "generation": 3,
             "revision": "revision_2",
             "provider": "openai-compatible-synthetic",
@@ -402,7 +580,7 @@
       ],
       "receipt": {
         "id": "native_success",
-        "boot": "0160c2cc-a88d-4799-912a-58d25f8a3cb4",
+        "boot": "715d915e-c5f9-435c-b0f5-790fc90841f7",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -413,7 +591,7 @@
           {
             "request_id": "native_success",
             "ordinal": 1,
-            "boot": "0160c2cc-a88d-4799-912a-58d25f8a3cb4",
+            "boot": "715d915e-c5f9-435c-b0f5-790fc90841f7",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -540,7 +718,7 @@
       ],
       "receipt": {
         "id": "native_tools",
-        "boot": "5502530f-4659-4eaa-878d-b041c0d94c8a",
+        "boot": "bf93710e-eb80-4a9d-9cbf-4e48c948c328",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -551,7 +729,7 @@
           {
             "request_id": "native_tools",
             "ordinal": 1,
-            "boot": "5502530f-4659-4eaa-878d-b041c0d94c8a",
+            "boot": "bf93710e-eb80-4a9d-9cbf-4e48c948c328",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -678,7 +856,7 @@
       ],
       "receipt": {
         "id": "native_tools_identity_drift",
-        "boot": "0be9cbf9-a19d-4542-a786-d498eb3efc7e",
+        "boot": "5b546f64-14c5-4540-bca6-a0e82b49fa21",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -689,7 +867,7 @@
           {
             "request_id": "native_tools_identity_drift",
             "ordinal": 1,
-            "boot": "0be9cbf9-a19d-4542-a786-d498eb3efc7e",
+            "boot": "5b546f64-14c5-4540-bca6-a0e82b49fa21",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -816,7 +994,7 @@
       ],
       "receipt": {
         "id": "native_tools_delta_drift",
-        "boot": "e72d1ff3-0f62-427a-a707-7c3eaf0a2022",
+        "boot": "c54d7acc-bf3b-4ce8-8103-07929c07ea1a",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -827,7 +1005,7 @@
           {
             "request_id": "native_tools_delta_drift",
             "ordinal": 1,
-            "boot": "e72d1ff3-0f62-427a-a707-7c3eaf0a2022",
+            "boot": "c54d7acc-bf3b-4ce8-8103-07929c07ea1a",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -954,7 +1132,7 @@
       ],
       "receipt": {
         "id": "native_tools_duplicate_argument_keys",
-        "boot": "fc0589ad-b7ec-4edb-ad85-42bc91fc20ab",
+        "boot": "d94c9c57-cf94-474a-9919-70b1895c0b25",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -965,7 +1143,7 @@
           {
             "request_id": "native_tools_duplicate_argument_keys",
             "ordinal": 1,
-            "boot": "fc0589ad-b7ec-4edb-ad85-42bc91fc20ab",
+            "boot": "d94c9c57-cf94-474a-9919-70b1895c0b25",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1098,7 +1276,7 @@
       ],
       "receipt": {
         "id": "native_account_fallback",
-        "boot": "10b87bda-e731-42dc-a28b-0da15a40e985",
+        "boot": "25351c3a-4c16-40b4-9e4f-e8305853c00b",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1109,7 +1287,7 @@
           {
             "request_id": "native_account_fallback",
             "ordinal": 1,
-            "boot": "10b87bda-e731-42dc-a28b-0da15a40e985",
+            "boot": "25351c3a-4c16-40b4-9e4f-e8305853c00b",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1121,7 +1299,7 @@
           {
             "request_id": "native_account_fallback",
             "ordinal": 2,
-            "boot": "10b87bda-e731-42dc-a28b-0da15a40e985",
+            "boot": "25351c3a-4c16-40b4-9e4f-e8305853c00b",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1260,7 +1438,7 @@
       ],
       "receipt": {
         "id": "native_model_fallback",
-        "boot": "2c1070c6-7beb-4f1b-80d2-420d515a74a1",
+        "boot": "7e1a6d2d-579e-4a0a-9629-5b6a1a133041",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1271,7 +1449,7 @@
           {
             "request_id": "native_model_fallback",
             "ordinal": 1,
-            "boot": "2c1070c6-7beb-4f1b-80d2-420d515a74a1",
+            "boot": "7e1a6d2d-579e-4a0a-9629-5b6a1a133041",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1283,7 +1461,7 @@
           {
             "request_id": "native_model_fallback",
             "ordinal": 2,
-            "boot": "2c1070c6-7beb-4f1b-80d2-420d515a74a1",
+            "boot": "7e1a6d2d-579e-4a0a-9629-5b6a1a133041",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1295,7 +1473,7 @@
           {
             "request_id": "native_model_fallback",
             "ordinal": 3,
-            "boot": "2c1070c6-7beb-4f1b-80d2-420d515a74a1",
+            "boot": "7e1a6d2d-579e-4a0a-9629-5b6a1a133041",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1434,7 +1612,7 @@
       ],
       "receipt": {
         "id": "native_refresh",
-        "boot": "0cfaeab7-1e17-43d4-907c-bc0248e66d5a",
+        "boot": "938875c5-ef58-4a9e-9255-45ab372c08b8",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1445,7 +1623,7 @@
           {
             "request_id": "native_refresh",
             "ordinal": 1,
-            "boot": "0cfaeab7-1e17-43d4-907c-bc0248e66d5a",
+            "boot": "938875c5-ef58-4a9e-9255-45ab372c08b8",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1457,7 +1635,7 @@
           {
             "request_id": "native_refresh",
             "ordinal": 2,
-            "boot": "0cfaeab7-1e17-43d4-907c-bc0248e66d5a",
+            "boot": "938875c5-ef58-4a9e-9255-45ab372c08b8",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1469,7 +1647,7 @@
           {
             "request_id": "native_refresh",
             "ordinal": 3,
-            "boot": "0cfaeab7-1e17-43d4-907c-bc0248e66d5a",
+            "boot": "938875c5-ef58-4a9e-9255-45ab372c08b8",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1602,7 +1780,7 @@
       ],
       "receipt": {
         "id": "native_proactive_refresh",
-        "boot": "da49895f-59fa-4278-a77d-47973a79a64f",
+        "boot": "6f5ead3a-723c-460d-8a9c-2cb4dc63961b",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1613,7 +1791,7 @@
           {
             "request_id": "native_proactive_refresh",
             "ordinal": 1,
-            "boot": "da49895f-59fa-4278-a77d-47973a79a64f",
+            "boot": "6f5ead3a-723c-460d-8a9c-2cb4dc63961b",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1625,7 +1803,7 @@
           {
             "request_id": "native_proactive_refresh",
             "ordinal": 2,
-            "boot": "da49895f-59fa-4278-a77d-47973a79a64f",
+            "boot": "6f5ead3a-723c-460d-8a9c-2cb4dc63961b",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1758,7 +1936,7 @@
       ],
       "receipt": {
         "id": "native_sse_retry",
-        "boot": "322e4f8c-2ddc-4c0c-81c4-524e79a29d69",
+        "boot": "a8990bd8-4836-4ef5-949e-5fc67c050f91",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1769,7 +1947,7 @@
           {
             "request_id": "native_sse_retry",
             "ordinal": 1,
-            "boot": "322e4f8c-2ddc-4c0c-81c4-524e79a29d69",
+            "boot": "a8990bd8-4836-4ef5-949e-5fc67c050f91",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1781,7 +1959,7 @@
           {
             "request_id": "native_sse_retry",
             "ordinal": 2,
-            "boot": "322e4f8c-2ddc-4c0c-81c4-524e79a29d69",
+            "boot": "a8990bd8-4836-4ef5-949e-5fc67c050f91",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -1908,7 +2086,7 @@
       ],
       "receipt": {
         "id": "native_retry_cancel",
-        "boot": "242cb54a-1fb0-4288-9aea-6b881eafd350",
+        "boot": "42647967-5891-4e27-a3b2-cddbba3bbbfe",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -1919,7 +2097,7 @@
           {
             "request_id": "native_retry_cancel",
             "ordinal": 1,
-            "boot": "242cb54a-1fb0-4288-9aea-6b881eafd350",
+            "boot": "42647967-5891-4e27-a3b2-cddbba3bbbfe",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2046,7 +2224,7 @@
       ],
       "receipt": {
         "id": "native_fence_retry",
-        "boot": "910e049d-9673-480b-ad7d-ba669aa8c04d",
+        "boot": "221f3feb-dfc8-438b-b91d-8340da3870c0",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2057,7 +2235,7 @@
           {
             "request_id": "native_fence_retry",
             "ordinal": 1,
-            "boot": "910e049d-9673-480b-ad7d-ba669aa8c04d",
+            "boot": "221f3feb-dfc8-438b-b91d-8340da3870c0",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2184,7 +2362,7 @@
       ],
       "receipt": {
         "id": "native_preheaders_cancel",
-        "boot": "6b185253-14b4-40e8-a03b-f4dbba8262f2",
+        "boot": "ca26ed96-00e4-406b-84d8-b3d147e5a6d7",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2195,7 +2373,7 @@
           {
             "request_id": "native_preheaders_cancel",
             "ordinal": 1,
-            "boot": "6b185253-14b4-40e8-a03b-f4dbba8262f2",
+            "boot": "ca26ed96-00e4-406b-84d8-b3d147e5a6d7",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2322,7 +2500,7 @@
       ],
       "receipt": {
         "id": "native_fence_preheaders",
-        "boot": "c6d59852-bf87-4587-a4a5-dbecb384da27",
+        "boot": "93c237bd-8afd-412a-8aa8-38d4235feef3",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2333,7 +2511,7 @@
           {
             "request_id": "native_fence_preheaders",
             "ordinal": 1,
-            "boot": "c6d59852-bf87-4587-a4a5-dbecb384da27",
+            "boot": "93c237bd-8afd-412a-8aa8-38d4235feef3",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2460,7 +2638,7 @@
       ],
       "receipt": {
         "id": "native_refresh_cancel",
-        "boot": "356639f6-0792-467e-9b7b-a78414a34c5e",
+        "boot": "9eae52d6-0c8f-4fe3-8eda-0d942d9a7ff2",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2471,7 +2649,7 @@
           {
             "request_id": "native_refresh_cancel",
             "ordinal": 1,
-            "boot": "356639f6-0792-467e-9b7b-a78414a34c5e",
+            "boot": "9eae52d6-0c8f-4fe3-8eda-0d942d9a7ff2",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2598,7 +2776,7 @@
       ],
       "receipt": {
         "id": "native_failed",
-        "boot": "7530b659-4c23-4aea-bf4a-ed909f12aecb",
+        "boot": "f34ff783-4847-43d8-a207-19615dcd7390",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2609,7 +2787,7 @@
           {
             "request_id": "native_failed",
             "ordinal": 1,
-            "boot": "7530b659-4c23-4aea-bf4a-ed909f12aecb",
+            "boot": "f34ff783-4847-43d8-a207-19615dcd7390",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2736,7 +2914,7 @@
       ],
       "receipt": {
         "id": "native_incomplete",
-        "boot": "4995413b-cd01-4ccd-abab-6f3d55ecc09d",
+        "boot": "f67ca478-eae7-471b-a721-b1dc80d4b870",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2747,7 +2925,7 @@
           {
             "request_id": "native_incomplete",
             "ordinal": 1,
-            "boot": "4995413b-cd01-4ccd-abab-6f3d55ecc09d",
+            "boot": "f67ca478-eae7-471b-a721-b1dc80d4b870",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -2874,7 +3052,7 @@
       ],
       "receipt": {
         "id": "native_partial",
-        "boot": "3394dd12-e222-47fd-aa55-af6dc52f98a2",
+        "boot": "051006bb-4090-4447-9f6e-cf1e1c417f00",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -2885,7 +3063,7 @@
           {
             "request_id": "native_partial",
             "ordinal": 1,
-            "boot": "3394dd12-e222-47fd-aa55-af6dc52f98a2",
+            "boot": "051006bb-4090-4447-9f6e-cf1e1c417f00",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -3012,7 +3190,7 @@
       ],
       "receipt": {
         "id": "native_contradictory",
-        "boot": "2fc08d09-b8c6-4f64-9911-e21af7edf2f4",
+        "boot": "09856814-2c38-4098-8cee-753987af3df6",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -3023,7 +3201,7 @@
           {
             "request_id": "native_contradictory",
             "ordinal": 1,
-            "boot": "2fc08d09-b8c6-4f64-9911-e21af7edf2f4",
+            "boot": "09856814-2c38-4098-8cee-753987af3df6",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -3150,7 +3328,7 @@
       ],
       "receipt": {
         "id": "native_oversized",
-        "boot": "c84549fb-fa76-4e0f-883e-a9dd5e5417fc",
+        "boot": "00c99a74-530d-4e4c-9651-72005d647ff8",
         "generation": 2,
         "revision": "native_revision_1",
         "route": "gaffer-native",
@@ -3161,7 +3339,7 @@
           {
             "request_id": "native_oversized",
             "ordinal": 1,
-            "boot": "c84549fb-fa76-4e0f-883e-a9dd5e5417fc",
+            "boot": "00c99a74-530d-4e4c-9651-72005d647ff8",
             "generation": 2,
             "revision": "native_revision_1",
             "provider": "codex",
@@ -3278,11 +3456,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 27,
+      "elapsedMs": 39,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "error_oversized_open",
-        "boot": "abbbba8e-2c40-4b08-a919-80a7654de577",
+        "boot": "089f4fa8-737a-4e34-a01a-548d4e3ca729",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3293,7 +3471,7 @@
           {
             "request_id": "error_oversized_open",
             "ordinal": 1,
-            "boot": "abbbba8e-2c40-4b08-a919-80a7654de577",
+            "boot": "089f4fa8-737a-4e34-a01a-548d4e3ca729",
             "generation": 2,
             "revision": "revision_1",
             "provider": "openai-compatible-synthetic",
@@ -3316,7 +3494,7 @@
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "error_invalid_utf8",
-        "boot": "f9b4d1a2-f559-41ab-bcf3-d331f3bb8668",
+        "boot": "1d339aa2-c8c3-414e-a031-f8684d5e3ae9",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3327,7 +3505,7 @@
           {
             "request_id": "error_invalid_utf8",
             "ordinal": 1,
-            "boot": "f9b4d1a2-f559-41ab-bcf3-d331f3bb8668",
+            "boot": "1d339aa2-c8c3-414e-a031-f8684d5e3ae9",
             "generation": 2,
             "revision": "revision_1",
             "provider": "openai-compatible-synthetic",
@@ -3346,11 +3524,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 25,
+      "elapsedMs": 24,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "error_invalid_json",
-        "boot": "865f8dfe-a859-4673-ba12-4faab3389300",
+        "boot": "0344f0ca-9fc0-4428-ae1b-32d11a83b405",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3361,7 +3539,7 @@
           {
             "request_id": "error_invalid_json",
             "ordinal": 1,
-            "boot": "865f8dfe-a859-4673-ba12-4faab3389300",
+            "boot": "0344f0ca-9fc0-4428-ae1b-32d11a83b405",
             "generation": 2,
             "revision": "revision_1",
             "provider": "openai-compatible-synthetic",
@@ -3380,11 +3558,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 27,
+      "elapsedMs": 25,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "success_wrong_content_type_open",
-        "boot": "9bb938d5-195c-4ec5-9ccb-6583d3a8e958",
+        "boot": "736c5047-542f-4215-9cfb-bc098d198bae",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3395,7 +3573,7 @@
           {
             "request_id": "success_wrong_content_type_open",
             "ordinal": 1,
-            "boot": "9bb938d5-195c-4ec5-9ccb-6583d3a8e958",
+            "boot": "736c5047-542f-4215-9cfb-bc098d198bae",
             "generation": 2,
             "revision": "revision_1",
             "provider": "openai-compatible-synthetic",
@@ -3414,11 +3592,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 21,
+      "elapsedMs": 24,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "refresh_oversized_open",
-        "boot": "6e6c846c-b543-45be-8ba9-9f8f22912d71",
+        "boot": "2f9257bc-f12b-4e4a-a57c-c3a39f9d960c",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3429,7 +3607,7 @@
           {
             "request_id": "refresh_oversized_open",
             "ordinal": 1,
-            "boot": "6e6c846c-b543-45be-8ba9-9f8f22912d71",
+            "boot": "2f9257bc-f12b-4e4a-a57c-c3a39f9d960c",
             "generation": 2,
             "revision": "revision_1",
             "provider": "codex",
@@ -3448,11 +3626,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 36,
+      "elapsedMs": 24,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "refresh_error_oversized_open",
-        "boot": "02a2dbf0-b04c-4666-a8c6-693ba3663341",
+        "boot": "1b701061-4a64-487b-876e-7075eb1a9e43",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3463,7 +3641,7 @@
           {
             "request_id": "refresh_error_oversized_open",
             "ordinal": 1,
-            "boot": "02a2dbf0-b04c-4666-a8c6-693ba3663341",
+            "boot": "1b701061-4a64-487b-876e-7075eb1a9e43",
             "generation": 2,
             "revision": "revision_1",
             "provider": "codex",
@@ -3486,7 +3664,7 @@
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "refresh_invalid_utf8",
-        "boot": "c8607566-d4a1-4d84-892b-4cbc1b3be801",
+        "boot": "c01dc50a-1c7c-4caa-875c-ecf94c12d910",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3497,7 +3675,7 @@
           {
             "request_id": "refresh_invalid_utf8",
             "ordinal": 1,
-            "boot": "c8607566-d4a1-4d84-892b-4cbc1b3be801",
+            "boot": "c01dc50a-1c7c-4caa-875c-ecf94c12d910",
             "generation": 2,
             "revision": "revision_1",
             "provider": "codex",
@@ -3516,11 +3694,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 23,
+      "elapsedMs": 19,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "refresh_invalid_schema",
-        "boot": "e5c448ff-dcf5-4ab0-b9f9-8204bbd1ddcd",
+        "boot": "eb1ae77b-073b-4151-b093-3b1796f8a3a4",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3531,7 +3709,7 @@
           {
             "request_id": "refresh_invalid_schema",
             "ordinal": 1,
-            "boot": "e5c448ff-dcf5-4ab0-b9f9-8204bbd1ddcd",
+            "boot": "eb1ae77b-073b-4151-b093-3b1796f8a3a4",
             "generation": 2,
             "revision": "revision_1",
             "provider": "codex",
@@ -3550,11 +3728,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 133,
+      "elapsedMs": 132,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "error_cancel_complete_json",
-        "boot": "8f04e982-148c-41fc-8b07-706792d78451",
+        "boot": "e32ac856-63e7-4d0f-a403-223d2798e802",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3565,7 +3743,7 @@
           {
             "request_id": "error_cancel_complete_json",
             "ordinal": 1,
-            "boot": "8f04e982-148c-41fc-8b07-706792d78451",
+            "boot": "e32ac856-63e7-4d0f-a403-223d2798e802",
             "generation": 2,
             "revision": "revision_1",
             "provider": "openai-compatible-synthetic",
@@ -3584,11 +3762,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 128,
+      "elapsedMs": 127,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "refresh_cancel_complete_json",
-        "boot": "669c7287-f39f-4251-bb55-450dc95187ee",
+        "boot": "75c351e9-8dd2-4819-b676-578b07251290",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3599,7 +3777,7 @@
           {
             "request_id": "refresh_cancel_complete_json",
             "ordinal": 1,
-            "boot": "669c7287-f39f-4251-bb55-450dc95187ee",
+            "boot": "75c351e9-8dd2-4819-b676-578b07251290",
             "generation": 2,
             "revision": "revision_1",
             "provider": "codex",
@@ -3618,11 +3796,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 30011,
+      "elapsedMs": 30012,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "error_deadline",
-        "boot": "2af136de-cf17-4e7e-93ae-1bf03c1326ec",
+        "boot": "835ec18c-9d8a-4cf5-850f-c3eb54145227",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3633,7 +3811,7 @@
           {
             "request_id": "error_deadline",
             "ordinal": 1,
-            "boot": "2af136de-cf17-4e7e-93ae-1bf03c1326ec",
+            "boot": "835ec18c-9d8a-4cf5-850f-c3eb54145227",
             "generation": 2,
             "revision": "revision_1",
             "provider": "openai-compatible-synthetic",
@@ -3652,11 +3830,11 @@
       "sends": 1,
       "closed": 1,
       "openOriginalResponses": 0,
-      "elapsedMs": 30023,
+      "elapsedMs": 30015,
       "afterHandlerCancelStillUnknown": true,
       "receipt": {
         "id": "native_peek_deadline",
-        "boot": "44bcf38d-4fa7-4475-9b3f-0ca131a81e81",
+        "boot": "4ae4d6c3-6ea9-41fc-b4e9-228f71515c70",
         "generation": 2,
         "revision": "revision_1",
         "route": "gaffer-synthetic",
@@ -3667,7 +3845,7 @@
           {
             "request_id": "native_peek_deadline",
             "ordinal": 1,
-            "boot": "44bcf38d-4fa7-4475-9b3f-0ca131a81e81",
+            "boot": "4ae4d6c3-6ea9-41fc-b4e9-228f71515c70",
             "generation": 2,
             "revision": "revision_1",
             "provider": "codex",
