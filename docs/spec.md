@@ -403,7 +403,16 @@ but their inference goes through the same router. A separate harness process is 
 required merely to make a planning call.
 
 Define role routes such as `gaffer-planner`, `gaffer-worker` and `gaffer-reviewer`
-(illustrative user-configured combo names). They can use different models while
+(illustrative user-configured combo names). These are starting profiles, not a
+complete selection algorithm. The alpha coordinator assesses each task or scoped
+step using the approved brief, authorised evidence, complexity/uncertainty,
+modality, tools, context and budget requirements. Deterministic eligibility filters
+the operator-approved route set before task-fit ranking. Show the proposed choice,
+reason, unknowns and eligible alternatives; an operator can override within the
+same authority envelope. See the [task-routing contract](https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md)
+for assessment bounds, evidence, immutable decisions and evaluation.
+
+Routes can use different models while
 sharing the same underlying provider connections. All intent, planning, coding,
 model-assisted review and later curation usage is attributed to tasks/projects.
 Embeddings are absent initially; any future model integration must use an explicitly
@@ -678,6 +687,15 @@ Task admission order: authority/data policy → runner/harness/route compatibili
 task budget and concurrency reservation → router-reported route availability →
 priority/fairness. Unknown quota does not mean zero or unlimited capacity; begin
 with bounded concurrency and react to observed availability/errors.
+
+Task-fit selection uses the [versioned route decision](https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md)
+from the approved plan or standing policy. Revalidate its requirements, complete
+fallback graph and current eligibility during atomic dispatch. A preferred route
+cannot override a mandatory capability, data/billing restriction or resource cap.
+An attempt's route stays immutable; ranked alternatives are not a Gaffer request
+fallback loop. Bootstrap assessment itself uses an explicitly permitted 9Router
+route and bounded allowance. The initial alpha supports semantic task assessment;
+beta adds richer availability/fairness and measured preference calibration.
 
 Account rotation and model fallback live in 9Router. Gaffer permits only routes
 whose complete provider/model/billing set fits project policy. A subscription-only

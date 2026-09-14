@@ -342,6 +342,11 @@ An always-on machine holds the project when your laptop is closed.</p>
 agent harnesses and Gaffer&#39;s own planning calls route through it. Provider accounts,
 multiple subscriptions from the same provider, account rotation and model fallback
 are configured once in 9Router; Gaffer coordinates tasks above that layer.</p>
+<p>The alpha design includes <strong>task-aware route selection</strong>. Gaffer assesses the
+actual work, filters routes by permission and verified capabilities, and explains
+which eligible route fits. Operator preferences guide the choice; the full fallback
+chain remains in 9Router. See the <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md">selection contract</a>
+for bounded assessment, uncertainty, override and independent review requirements.</p>
 <p>The thing worth building is continuity between <strong>what you meant, what you authorised,
 what ran, and what you accepted</strong>. More agents and more tokens are means to that end.</p>
 <blockquote>
@@ -957,8 +962,10 @@ review flow reduce operator effort on work spanning multiple sessions. Neither a
 large fleet nor fully automated memory is required to test that hypothesis.</p>
 <p>9Router is a required shared model-access layer, even with one harness. It owns
 provider connections, multiple subscriptions per provider and request routing.
-Gaffer owns the work and consumes named routes rather than individual account
-credentials. A coordinator
+Gaffer owns the work, assesses each task&#39;s requirements and selects an eligible
+named route rather than individual account credentials. An operator&#39;s preference
+matrix seeds that choice; task evidence, verified capabilities and constraints
+determine suitability. A coordinator
 is a logical role that plans and reports; it is not necessarily an always-running
 model conversation. Models wake for useful work, then stop consuming quota.</p>
 <h2 id="prd-2-audience-and-boundaries">2. Audience and boundaries</h2>
@@ -1054,12 +1061,19 @@ can reserve a runner to exact repositories/projects.</p>
 <a href="#evaluation-4-provider-and-gateway-feasibility">integration findings</a>.</p>
 <ul>
 <li><input disabled="" type="checkbox"> Connect one 9Router instance with an endpoint and router credential reference; select named routes for planning, coding and review.</li>
+<li><input disabled="" type="checkbox"> Alpha assesses concrete tasks and scoped steps before choosing among approved named routes; a fixed role-to-model matrix alone is insufficient. Separate mandatory capabilities, data/billing limits and uncertainty from preference ranking.</li>
+<li><input disabled="" type="checkbox"> Explain the proposed choice, relevant evidence/unknowns and eligible alternatives; support an operator override or standing automatic-selection policy within the permitted envelope.</li>
+<li><input disabled="" type="checkbox"> Bound any model-assisted assessment through a configured 9Router bootstrap route. Record selection and evidence versions; revalidate at dispatch and preserve the selected route throughout an attempt.</li>
 <li><input disabled="" type="checkbox"> Provider login, credential refresh, connection priority, account rotation and fallback are managed in 9Router. Gaffer links to its management surface and shows relevant read-only status.</li>
 <li><input disabled="" type="checkbox"> Two distinct subscriptions from one provider can serve the same route. Exhausting or disabling one allows 9Router to use the other without editing every agent&#39;s configuration.</li>
 <li><input disabled="" type="checkbox"> Separate subscriptions keep separate capacity; aliases for the same account do not create extra allowance. Shared organisation limits are respected where applicable.</li>
 <li><input disabled="" type="checkbox"> A probe verifies the exact harness→9Router→model path, including streaming/tool calls. Agents receive router access, never the underlying provider credentials.</li>
 <li><input disabled="" type="checkbox"> Usage observations name their source and freshness. Unknown headroom/reset stays unknown. Paid fallback is enabled explicitly in the route&#39;s billing policy.</li>
 </ul>
+<p>The <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md">task-routing contract</a> defines the optional
+operator preference example, hard eligibility, assessment budget, fresh review
+context and comparison with static selection. Exact model/settings support is
+verified per installation; labels in a preference table are not capability facts.</p>
 <h4 id="prd-us-a5-connect-a-repository-with-scoped-access">US-A5 — Connect a repository with scoped access</h4>
 <p><strong>Alpha.</strong> The operator selects the repository, base branch, protected paths and
 verification commands once.</p>
@@ -1160,8 +1174,9 @@ work, verification failures, stopped attempts and resource blocks.</p>
 <li><input disabled="" type="checkbox"> Sending to a chat channel is a later integration with separately configured authority.</li>
 </ul>
 <h4 id="prd-us-c2-respond-to-capacity-limits">US-C2 — Respond to capacity limits</h4>
-<p><strong>Alpha router integration and caps; beta capacity-aware task scheduling.</strong> Gaffer
-selects an eligible named route; 9Router selects the provider connection per request.</p>
+<p><strong>Alpha task-aware route selection and caps; beta capacity-aware task scheduling.</strong>
+Gaffer selects an eligible named route for the work; 9Router selects models and
+provider connections within that route&#39;s approved fallback definition.</p>
 <ul>
 <li><input disabled="" type="checkbox"> Account exhaustion, cooldown and rotation stay in 9Router. A successful router fallback continues the current attempt without Gaffer redispatching the task.</li>
 <li><input disabled="" type="checkbox"> Distinct subscriptions from the same provider can supply the route; Gaffer consumes aggregate availability rather than maintaining competing per-account balances.</li>
@@ -1729,7 +1744,15 @@ general shell-backed access to daemon state. Coding workers use harness adapters
 but their inference goes through the same router. A separate harness process is not
 required merely to make a planning call.</p>
 <p>Define role routes such as <code>gaffer-planner</code>, <code>gaffer-worker</code> and <code>gaffer-reviewer</code>
-(illustrative user-configured combo names). They can use different models while
+(illustrative user-configured combo names). These are starting profiles, not a
+complete selection algorithm. The alpha coordinator assesses each task or scoped
+step using the approved brief, authorised evidence, complexity/uncertainty,
+modality, tools, context and budget requirements. Deterministic eligibility filters
+the operator-approved route set before task-fit ranking. Show the proposed choice,
+reason, unknowns and eligible alternatives; an operator can override within the
+same authority envelope. See the <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md">task-routing contract</a>
+for assessment bounds, evidence, immutable decisions and evaluation.</p>
+<p>Routes can use different models while
 sharing the same underlying provider connections. All intent, planning, coding,
 model-assisted review and later curation usage is attributed to tasks/projects.
 Embeddings are absent initially; any future model integration must use an explicitly
@@ -2003,6 +2026,14 @@ cache and task-level admission limits:</p>
 task budget and concurrency reservation → router-reported route availability →
 priority/fairness. Unknown quota does not mean zero or unlimited capacity; begin
 with bounded concurrency and react to observed availability/errors.</p>
+<p>Task-fit selection uses the <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md">versioned route decision</a>
+from the approved plan or standing policy. Revalidate its requirements, complete
+fallback graph and current eligibility during atomic dispatch. A preferred route
+cannot override a mandatory capability, data/billing restriction or resource cap.
+An attempt&#39;s route stays immutable; ranked alternatives are not a Gaffer request
+fallback loop. Bootstrap assessment itself uses an explicitly permitted 9Router
+route and bounded allowance. The initial alpha supports semantic task assessment;
+beta adds richer availability/fairness and measured preference calibration.</p>
 <p>Account rotation and model fallback live in 9Router. Gaffer permits only routes
 whose complete provider/model/billing set fits project policy. A subscription-only
 route excludes paid fallthrough; paid fallback is an explicit choice configured
@@ -2250,6 +2281,7 @@ shared 9Router instance, and is a new Gaffer foundation justified?</p>
 <li>Validate tool calls, streaming, structured output, ambient config/hooks, private endpoint access and billing policy on the intended runtime.</li>
 <li>Implement a small authenticated route boundary and sanitized status adapter where the selected router lacks scoped keys or safe stable status APIs. Keep all provider/account selection and refresh in 9Router.</li>
 <li>Define the verification fixture and prepare captures/tasks with expected outcomes before tuning prompts.</li>
+<li>Specify task-aware route assessment, hard eligibility, operator preferences, bounded bootstrap and decision evidence; preserve 9Router&#39;s ownership of request fallback and accounts. Keep desired model labels separate from verified settings/capabilities.</li>
 </ul>
 <p><strong>Exit evidence</strong></p>
 <ul>
@@ -2262,6 +2294,7 @@ shared 9Router instance, and is a new Gaffer foundation justified?</p>
 <li><input disabled="" type="checkbox"> Cancellation terminates the test process tree; failure is a blocker for unattended work.</li>
 <li><input disabled="" type="checkbox"> Model discovery is distinguished from readiness by a real bounded probe; the route&#39;s paid-overflow policy and request/partial-stream fallback behaviour are established.</li>
 <li><input disabled="" type="checkbox"> Baseline task results, operator minutes and total overhead are recorded with a repeatable test method.</li>
+<li><input disabled="" type="checkbox"> The task-routing contract and development counterexamples are reviewed; alpha implementation and a separate static-versus-task-aware comparison are tracked without changing the identical-route whole-product baseline.</li>
 </ul>
 <p><strong>Decision:</strong> adopt/extend if a maintained project satisfies the critical boundaries
 with less maintenance than a new core. Build a narrow core only if the missing
@@ -2275,6 +2308,7 @@ artifact without losing state or repeating external effects?</p>
 <p><strong>Build</strong></p>
 <ul>
 <li>Daemon state, authority, task/attempt identities, transactional outbox and resource reservations.</li>
+<li>Deterministic validation and persistence of an approved route decision with the task&#39;s requirements and policy versions; M1 accepts operator-supplied assessments and does not depend on the M2 semantic planner.</li>
 <li>Runner enrollment disabled by default, local repository policy and one supported containment profile.</li>
 <li>Runner journal, renewable lease/watchdog, stream sequencing, artifact upload/acknowledgment and retry classification.</li>
 <li>Basic CLI for create/approve/inspect/pause/cancel/stop; a fake harness for deterministic fault tests plus the real M0 adapter.</li>
@@ -2302,6 +2336,7 @@ This is the <strong>private alpha</strong>, limited to one repository and sequen
 <p><strong>Build</strong></p>
 <ul>
 <li>Authenticated private HTTPS web application: capture, routing correction, brief/plan editing, combined approval, task status, evidence review and stop.</li>
+<li>Task-aware selection among approved 9Router profiles: bounded semantic assessment, capability filtering, explainable ranking, uncertainty and eligible overrides for worker/planner/reviewer steps. Fixed role defaults are the comparator, not the completed feature.</li>
 <li>Bounded discovery and structured intent/planning with criterion IDs and assumptions.</li>
 <li>Revocation on material intent changes; current instructions override stored preferences.</li>
 <li>Minimal Markdown context: charter, progress, verified commands and decisions, with human-approved writes.</li>
@@ -2318,6 +2353,7 @@ This is the <strong>private alpha</strong>, limited to one repository and sequen
 <li><input disabled="" type="checkbox"> Review shows the exact candidate, checks and limitations. Accept, publish and merge are distinguishable; no default-branch push occurs.</li>
 <li><input disabled="" type="checkbox"> Lost push/PR response is reconciled by remote branch/head/PR identity before retry; moved remote refs block instead of overwriting.</li>
 <li><input disabled="" type="checkbox"> Ten paired tasks compare Gaffer with a standalone harness using the same 9Router routes, a good brief and progress notes; include all planning, review and recovery effort.</li>
+<li><input disabled="" type="checkbox"> A separately registered selector comparison checks suitability, uncertainty, overrides and zero hard-constraint violations against static role defaults, counting assessment and failed-run overhead. Here route choice varies while the available route set, fallback definitions, budgets and harness remain fixed; do not combine it with the identical-route product comparison.</li>
 <li><input disabled="" type="checkbox"> Seven consecutive days of bounded dogfood have no lost acknowledged result or unauthorised publication. Blocking is allowed and reported.</li>
 </ul>
 <p><strong>Decision:</strong> if intent clarification does not reduce correction effort, simplify

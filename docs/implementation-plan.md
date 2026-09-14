@@ -1,21 +1,27 @@
 # Implementation issue index
 
-Created **14 September 2026** from the reviewed v0.4 plan. The backlog contains **63 focused issues across seven milestones**, each with one outcome, context links, dependencies, acceptance checks, exclusions and a GPT-6 Astra instruction.
+Created **14 September 2026** from the reviewed v0.4 plan. The initial backlog defined **63 focused issues across seven milestones**, each with one outcome, context links, dependencies, acceptance checks, exclusions and a GPT-6 Astra instruction.
 
 [GitHub issues](https://github.com/korallis/letmecook/issues) are the live work-status source of truth. This file is a navigation and traceability index, not a duplicate status tracker. Read current issue bodies and native blocked-by relationships before starting. Later milestone details may be refined by evidence without changing their single-purpose delivery rule.
 
 The initial 63-issue index is supplemented by
-[#66 operator-selected deployment](https://github.com/korallis/letmecook/issues/66).
+[#66 operator-selected deployment](https://github.com/korallis/letmecook/issues/66)
+and [#71 task-aware route selection](https://github.com/korallis/letmecook/issues/71).
 Daemon, runner and 9Router locations are operator configuration; no maintainer
 machine or private network is a product prerequisite. The affected setup,
 placement and packaging issues retain their milestone dependencies.
+
+The [task-routing contract](contracts/task-routing.md) separates task assessment
+and eligible named-route ranking in Gaffer from 9Router's model/account fallback.
+M1 records and enforces immutable decisions; M2 implements semantic assessment and
+operator controls for the first alpha. M4 adds capacity and calibration evidence.
 
 ## Start here
 
 - [#1 Define representative fixtures and record the standalone baseline](https://github.com/korallis/letmecook/issues/1) — Establish the task/capture fixture and measurement method before tuning the product, so later value claims have a fair comparator.
 - [#2 Specify the pinned 9Router integration contract](https://github.com/korallis/letmecook/issues/2) — Make the shared model-access boundary implementable without duplicating provider-account management. Read the [contract proposal and evidence gates](contracts/9router.md) and [synthetic conformance corpus](../tests/fixtures/9router/README.md).
 
-The [ready queue](https://github.com/korallis/letmecook/issues?q=is%3Aissue%20is%3Aopen%20label%3Astatus%3Aready) starts with those two items. Readiness describes issue dependencies, not the availability of operator-labelled examples, configured test subscriptions, isolated hosts or evaluation participants. Required external inputs must be recorded honestly.
+The [ready queue](https://github.com/korallis/letmecook/issues?q=is%3Aissue%20is%3Aopen%20label%3Astatus%3Aready) evolves as prerequisite outcomes are accepted. Readiness describes issue dependencies, not the availability of operator-labelled examples, configured test subscriptions, isolated hosts or evaluation participants. Required external inputs must be recorded honestly.
 
 ## Delivery rules
 
@@ -29,7 +35,7 @@ When a prerequisite lands, review its evidence and update dependent readiness la
 
 ## M0 — Evidence and feasibility
 
-[Milestone on GitHub](https://github.com/korallis/letmecook/milestone/1) · 9 issues.
+[Milestone on GitHub](https://github.com/korallis/letmecook/milestone/1) · 10 indexed issues.
 
 | ID | Issue | Type | Prerequisites |
 | --- | --- | --- | --- |
@@ -41,7 +47,8 @@ When a prerequisite lands, review its evidence and update dependent readiness la
 | M0-06 | [#6 Run the first coding harness through a named 9Router route](https://github.com/korallis/letmecook/issues/6) | implementation | [#3](https://github.com/korallis/letmecook/issues/3), [#5](https://github.com/korallis/letmecook/issues/5) |
 | M0-07 | [#7 Prove restricted planning and discovery through 9Router](https://github.com/korallis/letmecook/issues/7) | implementation | [#3](https://github.com/korallis/letmecook/issues/3), [#5](https://github.com/korallis/letmecook/issues/5) |
 | M0-08 | [#8 Prove same-provider subscription continuity](https://github.com/korallis/letmecook/issues/8) | validation | [#4](https://github.com/korallis/letmecook/issues/4), [#6](https://github.com/korallis/letmecook/issues/6), [#7](https://github.com/korallis/letmecook/issues/7) |
-| M0-09 | [#9 Choose build, adopt or extend from measured foundation evidence](https://github.com/korallis/letmecook/issues/9) | specification | [#1](https://github.com/korallis/letmecook/issues/1), [#8](https://github.com/korallis/letmecook/issues/8) |
+| M0-09 | [#9 Choose build, adopt or extend from measured foundation evidence](https://github.com/korallis/letmecook/issues/9) | specification | [#1](https://github.com/korallis/letmecook/issues/1), [#8](https://github.com/korallis/letmecook/issues/8), [#71](https://github.com/korallis/letmecook/issues/71) |
+| M0-10 | [#71 Specify task-aware selection of approved 9Router routes](https://github.com/korallis/letmecook/issues/71) | specification | [#2](https://github.com/korallis/letmecook/issues/2) |
 
 ## M1 — Durable bounded execution
 
@@ -51,16 +58,16 @@ When a prerequisite lands, review its evidence and update dependent readiness la
 | --- | --- | --- | --- |
 | M1-01 | [#10 Specify fenced attempt execution and recovery messages](https://github.com/korallis/letmecook/issues/10) | specification | [#9](https://github.com/korallis/letmecook/issues/9) |
 | M1-02 | [#11 Establish the durable workflow store and application scaffold](https://github.com/korallis/letmecook/issues/11) | implementation | [#10](https://github.com/korallis/letmecook/issues/10) |
-| M1-03 | [#12 Enforce immutable execution grants and revisions](https://github.com/korallis/letmecook/issues/12) | implementation | [#11](https://github.com/korallis/letmecook/issues/11) |
+| M1-03 | [#12 Enforce immutable execution grants and revisions](https://github.com/korallis/letmecook/issues/12) | implementation | [#11](https://github.com/korallis/letmecook/issues/11), [#71](https://github.com/korallis/letmecook/issues/71) |
 | M1-04 | [#13 Authenticate owner bootstrap and runner enrollment](https://github.com/korallis/letmecook/issues/13) | implementation | [#11](https://github.com/korallis/letmecook/issues/11) |
 | M1-05 | [#14 Validate and register an explicitly permitted repository](https://github.com/korallis/letmecook/issues/14) | implementation | [#12](https://github.com/korallis/letmecook/issues/12), [#13](https://github.com/korallis/letmecook/issues/13) |
-| M1-06 | [#15 Commit eligible dispatch and reservations atomically](https://github.com/korallis/letmecook/issues/15) | implementation | [#12](https://github.com/korallis/letmecook/issues/12), [#13](https://github.com/korallis/letmecook/issues/13), [#14](https://github.com/korallis/letmecook/issues/14) |
+| M1-06 | [#15 Commit eligible dispatch and reservations atomically](https://github.com/korallis/letmecook/issues/15) | implementation | [#12](https://github.com/korallis/letmecook/issues/12), [#13](https://github.com/korallis/letmecook/issues/13), [#14](https://github.com/korallis/letmecook/issues/14), [#71](https://github.com/korallis/letmecook/issues/71) |
 | M1-07 | [#16 Supervise a durable runner attempt under a lease](https://github.com/korallis/letmecook/issues/16) | implementation | [#15](https://github.com/korallis/letmecook/issues/15), [#6](https://github.com/korallis/letmecook/issues/6) |
 | M1-08 | [#17 Preserve ordered run output across reconnects](https://github.com/korallis/letmecook/issues/17) | implementation | [#16](https://github.com/korallis/letmecook/issues/16) |
 | M1-09 | [#18 Preserve complete candidate artifacts before acknowledging results](https://github.com/korallis/letmecook/issues/18) | implementation | [#16](https://github.com/korallis/letmecook/issues/16) |
 | M1-10 | [#19 Make pause, cancellation and global stop durable](https://github.com/korallis/letmecook/issues/19) | implementation | [#12](https://github.com/korallis/letmecook/issues/12), [#16](https://github.com/korallis/letmecook/issues/16) |
 | M1-11 | [#20 Reconcile interruptions before bounded task retry](https://github.com/korallis/letmecook/issues/20) | implementation | [#18](https://github.com/korallis/letmecook/issues/18), [#19](https://github.com/korallis/letmecook/issues/19) |
-| M1-12 | [#21 Verify and locally accept an exact candidate](https://github.com/korallis/letmecook/issues/21) | implementation | [#12](https://github.com/korallis/letmecook/issues/12), [#18](https://github.com/korallis/letmecook/issues/18) |
+| M1-12 | [#21 Verify and locally accept an exact candidate](https://github.com/korallis/letmecook/issues/21) | implementation | [#12](https://github.com/korallis/letmecook/issues/12), [#18](https://github.com/korallis/letmecook/issues/18), [#71](https://github.com/korallis/letmecook/issues/71) |
 | M1-13 | [#22 Expose the bounded local workflow through a typed CLI](https://github.com/korallis/letmecook/issues/22) | implementation | [#17](https://github.com/korallis/letmecook/issues/17), [#20](https://github.com/korallis/letmecook/issues/20), [#21](https://github.com/korallis/letmecook/issues/21) |
 | M1-14 | [#23 Restore a consistent paused state snapshot](https://github.com/korallis/letmecook/issues/23) | implementation | [#20](https://github.com/korallis/letmecook/issues/20), [#22](https://github.com/korallis/letmecook/issues/22) |
 | M1-15 | [#24 Record the durable-core acceptance gate](https://github.com/korallis/letmecook/issues/24) | validation | [#22](https://github.com/korallis/letmecook/issues/22), [#23](https://github.com/korallis/letmecook/issues/23) |
@@ -73,10 +80,10 @@ When a prerequisite lands, review its evidence and update dependent readiness la
 | --- | --- | --- | --- |
 | M2-01 | [#25 Specify owner browser authentication and device sessions](https://github.com/korallis/letmecook/issues/25) | specification | [#24](https://github.com/korallis/letmecook/issues/24) |
 | M2-02 | [#26 Implement authenticated private browser access](https://github.com/korallis/letmecook/issues/26) | implementation | [#25](https://github.com/korallis/letmecook/issues/25) |
-| M2-03 | [#27 Expose alpha 9Router connection and route status](https://github.com/korallis/letmecook/issues/27) | implementation | [#26](https://github.com/korallis/letmecook/issues/26), [#4](https://github.com/korallis/letmecook/issues/4) |
-| M2-04 | [#28 Specify capture-to-approval revision semantics](https://github.com/korallis/letmecook/issues/28) | specification | [#24](https://github.com/korallis/letmecook/issues/24) |
+| M2-03 | [#27 Expose alpha 9Router connection and route status](https://github.com/korallis/letmecook/issues/27) | implementation | [#26](https://github.com/korallis/letmecook/issues/26), [#4](https://github.com/korallis/letmecook/issues/4), [#71](https://github.com/korallis/letmecook/issues/71) |
+| M2-04 | [#28 Specify capture-to-approval revision semantics](https://github.com/korallis/letmecook/issues/28) | specification | [#24](https://github.com/korallis/letmecook/issues/24), [#71](https://github.com/korallis/letmecook/issues/71) |
 | M2-05 | [#29 Implement a durable phone capture inbox](https://github.com/korallis/letmecook/issues/29) | implementation | [#26](https://github.com/korallis/letmecook/issues/26), [#28](https://github.com/korallis/letmecook/issues/28) |
-| M2-06 | [#30 Produce bounded discovery and structured intent proposals](https://github.com/korallis/letmecook/issues/30) | implementation | [#29](https://github.com/korallis/letmecook/issues/29), [#7](https://github.com/korallis/letmecook/issues/7), [#27](https://github.com/korallis/letmecook/issues/27) |
+| M2-06 | [#30 Produce bounded discovery and structured intent proposals](https://github.com/korallis/letmecook/issues/30) | implementation | [#29](https://github.com/korallis/letmecook/issues/29), [#7](https://github.com/korallis/letmecook/issues/7), [#27](https://github.com/korallis/letmecook/issues/27), [#71](https://github.com/korallis/letmecook/issues/71) |
 | M2-07 | [#31 Implement editable brief-and-plan approval](https://github.com/korallis/letmecook/issues/31) | implementation | [#30](https://github.com/korallis/letmecook/issues/30) |
 | M2-08 | [#32 Show reconnectable progress and honest stop controls](https://github.com/korallis/letmecook/issues/32) | implementation | [#26](https://github.com/korallis/letmecook/issues/26) |
 | M2-09 | [#33 Compose sequential candidates before verification](https://github.com/korallis/letmecook/issues/33) | implementation | [#24](https://github.com/korallis/letmecook/issues/24) |
@@ -148,7 +155,7 @@ These links identify the primary work slices, not a claim that a story is implem
 | US-A1 — Get to a first useful result | [#22](https://github.com/korallis/letmecook/issues/22), [#40](https://github.com/korallis/letmecook/issues/40), [#57](https://github.com/korallis/letmecook/issues/57), [#60](https://github.com/korallis/letmecook/issues/60), [#62](https://github.com/korallis/letmecook/issues/62), [#63](https://github.com/korallis/letmecook/issues/63) |
 | US-A2 — Decide which machines can work | [#5](https://github.com/korallis/letmecook/issues/5), [#13](https://github.com/korallis/letmecook/issues/13), [#14](https://github.com/korallis/letmecook/issues/14), [#48](https://github.com/korallis/letmecook/issues/48) |
 | US-A3 — Protect machines allocated to other work | [#5](https://github.com/korallis/letmecook/issues/5), [#13](https://github.com/korallis/letmecook/issues/13), [#16](https://github.com/korallis/letmecook/issues/16), [#48](https://github.com/korallis/letmecook/issues/48) |
-| US-A4 — Manage all subscriptions through one router | [#2](https://github.com/korallis/letmecook/issues/2), [#3](https://github.com/korallis/letmecook/issues/3), [#4](https://github.com/korallis/letmecook/issues/4), [#8](https://github.com/korallis/letmecook/issues/8), [#27](https://github.com/korallis/letmecook/issues/27), [#47](https://github.com/korallis/letmecook/issues/47), [#49](https://github.com/korallis/letmecook/issues/49) |
+| US-A4 — Manage all subscriptions through one router | [#2](https://github.com/korallis/letmecook/issues/2), [#3](https://github.com/korallis/letmecook/issues/3), [#4](https://github.com/korallis/letmecook/issues/4), [#8](https://github.com/korallis/letmecook/issues/8), [#27](https://github.com/korallis/letmecook/issues/27), [#47](https://github.com/korallis/letmecook/issues/47), [#49](https://github.com/korallis/letmecook/issues/49), [#71](https://github.com/korallis/letmecook/issues/71), [#15](https://github.com/korallis/letmecook/issues/15), [#30](https://github.com/korallis/letmecook/issues/30), [#31](https://github.com/korallis/letmecook/issues/31), [#40](https://github.com/korallis/letmecook/issues/40) |
 | US-A5 — Connect a repository with scoped access | [#14](https://github.com/korallis/letmecook/issues/14), [#35](https://github.com/korallis/letmecook/issues/35), [#36](https://github.com/korallis/letmecook/issues/36) |
 | US-A6 — Use a private application from a phone | [#25](https://github.com/korallis/letmecook/issues/25), [#26](https://github.com/korallis/letmecook/issues/26), [#58](https://github.com/korallis/letmecook/issues/58) |
 | US-B1 — Capture before the idea disappears | [#28](https://github.com/korallis/letmecook/issues/28), [#29](https://github.com/korallis/letmecook/issues/29), [#40](https://github.com/korallis/letmecook/issues/40), [#58](https://github.com/korallis/letmecook/issues/58) |

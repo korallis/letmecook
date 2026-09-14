@@ -17,8 +17,10 @@ large fleet nor fully automated memory is required to test that hypothesis.
 
 9Router is a required shared model-access layer, even with one harness. It owns
 provider connections, multiple subscriptions per provider and request routing.
-Gaffer owns the work and consumes named routes rather than individual account
-credentials. A coordinator
+Gaffer owns the work, assesses each task's requirements and selects an eligible
+named route rather than individual account credentials. An operator's preference
+matrix seeds that choice; task evidence, verified capabilities and constraints
+determine suitability. A coordinator
 is a logical role that plans and reports; it is not necessarily an always-running
 model conversation. Models wake for useful work, then stop consuming quota.
 
@@ -106,11 +108,19 @@ can reserve a runner to exact repositories/projects.
 [integration findings](evaluation.md#4-provider-and-gateway-feasibility).
 
 - [ ] Connect one 9Router instance with an endpoint and router credential reference; select named routes for planning, coding and review.
+- [ ] Alpha assesses concrete tasks and scoped steps before choosing among approved named routes; a fixed role-to-model matrix alone is insufficient. Separate mandatory capabilities, data/billing limits and uncertainty from preference ranking.
+- [ ] Explain the proposed choice, relevant evidence/unknowns and eligible alternatives; support an operator override or standing automatic-selection policy within the permitted envelope.
+- [ ] Bound any model-assisted assessment through a configured 9Router bootstrap route. Record selection and evidence versions; revalidate at dispatch and preserve the selected route throughout an attempt.
 - [ ] Provider login, credential refresh, connection priority, account rotation and fallback are managed in 9Router. Gaffer links to its management surface and shows relevant read-only status.
 - [ ] Two distinct subscriptions from one provider can serve the same route. Exhausting or disabling one allows 9Router to use the other without editing every agent's configuration.
 - [ ] Separate subscriptions keep separate capacity; aliases for the same account do not create extra allowance. Shared organisation limits are respected where applicable.
 - [ ] A probe verifies the exact harness→9Router→model path, including streaming/tool calls. Agents receive router access, never the underlying provider credentials.
 - [ ] Usage observations name their source and freshness. Unknown headroom/reset stays unknown. Paid fallback is enabled explicitly in the route's billing policy.
+
+The [task-routing contract](https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md) defines the optional
+operator preference example, hard eligibility, assessment budget, fresh review
+context and comparison with static selection. Exact model/settings support is
+verified per installation; labels in a preference table are not capability facts.
 
 #### US-A5 — Connect a repository with scoped access
 
@@ -227,8 +237,9 @@ work, verification failures, stopped attempts and resource blocks.
 
 #### US-C2 — Respond to capacity limits
 
-**Alpha router integration and caps; beta capacity-aware task scheduling.** Gaffer
-selects an eligible named route; 9Router selects the provider connection per request.
+**Alpha task-aware route selection and caps; beta capacity-aware task scheduling.**
+Gaffer selects an eligible named route for the work; 9Router selects models and
+provider connections within that route's approved fallback definition.
 
 - [ ] Account exhaustion, cooldown and rotation stay in 9Router. A successful router fallback continues the current attempt without Gaffer redispatching the task.
 - [ ] Distinct subscriptions from the same provider can supply the route; Gaffer consumes aggregate availability rather than maintaining competing per-account balances.

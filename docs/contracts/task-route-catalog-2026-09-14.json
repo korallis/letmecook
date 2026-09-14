@@ -1,0 +1,248 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-09-14",
+  "scope": "Source/catalog discovery only; not defaults, importable configuration, readiness or live protocol evidence",
+  "routerVersion": "0.5.75",
+  "sourceCommit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+  "inferencePerformed": false,
+  "modelsGetPerformed": false,
+  "routerMutationPerformed": false,
+  "automaticallyEligible": false,
+  "models": [
+    {
+      "desiredLabel": "gateway Grok 4.6",
+      "routeId": "gcli/grok-4.6-xhigh",
+      "desiredEfforts": [
+        "xhigh"
+      ],
+      "effortWireEvidence": "REMOVED",
+      "note": "Custom route exists. Executor strips -xhigh to grok-4.6 then supportsGrokCliReasoningEffort permits only grok-4.5; requested effort is deleted. Do not substitute Grok 4.5.",
+      "discoveryStatus": "custom configured route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "xAI Grok 4",
+      "routeId": "xai/grok-4",
+      "desiredEfforts": [
+        "high"
+      ],
+      "effortWireEvidence": "source normalizer preserves high",
+      "note": "Registry declaration and generic Grok capability only; no upstream effort acceptance proof.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "Astra",
+      "routeId": "cx/gpt-6-astra",
+      "desiredEfforts": [
+        "xhigh"
+      ],
+      "effortWireEvidence": "xhigh",
+      "note": "Model-specific thinking levels include xhigh; Codex executor preserves it. Desired IDs not in saved disabled list.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "GPT 5.6 Sol",
+      "routeId": "cx/gpt-5.6-sol",
+      "desiredEfforts": [
+        "xhigh"
+      ],
+      "effortWireEvidence": "xhigh",
+      "note": "Model-specific thinking levels include xhigh; Codex executor preserves it. Desired IDs not in saved disabled list.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "GPT 5.6 Terra",
+      "routeId": "cx/gpt-5.6-terra",
+      "desiredEfforts": [
+        "xhigh"
+      ],
+      "effortWireEvidence": "xhigh",
+      "note": "Model-specific thinking levels include xhigh; Codex executor preserves it. Desired IDs not in saved disabled list.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "Sol-review",
+      "routeId": "cx/gpt-5.6-sol-review",
+      "desiredEfforts": [
+        "xhigh"
+      ],
+      "effortWireEvidence": "xhigh",
+      "note": "Virtual review variant maps to base model and quotaFamily review; identity is not an independent base model or proof of independent reviewer context.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "Luna-review",
+      "routeId": "cx/gpt-5.6-luna-review",
+      "desiredEfforts": [
+        "xhigh"
+      ],
+      "effortWireEvidence": "xhigh",
+      "note": "Virtual review variant maps to base model and quotaFamily review; identity is not an independent base model or proof of independent reviewer context.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "Terra-review",
+      "routeId": "cx/gpt-5.6-terra-review",
+      "desiredEfforts": [
+        "xhigh"
+      ],
+      "effortWireEvidence": "xhigh",
+      "note": "Virtual review variant maps to base model and quotaFamily review; identity is not an independent base model or proof of independent reviewer context.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "Gemini 3.8 Flash (low)",
+      "routeId": "ag/gemini-3.8-flash-low",
+      "desiredEfforts": [
+        "low"
+      ],
+      "effortWireEvidence": "low",
+      "note": "Explicit low route maps to gemini-3.8-flash-low(low). Base ag/gemini-3.8-flash maps to medium upstream; proposed explicit binding needs acknowledgement in policy, not silent substitution.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "Gemini 3.8 Flash high",
+      "routeId": "ag/gemini-3.8-flash-high",
+      "desiredEfforts": [
+        "high"
+      ],
+      "effortWireEvidence": "high",
+      "note": "Maps to gemini-3.8-flash-high(high).",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "Gemini 3.1 Pro low",
+      "routeId": "ag/gemini-3.1-pro-low",
+      "desiredEfforts": [
+        "low"
+      ],
+      "effortWireEvidence": "low",
+      "note": "Exact registry route; generic Gemini 3 Pro capability declares gemini-level, which preserves explicit low.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "Fable 5.1",
+      "routeId": "cc/claude-fable-5-1",
+      "desiredEfforts": [
+        "xhigh"
+      ],
+      "effortWireEvidence": "high (normalized)",
+      "note": "Exact dashed router ID differs from display version. Canonical capability is permanently adaptive; normalizer maps xhigh to high. Exact xhigh semantics unsupported by this path.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "Fable 5",
+      "routeId": "cc/claude-fable-5",
+      "desiredEfforts": [
+        "xhigh"
+      ],
+      "effortWireEvidence": "thinking.budget_tokens=32768 (source translation)",
+      "note": "Generic Fable capability uses Claude budget. This is budget translation, not proven provider-native xhigh.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "Sonnet 5",
+      "routeId": "cc/claude-sonnet-5",
+      "desiredEfforts": [
+        "high"
+      ],
+      "effortWireEvidence": "output_config.effort=high",
+      "note": "Canonical adaptive capability preserves high.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "Opus 5",
+      "routeId": "cc/claude-opus-5",
+      "desiredEfforts": [
+        "xhigh"
+      ],
+      "effortWireEvidence": "high (normalized)",
+      "note": "Canonical adaptive capability maps xhigh to high; preserve mismatch explicitly.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "Haiku",
+      "routeId": "cc/claude-haiku-4-5-20251001",
+      "desiredEfforts": [
+        "low"
+      ],
+      "effortWireEvidence": "thinking.budget_tokens=1024 (source translation)",
+      "note": "Haiku label has no version. This is configured-provider registry candidate 4.5, not an authorized silent version choice; upstream thinking compatibility unproven.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "GLM 5.3 Flash",
+      "routeId": "glm/glm-5.3-flash",
+      "desiredEfforts": [
+        "low"
+      ],
+      "effortWireEvidence": "NO reasoning_effort from unified zai translator",
+      "note": "Exact canonical capability overrides family pattern and lacks thinkingEffortSupported; default false. Unified translator sets thinking enabled but skips effort. Desired low not preserved by that path.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    },
+    {
+      "desiredLabel": "GLM 5.3",
+      "routeId": "glm/glm-5.3",
+      "desiredEfforts": [
+        "high",
+        "max"
+      ],
+      "effortWireEvidence": "high / max (source translation)",
+      "note": "Family pattern sets thinkingEffortSupported true; zai translator preserves high/max. UI thinking-level list is binary for zai; model catalog is not effort support proof.",
+      "discoveryStatus": "source-declared route; active provider; no live probe",
+      "readiness": "unproven",
+      "protocolConformance": "unproven",
+      "automaticallyEligible": false
+    }
+  ]
+}
