@@ -13,6 +13,12 @@ agent harnesses and Gaffer's own planning calls route through it. Provider accou
 multiple subscriptions from the same provider, account rotation and model fallback
 are configured once in 9Router; Gaffer coordinates tasks above that layer.
 
+The alpha design includes **task-aware route selection**. Gaffer assesses the
+actual work, filters routes by permission and verified capabilities, and explains
+which eligible route fits. Operator preferences guide the choice; the full fallback
+chain remains in 9Router. See the [selection contract](https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md)
+for bounded assessment, uncertainty, override and independent review requirements.
+
 The thing worth building is continuity between **what you meant, what you authorised,
 what ran, and what you accepted**. More agents and more tokens are means to that end.
 

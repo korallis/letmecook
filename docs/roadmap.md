@@ -46,6 +46,7 @@ shared 9Router instance, and is a new Gaffer foundation justified?
 - Validate tool calls, streaming, structured output, ambient config/hooks, private endpoint access and billing policy on the intended runtime.
 - Implement a small authenticated route boundary and sanitized status adapter where the selected router lacks scoped keys or safe stable status APIs. Keep all provider/account selection and refresh in 9Router.
 - Define the verification fixture and prepare captures/tasks with expected outcomes before tuning prompts.
+- Specify task-aware route assessment, hard eligibility, operator preferences, bounded bootstrap and decision evidence; preserve 9Router's ownership of request fallback and accounts. Keep desired model labels separate from verified settings/capabilities.
 
 **Exit evidence**
 
@@ -58,6 +59,7 @@ shared 9Router instance, and is a new Gaffer foundation justified?
 - [ ] Cancellation terminates the test process tree; failure is a blocker for unattended work.
 - [ ] Model discovery is distinguished from readiness by a real bounded probe; the route's paid-overflow policy and request/partial-stream fallback behaviour are established.
 - [ ] Baseline task results, operator minutes and total overhead are recorded with a repeatable test method.
+- [ ] The task-routing contract and development counterexamples are reviewed; alpha implementation and a separate static-versus-task-aware comparison are tracked without changing the identical-route whole-product baseline.
 
 **Decision:** adopt/extend if a maintained project satisfies the critical boundaries
 with less maintenance than a new core. Build a narrow core only if the missing
@@ -74,6 +76,7 @@ artifact without losing state or repeating external effects?
 **Build**
 
 - Daemon state, authority, task/attempt identities, transactional outbox and resource reservations.
+- Deterministic validation and persistence of an approved route decision with the task's requirements and policy versions; M1 accepts operator-supplied assessments and does not depend on the M2 semantic planner.
 - Runner enrollment disabled by default, local repository policy and one supported containment profile.
 - Runner journal, renewable lease/watchdog, stream sequencing, artifact upload/acknowledgment and retry classification.
 - Basic CLI for create/approve/inspect/pause/cancel/stop; a fake harness for deterministic fault tests plus the real M0 adapter.
@@ -104,6 +107,7 @@ This is the **private alpha**, limited to one repository and sequential executio
 **Build**
 
 - Authenticated private HTTPS web application: capture, routing correction, brief/plan editing, combined approval, task status, evidence review and stop.
+- Task-aware selection among approved 9Router profiles: bounded semantic assessment, capability filtering, explainable ranking, uncertainty and eligible overrides for worker/planner/reviewer steps. Fixed role defaults are the comparator, not the completed feature.
 - Bounded discovery and structured intent/planning with criterion IDs and assumptions.
 - Revocation on material intent changes; current instructions override stored preferences.
 - Minimal Markdown context: charter, progress, verified commands and decisions, with human-approved writes.
@@ -120,6 +124,7 @@ This is the **private alpha**, limited to one repository and sequential executio
 - [ ] Review shows the exact candidate, checks and limitations. Accept, publish and merge are distinguishable; no default-branch push occurs.
 - [ ] Lost push/PR response is reconciled by remote branch/head/PR identity before retry; moved remote refs block instead of overwriting.
 - [ ] Ten paired tasks compare Gaffer with a standalone harness using the same 9Router routes, a good brief and progress notes; include all planning, review and recovery effort.
+- [ ] A separately registered selector comparison checks suitability, uncertainty, overrides and zero hard-constraint violations against static role defaults, counting assessment and failed-run overhead. Here route choice varies while the available route set, fallback definitions, budgets and harness remain fixed; do not combine it with the identical-route product comparison.
 - [ ] Seven consecutive days of bounded dogfood have no lost acknowledged result or unauthorised publication. Blocking is allowed and reported.
 
 **Decision:** if intent clarification does not reduce correction effort, simplify
