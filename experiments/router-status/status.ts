@@ -45,11 +45,11 @@ export interface Observation {
   projected_at: string;
   route: {
     state: 'unknown';
-    readiness: 'unknown';
-    reason: 'no_observation' | 'policy_unverified' | 'malformed_observation' | 'router_unreachable';
-    source: 'none';
-    observed_at: null;
-    validity_until: null;
+    readiness: 'unknown' | 'not_ready';
+    reason: 'no_observation' | 'policy_unverified' | 'malformed_observation' | 'router_unreachable' | 'connection_unavailable' | 'stale_observation';
+    source: 'none' | 'router_snapshot';
+    observed_at: string | null;
+    validity_until: string | null;
   };
   connections: Array<{
     connection_ref: string;
@@ -137,12 +137,12 @@ function validateConfig(config: Config): Config {
 }
 
 async function boundedJSON(response: Response, maxBytes: number): Promise<unknown> {
-  if (response.headers.get('content-type')?.split(';')[0]?.trim() !== 'application/json') badSchema();
   if (!response.body) badSchema();
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
   try {
+    if (response.headers.get('content-type')?.split(';')[0]?.trim() !== 'application/json') badSchema();
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -184,11 +184,12 @@ function projectConnection(entry: ObjectValue | undefined, binding: ConnectionBi
   const health = enumField(entry.healthStatus, ['healthy', 'degraded', 'error', 'failed', 'unhealthy', 'down', 'unknown']);
   const quota = enumField(entry.quotaState, ['ok', 'exhausted', 'blocked', 'unknown']);
   const lastCheckedAt = timestamp(entry.lastCheckedAt);
-  const age = lastCheckedAt === null ? null : now - Date.parse(lastCheckedAt);
-  // Reading status does not refresh the original router observation's lifetime.
-  if (age === null || age < 0 || lastCheckedAt === null) return empty;
   const nextRetryAt = timestamp(entry.nextRetryAt);
   const resetAt = timestamp(entry.resetAt);
+  const age = lastCheckedAt === null ? null : now - Date.parse(lastCheckedAt);
+  // Reading status does not refresh the original router observation's lifetime.
+  if (age !== null && age < 0) badSchema();
+  if (age === null || lastCheckedAt === null) return empty;
   const retryTimes = [nextRetryAt, resetAt].filter((time): time is string => time !== null && Date.parse(time) > now);
   let state: State = 'unknown';
   // Passive eligibility is never readiness. Stale observations cannot admit work.
@@ -209,9 +210,17 @@ function projectLegacyConnection(entry: ObjectValue | undefined, binding: Connec
   const empty = projectConnection(undefined, binding, now, freshnessMs);
   if (!entry) return empty;
   if (entry.provider !== binding.upstreamProvider || (entry.isActive !== undefined && typeof entry.isActive !== 'boolean')) badSchema();
+  const status = enumField(entry.testStatus, ['active', 'error', 'unavailable', 'unknown']);
+  const lastErrorAt = timestamp(entry.lastErrorAt);
+  if (lastErrorAt !== null && Date.parse(lastErrorAt) > now) badSchema();
   // 0.5.75 does not have the reference fork's canonical status model. An active
   // configuration and legacy testStatus are not live route/capability evidence.
-  if (entry.isActive !== false) return empty;
+  if (entry.isActive !== false) {
+    if (lastErrorAt === null || (status !== 'error' && status !== 'unavailable')) return empty;
+    return { ...empty, state: now - Date.parse(lastErrorAt) < freshnessMs ? 'blocked' : 'unknown',
+      source: 'router_snapshot', observed_at: lastErrorAt,
+      validity_until: new Date(Date.parse(lastErrorAt) + freshnessMs).toISOString() };
+  }
   // This is the authenticated retrieval time of an explicit disabled config fact,
   // never a timestamp assigned to an old health/capability observation.
   return { ...empty, state: 'disabled', source: 'router_snapshot', observed_at: new Date(now).toISOString(),
@@ -241,6 +250,10 @@ export function createStatusAdapter(config: Config, options: { fetch?: typeof fe
       };
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const diagnostic = (code: Failure) => {
+        // Never forward an error, body or header, including from a broken logger.
+        try { options.diagnostic?.(code); } catch { /* Fixed enum only. */ }
+      };
       try {
         if (![INSPECTED_COMMIT, DEPLOYED_COMMIT].includes(fixed.inspectedCommit)) throw new ProjectionFailure('unsupported_version');
         const response = await transport(new URL(PASSIVE_PATH, fixed.origin), {
@@ -256,15 +269,38 @@ export function createStatusAdapter(config: Config, options: { fetch?: typeof fe
         const projectedAt = now();
         result.projected_at = new Date(projectedAt).toISOString();
         const project = fixed.inspectedCommit === DEPLOYED_COMMIT ? projectLegacyConnection : projectConnection;
-        result.connections = bindings.map(binding => project(entries.get(binding.upstreamId), binding, projectedAt, freshnessMs));
+        const configuredIds = new Set(fixed.connections.map(binding => binding.upstreamId));
+        let malformed = [...entries.keys()].some(id => !configuredIds.has(id));
+        result.connections = bindings.map(binding => {
+          try { return project(entries.get(binding.upstreamId), binding, projectedAt, freshnessMs); }
+          catch {
+            malformed = true;
+            return projectConnection(undefined, binding, projectedAt, freshnessMs);
+          }
+        });
+        if (malformed) {
+          result.route.reason = 'malformed_observation';
+          diagnostic('schema_mismatch');
+        } else if (result.connections.length > 0 && result.connections.every(row => ['blocked', 'disabled', 'exhausted'].includes(row.state))) {
+          // All configured alternatives are freshly denied. Intersect their
+          // observation intervals; never infer positive readiness or capacity.
+          result.route = { state: 'unknown', readiness: 'not_ready', reason: 'connection_unavailable', source: 'router_snapshot',
+            observed_at: result.connections.map(row => row.observed_at!).sort().at(-1)!,
+            validity_until: result.connections.map(row => row.validity_until!).sort()[0]! };
+        } else if (result.connections.some(row => row.validity_until !== null && Date.parse(row.validity_until) <= projectedAt)) {
+          result.route.reason = 'stale_observation';
+        }
       } catch (error) {
         const code = controller.signal.aborted ? 'unavailable' : error instanceof ProjectionFailure ? error.code : 'unavailable';
         result.route.reason = code === 'unsupported_version' ? 'policy_unverified' : code === 'schema_mismatch' ? 'malformed_observation' : 'router_unreachable';
-        // Logging is restricted to a fixed enum. Never forward an error, body or header.
-        try { options.diagnostic?.(code); } catch { /* A broken logger must not leak its exception. */ }
-      } finally { clearTimeout(timeout); }
+        diagnostic(code);
+      } finally {
+        // Covers early header rejection and transport paths before a reader exists.
+        controller.abort();
+        clearTimeout(timeout);
+      }
       if (!validateObservation(result)) {
-        result.route.reason = 'malformed_observation';
+        result.route = { state: 'unknown', readiness: 'unknown', reason: 'malformed_observation', source: 'none', observed_at: null, validity_until: null };
         result.connections = bindings.map(entry => projectConnection(undefined, entry, sampledAt, freshnessMs));
         if (!validateObservation(result)) throw new Error('invalid_projection');
       }

@@ -1,6 +1,6 @@
 # Passive 9Router status experiment
 
-Related to issue #4; consumes the proposed
+Implements issue #4; consumes the accepted
 [9Router contract](../../docs/contracts/9router.md) from issue #2. This is a
 standalone backend experiment, outside the undecided application core. It does
 not enroll a host, configure accounts, select a provider or claim a ready route.
@@ -48,9 +48,11 @@ Two source profiles are deliberately distinct:
   conservatively. Freshness is at most 30 seconds and may be shortened.
 - `17c4cc76877bd1755030a8414f8d0083f48dcccf` (npm 0.5.75 source): the canonical
   fields above are not that version's status interface. Active configuration and
-  legacy `testStatus` remain unknown. Explicit disabled configuration is observed
-  at authenticated snapshot retrieval time. Legacy health-error projection is not
-  implemented; it remains unknown. No observation is treated as model readiness.
+  legacy `testStatus=active` remain unknown. Explicit disabled configuration is
+  observed at authenticated snapshot retrieval time. Fresh `error`/`unavailable`
+  observations with valid `lastErrorAt` project blocked, never quota exhaustion.
+  Inspected enum/time fields must be valid even for disabled configuration; old
+  observations keep their source timestamp and become unknown on expiry.
 
 Other source pins are refused before network access. The configured source commit
 must come from inspected deployment evidence; this adapter does not remotely
@@ -61,12 +63,17 @@ All output objects are newly constructed and validated by the actual JSON-schema
 consumer. Upstream names, emails, IDs, arbitrary errors, URLs, nested provider data
 and unknown fields never pass through. Diagnostics expose only a fixed reason enum,
 including for parsing, transport and logging failures. Invalid projections fail
-closed to a schema-valid unknown result. Output contains only locally configured
+closed to a schema-valid unknown result. Malformed connection fields invalidate
+that connection and preserve valid siblings; malformed response containers and
+ambiguous identities invalidate the whole response. Output contains only locally configured
 opaque references, enums and normalized timestamps; no quota estimates or totals.
 Aliases share connection references instead of manufacturing additional capacity.
 
-This minimal passive adapter always leaves **route readiness and capabilities
-unknown**. A later integration must supply the separate deployment, epoch,
+When every configured alternative is freshly blocked, exhausted or disabled,
+route readiness is **not_ready**, with the intersection of those observations'
+lifetimes. A missing, malformed or stale alternative leaves readiness unknown;
+an empty connection set cannot create a denial. Capabilities always remain unknown.
+A later integration must supply the separate deployment, epoch,
 capability and bounded-inference evidence before claiming ready. It must invalidate
 or repoll observations after their `validity_until`; polling does not refresh old
 router timestamps. The output is not execution authority.
@@ -77,9 +84,14 @@ The automated suite exercises both version profiles, synthetic nested credential
 and raw key aggregates, duplicate aliases and distinct subscriptions, malformed and
 stale status, immutable configuration, unsupported-version refusal, exact HTTP
 reads, redirects, server/parser/logger failures, chunked response bounds and abort
-of a stalled server connection. TypeScript checking and CI use the same commands.
+of a stalled server connection, including bodies rejected on their headers.
+All 36 tests pass, including direct execution of 18 applicable provider fixtures
+from the accepted contract corpus. Four broader corpus cases require absent-read,
+model-discovery or bounded-inference/capability inputs not exposed by this passive
+adapter; their definitions are validated separately, not claimed as adapter runs.
+TypeScript checking and CI use the same commands.
 
 No authenticated deployed-router status call, private-ingress scope proof, provider
 quota measurement, account migration or live readiness probe has been performed by
-this experiment. Issue #2 acceptance and deployment authentication remain separate
-gates; this draft does not claim production compatibility from fixtures alone.
+this experiment. Issue #2 is accepted; deployment authentication remains a separate
+gate. This experiment does not claim production compatibility from fixtures alone.

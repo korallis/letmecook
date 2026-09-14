@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { Server, RequestListener } from 'node:http';
 import { test } from 'node:test';
@@ -204,6 +205,95 @@ test('response bounds apply to chunked bodies and cancellation closes a stalled 
     await Promise.race([closed, new Promise((_, reject) => { const timer = setTimeout(() => reject(new Error('abort_did_not_close_connection')), 1000); timer.unref(); })]);
   } finally { await stalled.close(); }
 });
+
+test('rejecting headers closes an unconsumed streaming body before its deadline', async () => {
+  let disconnected!: () => void;
+  const closed = new Promise<void>(resolve => { disconnected = resolve; });
+  const server = await listen((_request, response) => {
+    response.on('close', disconnected);
+    response.writeHead(200, { 'content-type': 'text/plain' });
+    response.write(SECRET);
+  });
+  try {
+    const diagnostics: string[] = [];
+    const result = await createStatusAdapter(config({ origin: server.origin, syntheticLoopback: true, timeoutMs: 30_000 }),
+      { diagnostic: code => diagnostics.push(code) }).snapshot('worker');
+    assert.equal(result.route.reason, 'malformed_observation');
+    assert.deepEqual(diagnostics, ['schema_mismatch']);
+    await Promise.race([closed, new Promise((_, reject) => {
+      const timer = setTimeout(() => reject(new Error('rejected_body_left_connected')), 1000); timer.unref();
+    })]);
+  } finally { await server.close(); }
+});
+
+test('one malformed connection preserves a sibling denial without denying an unknown alternative', async () => {
+  const value = payload({ authState: SECRET });
+  value.connections.push({ ...payload({ quotaState: 'exhausted' }).connections[0]!, id: 'upstream-b' });
+  const result = await read(value, {
+    connections: [...config().connections, { ref: 'connection-b', providerRef: 'provider-a', upstreamId: 'upstream-b', upstreamProvider: 'codex' }],
+    routes: [{ routeId: 'worker', policyRevision: 'policy-v1', connectionRefs: ['connection-a', 'connection-b'] }],
+  });
+  assert.deepEqual(result.connections.map(row => row.state), ['unknown', 'exhausted']);
+  assert.equal(result.route.readiness, 'unknown');
+  assert.equal(result.route.reason, 'malformed_observation');
+});
+
+test('all denied alternatives yield a route denial with their intersected lifetime', async () => {
+  const value = payload({ isActive: false, lastCheckedAt: '2026-09-14T11:59:50Z' });
+  value.connections.push({ ...payload({ quotaState: 'exhausted' }).connections[0]!, id: 'upstream-b' });
+  const settings: Partial<Config> = {
+    connections: [...config().connections, { ref: 'connection-b', providerRef: 'provider-a', upstreamId: 'upstream-b', upstreamProvider: 'codex' }],
+    routes: [{ routeId: 'worker', policyRevision: 'policy-v1', connectionRefs: ['connection-a', 'connection-b'] }],
+  };
+  assert.deepEqual((await read(value, settings)).route, { state: 'unknown', readiness: 'not_ready', reason: 'connection_unavailable',
+    source: 'router_snapshot', observed_at: '2026-09-14T12:00:00.000Z', validity_until: '2026-09-14T12:00:20.000Z' });
+  value.connections[0]!.lastCheckedAt = '2026-09-14T11:59:30Z';
+  assert.equal((await read(value, settings)).route.readiness, 'unknown');
+  assert.equal((await read({ connections: [] }, { connections: [], routes: [{ routeId: 'worker', policyRevision: 'policy-v1', connectionRefs: [] }] })).route.readiness, 'unknown');
+});
+
+test('legacy fields must be valid even on a disabled connection', async () => {
+  for (const patch of [{ testStatus: { token: SECRET } }, { lastErrorAt: SECRET }, { lastErrorAt: '2026-09-14T12:00:01Z' }]) {
+    const result = await read(payload({ isActive: false, ...patch }), { inspectedCommit: DEPLOYED_COMMIT });
+    assert.equal(result.connections[0]?.state, 'unknown');
+    assert.equal(result.route.reason, 'malformed_observation');
+    assert(!JSON.stringify(result).includes(SECRET));
+  }
+});
+
+interface CorpusCase {
+  id: string;
+  context: { now: string; router_id: string; route_id: string; policy_revision: string; ttl_ms: number; adapter_profile: string;
+    connections: Array<{ connection_ref: string; provider_ref: string; upstream_connection_id: string; upstream_provider_id: string }> };
+  inputs: { providers: unknown };
+  expected: unknown;
+}
+// Compare dates semantically; the adapter deliberately normalizes source dates to milliseconds.
+function normalizedDates(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizedDates);
+  if (value !== null && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key,
+    ['projected_at', 'observed_at', 'validity_until', 'retry_after'].includes(key) && typeof item === 'string'
+      ? new Date(item).toISOString() : normalizedDates(item)]));
+  return value;
+}
+const corpus = JSON.parse(readFileSync(new URL('../../tests/fixtures/9router/status-cases.json', import.meta.url), 'utf8')) as { cases: CorpusCase[] };
+// These require inputs this GET-only adapter does not expose: absent fetch,
+// model discovery, or bounded-inference/capability evidence. No fixtures are rewritten.
+const outsidePassiveAdapter = new Set(['missing-observations', 'discovery-is-not-readiness', 'fresh-confirmed-ready', 'stale-does-not-refresh-on-poll']);
+for (const fixture of corpus.cases.filter(entry => !outsidePassiveAdapter.has(entry.id))) {
+  test(`accepted provider contract: ${fixture.id}`, async () => {
+    const context = fixture.context;
+    const result = await createStatusAdapter({
+      routerId: context.router_id, origin: 'https://router.invalid', managementCredential: 'synthetic-management-token',
+      inspectedCommit: context.adapter_profile === 'decolua-0.5.75-17c4cc7' ? DEPLOYED_COMMIT : INSPECTED_COMMIT,
+      freshnessMs: context.ttl_ms,
+      connections: context.connections.map(row => ({ ref: row.connection_ref, providerRef: row.provider_ref,
+        upstreamId: row.upstream_connection_id, upstreamProvider: row.upstream_provider_id })),
+      routes: [{ routeId: context.route_id, policyRevision: context.policy_revision, connectionRefs: context.connections.map(row => row.connection_ref) }],
+    }, { fetch: fixtureFetch(fixture.inputs.providers), now: () => Date.parse(context.now) }).snapshot(context.route_id);
+    assert.deepEqual(normalizedDates(result), normalizedDates(fixture.expected));
+  });
+}
 
 test('transport/parser/logger exceptions cannot escape with credentials', async () => {
   for (const transport of [async () => { throw new Error(SECRET); }, async () => new Response(SECRET, { headers: { 'content-type': 'application/json' } })]) {
