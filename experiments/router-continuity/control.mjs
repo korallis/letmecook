@@ -86,3 +86,11 @@ export function continuityControl({ manifest, packetDigest, policy, gate, author
   }
   return { transition, wrapGate, controlAllowed, admissionAllowed, state: () => ({ busy, failed, admissions, completed }) };
 }
+
+// Fake provider output only; caller is inside the gateway's synthetic-evidence branch.
+export function syntheticContinuityEvents(manifest, profile, body, events) {
+  if(!manifest || digest(profile)!==manifest.profileDigest)return null;
+  const users=body.input?.filter(x=>x.role==='user');
+  if(users?.length!==1||canonical(users[0].content)!==canonical([{type:'input_text',text:JSON.stringify(PROMPT)}]))return null;
+  return JSON.parse(JSON.stringify(events(false)).replaceAll('Completed 🌍 café.',EXPECTED));
+}
