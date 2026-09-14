@@ -1,5 +1,5 @@
 // Bound the byte input before parsing. JSON.parse alone silently accepts duplicate keys.
-export function parseJSON(text: string): unknown {
+export function parseJSON(text: string, allowReservedKeys = false): unknown {
   let i = 0;
   const bad = (): never => { throw new Error('invalid_json'); };
   const space = () => { while (/[ \t\r\n]/.test(text[i] ?? 'x')) i++; };
@@ -24,7 +24,7 @@ export function parseJSON(text: string): unknown {
       while (true) {
         space(); if (text[i] !== '"') return bad();
         const key = string();
-        if (Object.hasOwn(result, key) || ['__proto__', 'constructor', 'prototype'].includes(key)) return bad();
+        if (Object.hasOwn(result, key) || !allowReservedKeys && ['__proto__', 'constructor', 'prototype'].includes(key)) return bad();
         space(); if (text[i++] !== ':') return bad();
         result[key] = value(depth + 1); space();
         const separator = text[i++];

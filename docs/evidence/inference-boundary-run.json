@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "observedAt": "2026-09-14T12:27:09.574Z",
+  "observedAt": "2026-09-14T12:46:54.283Z",
   "result": "synthetic-boundary-passed",
   "synthetic": true,
   "liveRouterCalled": false,
@@ -14,18 +14,19 @@
     "architecture": "arm64"
   },
   "sourceDigests": {
-    "boundary.test.ts": "0439a0dcc33823adb0011ff6402181d64c20226a8fccbbd001e872f9a0bfb5ee",
-    "boundary.ts": "52ab3164b858949f31e0367a4f5db52d35b9d3c661a7f850ed1ecbfdf5e6ee6c",
-    "demo.ts": "5420d67eb4abe59197c4df7dce752b3b51b485c7837e94f91c91e677d2f031c4",
-    "fixture.ts": "cd6853fadbd3ffcb41ffe662c3bf2bb1f3afc5fe409181802fb0a3e6ae71bd5a",
-    "json.ts": "26e9809bf196d2a0e8154d58299dc70f7f710eb25534ae04e956be2aedc0269f",
+    "boundary.test.ts": "184fd24601e8c08d47007cd69e4d4d51b9458ee3ffb29a43ce439f2c7f386553",
+    "boundary.ts": "aedaeb58da77ea5ff22f40addce01a8a7f7146525783856b22006d6d5b7a0b35",
+    "demo.ts": "448bef33591c5408942adb0ea4a44c6473bac90831962dcabbd339b102b91fa3",
+    "fixture.ts": "acc2080543fe4bd228900bab5b0b57ccfb13aca690c1d0da27cf221bc1bd412b",
+    "json.ts": "7f26eb4cf1d4544f55a7b5a7c69cb8dc41de8aaa0c8db13596f59e981944c180",
     "package-lock.json": "10a402c72fae1b535ebbe43a8cbb6ddae3e706b9a41346c2da6416a66be361ba",
     "package.json": "0687f4f3e65bd81e0252ff98b699899eb3062184dc84db685a5ee5e20edc7b9d",
-    "policy.ts": "f221951d3167415a037a6833978cafbe16e2aae8fc3f56d0d6e313abaca1f562",
+    "policy.ts": "6d77453009bad776abe66a55219467b00a84f53a3d38f4387cf563e02cadbf44",
     "protocol.ts": "a5e4cfac5a00d7daf7a4e03f8180af4491454a8eab4aa30650a8bd959d07e98d",
     "prove.ts": "76bf6a73c17523e749d5389c10fcb4616708463e19e19fdba8f07a9168a7d750",
     "tsconfig.json": "e7fdc78d6c95f978eb355c76d005733baf15e891719f85e9a001e67fb65d435d",
-    "types.ts": "a57afcb9aa488e83692e8beaaf77fd2a0f27a6478289146f03c254a685214732"
+    "types.ts": "a57afcb9aa488e83692e8beaaf77fd2a0f27a6478289146f03c254a685214732",
+    "wait.ts": "c56f31eb6d68762bf4d083156a69d98ea01bc4942a5a05400a0de80f2d317e1d"
   },
   "tests": [
     {
@@ -122,6 +123,42 @@
     },
     {
       "name": "transport loss before headers retains unknown work and does not retry or refund the reservation",
+      "result": "passed"
+    },
+    {
+      "name": "closed owners are terminal/idempotent and cannot modify or unlock a newer owner",
+      "result": "passed"
+    },
+    {
+      "name": "an owner whose lock identity changed cannot write the journal or remove that lock",
+      "result": "passed"
+    },
+    {
+      "name": "reserved JavaScript property IDs have numeric own counters and remain bounded after reopening",
+      "result": "passed"
+    },
+    {
+      "name": "journal reservations require a matching own request counter",
+      "result": "passed"
+    },
+    {
+      "name": "stalled admission honors the caller deadline and its late read cannot change a newer owner",
+      "result": "passed"
+    },
+    {
+      "name": "stop and shutdown interrupt a stalled completion authority without losing unknown reservations",
+      "result": "passed"
+    },
+    {
+      "name": "authority deadline bounds trusted policy reads even without an HTTP caller",
+      "result": "passed"
+    },
+    {
+      "name": "a cancelled non-cooperative policy writer keeps its lock quarantined across late completion",
+      "result": "passed"
+    },
+    {
+      "name": "a timed-out policy writer poisons its existing owner before shutdown or late completion",
       "result": "passed"
     }
   ],

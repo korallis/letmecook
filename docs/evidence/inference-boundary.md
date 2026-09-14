@@ -77,6 +77,7 @@ concurrency reservation and elapsed-time budget. The default fixture uses:
 | Total request / first semantic output / semantic idle | 2 s / 1 s / 500 ms |
 | Attempt duration | 10 s |
 | Process-wide admitted reservations / issued grants | 16 / 64 |
+| Trusted authority callback | 250 ms maximum by default; caller/stop cancellation can end it earlier |
 
 Tokens expire at the earlier credential, lease or attempt deadline. SSE comments
 and empty role metadata do not extend semantic deadlines. The bounded profile
@@ -85,6 +86,11 @@ connections and headers are separately capped. Request/response reads and
 downstream backpressure remain under the request deadline. Each admitted forward
 creates exactly one upstream HTTP request. There is no account selection, provider
 retry, credential refresh, quota ledger or hard-money guarantee.
+
+Request counts use numeric own properties, including for valid IDs such as
+`constructor` and `prototype`; inherited JavaScript properties cannot supply a
+counter. Reload validates every reservation against its matching count and policy
+epoch. Those IDs remain bounded across journal reloads.
 
 ## Frozen policy, cancellation and recovery
 
@@ -110,6 +116,9 @@ the uncertain reservation and never triggers an automatic retry or refund.
 
 The private journal holds only reviewed synthetic policy, safe identities, request
 counts and reservations. A single-owner lock prevents a second supervisor.
+The lock carries a random owner identity, checked before journal writes and lock
+removal. Closing an owner is terminal and idempotent: calling it again cannot write
+state, reactivate admission or remove a newer supervisor's lock.
 Restart always begins closed and requires the trusted authority to reconcile any
 retained work; attempt credentials do not survive. A process-crash test records an
 active reservation and stale lock before abrupt exit. For manual recovery, first
@@ -118,6 +127,22 @@ then remove **only that experiment directory's** `owner.lock`. Reopening still
 requires authoritative router/provider quiescence and a frozen policy; never edit
 away uncertain reservations. Corrupt state fails closed. This small admission
 journal is not the durable application core or a router deployment recovery tool.
+
+Admission passes the caller's abort signal into authority waits. Every authority
+call has its own bounded deadline, and shutdown aborts those waits before waiting
+for HTTP handlers. Timeout/stop leaves uncertain reservations durable and late read
+results are discarded; they cannot reopen a closed owner or alter a newer owner's
+journal. The trusted host can select an authority deadline from 1–1,000 ms when
+opening the experiment gate. This is not a deadline guarantee for a failed host
+filesystem or a blocked JavaScript event loop.
+
+An external policy writer might ignore its abort signal. If such a mutation is
+still pending when cancellation/deadline ends the wait, shutdown returns a closed
+error and **retains its owner lock**. The uncertain owner cannot reactivate or admit
+work, even before shutdown. New owners remain blocked even if the callback
+returns later. Recover that quarantined experiment only after terminating the old
+supervisor and verifying the router's actual frozen graph and quiescence; never
+remove the lock merely because the HTTP request or callback timed out.
 
 The fixture authority is honest, sole-writer test code outside the worker endpoint.
 It cannot certify the real 9Router dashboard/import/database/CLI writers or hidden
@@ -132,6 +157,9 @@ requests; text and complete tool continuation; every byte split of UTF-8/SSE;
 multiple tool IDs; malformed/partial streams; response caps; concurrency/count/time
 bounds; pre-forward and midstream stop; hidden-work cancellation; drain races;
 failed readback; second-writer refusal; corrupt state and abrupt-exit recovery.
+Regression cases also cover stale owner reuse, changed lock identity, inherited
+counter names, mismatched journal identities, stalled admission/completion reads,
+bounded shutdown and late non-cooperative policy mutations.
 The accepted Chat corpus's complete, partial, synthetic-DONE and post-text error
 files are consumed directly. Messages/Responses remain unsupported and are denied.
 

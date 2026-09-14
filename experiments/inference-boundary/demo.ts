@@ -1,4 +1,5 @@
 import { request } from 'node:http';
+import { setTimeout as pause } from 'node:timers/promises';
 import { setup } from './fixture.ts';
 import { TOOL, CHAT_PATH } from './types.ts';
 
@@ -14,6 +15,10 @@ try {
     req.on('error', reject); req.end(body);
   });
   if (!result.includes('[DONE]') || !result.includes('read_file')) throw new Error('demo_failed');
+  // Let the completed fixture request record its quiescence before deliberate shutdown.
+  const deadline = Date.now() + 1000;
+  while (!experiment.boundary.audit.length && Date.now() < deadline) await pause(5);
+  if (experiment.boundary.audit[0]?.outcome !== 'completed') throw new Error('demo_failed');
   await experiment.close();
   console.log(JSON.stringify({ synthetic: true, liveRouterCalled: false, completedToolCall: 'read_file', toolExecuted: false, attribution: experiment.boundary.audit }, null, 2));
 } catch {

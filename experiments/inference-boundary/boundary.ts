@@ -23,6 +23,7 @@ export class Boundary {
   private pending = new Map<AbortController, Scope>();
   private handlers = new Set<Promise<void>>();
   private closed = false;
+  private closing: Promise<void> | undefined;
   readonly audit: Audit[] = [];
   readonly server = createServer({ maxHeaderSize: 8192, connectionsCheckingInterval: 50 }, (req, res) => {
     const action = this.handle(req, res).catch(() => { res.destroy(); });
@@ -105,6 +106,8 @@ export class Boundary {
     let scope: Scope | undefined; let requestId: string | undefined; let forwarded = false;
     let semantic = false; let outcome: Outcome = 'failed_before_output'; let reason: Reason | null = null;
     const abort = new AbortController(); const timers: NodeJS.Timeout[] = [];
+    const rejectAborted = () => this.reject(req, res, safeError(abort.signal.reason), requestId);
+    abort.signal.addEventListener('abort', rejectAborted, { once: true });
     const cancel = () => { if (!res.writableEnded) abort.abort(new Denial('cancelled', 409)); };
     res.once('close', cancel);
     try {
@@ -120,7 +123,7 @@ export class Boundary {
       let value: any;
       try { value = parseJSON(raw); } catch { throw new Denial('unsupported_request', 400); }
       const body = validateRequest(value, policy);
-      const admission = await this.gate.admit(scope.binding, () => this.current(scope!) && !abort.signal.aborted);
+      const admission = await this.gate.admit(scope.binding, () => this.current(scope!) && !abort.signal.aborted, abort.signal);
       requestId = admission.reservation.requestId;
       this.active.set(requestId, { scope, abort });
       // Recheck after durable admission. A stop during I/O must never start a request.
@@ -172,6 +175,7 @@ export class Boundary {
       abort.abort(failure); this.reject(req, res, failure, requestId);
     } finally {
       for (const timer of timers) clearTimeout(timer); res.off('close', cancel);
+      abort.signal.removeEventListener('abort', rejectAborted);
       this.pending.delete(abort);
       if (requestId && scope) {
         let quiescence: Audit['quiescence'] = 'unknown';
@@ -184,12 +188,18 @@ export class Boundary {
       }
     }
   }
-  async close() {
+  close(): Promise<void> {
+    if (this.closing) return this.closing;
     this.closed = true;
     for (const abort of this.pending.keys()) abort.abort(new Denial('cancelled', 409));
     for (const { abort } of this.active.values()) abort.abort(new Denial('cancelled', 409));
+    const closeGate = this.gate.close();
+    void closeGate.catch(() => {});
     this.server.closeAllConnections();
-    if (this.server.listening) await new Promise<void>(resolve => this.server.close(() => resolve()));
-    await Promise.allSettled([...this.handlers]); await this.gate.close();
+    this.closing = (async () => {
+      if (this.server.listening) await new Promise<void>(resolve => this.server.close(() => resolve()));
+      await Promise.allSettled([...this.handlers]); await closeGate;
+    })();
+    return this.closing;
   }
 }

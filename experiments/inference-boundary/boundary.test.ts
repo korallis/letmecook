@@ -303,7 +303,7 @@ test('abrupt supervisor exit leaves a lock and durable reservation; offline reco
     const code = `import {PolicyGate} from ${JSON.stringify(policyUrl)}; import {fixturePolicy} from ${JSON.stringify(typesUrl)};
       const authority={readFrozenPolicy:async()=>fixturePolicy(),quiescent:async()=>true,replaceFrozenPolicy:async p=>p};
       const gate=await PolicyGate.open(${JSON.stringify(directory)},authority); await gate.activate();
-      await gate.admit({attemptId:'attempt_crash',taskId:'task_crash',routerId:'fixture_router',routeId:'coding',epoch:1,revision:'policy_1'},()=>true);
+      await gate.admit({attemptId:'attempt_crash',taskId:'task_crash',grantId:'grant_crash',leaseId:'lease_crash',fence:1,role:'worker',routerId:'fixture_router',routeId:'coding',epoch:1,revision:'policy_1',expiresAt:Date.now()+10000,leaseExpiresAt:Date.now()+10000},()=>true);
       process.exit(17);`;
     const child = spawnSync(process.execPath, ['--input-type=module', '-e', code], { timeout: 3000, encoding: 'utf8' });
     assert.equal(child.status, 17);
@@ -337,4 +337,174 @@ test('transport loss before headers retains unknown work and does not retry or r
     assert.equal(s.boundary.audit[0].quiescence, 'unknown'); assert.equal(s.gate.snapshot().reservations.length, 1);
     assert.equal((await call(s.workerSocket, g.token)).status, 429); assert.equal(s.router.calls.length, 1);
   } finally { await s.close(); }
+});
+
+test('closed owners are terminal/idempotent and cannot modify or unlock a newer owner', async () => {
+  const s = await setup(); let newer: PolicyGate | undefined;
+  try {
+    const old = s.gate; const binding = s.grant().binding;
+    await s.boundary.close();
+    newer = await PolicyGate.open(join(s.directory, 'policy'), s.router); await newer.activate();
+    const journal = await readFile(join(s.directory, 'policy/state.json'), 'utf8');
+    const owner = await readFile(join(s.directory, 'policy/owner.lock'), 'utf8');
+    await Promise.all([old.close(), old.close()]);
+    await assert.rejects(old.activate(), /boundary_closed/);
+    await assert.rejects(old.admit(binding, () => true), /boundary_closed/);
+    await assert.rejects(old.finish('not-a-request', 'completed'), /boundary_closed/);
+    await assert.rejects(old.drainAndReplace({ ...fixturePolicy(), epoch: 2, revision: 'policy_2' }), /boundary_closed/);
+    assert.equal(await readFile(join(s.directory, 'policy/state.json'), 'utf8'), journal);
+    assert.equal(await readFile(join(s.directory, 'policy/owner.lock'), 'utf8'), owner);
+    assert.equal(newer.snapshot().phase, 'active');
+    await assert.rejects(PolicyGate.open(join(s.directory, 'policy'), s.router), /EEXIST/);
+    await newer.close(); newer = undefined;
+  } finally { if (newer) await newer.close(); await s.close(); }
+});
+
+test('an owner whose lock identity changed cannot write the journal or remove that lock', async () => {
+  const s = await setup();
+  try {
+    const before = await readFile(join(s.directory, 'policy/state.json'), 'utf8');
+    const replacement = JSON.stringify({ pid: process.pid, owner: 'replacement-owner' });
+    await writeFile(join(s.directory, 'policy/owner.lock'), replacement);
+    await assert.rejects(s.gate.admit(s.grant().binding, () => true), /boundary_closed/);
+    await assert.rejects(s.boundary.close(), /boundary_closed/);
+    assert.equal(await readFile(join(s.directory, 'policy/state.json'), 'utf8'), before);
+    assert.equal(await readFile(join(s.directory, 'policy/owner.lock'), 'utf8'), replacement);
+  } finally { await s.boundary.close().catch(() => {}); await s.router.close(); await rm(s.directory, { recursive: true, force: true }); }
+});
+
+test('reserved JavaScript property IDs have numeric own counters and remain bounded after reopening', async () => {
+  const s = await setup(fixturePolicy({ requestCount: 1 })); let reopened: PolicyGate | undefined;
+  try {
+    const bindings = [];
+    for (const attemptId of ['constructor', 'prototype', 'tostring', 'hasownproperty']) {
+      const g = s.grant({ attemptId }); bindings.push(g.binding);
+      assert.equal((await call(s.workerSocket, g.token)).status, 200);
+      await until(() => s.boundary.audit.length === bindings.length);
+      assert.equal((await call(s.workerSocket, g.token)).status, 429);
+      const counts = s.gate.snapshot().counts; assert(Object.hasOwn(counts, attemptId)); assert.equal(counts[attemptId], 1);
+    }
+    assert.throws(() => s.grant({ attemptId: '__proto__' }));
+    assert.equal(s.router.calls.length, bindings.length);
+    await s.boundary.close();
+    reopened = await PolicyGate.open(join(s.directory, 'policy'), s.router); await reopened.activate();
+    for (const binding of bindings) await assert.rejects(reopened.admit(binding, () => true), /attempt_limit/);
+    const journal = JSON.parse(await readFile(join(s.directory, 'policy/state.json'), 'utf8'));
+    assert(Object.values(journal.counts).every(count => count === 1));
+    await reopened.close(); reopened = undefined;
+  } finally { if (reopened) await reopened.close(); await s.close(); }
+});
+
+test('journal reservations require a matching own request counter', async () => {
+  const s = await setup();
+  try {
+    const g = s.grant({ attemptId: 'constructor' }); s.router.enqueue('hidden_drop');
+    await call(s.workerSocket, g.token); await until(() => s.boundary.audit.length === 1);
+    await s.boundary.close();
+    const path = join(s.directory, 'policy/state.json'); const journal = JSON.parse(await readFile(path, 'utf8'));
+    journal.counts = {}; await writeFile(path, JSON.stringify(journal));
+    await assert.rejects(PolicyGate.open(join(s.directory, 'policy'), s.router), /boundary_closed/);
+  } finally { await s.close(); }
+});
+
+test('stalled admission honors the caller deadline and its late read cannot change a newer owner', async () => {
+  const s = await setup(fixturePolicy({ totalMs: 60 })); let newer: PolicyGate | undefined;
+  let release!: (value: boolean) => void;
+  try {
+    const g = s.grant(); s.router.enqueue('hidden_drop'); await call(s.workerSocket, g.token);
+    await until(() => s.boundary.audit.length === 1);
+    const original = s.router.quiescent.bind(s.router);
+    let entered = false; const held = new Promise<boolean>(resolve => release = resolve);
+    s.router.quiescent = async () => { entered = true; return held; };
+    const began = Date.now(); const pending = call(s.workerSocket, g.token);
+    await until(() => entered);
+    const result = await Promise.race([pending, pause(220).then(() => { throw new Error('admission_deadline_overrun'); })]);
+    assert.equal(result.status, 408); assert(Date.now() - began < 220); assert.equal(s.router.calls.length, 1);
+    await s.boundary.close();
+    const oldState = JSON.parse(await readFile(join(s.directory, 'policy/state.json'), 'utf8'));
+    assert.equal(oldState.phase, 'closed'); assert.equal(oldState.reservations.length, 1);
+    s.router.quiescent = original; s.router.stopHidden();
+    newer = await PolicyGate.open(join(s.directory, 'policy'), s.router); await newer.activate();
+    const journal = await readFile(join(s.directory, 'policy/state.json'), 'utf8');
+    const owner = await readFile(join(s.directory, 'policy/owner.lock'), 'utf8');
+    release(true); await pause(30);
+    assert.equal(await readFile(join(s.directory, 'policy/state.json'), 'utf8'), journal);
+    assert.equal(await readFile(join(s.directory, 'policy/owner.lock'), 'utf8'), owner);
+    assert.equal(s.router.calls.length, 1); await assert.rejects(s.gate.activate(), /boundary_closed/);
+    await assert.rejects(PolicyGate.open(join(s.directory, 'policy'), s.router), /EEXIST/);
+    await newer.close(); newer = undefined;
+  } finally { release?.(false); if (newer) await newer.close(); await s.close(); }
+});
+
+test('stop and shutdown interrupt a stalled completion authority without losing unknown reservations', async () => {
+  const s = await setup(); let release!: (value: boolean) => void;
+  try {
+    let entered = false; const held = new Promise<boolean>(resolve => release = resolve);
+    s.router.quiescent = async () => { entered = true; return held; };
+    const result = await call(s.workerSocket, s.grant().token); assert.equal(result.status, 200);
+    await until(() => entered); const began = Date.now();
+    await Promise.race([s.boundary.close(), pause(150).then(() => { throw new Error('shutdown_authority_wait'); })]);
+    assert(Date.now() - began < 150);
+    const journal = await readFile(join(s.directory, 'policy/state.json'), 'utf8');
+    assert.equal(JSON.parse(journal).reservations.length, 1); assert.equal(JSON.parse(journal).phase, 'closed');
+    release(true); await pause(30);
+    assert.equal(await readFile(join(s.directory, 'policy/state.json'), 'utf8'), journal);
+    assert.equal(s.boundary.audit[0].quiescence, 'unknown');
+  } finally { release?.(false); await s.close(); }
+});
+
+test('authority deadline bounds trusted policy reads even without an HTTP caller', async () => {
+  const s = await setup(fixturePolicy(), 40); let release!: (value: boolean) => void;
+  try {
+    const held = new Promise<boolean>(resolve => release = resolve);
+    s.router.quiescent = async () => held;
+    const began = Date.now();
+    await assert.rejects(s.gate.drainAndReplace({ ...fixturePolicy(), epoch: 2, revision: 'policy_2' }), /deadline/);
+    assert(Date.now() - began < 180); assert.equal(s.gate.snapshot().phase, 'closed');
+    await s.boundary.close();
+    const journal = await readFile(join(s.directory, 'policy/state.json'), 'utf8');
+    release(true); await pause(30);
+    assert.equal(await readFile(join(s.directory, 'policy/state.json'), 'utf8'), journal); assert.equal(s.router.mutations, 0);
+  } finally { release?.(false); await s.close(); }
+});
+
+test('a cancelled non-cooperative policy writer keeps its lock quarantined across late completion', async () => {
+  const s = await setup(); let release!: () => void;
+  try {
+    const original = s.router.replaceFrozenPolicy.bind(s.router);
+    let entered = false; const held = new Promise<void>(resolve => release = resolve);
+    s.router.replaceFrozenPolicy = async next => { entered = true; await held; return original(next); };
+    const mutation = s.gate.drainAndReplace({ ...fixturePolicy(), epoch: 2, revision: 'policy_2' });
+    void mutation.catch(() => {}); await until(() => entered);
+    await assert.rejects(s.boundary.close(), /boundary_closed/); await assert.rejects(mutation, /boundary_closed/);
+    const journal = await readFile(join(s.directory, 'policy/state.json'), 'utf8');
+    const owner = await readFile(join(s.directory, 'policy/owner.lock'), 'utf8');
+    assert.equal(JSON.parse(journal).phase, 'closed');
+    await assert.rejects(PolicyGate.open(join(s.directory, 'policy'), s.router), /EEXIST/);
+    release(); await pause(30); assert.equal(s.router.mutations, 1);
+    assert.equal(await readFile(join(s.directory, 'policy/state.json'), 'utf8'), journal);
+    assert.equal(await readFile(join(s.directory, 'policy/owner.lock'), 'utf8'), owner);
+    await assert.rejects(s.gate.activate(), /boundary_closed/);
+    await assert.rejects(PolicyGate.open(join(s.directory, 'policy'), s.router), /EEXIST/);
+  } finally { release?.(); await s.boundary.close().catch(() => {}); await s.router.close(); await rm(s.directory, { recursive: true, force: true }); }
+});
+
+test('a timed-out policy writer poisons its existing owner before shutdown or late completion', async () => {
+  const s = await setup(fixturePolicy(), 40); let release!: () => void;
+  try {
+    const g = s.grant(); const original = s.router.replaceFrozenPolicy.bind(s.router);
+    const held = new Promise<void>(resolve => release = resolve);
+    s.router.replaceFrozenPolicy = async next => { await held; return original(next); };
+    const next = { ...fixturePolicy(), epoch: 2, revision: 'policy_2' };
+    await assert.rejects(s.gate.drainAndReplace(next), /boundary_closed/);
+    assert.equal(s.gate.snapshot().phase, 'closed');
+    await assert.rejects(s.gate.activate(), /boundary_closed/);
+    await assert.rejects(s.gate.admit(g.binding, () => true), /boundary_closed/);
+    await assert.rejects(s.gate.drainAndReplace(next), /boundary_closed/);
+    const result = await call(s.workerSocket, g.token); assert.equal(result.status, 503); assert.equal(s.router.calls.length, 0);
+    release(); await pause(30); assert.equal(s.router.mutations, 1);
+    await assert.rejects(s.gate.activate(), /boundary_closed/);
+    await assert.rejects(s.boundary.close(), /boundary_closed/);
+    await assert.rejects(PolicyGate.open(join(s.directory, 'policy'), s.router), /EEXIST/);
+  } finally { release?.(); await s.boundary.close().catch(() => {}); await s.router.close(); await rm(s.directory, { recursive: true, force: true }); }
 });

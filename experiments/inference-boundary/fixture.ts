@@ -71,11 +71,11 @@ export class SyntheticRouter implements FrozenAuthority {
   async close() { this.stopHidden(); this.server.closeAllConnections(); await new Promise<void>(resolve => this.server.close(() => resolve())); }
 }
 
-export async function setup(policy = fixturePolicy()) {
+export async function setup(policy = fixturePolicy(), authorityMs = 250) {
   const directory = await mkdtemp(join(tmpdir(), 'gaffer-boundary-'));
   const routerSocket = join(directory, 'router.sock'); const workerSocket = join(directory, 'worker.sock');
   const router = new SyntheticRouter(policy); await router.listen(routerSocket);
-  const gate = await PolicyGate.open(join(directory, 'policy'), router); await gate.activate();
+  const gate = await PolicyGate.open(join(directory, 'policy'), router, authorityMs); await gate.activate();
   const boundary = new Boundary(gate, routerSocket, router.key); await boundary.listen(workerSocket);
   let next = 0;
   const grant = (overrides: Partial<Binding> = {}) => {
