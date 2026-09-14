@@ -9,6 +9,50 @@ import { DEFAULT_BUDGET, validatePlan } from './planner.ts';
 import { snapshot, sha256 } from './reader.ts';
 import { toolStream, event } from '../inference-boundary/fixture.ts';
 import { validateRequest } from '../inference-boundary/protocol.ts';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+
+test('failed fixture setup closes listeners and removes owned state; cleanup failures retain both errors', async () => {
+  // Keep the nested Unix socket path below macOS's sockaddr_un limit.
+  const parent = await mkdtemp(join(await realpath(tmpdir()), 'gs-'));
+  try {
+    // The subprocess must exit naturally. Leaked listening servers keep it alive
+    // and fail the timeout, even if their socket directory has been unlinked.
+    const script = `
+      import assert from 'node:assert/strict';
+      import { readdir, rm } from 'node:fs/promises';
+      import { join } from 'node:path';
+      const { setup } = await import(process.argv[1]);
+      const { DEFAULT_BUDGET } = await import(process.argv[2]);
+      const { Boundary } = await import(process.argv[3]);
+      const parent = process.argv[4];
+      await assert.rejects(setup([], { ...DEFAULT_BUDGET, totalMs: 0 }, { temporaryParent: parent }), /invalid_budget/);
+      assert.deepEqual(await readdir(parent), []);
+      await assert.rejects(setup([], DEFAULT_BUDGET, { temporaryParent: parent, fixtureRoot: join(parent, 'missing') }), /discovery_denied/);
+      assert.deepEqual(await readdir(parent), []);
+      const originalClose = Boundary.prototype.close;
+      const cleanupFailure = new Error('synthetic_cleanup_failure');
+      Boundary.prototype.close = async function() { await originalClose.call(this); throw cleanupFailure; };
+      await assert.rejects(setup([], { ...DEFAULT_BUDGET, totalMs: 0 }, { temporaryParent: parent }), error => {
+        assert.equal(error.message, 'fixture_setup_and_cleanup_failed');
+        assert.equal(error.errors[0].code, 'invalid_budget');
+        assert.equal(error.cause, error.errors[0]);
+        assert.equal(error.errors[1].message, 'fixture_cleanup_failed');
+        assert.equal(error.errors[1].errors[0], cleanupFailure);
+        return true;
+      });
+      Boundary.prototype.close = originalClose;
+      const retained = await readdir(parent);
+      assert.equal(retained.length, 1);
+      await rm(join(parent, retained[0]), { recursive: true });
+      console.log('setup_cleanup_verified');
+    `;
+    const result = await promisify(execFile)(process.execPath, ['--input-type=module', '-e', script,
+      new URL('./fixture.ts', import.meta.url).href, new URL('./planner.ts', import.meta.url).href,
+      new URL('../inference-boundary/boundary.ts', import.meta.url).href, parent], { timeout: 5000 });
+    assert.match(result.stdout, /setup_cleanup_verified/);
+  } finally { await rm(parent, { recursive: true, force: true }); }
+});
 
 test('actual synthetic HTTP tool continuation returns a schema-valid proposal without authority', async () => {
   const f = await setup();

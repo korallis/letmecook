@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "observedAt": "2026-09-14T13:33:10.803Z",
+  "observedAt": "2026-09-14T13:42:12.937Z",
   "result": "synthetic_planner_passed_live_blocked",
   "synthetic": true,
   "liveRouterCalled": false,
@@ -26,10 +26,10 @@
   "sourceDigests": {
     "experiments/planner-probe/capabilities.ts": "c754a7df01044b0c539808431b5a714605832cbab6b298c818d821389f91730c",
     "experiments/planner-probe/demo.ts": "25d1927331fb70f0f0552bc19006bee7bbb36b63fdd315e06d6ae236538680a6",
-    "experiments/planner-probe/fixture.ts": "09917da1a005ff2a7a7076749652690483f7c8ff18769e44d75cc3e261f147b2",
+    "experiments/planner-probe/fixture.ts": "2781097c780b0df0326fb1339214ff3060f79fbf77eed80ab460ece5d63182fe",
     "experiments/planner-probe/package-lock.json": "8a9a9881e0d48b3e98a52ffc56a81344b15a004c9827efc387edf733126e7237",
     "experiments/planner-probe/package.json": "e22142c1305dc6274bbe909a79975c6a24ee5e2c92b4eca895902248082cf258",
-    "experiments/planner-probe/planner.test.ts": "5f0894f7660f6662247227aaf4ac8d67accb639229d222abe04a6a522cb9e15c",
+    "experiments/planner-probe/planner.test.ts": "6e1036e70605c83185cc771e04ee3256ed059b5d6eaa2445ac8ffc2d72d071c0",
     "experiments/planner-probe/planner.ts": "d467bac3af806e4a5fc02b4976d10b08d713a2d3bbbbd8aea31e52aea9c47448",
     "experiments/planner-probe/prove.ts": "5bd8c594a87e5572897605de5652391017902db1416929625d36924cc732b5b6",
     "experiments/planner-probe/reader.ts": "de2930b80a6c0dd9336910dad74b4668019a4629540a6f91677f0ee8bff370dc",
@@ -52,6 +52,10 @@
     "tests/fixtures/planner/plan.schema.json": "487ff8ab83fb394a68e97127c34ecfecfb8e4c304f76bea115c346f1e08d57e3"
   },
   "tests": [
+    {
+      "name": "failed fixture setup closes listeners and removes owned state; cleanup failures retain both errors",
+      "result": "passed"
+    },
     {
       "name": "actual synthetic HTTP tool continuation returns a schema-valid proposal without authority",
       "result": "passed"
@@ -237,7 +241,7 @@
       {
         "taskId": "planner_task",
         "attemptId": "planner_attempt",
-        "requestId": "afa3ed924d8d4cdb948da390ce3df2e1",
+        "requestId": "0a8e802ce87048aea12109ec5b9a4191",
         "role": "planner",
         "routeId": "fixture_planner",
         "policyRevision": "policy_1",
@@ -250,7 +254,7 @@
       {
         "taskId": "planner_task",
         "attemptId": "planner_attempt",
-        "requestId": "c096e35ad02e43e3b0b0100b585fa622",
+        "requestId": "e8772aa6dbd74b7c8e03550a6f37cc64",
         "role": "planner",
         "routeId": "fixture_planner",
         "policyRevision": "policy_1",

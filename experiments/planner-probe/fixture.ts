@@ -26,8 +26,8 @@ export function proposal(revision: string, fileRead = true) {
 export const finishText = (text: string) => event({ content: text }) + event({}, 'stop') + 'data: [DONE]\n\n';
 export type Reply = string | 'hold' | 'unavailable' | ((body: any) => string);
 
-export async function setup(replies: Reply[] = [], budget: Budget = DEFAULT_BUDGET) {
-  const directory = await mkdtemp(join(await realpath(tmpdir()), 'gaffer-planner-'));
+export async function setup(replies: Reply[] = [], budget: Budget = DEFAULT_BUDGET, locations: { temporaryParent?: string; fixtureRoot?: string } = {}) {
+  const directory = await mkdtemp(join(await realpath(locations.temporaryParent ?? tmpdir()), 'gaffer-planner-'));
   const routerSocket = join(directory, 'router.sock'); const boundarySocket = join(directory, 'planner.sock');
   const policy = fixturePolicy({ requestBytes: 32768, responseBytes: 32768, outputTokens: 1024, requestCount: 3, totalMs: 4000, firstOutputMs: 2000, idleMs: 1000, attemptMs: 10000 });
   policy.routeId = 'fixture_planner'; policy.routerModel = 'gaffer-planner-fixture';
@@ -46,18 +46,37 @@ export async function setup(replies: Reply[] = [], budget: Budget = DEFAULT_BUDG
     for (let i = 0; i < bytes.length; i += 11) res.write(bytes.subarray(i, i + 11));
     res.end();
   });
-  server.listen(routerSocket); await once(server, 'listening');
-  const authority = { readFrozenPolicy: async () => structuredClone(policy), quiescent: async () => active.size === 0,
-    replaceFrozenPolicy: async (_next: Policy): Promise<Policy> => { throw new Error('fixture_writer_disabled'); } };
-  const gate = await PolicyGate.open(join(directory, 'policy'), authority); await gate.activate();
-  const boundary = new Boundary(gate, routerSocket, key); await boundary.listen(boundarySocket);
-  const now = Date.now();
-  const binding: Binding = { attemptId: 'planner_attempt', taskId: 'planner_task', grantId: 'planner_grant', leaseId: 'planner_lease', fence: 1, role: 'planner', routerId: policy.routerId, routeId: policy.routeId, revision: policy.revision, epoch: policy.epoch, expiresAt: now + 10000, leaseExpiresAt: now + 10000 };
-  const transport = new BoundaryTransport(boundarySocket, boundary.issue(binding), policy);
-  const file = await snapshot(FIXTURE_ROOT, 'fixture.txt', FIXTURE_HASH, 4096, AbortSignal.timeout(1000));
-  const planner = new PlannerSession(transport, file, BRIEF, budget);
-  return { planner, transport, boundary, gate, calls, policy, directory, replies, async close() {
-    await boundary.close(); server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve()));
-    await rm(directory, { recursive: true, force: true });
-  } };
+  let gate: PolicyGate | undefined; let boundary: Boundary | undefined; let closing: Promise<void> | undefined;
+  const close = (): Promise<void> => closing ??= (async () => {
+    const errors: unknown[] = [];
+    try { if (boundary) await boundary.close(); else if (gate) await gate.close(); }
+    catch (error) { errors.push(error); }
+    try {
+      server.closeAllConnections();
+      if (server.listening) await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    } catch (error) { errors.push(error); }
+    // A failed boundary close may retain an owner lock for uncertain work. Keep
+    // its state for inspection; closing the other listener still proceeds.
+    if (!errors.length) {
+      try { await rm(directory, { recursive: true, force: true }); } catch (error) { errors.push(error); }
+    }
+    if (errors.length) throw new AggregateError(errors, 'fixture_cleanup_failed');
+  })();
+  try {
+    server.listen(routerSocket); await once(server, 'listening');
+    const authority = { readFrozenPolicy: async () => structuredClone(policy), quiescent: async () => active.size === 0,
+      replaceFrozenPolicy: async (_next: Policy): Promise<Policy> => { throw new Error('fixture_writer_disabled'); } };
+    gate = await PolicyGate.open(join(directory, 'policy'), authority); await gate.activate();
+    boundary = new Boundary(gate, routerSocket, key); await boundary.listen(boundarySocket);
+    const now = Date.now();
+    const binding: Binding = { attemptId: 'planner_attempt', taskId: 'planner_task', grantId: 'planner_grant', leaseId: 'planner_lease', fence: 1, role: 'planner', routerId: policy.routerId, routeId: policy.routeId, revision: policy.revision, epoch: policy.epoch, expiresAt: now + 10000, leaseExpiresAt: now + 10000 };
+    const transport = new BoundaryTransport(boundarySocket, boundary.issue(binding), policy);
+    const file = await snapshot(locations.fixtureRoot ?? FIXTURE_ROOT, 'fixture.txt', FIXTURE_HASH, 4096, AbortSignal.timeout(1000));
+    const planner = new PlannerSession(transport, file, BRIEF, budget);
+    return { planner, transport, boundary, gate, calls, policy, directory, replies, close };
+  } catch (error) {
+    try { await close(); }
+    catch (cleanupError) { throw new AggregateError([error, cleanupError], 'fixture_setup_and_cleanup_failed', { cause: error }); }
+    throw error;
+  }
 }

@@ -151,6 +151,12 @@ instruction-like repository data. An adversarial final response demanding route,
 shell and execution authority is rejected while the policy and call count remain
 unchanged. No proposal execution function exists to accept those demands.
 
+Fixture setup also cleans up after post-listen budget or snapshot failures. A
+subprocess regression must exit naturally with its owned directory removed, so
+unlinked-but-listening servers cannot pass. Injected cleanup failure preserves
+both the original setup error and the cleanup error; other listeners are still
+closed, while uncertain boundary state is retained for inspection.
+
 ## Live completion path and remaining acceptance criteria
 
 Before live probes, an accepted adapter must fence all real 9Router writers and
