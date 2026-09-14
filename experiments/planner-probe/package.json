@@ -1,0 +1,7 @@
+{
+  "name": "gaffer-planner-probe", "private": true, "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": { "check": "tsc --noEmit", "test": "node --test planner.test.ts", "demo": "node demo.ts", "prove": "node prove.ts" },
+  "dependencies": { "ajv": "8.20.0" },
+  "devDependencies": { "@types/node": "24.3.0", "typescript": "5.9.3" }
+}
