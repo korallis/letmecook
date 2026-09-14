@@ -64,6 +64,23 @@ content, argument, delta and completed sequence, fragmented UTF-8, original EOF
 and receipt-to-output digest joins. Documentation does not establish deployed
 subscription-route conformance.
 
+## CI reconciliation
+
+The [reconciliation packet](evidence/ci-reconciliation-run.json) retains the two
+initial CI failures and the corrected observations. Harness staging now includes
+the full pure planner validator dependency. Portable authority fixtures await
+output flush before forced exit, and their parent waits for pipe EOF before
+strictly parsing every JSON record. A backpressured actual `baseline32` process
+previously exited successfully with truncated JSON; the corrected replay emitted
+a complete record. All 38 portable source cases, seven selected actual Chat
+harness cases, 16 harness tests and 23 native evaluation/scope/output tests pass.
+
+The first historical 512 MiB fixture replay OOMed before inference in its edit
+case. A serial replay passed all 13 cases with identical source and limits. Both
+records remain in the packet: this historical memory profile showed intermittent
+behavior. No memory or timing limit was increased, and the separate native worker
+profile is unchanged.
+
 ## Evidence and acknowledgement
 
 `native-boundary-port.ts` is the production transport implementation. Every
