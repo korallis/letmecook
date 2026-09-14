@@ -118,6 +118,8 @@ export class Boundary {
   private async handle(req: IncomingMessage, res: ServerResponse) {
     let scope: Scope | undefined; let requestId: string | undefined; let forwarded = false;
     let semantic = false; let outcome: Outcome = 'failed_before_output'; let reason: Reason | null = null;
+    let requestDeadline=Infinity,requestWallDeadline=Infinity;
+    const withinRequest=()=>performance.now()<requestDeadline&&Date.now()<requestWallDeadline;
     const abort = new AbortController(); const timers: NodeJS.Timeout[] = [];
     const rejectAborted = () => this.reject(req, res, safeError(abort.signal.reason), requestId);
     abort.signal.addEventListener('abort', () => { if (requestId) { try { this.gate.cancel(requestId); } catch { /* Preserve reservation if private control is unavailable. */ } } }, { once: true });
@@ -131,6 +133,7 @@ export class Boundary {
       this.pending.set(abort, scope);
       const policy = this.gate.snapshot().policy;
       if (!policy) throw new Denial('boundary_closed', 503);
+      requestDeadline=performance.now()+policy.limits.totalMs;requestWallDeadline=Date.now()+policy.limits.totalMs;
       const expiry = Math.min(scope.binding.expiresAt, scope.binding.leaseExpiresAt, scope.born + policy.limits.attemptMs);
       timers.push(setTimeout(() => abort.abort(new Denial('deadline', 408)), Math.min(policy.limits.totalMs, Math.max(1, expiry - Date.now()))));
       const raw = await this.body(req, policy.limits.requestBytes, abort.signal);
@@ -138,15 +141,17 @@ export class Boundary {
       try { value = parseJSON(raw); } catch { throw new Denial('unsupported_request', 400); }
       if(req.url !== (policy.schema===3?'/v1/responses':CHAT_PATH))throw new Denial('unsupported_request',404);
       const body = policy.schema===3?JSON.stringify(validateNativeRequest(value,policy.native,policy.routerModel,this.gate.nativePrevious(scope.binding.attemptId))):validateRequest(value, policy);
-      const admission = await this.gate.admit(scope.binding, () => this.current(scope!) && !abort.signal.aborted, abort.signal, hashDocument(body),policy.schema===3?JSON.parse(body):undefined);
+      const admission = await this.gate.admit(scope.binding, () => this.current(scope!) && !abort.signal.aborted && withinRequest(), abort.signal, hashDocument(body),policy.schema===3?JSON.parse(body):undefined);
       requestId = admission.reservation.requestId;
       this.active.set(requestId, { scope, abort });
       // Recheck after durable admission. A stop during I/O must never start a request.
+      if (!withinRequest()) throw new Denial('deadline',408);
       if (!this.current(scope) || abort.signal.aborted) throw new Denial('cancelled', 409);
       const decoder = policy.schema===3 ? new NativeResponsesStream(policy.native) : new ChatStream(requestId, policy.routerModel, !!value.tools && value.tool_choice !== 'none', policy.profile === 'router-native-chat-translation-synthetic-v1' ? 'receipt-gated-eof' : policy.schema === 2 ? 'router-done' : 'done', policy.profile);
       const firstOutput = setTimeout(() => abort.abort(new Denial('deadline', 408)), policy.limits.firstOutputMs); timers.push(firstOutput);
       let idle: NodeJS.Timeout | undefined;
       if (policy.schema !== 1) await this.gate.markSend(requestId);
+      if (!withinRequest()) throw new Denial('deadline',408);
       if (!this.current(scope) || abort.signal.aborted) throw new Denial('cancelled',409);
       const upstream = request({ socketPath: this.upstreamSocket, path: policy.schema===3?'/v1/responses':CHAT_PATH, method: 'POST', agent: false, signal: abort.signal, headers: {
         host: policy.schema !== 1 ? '127.0.0.1' : 'localhost', authorization: `Bearer ${this.routerKey}`, 'content-type': 'application/json', 'content-length': Buffer.byteLength(body),
@@ -164,6 +169,7 @@ export class Boundary {
       let rawBytes = 0; let responseBytes = 0;
       try {
         for await (const chunk of response) {
+          if (!withinRequest()) throw new Denial('deadline',408);
           if (!this.current(scope) || abort.signal.aborted) throw new Denial('cancelled', 409);
           rawBytes += chunk.length;
           if (rawBytes > policy.limits.responseBytes) throw new Denial('response_limit', 502);
@@ -175,6 +181,7 @@ export class Boundary {
           for (const output of parsed.output) {
             responseBytes += Buffer.byteLength(output);
             if (responseBytes > policy.limits.responseBytes) throw new Denial('response_limit', 502);
+            if (!withinRequest()) throw new Denial('deadline',408);
             if (!res.write(output)) await once(res, 'drain', { signal: abort.signal });
           }
           if (parsed.error) throw parsed.error;
@@ -183,13 +190,15 @@ export class Boundary {
         if (responseBytes + completion.reduce((n,output) => n + Buffer.byteLength(output),0) > policy.limits.responseBytes) throw new Denial('response_limit',502);
         if (policy.schema !== 1) {
           clearTimeout(firstOutput); if (idle) clearTimeout(idle);
-          await this.gate.finalize(requestId,hashDocument(completion),() => this.current(scope!) && !abort.signal.aborted,abort.signal,decoder instanceof NativeResponsesStream?decoder.nativeOutput??undefined:undefined);
+          await this.gate.finalize(requestId,hashDocument(completion),() => this.current(scope!) && !abort.signal.aborted && withinRequest(),abort.signal,decoder instanceof NativeResponsesStream?decoder.nativeOutput??undefined:undefined);
         }
         for (const output of completion) {
+          if (!withinRequest()) throw new Denial('deadline',408);
           if (!this.current(scope) || abort.signal.aborted) throw new Denial('cancelled',409);
           if (policy.schema !== 1) this.gate.assertRelease(requestId);
           responseBytes += Buffer.byteLength(output);
           if (responseBytes > policy.limits.responseBytes) throw new Denial('response_limit', 502);
+          if (!withinRequest()) throw new Denial('deadline',408);
           if (!res.write(output)) await once(res, 'drain', { signal: abort.signal });
         }
         outcome = 'completed'; res.end();

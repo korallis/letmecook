@@ -232,6 +232,9 @@ export function installAuthority(db) {
     db.run("UPDATE gaffer_operations SET local_stop='crash_unknown' WHERE terminal='unknown'");
   });
   const active = new Map();
+  // Keep request clocks after transport drain: durable decision I/O and output
+  // delivery remain subject to the same deadline. A new boot cannot reuse them.
+  const nativeClocks = new Map();
   const state = () => { ownerAtBoot?.assertCurrent();const s = db.get('SELECT * FROM gaffer_authority WHERE id=1'); requireThat(s.boot === boot, 'stale_boot'); return s; };
   const snapshot = () => project(payloadFromDb(db));
   const receipt = id => {
@@ -247,7 +250,7 @@ export function installAuthority(db) {
   const nativeTime=ctx=>{
     if(!ctx.native)return Infinity;
     const binding=JSON.parse(ctx.native.binding);requireThat(binding.role===nativeConsumerRole(nativeProfile),'native_role_mismatch');const limit=scopes.assertCurrent(ctx.native.scope_id,ctx.native.authorization_digest,ctx.tokenDeadline);
-    const remaining=Math.min(limit.remainingMs,ctx.requestDeadline-performance.now(),binding.expiresAt-Date.now(),binding.leaseExpiresAt-Date.now());
+    const remaining=Math.min(limit.remainingMs,ctx.requestDeadline-performance.now(),ctx.requestWallDeadline-Date.now(),binding.expiresAt-Date.now(),binding.leaseExpiresAt-Date.now());
     requireThat(remaining>0,'native_deadline');return remaining;
   };
   const assertContext = ctx => { const s = state(); requireThat(ctx && !ctx.cancel.signal.aborted && ['active','draining'].includes(s.phase) && s.generation === ctx.generation && s.revision === ctx.revision, 'request_fenced'); nativeTime(ctx); };
@@ -304,6 +307,18 @@ export function installAuthority(db) {
     },
     startEvaluation(){requireThat(nativeProfile&&state().phase==='active','native_configuration_closed');return scopes.register(nativeProfile.scope,allQuiet);},
     evaluationScope:id=>scopes.read(id),
+    assertNativeCurrent(record,admission=false){
+      const {policy,binding,requestDigest}=record?.router??{};
+      const current=state();requireThat(nativeProfile&&policy?.schema===3&&canonical(policy.native)===canonical(nativeProfile)&&binding?.role===nativeConsumerRole(nativeProfile)&&policy.authority.boot===boot&&policy.authority.generation===current.generation&&policy.revision===current.revision&&policy.authority.graphDigest===digest(snapshot())&&canonical(binding.native)===canonical({profileDigest:digest(nativeProfile),scopeId:nativeProfile.scope.id,authorizationDigest:nativeProfile.scope.authorizationDigest}),'native_preparation_mismatch');
+      const tokenDeadline=Math.min(...nativeProfile.connections.map(c=>c.expiresAt-c.skewMs));requireThat(Number.isSafeInteger(tokenDeadline),'native_token_expiry_required');
+      requireThat(binding.expiresAt>Date.now()&&binding.leaseExpiresAt>Date.now(),'native_expired');
+      scopes.assertCurrent(nativeProfile.scope.id,nativeProfile.scope.authorizationDigest,tokenDeadline);
+      if(!admission){
+        const prepared=db.get('SELECT * FROM gaffer_native_admissions WHERE id=?',[record.requestId]),clock=nativeClocks.get(record.requestId);
+        requireThat(prepared&&clock&&prepared.profile_digest===digest(nativeProfile)&&prepared.request_digest===requestDigest&&prepared.binding===canonical(binding),'native_preparation_required');
+        nativeTime({native:prepared,tokenDeadline,...clock});
+      }
+    },
     closeEvaluation:id=>scopes.close(id,allQuiet),
     prepareNative(record){
       requireThat(nativeProfile&&record?.router?.policy?.schema===3&&record.router.send==='send_possible'&&ref(record.requestId),'native_preparation_required');
@@ -312,7 +327,9 @@ export function installAuthority(db) {
       requireThat(binding.role===nativeConsumerRole(nativeProfile)&&canonical(binding.native)===canonical({profileDigest:digest(nativeProfile),scopeId:nativeProfile.scope.id,authorizationDigest:nativeProfile.scope.authorizationDigest})&&digest(JSON.stringify(nativeRequest))===requestDigest,'native_preparation_mismatch');
       const tokenDeadline=Math.min(...nativeProfile.connections.map(c=>c.expiresAt-c.skewMs));requireThat(Number.isSafeInteger(tokenDeadline)&&binding.expiresAt>Date.now()&&binding.leaseExpiresAt>Date.now(),'native_expired');
       scopes.assertCurrent(nativeProfile.scope.id,nativeProfile.scope.authorizationDigest,tokenDeadline);
+      const clock={requestDeadline:performance.now()+nativeProfile.local.totalMs,requestWallDeadline:Date.now()+nativeProfile.local.totalMs};
       db.run('INSERT INTO gaffer_native_admissions VALUES(?,?,?,?,?,?,?)',[record.requestId,canonical(binding),requestDigest,JSON.stringify(nativeRequest),digest(nativeProfile),nativeProfile.scope.id,nativeProfile.scope.authorizationDigest]);
+      nativeClocks.set(record.requestId,clock);
     },
     quiescent: ids => db.transaction(()=>{
       const s=state();requireThat(Array.isArray(ids) && ids.every(ref),'invalid_receipt_ids');
@@ -395,7 +412,7 @@ export function installAuthority(db) {
         requireThat(prepared&&prepared.profile_digest===digest(nativeProfile)&&prepared.request_digest===digest(bodyText)&&canonical(JSON.parse(prepared.request))===canonical(body),'native_preparation_required');
         ctx.native=prepared;ctx.tokenDeadline=Math.min(...nativeProfile.connections.map(c=>c.expiresAt-c.skewMs));
         requireThat(Number.isSafeInteger(ctx.tokenDeadline),'native_token_expiry_required');
-        ctx.requestDeadline=performance.now()+nativeProfile.local.totalMs;
+        const clock=nativeClocks.get(id);requireThat(clock,'native_request_clock_missing');Object.assign(ctx,clock);
       }
       db.transaction(() => {
         const s = state();requireThat(s.phase==='active','admission_closed'); assertContext(ctx); requireThat(!db.get('SELECT id FROM gaffer_receipts WHERE id=?', [id]), 'duplicate_request_id');
