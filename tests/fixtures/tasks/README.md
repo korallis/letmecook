@@ -8,6 +8,7 @@ not an execution harness or evidence of a live run.
 | `operator-intake.json` | Three real candidate briefs, private manifest digest and remaining registration inputs |
 | `development-examples.json` | Synthetic design examples for feasible, ambiguous, changed-intent, misleading-preference, unauthorized and impossible requests |
 | `run-template.json` | Unstarted observation template; copy and complete it for a permitted real run |
+| `check.ts` | Rerunnable semantic check of these design records and excluded synthetic examples |
 
 Examples contain invented captures and expected responses. They are labelled
 `synthetic`, all belong to development, and are excluded from measurement. No
@@ -48,5 +49,9 @@ Run `status` starts as `blocked`, moves to `registered` only after prerequisites
 and budgets are frozen, then `running`, and finally a terminal outcome named in
 the contract. `acceptance.decision` stays null until human review, including when
 the process has already terminated. Follow-up remains open for seven days after
-acceptance. This is a reviewable data format; JSON parsing alone does not enforce
-these semantic requirements or establish evidence authenticity.
+acceptance. Run `node tests/fixtures/tasks/check.ts` from the repository root to
+check the committed candidate/example/template invariants. CI runs the same check,
+including rejection of five mutations that falsely claim measurement evidence.
+These design records remain unregistered: future frozen registrations and real run
+records are separate reviewed artifacts. This checker is not a run collector or
+general observation validator and cannot establish evidence or label authenticity.

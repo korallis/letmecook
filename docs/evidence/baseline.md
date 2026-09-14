@@ -203,15 +203,18 @@ Avoid putting access tokens in command arguments, transcripts or this repository
 From the repository root, check the committed templates and documentation with:
 
 ```sh
-node --input-type=module -e 'import { readFileSync } from "node:fs"; for (const name of ["operator-intake", "development-examples", "run-template"]) { JSON.parse(readFileSync(`tests/fixtures/tasks/${name}.json`, "utf8")); console.log(`${name}: valid JSON`); }'
+node tests/fixtures/tasks/check.ts
 npm --prefix docs ci
 npm --prefix docs run build
 npm --prefix docs run check
 ```
 
-These commands check artifact syntax and the existing documentation reader, not
-live evidence, operator intent, eligibility or route readiness. No new application
-test suite is required for this contract-only change.
+These commands check the design-record semantics and existing documentation reader.
+The fixture checker verifies that the proposed cases remain unregistered, synthetic
+examples remain excluded from measurement, and the template contains no run or
+acceptance observations; five invalid-claim mutations exercise those checks. It does
+not collect live evidence, authenticate operator labels, establish route readiness
+or validate future run records. No application test suite is introduced.
 
 ## Active operator minutes and total overhead
 
