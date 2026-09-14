@@ -114,7 +114,11 @@ its normal exit. `persistImmutable(directory, kind, value)` in
 `durable-records.mjs` returns `{digest, file, created}` after a no-replace atomic
 link and directory fsync; consumers can use the same primitive for acknowledged
 candidate envelopes. Existing same-digest records are verified and re-synced,
-and malformed/symlink collisions are refused. Gateway revisions derive from the
+and malformed/symlink collisions are refused. Bare artifact acknowledgements
+add an immutable `artifact-ack` manifest with packet/policy/authority/profile and
+started scope/authorization identity, returned as `acknowledgement:{digest,file}`.
+The blob can be deduplicated across baselines while each scoped acknowledgement
+and its immutable deployment packet remain independently retrievable. Gateway revisions derive from the
 fenced boot generation so a separately approved later baseline can reuse the
 preserved store without reopening an earlier scope. The host supervisor preserves all state volumes and records;
 there is no automatic deletion or stale-lock recovery. After a crash or unknown
