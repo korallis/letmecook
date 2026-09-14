@@ -22,7 +22,7 @@ const server = createServer(async (req, res) => {
   let text = ''; for await (const bytes of req) { text += bytes; assert(text.length <= 65536); }
   const body = JSON.parse(text); requests++;
   emit('request', { number: requests, requestId: id, path: req.url, headerNames: Object.keys(req.headers), body });
-  if (mode === 'cancel' || mode === 'tree' || mode === 'crash') { held.add(res); return; }
+  if (mode === 'cancel' || mode === 'tree' || mode === 'crash' || mode === 'ambient-timeout') { held.add(res); return; }
   if (mode === 'router-error') { res.writeHead(503, { 'content-type': 'application/json' }).end(JSON.stringify({ error: { message: 'SYNTHETIC_ROUTER_SECRET_MUST_NOT_LEAK' } })); return; }
   res.writeHead(200, { 'content-type': 'text/event-stream' });
   const frame = (delta: unknown, finish_reason: string | null = null) => `data: ${JSON.stringify({ id: 'synthetic-provider-id', model: 'fixture_model', choices: [{ index: 0, delta, finish_reason }] })}\n\n`;

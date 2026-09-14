@@ -82,14 +82,24 @@ show zero; nonzero fixture numbers are synthetic observations, not billing evide
 
 The pinned binary executed a harmless project plugin despite the documented
 disable flags. The `ambient-probe` case deliberately bypasses **adapter admission**
-to reproduce that public negative observation inside the same OS boundary; it is
-not an eligible run. The adapter refuses unexpected repository entries and active
+to reproduce that public negative observation inside the same OS boundary. It
+terminates upon observing the canary, with a 20 s discovery deadline and bounded
+TERM/KILL cleanup; it does not wait for an edit to finish. It is not an eligible run. The adapter refuses unexpected repository entries and active
 Git hooks before spawn. This inventory is a narrow compatibility check, not an OS
 security boundary or a general TOCTOU guarantee. Only the trusted launcher creates
 the fixture, with no external writer; arbitrary working trees remain unsupported.
 Repository instructions remain untrusted task data. Fresh home/XDG state and an
 explicit subprocess environment exclude host auth/config, parent credential,
 proxy and telemetry canaries. Unattended support is still disabled.
+
+Every actual harness result is flushed as an `observation` before outcome/artifact
+assertions. Failed artifact/process reads are recorded in that observation, and
+`finished` is a separate marker emitted only after checks pass. The added
+`ambient-timeout` regression intentionally exits its worker with status 1 and no
+completion marker; the launcher requires the retained stdout/stderr, signal,
+missing-canary state, unchanged artifact and post-exit census before cleanup.
+This verifies diagnostic retention rather than accepting a failed discovery.
+The first failed fresh-review replay is retained in the evidence directory.
 
 ## Live preparation
 

@@ -15,3 +15,9 @@ retained in `opencode-LICENSE.txt` for the copied prompt/tool material.
 Only the host launcher may execute them inside the pinned containers. `ambient-probe`
 is intentionally a negative raw-binary discovery probe after adapter admission has
 refused that input; it records why flags alone cannot be trusted.
+
+`ambient-probe` terminates when the harmless canary is observed. `ambient-timeout`
+intentionally emits diagnostic stdout/stderr, then times out without creating the
+canary. The worker must flush its `observation` before failing the discovery check;
+the launcher verifies diagnostics remain available after the worker exits 1. A
+`finished` marker is reserved for checks that actually pass.

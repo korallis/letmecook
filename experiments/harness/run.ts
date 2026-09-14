@@ -71,7 +71,7 @@ try {
   const version = JSON.parse(await docker(['version', '--format', '{{json .}}'])); const info = JSON.parse(await docker(['info', '--format', '{{json .}}'])); assertRuntime(version, info);
   evidence.runtime = { server: version.Server, cgroup: info.CgroupVersion, securityOptions: info.SecurityOptions, hostNode: process.version };
   await docker(['image', 'inspect', IMAGE]);
-  const modes = ['containment', 'ambient-probe', 'edit', 'ask', 'usage-missing', 'partial', 'forbidden', 'router-error', 'cancel', 'crash', 'tree', 'oom'];
+  const modes = ['containment', 'ambient-probe', 'ambient-timeout', 'edit', 'ask', 'usage-missing', 'partial', 'forbidden', 'router-error', 'cancel', 'crash', 'tree', 'oom'];
   for (const mode of modes) {
     volume = runId + '-' + mode + '-socket';
     await docker(['volume', 'create', '--label', `${LABEL}=${runId}`, '--driver', 'local', '--opt', 'type=tmpfs', '--opt', 'device=tmpfs', '--opt', 'o=size=1m,uid=1000,gid=1000,mode=0700', volume]);
@@ -86,14 +86,31 @@ try {
     const exit = Number(await docker(['wait', worker.name], 35000)); const state = (await inspect(worker.name)).State;
     evidence.pendingCase = { mode, workerState: state, workerLogs: await docker(['logs', worker.name]), gatewayLogs: await docker(['logs', gateway.name]) };
     assert.equal(state.Running, false); assert.equal(state.Pid, 0);
-    if (mode === 'oom') { assert.equal(state.OOMKilled, true); assert.equal(exit, 137); } else if (mode === 'tree') assert.equal(exit, 137); else assert.equal(exit, 0, await docker(['logs', worker.name]));
-    const workerEvents = (await docker(['logs', worker.name])).split('\n').filter(l => l.startsWith('{')).map(l => JSON.parse(l));
-    if (mode !== 'oom') assert(workerEvents.some(e => e.type === 'finished'));
+    const workerEvents = evidence.pendingCase.workerLogs.split('\n').filter((l: string) => l.startsWith('{')).map((l: string) => JSON.parse(l));
+    if (mode === 'oom') { assert.equal(state.OOMKilled, true); assert.equal(exit, 137); }
+    else if (mode === 'tree') assert.equal(exit, 137);
+    else if (mode === 'ambient-timeout') {
+      assert.equal(exit, 1, 'forced timeout must fail the worker discovery criterion');
+      const actual = workerEvents.find((e: any) => e.type === 'observation')?.data;
+      assert(actual, 'failed worker must retain its pre-assertion observation');
+      assert.equal(actual.stopReason, 'forced_timeout'); assert.equal(actual.canaryExecutedDespiteFlags, false);
+      assert.equal(actual.exitCode, null); assert(['SIGTERM', 'SIGKILL'].includes(actual.signal));
+      assert.match(actual.stdout, /forced timeout stdout diagnostic/); assert.match(actual.stderr, /forced timeout stderr diagnostic/);
+      assert.equal(actual.artifact.file, 'hello\n'); assert.equal(actual.artifact.headSHA, actual.artifact.baseSHA);
+      assert.equal(actual.requestsObserved, 1); assert.doesNotMatch(actual.processes, /\bopencode\b/);
+      assert(!workerEvents.some((e: any) => e.type === 'finished'), 'failed criterion must not claim completion');
+    } else assert.equal(exit, 0, evidence.pendingCase.workerLogs);
+    if (!['oom', 'ambient-timeout'].includes(mode)) assert(workerEvents.some((e: any) => e.type === 'finished'));
     await assert.rejects(docker(['exec', worker.name, 'true']));
     await docker(['stop', '--timeout', '2', gateway.name]);
     const gatewayState = (await inspect(gateway.name)).State; assert.equal(gatewayState.Running, false); assert.equal(gatewayState.Pid, 0); assert.equal(gatewayState.ExitCode, 0);
     const gatewayEvents = (await docker(['logs', gateway.name])).split('\n').filter(l => l.startsWith('{')).map(l => JSON.parse(l));
     assert(gatewayEvents.some(e => e.type === 'finished'));
+    if (['partial', 'forbidden'].includes(mode)) {
+      const audit = gatewayEvents.find(e => e.type === 'finished').data.audit;
+      assert(audit.some((entry: any) => entry.outcome === 'partial_failure' && entry.reason === 'invalid_stream'));
+      assert(gatewayEvents.filter(e => e.type === 'request').length <= 3);
+    }
     assert.equal(await readFile(join(host, 'sentinel'), 'utf8'), 'SYNTHETIC_HOST_SENTINEL');
     evidence.cases.push({ mode, workerPreflight: worker.preflight, gatewayPreflight: gateway.preflight, exit, workerState: state, gatewayState, workerEvents, gatewayEvents, execAfterStopDenied: true });
     delete evidence.pendingCase;
