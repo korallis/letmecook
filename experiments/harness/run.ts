@@ -10,6 +10,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { IMAGE, LABEL, selectedProfile, assertRuntime, cleanupOwned } from '../isolation/profile.ts';
 import { harnessContainerArgs, assertHarnessContainer, VARIANT } from './isolation.ts';
 import { pins, probe } from './adapter.ts';
+import { codecOverlayFiles, stageFiles } from './staging.ts';
 const exec = promisify(execFile);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const output = resolve(process.argv[2] ?? join(root, 'docs/evidence/first-harness-run.json'));
@@ -67,6 +68,9 @@ try {
     }
   }
   for (const name of ['experiments/harness/isolation.ts', 'experiments/isolation/profile.ts', 'experiments/isolation/profile.json']) evidence.sourceDigests[name] = createHash('sha256').update(await readFile(join(root, name))).digest('hex');
+  await stageFiles(root, staging, codecOverlayFiles);
+  for (const name of codecOverlayFiles) evidence.sourceDigests[name] = createHash('sha256').update(await readFile(join(root, name))).digest('hex');
+  evidence.pureOverlayStagedFiles = codecOverlayFiles;
   await copyFile(binary, join(staging, 'opencode')); probe(join(staging, 'opencode'));
   const version = JSON.parse(await docker(['version', '--format', '{{json .}}'])); const info = JSON.parse(await docker(['info', '--format', '{{json .}}'])); assertRuntime(version, info);
   evidence.runtime = { server: version.Server, cgroup: info.CgroupVersion, securityOptions: info.SecurityOptions, hostNode: process.version };

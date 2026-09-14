@@ -87,7 +87,10 @@ cancellation, binary crash, detached/TERM-ignoring descendants, receipt and
 boundary journal failures, immutable candidate write failure, incomplete/forbidden
 output, router retries, disabled builtin hooks, ambient plugins/auth/Git hooks,
 network/filesystem/process containment, native transport bypass and cgroup OOM.
-Every retry is an actual counted original attempt. Failures are saved before
+The default worker reports only after relay closure and holds its tmpfs for at
+most ten seconds; a requested active stop skips that hold. The delayed-start and
+active-container-stop regressions exercise these lifecycle boundaries. Every
+retry is an actual counted original attempt. Failures are saved before
 cleanup, including a failed gateway stop: read-only retention saves the journal
 and immutable records when the final result file is absent, and records unknown
 quiescence. An OOM child is measured through kernel cgroup memory.events and
@@ -120,3 +123,10 @@ start that scope. Separately approved baseline scopes have at most 32 attempts
 and 900,000 ms; they cannot replenish initial checks. No live command, provider
 credential, deployment, source-host operation, publication or merge is performed
 by this preparation.
+
+The current worker binary wall ceiling is 30,000 ms. Synthetic gateway fixtures
+use request/first-output/idle limits of 6,000/4,000/2,000 ms; these are deterministic
+fault-test timings, not measured live Astra xhigh thresholds. The exact reviewed
+live suite must declare suitable finite request and consumer bounds within its
+shared 600,000 ms scope before admission. No limits were widened or calibrated
+through model calls in this integration.

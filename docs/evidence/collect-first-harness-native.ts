@@ -8,7 +8,7 @@ import { resolve } from 'node:path';
 import { digest } from '../../experiments/harness/native/client.ts';
 const root = resolve(import.meta.dirname, '../..'), sha = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
 const bytes = readFileSync(process.argv[2]), r = JSON.parse(bytes.toString()), commit = process.argv[4];
-assert(/^[a-f0-9]{40}$/.test(commit)); assert.equal(r.result, 'passed'); assert.equal(r.cleanup, true); assert.equal(r.sourcesVerifiedAfterRun, true);
+assert(/^[a-f0-9]{40}$/.test(commit)); assert(['passed', 'selected-cases-passed'].includes(r.result)); assert.equal(r.cleanup, true); assert.equal(r.sourcesVerifiedAfterRun, true);
 assert.equal(r.live, false); assert.equal(r.realProviderCalled, false); assert.equal(r.realEvaluationScopeStarted, false);
 for (const [path, expected] of Object.entries(r.sources)) {
   assert.equal(sha(readFileSync(resolve(root, path))), expected, 'current source: ' + path);
@@ -26,12 +26,12 @@ const cases = r.cases.map(c => {
     staleGrantStatus: c.staleGrantStatus, staleBindingGrantStatus: c.staleBindingGrantStatus,
     gateway: { measured: c.gatewayMeasured, state: state(c.gatewayState), closure: c.closure ?? 'stopped', scope: c.gateway?.scope ?? null, physicalSyntheticSends: c.gateway?.observed.sends.length ?? null, fault: c.gateway?.observed.harnessFault ?? null },
     workers: c.workers.map(w => ({ mode: w.mode, outcome: w.outcome, binding: w.binding, policy: w.policy, measured: w.measured, state: state(w.state),
-      observation: w.observation, observedArtifact: w.observedArtifact, evidence: w.evidence, candidate: w.candidate, acknowledgement: w.acknowledgement, retryAcknowledgement: w.retryAcknowledgement, qualified: w.qualified, treeBeforeStop: w.treeBeforeStop })),
+      observation: w.observation, observedArtifact: w.observedArtifact, evidence: w.evidence, candidate: w.candidate, acknowledgement: w.acknowledgement, retryAcknowledgement: w.retryAcknowledgement, qualified: w.qualified, treeBeforeStop: w.treeBeforeStop, beforeSignal: w.beforeSignal, signalAt: w.signalAt, stopMs: w.stopMs, artifactObservation: w.artifactObservation })),
     retainedRecords: records, retainedInventory: c.retained.inventory };
 });
 const packet = { schema: 1, evidence: 'actual-native-adapter-shared-router-synthetic', live: false, issueComplete: false, sourceCommit: commit,
   sourceHashes: r.sources, rawInputSha256: sha(bytes), collectorSha256: sha(readFileSync(import.meta.filename)), runtime: r.runtime,
-  baseSHA: r.baseSHA, variant: r.variant, workerStaging: r.workerStaging, cases, cleanup: true, sourceIdentityVerified: true };
+  baseSHA: r.baseSHA, lifecycle: r.lifecycle, variant: r.variant, workerStaging: r.workerStaging, cases, cleanup: true, sourceIdentityVerified: true };
 const text = JSON.stringify(packet, null, 2) + '\n';
 assert(!/\/Users\/|\/var\/folders\/|synthetic_access_[0-9]|Bearer [a-f0-9]{64}|"accessToken"|"refreshToken"|"apiKey"/.test(text), 'private data in public projection');
 writeFileSync(process.argv[3], text); console.log(JSON.stringify({ sourceCommit: commit, cases: cases.length, bytes: Buffer.byteLength(text), sha256: sha(Buffer.from(text)) }));

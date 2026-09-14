@@ -1,0 +1,247 @@
+{
+  "schema": 1,
+  "evidence": "retained-development-observations",
+  "live": false,
+  "passedMatrix": false,
+  "observations": [
+    {
+      "inputSha256": "0ca2c2102984bf5e4ee365cc5defd8944ebfdca8793a36e7e458441f1f267ef3",
+      "name": "edit-1",
+      "classification": "development failure retained",
+      "reason": "cleanup inventory filter rejected after successful edit",
+      "reportedResult": "selected-cases-passed",
+      "reportedCleanup": false,
+      "sourceMapDigest": "ca5e90ddefb045a5a4668b46fc6a65294ca14a34356d426198b73d9994950629",
+      "error": null,
+      "cases": [
+        {
+          "scenario": "edit",
+          "result": "passed",
+          "workerOutcomes": [
+            "completed_candidate"
+          ]
+        }
+      ]
+    },
+    {
+      "inputSha256": "9c0ec85173e32aa1be0cc2a602b5f8879bcc80f0b21b256e83665f6c3d739acc",
+      "name": "matrix-1",
+      "classification": "development failure retained",
+      "reason": "missing final result after deliberate journal failure",
+      "reportedResult": "failed",
+      "reportedCleanup": true,
+      "sourceMapDigest": "be10f34af46ffd5756a2d52e0725c3c40ad2a1a2559ce4d22e15d6865ec91df4",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n\n    at readState (file://<gaffer-source>/experiments/harness/native/router-run.ts:48:418)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file://<gaffer-source>/experiments/harness/native/router-run.ts:110:219",
+      "cases": [
+        {
+          "scenario": "edit",
+          "result": "passed",
+          "workerOutcomes": [
+            "completed_candidate"
+          ]
+        },
+        {
+          "scenario": "delay",
+          "result": "passed",
+          "workerOutcomes": [
+            "completed_candidate"
+          ]
+        },
+        {
+          "scenario": "ask",
+          "result": "passed",
+          "workerOutcomes": [
+            "approval_blocked"
+          ]
+        },
+        {
+          "scenario": "registry",
+          "result": "passed",
+          "workerOutcomes": [
+            "completed_candidate",
+            "approval_blocked"
+          ]
+        },
+        {
+          "scenario": "cancel",
+          "result": "passed",
+          "workerOutcomes": [
+            "cancelled_unknown"
+          ]
+        },
+        {
+          "scenario": "crash",
+          "result": "passed",
+          "workerOutcomes": [
+            "harness_failed"
+          ]
+        },
+        {
+          "scenario": "tree",
+          "result": "passed",
+          "workerOutcomes": [
+            "cancelled_unknown"
+          ]
+        },
+        {
+          "scenario": "receipt-write",
+          "result": "passed",
+          "workerOutcomes": [
+            "harness_failed"
+          ]
+        },
+        {
+          "scenario": "decision-write",
+          "result": "pending",
+          "workerOutcomes": [
+            "harness_failed"
+          ]
+        }
+      ]
+    },
+    {
+      "inputSha256": "12567cd139e586b0d08126819f59a3f6be31c3a0424c8e6f658cabebb4d5d9be",
+      "name": "negatives-2",
+      "classification": "development failure retained",
+      "reason": "disabled hook refused before upstream capture",
+      "reportedResult": "failed",
+      "reportedCleanup": true,
+      "sourceMapDigest": "a59f6ac038f0eeb0a7cca56cc28e8895d72860101eb47fb8f53f9665cef323dd",
+      "error": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert(entry.observation.requests.length > 0)\n\n    at file://<gaffer-source>/experiments/harness/native/router-run.ts:109:48",
+      "cases": [
+        {
+          "scenario": "decision-write",
+          "result": "passed",
+          "workerOutcomes": [
+            "harness_failed"
+          ]
+        },
+        {
+          "scenario": "artifact-write",
+          "result": "passed",
+          "workerOutcomes": [
+            "artifact_durability_refused"
+          ]
+        },
+        {
+          "scenario": "partial",
+          "result": "passed",
+          "workerOutcomes": [
+            "harness_failed"
+          ]
+        },
+        {
+          "scenario": "forbidden",
+          "result": "passed",
+          "workerOutcomes": [
+            "harness_failed"
+          ]
+        },
+        {
+          "scenario": "router-error",
+          "result": "passed",
+          "workerOutcomes": [
+            "cancelled_unknown"
+          ]
+        },
+        {
+          "scenario": "disabled-hook",
+          "result": "pending",
+          "workerOutcomes": [
+            "pending"
+          ]
+        }
+      ]
+    },
+    {
+      "inputSha256": "9cd0b76031ca92ea2c202716982f1e0247b1e010a62690791d48cf3b4184e828",
+      "name": "negatives-3",
+      "classification": "development failure retained",
+      "reason": "unresolved local integration prevented gateway startup",
+      "reportedResult": "failed",
+      "reportedCleanup": true,
+      "sourceMapDigest": "c25c5e6ec97ed1a99bbfa2fbf048c1bbd931a910a3d80a8c8e7d0bbc1ba2dd6a",
+      "error": "Error: exited_before_gateway_ready:(node:7) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:\n--import 'data:text/javascript,import { register } from \"node:module\"; import { pathToFileURL } from \"node:url\"; register(\"/gaffer/experiments/harness/native/fault-loader.mjs\", pathToFileURL(\"./\"));'\n(Use `node --trace-warnings ...` to show where the warning was created)\nfile:///gaffer/experiments/native-evaluation/gateway.mjs:14\n<<<<<<< HEAD\n^^\n\nSyntaxError: Unexpected token '<<'\n    at compileSourceTextModule (node:internal/modules/esm/utils:319:16)\n    at ModuleLoader.moduleStrategy (node:internal/modules/esm/translators:89:18)\n    at #translate (node:internal/modules/esm/loader:438:20)\n    at afterLoad (node:internal/modules/esm/loader:506:29)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:511:12)\n    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:564:36)\n    at afterResolve (node:internal/modules/esm/loader:611:52)\n    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:617:12)\n    at node:internal/modules/esm/loader:636:32\n    at TracingChannel.tracePromise (node:diagnostics_channel:362:14)\n\nNode.js v24.21.0\n    at event (file://<gaffer-source>/experiments/harness/native/router-run.ts:38:405)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file://<gaffer-source>/experiments/harness/native/router-run.ts:79:39",
+      "cases": [
+        {
+          "scenario": "disabled-hook",
+          "result": "pending",
+          "workerOutcomes": []
+        }
+      ]
+    },
+    {
+      "inputSha256": "da349382e275d63a10e3a36a3db5c5f3231a55587b29e763d89c14980ecd3c1a",
+      "name": "negatives-4",
+      "classification": "development failure retained",
+      "reason": "Docker OOM flag expectation failed; later kernel counters used",
+      "reportedResult": "failed",
+      "reportedCleanup": true,
+      "sourceMapDigest": "6bec9d9292c3adfe08fbe3ebc246636f6bb2bd324a24afcd65b92b9ae666511d",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\nfalse !== true\n\n    at file://<gaffer-source>/experiments/harness/native/router-run.ts:93:120\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)",
+      "cases": [
+        {
+          "scenario": "disabled-hook",
+          "result": "passed",
+          "workerOutcomes": [
+            "cap_request_refused"
+          ]
+        },
+        {
+          "scenario": "ambient",
+          "result": "passed",
+          "workerOutcomes": [
+            "ambient_admission_refused"
+          ]
+        },
+        {
+          "scenario": "auth",
+          "result": "passed",
+          "workerOutcomes": [
+            "ambient_admission_refused"
+          ]
+        },
+        {
+          "scenario": "containment",
+          "result": "passed",
+          "workerOutcomes": [
+            "containment_observed"
+          ]
+        },
+        {
+          "scenario": "transport",
+          "result": "passed",
+          "workerOutcomes": [
+            "transport_refused"
+          ]
+        },
+        {
+          "scenario": "oom",
+          "result": "pending",
+          "workerOutcomes": [
+            "pending"
+          ]
+        }
+      ]
+    },
+    {
+      "inputSha256": "0d03a0c871f0c2726f2c4a8736a4bb562e8ceaa06b876e044bb35af3f4a6056a",
+      "name": "entry-lifecycle",
+      "classification": "development failure retained",
+      "reason": "delayed launcher option separator missing",
+      "reportedResult": "failed",
+      "reportedCleanup": true,
+      "sourceMapDigest": "6b4bcb6795807ddc2c8ff9a142e1331747ce763b2cfbd8a038065e5d74bd7dea",
+      "error": "Error: event_timeout:native_worker_observation:{\"Status\":\"created\",\"Running\":false,\"Paused\":false,\"Restarting\":false,\"OOMKilled\":false,\"Dead\":false,\"Pid\":0,\"ExitCode\":0,\"Error\":\"\",\"StartedAt\":\"0001-01-01T00:00:00Z\",\"FinishedAt\":\"0001-01-01T00:00:00Z\"}\n    at event (file://<gaffer-source>/experiments/harness/native/router-run.ts:59:9)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async file://<gaffer-source>/experiments/harness/native/router-run.ts:119:31",
+      "cases": [
+        {
+          "scenario": "start-delay",
+          "result": "pending",
+          "workerOutcomes": [
+            "pending"
+          ]
+        }
+      ]
+    }
+  ]
+}
