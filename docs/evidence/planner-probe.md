@@ -159,7 +159,7 @@ prove upstream quiescence under the approved complete graph. The current #3
 providing a router URL or asserting readiness in JSON would bypass that gate;
 this experiment offers none of those switches.
 
-The coordinated source-module authority experiment on this exact router revision
+The coordinated [source-module authority experiment (#74)](https://github.com/korallis/letmecook/issues/74) on this exact router revision
 also found that the UI pending count reaches zero after 60 seconds without a
 completion, disconnect clears that count before the delayed local abort, and the
 combo writer can update a route while its count remains one. That experiment used
