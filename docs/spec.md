@@ -75,6 +75,61 @@ Do not promise a dependency-free installation: git, the harness, language/build
 tools, 9Router and an isolation runtime may be required. M0 proves the exact supported
 matrix. No automatic work is placed on client/production hosts.
 
+### 1.2 Operator-selected deployment
+
+Gaffer is intended to be downloadable and self-hosted on the operator's own
+infrastructure. There is no mandatory maintainer host, hostname, IP address,
+Tailscale network, router instance or provider account. An environment used to
+collect development evidence is a test fixture, not an application dependency.
+Exact tested versions belong in the compatibility/evidence matrix; capability
+requirements and explicitly selected isolation profiles govern supported execution.
+
+- **Daemon:** choose its host, local state/artifact directories and authenticated
+  private endpoint. One active daemon owns authoritative state.
+- **Runner:** enroll a host and configure repository identities/roots, allowed
+  projects, runtime profile and enablement. It starts disabled and executes only
+  within both project grants and runner-local policy.
+- **9Router:** supply an existing or fresh router origin, deployment identity,
+  protected credential references and named routes. It owns provider credentials,
+  subscriptions, account selection and fallback.
+- **Private transport:** supply reachable authenticated endpoints and the supported
+  TLS/private-access profile. Tailscale is optional; another verified VPN, private
+  network or authenticated tunnel may satisfy the contract.
+
+A single-host installation may colocate daemon, runner supervisor and router while
+keeping their state, credentials and process permissions separate. Repository code
+still runs in the supported containment profile. A split-host installation supplies
+the corresponding endpoints explicitly; runner connections are outbound to the
+daemon, and inference travels through the scoped route boundary. Being reachable
+does not make a host eligible. Losing a selected host blocks or reconciles work
+under its existing authority; it never silently selects an unapproved machine.
+
+Setup must offer **connect existing 9Router** and **configure a fresh 9Router**
+paths, with compatibility/authentication checks and actionable diagnostics. An
+existing router does not need new provider logins merely because Gaffer connects
+to it. Configure named worker/planner/reviewer routes in that router and validate
+their actual capabilities and permitted provider/billing envelope. Credentials are
+supplied through protected local references, never command-line flags, checked-in
+examples or shipped defaults. Unknown compatibility is reported before execution.
+
+Reusing an existing instance and moving it are different operations. Optional
+operator-directed migration uses the selected router version's verified
+backup/export/restore procedure. Check whether its configuration, encryption keys
+and provider sessions are portable; do not promise that every provider session
+can move without reauthentication. Transfer only between operator-approved router
+hosts over an authenticated encrypted channel with restrictive storage permissions.
+Protect the source and recovery copy, validate the destination's identity, routes,
+authentication and policy before cutover, and reconcile/drain active requests before
+changing Gaffer's endpoint or route grants. Preserve a tested rollback path.
+
+Router backups remain separate from Gaffer's workflow/artifact backups. Gaffer
+must never collect provider secrets into its database, repositories, worker
+sandboxes, logs, browser downloads or release packages. Shipped examples use
+placeholders. Clean-machine install tests must work with independently supplied
+hosts and fresh credentials, without access to a maintainer's private resources.
+These are implementation requirements, not claims of an existing installer or
+already-tested router migration.
+
 ## 2. Authority and intent
 
 ### 2.1 Capture and bounded discovery

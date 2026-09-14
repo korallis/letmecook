@@ -272,6 +272,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--oxide);outline-offs
 <li class="lvl2"><a href="#prd-7-decisions-still-requiring-evidence">7. Decisions still requiring evidence</a></li></ul></section>
 <section class="navdoc" data-doc="spec"><a class="navtitle" href="#spec">Specification<em>Authority, execution and recovery</em></a><ul class="navlist"><li class="lvl2"><a href="#spec-1-architecture-and-ownership">1. Architecture and ownership</a></li>
 <li class="lvl3"><a href="#spec-11-initial-deployment">1.1 Initial deployment</a></li>
+<li class="lvl3"><a href="#spec-12-operator-selected-deployment">1.2 Operator-selected deployment</a></li>
 <li class="lvl2"><a href="#spec-2-authority-and-intent">2. Authority and intent</a></li>
 <li class="lvl3"><a href="#spec-21-capture-and-bounded-discovery">2.1 Capture and bounded discovery</a></li>
 <li class="lvl3"><a href="#spec-22-execution-authority">2.2 Execution authority</a></li>
@@ -399,6 +400,17 @@ and the 9Router instance that connects your model accounts. Several subscription
 from one provider are separate connections in that router, available to all eligible
 agents through named routes. Gaffer does not duplicate provider login, refresh,
 account selection or request-level fallback.</p>
+<p>You choose the hosts for the daemon, each runner and 9Router. They can share a
+suitable machine or use separate machines. Register and explicitly enable eligible
+runners, then choose which projects they may execute; discovery of a machine never
+enrolls it or grants execution authority. A maintainer&#39;s test machine is only one
+optional environment, with no built-in hostname, address or account dependency.</p>
+<p>Connect an existing 9Router instance, set up a fresh one, or perform an
+operator-directed migration supported by that router version. Router credentials
+and provider sessions stay inside its own trust boundary and are never bundled
+with Gaffer. Tailscale is one optional private networking choice; deployments may
+use another tested transport satisfying the same authentication and TLS contract.
+See <a href="#spec-12-operator-selected-deployment">deployment choices and migration boundaries</a>.</p>
 <p>Cloud harnesses still send prompts, code and tool results to their model provider.
 Self-hosted orchestration does not mean local inference, air-gapped operation or
 independence from provider policy. Provider credentials stay with 9Router; agents
@@ -1398,6 +1410,56 @@ VM/container environment; native macOS execution needs its own verified boundary
 <p>Do not promise a dependency-free installation: git, the harness, language/build
 tools, 9Router and an isolation runtime may be required. M0 proves the exact supported
 matrix. No automatic work is placed on client/production hosts.</p>
+<h3 id="spec-12-operator-selected-deployment">1.2 Operator-selected deployment</h3>
+<p>Gaffer is intended to be downloadable and self-hosted on the operator&#39;s own
+infrastructure. There is no mandatory maintainer host, hostname, IP address,
+Tailscale network, router instance or provider account. An environment used to
+collect development evidence is a test fixture, not an application dependency.
+Exact tested versions belong in the compatibility/evidence matrix; capability
+requirements and explicitly selected isolation profiles govern supported execution.</p>
+<ul>
+<li><strong>Daemon:</strong> choose its host, local state/artifact directories and authenticated
+private endpoint. One active daemon owns authoritative state.</li>
+<li><strong>Runner:</strong> enroll a host and configure repository identities/roots, allowed
+projects, runtime profile and enablement. It starts disabled and executes only
+within both project grants and runner-local policy.</li>
+<li><strong>9Router:</strong> supply an existing or fresh router origin, deployment identity,
+protected credential references and named routes. It owns provider credentials,
+subscriptions, account selection and fallback.</li>
+<li><strong>Private transport:</strong> supply reachable authenticated endpoints and the supported
+TLS/private-access profile. Tailscale is optional; another verified VPN, private
+network or authenticated tunnel may satisfy the contract.</li>
+</ul>
+<p>A single-host installation may colocate daemon, runner supervisor and router while
+keeping their state, credentials and process permissions separate. Repository code
+still runs in the supported containment profile. A split-host installation supplies
+the corresponding endpoints explicitly; runner connections are outbound to the
+daemon, and inference travels through the scoped route boundary. Being reachable
+does not make a host eligible. Losing a selected host blocks or reconciles work
+under its existing authority; it never silently selects an unapproved machine.</p>
+<p>Setup must offer <strong>connect existing 9Router</strong> and <strong>configure a fresh 9Router</strong>
+paths, with compatibility/authentication checks and actionable diagnostics. An
+existing router does not need new provider logins merely because Gaffer connects
+to it. Configure named worker/planner/reviewer routes in that router and validate
+their actual capabilities and permitted provider/billing envelope. Credentials are
+supplied through protected local references, never command-line flags, checked-in
+examples or shipped defaults. Unknown compatibility is reported before execution.</p>
+<p>Reusing an existing instance and moving it are different operations. Optional
+operator-directed migration uses the selected router version&#39;s verified
+backup/export/restore procedure. Check whether its configuration, encryption keys
+and provider sessions are portable; do not promise that every provider session
+can move without reauthentication. Transfer only between operator-approved router
+hosts over an authenticated encrypted channel with restrictive storage permissions.
+Protect the source and recovery copy, validate the destination&#39;s identity, routes,
+authentication and policy before cutover, and reconcile/drain active requests before
+changing Gaffer&#39;s endpoint or route grants. Preserve a tested rollback path.</p>
+<p>Router backups remain separate from Gaffer&#39;s workflow/artifact backups. Gaffer
+must never collect provider secrets into its database, repositories, worker
+sandboxes, logs, browser downloads or release packages. Shipped examples use
+placeholders. Clean-machine install tests must work with independently supplied
+hosts and fresh credentials, without access to a maintainer&#39;s private resources.
+These are implementation requirements, not claims of an existing installer or
+already-tested router migration.</p>
 <h2 id="spec-2-authority-and-intent">2. Authority and intent</h2>
 <h3 id="spec-21-capture-and-bounded-discovery">2.1 Capture and bounded discovery</h3>
 <p>Persist a capture before analysing it. The client supplies an idempotency key;

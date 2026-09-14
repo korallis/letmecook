@@ -14,6 +14,13 @@ All worker, planner and reviewer model calls go through **9Router**. It owns pro
 authentication, multiple subscriptions from the same provider, account rotation and
 request fallback. Gaffer owns task authority, execution, recovery and review.
 
+Gaffer is designed for installation on infrastructure **you choose**. The daemon,
+runners and 9Router may share a suitable host or run on separate configured hosts.
+No maintainer machine, hostname, account or private network is a product dependency.
+Connect an existing 9Router instance or set up your own; supported migration can
+preserve router configuration without bringing provider credentials into Gaffer.
+See [operator-selected deployment](docs/spec.md#12-operator-selected-deployment).
+
 | Start here | Purpose |
 | --- | --- |
 | [Product overview](docs/README.md) | Intended workflow and scope |
