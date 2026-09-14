@@ -1,5 +1,6 @@
 {
-  "name": "gaffer-inference-boundary-experiment",
+  "name": "gaffer-router-boundary-bridge",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -7,9 +8,8 @@
   },
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "node --test boundary.test.ts router-gate.test.ts",
-    "prove": "node prove.ts",
-    "demo": "node demo.ts"
+    "test": "node --test lifecycle.test.ts",
+    "prove": "node run.ts"
   },
   "devDependencies": {
     "@types/node": "24.3.0",
