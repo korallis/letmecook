@@ -1,0 +1,21 @@
+{
+  "name": "gaffer-first-harness-experiment",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "node --test adapter.test.ts protocol.test.ts router-profile.test.ts",
+    "prove": "node run.ts",
+    "prove:router": "node router-run.ts",
+    "check:native": "tsc -p native/tsconfig.json",
+    "test:native": "node --test native/native.test.ts ../native-evaluation/evidence-control.test.mjs",
+    "prove:native": "node native/router-run.ts"
+  },
+  "devDependencies": {
+    "@types/node": "24.3.0",
+    "typescript": "5.9.3"
+  }
+}

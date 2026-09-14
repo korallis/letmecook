@@ -1,14 +1,15 @@
 import { spawn } from 'node:child_process';
 // Cancelling this CLI can leave an uncertain Docker start. The caller retains
 // the deterministic container name and reconciles/removes it after this settles.
-export async function inputProcess(command:string,args:string[],input:string,signal:AbortSignal):Promise<string> {
+export async function inputProcess(command:string,args:string[],input:string,signal:AbortSignal,maxMs=12000):Promise<string> {
+ if(!Number.isSafeInteger(maxMs)||maxMs<1||maxMs>45000)throw new Error('invalid_input_process_deadline');
  signal.throwIfAborted();
  return new Promise((resolve,reject)=>{
   const child=spawn(command,args,{stdio:['pipe','pipe','pipe']});let out='',err='';let overflow=false;
   let killTimer:ReturnType<typeof setTimeout>|undefined;
   const abort=()=>{child.kill('SIGTERM');killTimer ??= setTimeout(()=>child.kill('SIGKILL'),500);};
   signal.addEventListener('abort',abort,{once:true});if(signal.aborted)abort();
-  const timer=setTimeout(abort,12000);
+  const timer=setTimeout(abort,maxMs);
   child.stdout.on('data',b=>{out+=b;if(out.length>1048576){overflow=true;abort();}});
   child.stderr.on('data',b=>{err+=b;if(err.length>65536)err=err.slice(-65536);});
   child.stdin.on('error',()=>{});

@@ -4,6 +4,7 @@ import { mergeWithDefaults } from '../src/lib/db/repos/settingsRepo.js';
 import { existsSync } from 'node:fs';
 import { createResponsesTerminalObserver } from './responses-terminal.mjs';
 import { createChatTerminalObserver } from './chat-terminal.mjs';
+import { validateOpenCodeTools, validateOpenCodeArguments } from './opencode-profile.mjs';
 import { stripCodexUnsupportedPatterns } from 'open-sse/utils/codexToolSchema.js';
 import { CODEX_DEFAULT_INSTRUCTIONS } from 'open-sse/config/codexInstructions.js';
 import { evaluationScopes } from './evaluation-scope.mjs';
@@ -25,6 +26,8 @@ const settingKeys = new Set([...disabled, 'requireApiKey', 'capacityAdapter', 'c
 const healthKeys = new Set(['apiKey', 'testStatus', 'lastTested', 'lastError', 'lastErrorAt', 'errorCode', 'rateLimitedUntil', 'backoffLevel', 'lastUsedAt', 'consecutiveUseCount']);
 const tokenKeys = new Set(['accessToken','refreshToken','idToken','expiresAt','expiresIn','lastRefreshAt','tokenType','scope']);
 const nativeSynthetic = process.env.GAFFER_SYNTHETIC_NATIVE === '1' && existsSync('/.dockerenv');
+const opencodeSynthetic = process.env.GAFFER_SYNTHETIC_OPENCODE === '1' && existsSync('/.dockerenv');
+requireThat(!(nativeSynthetic && opencodeSynthetic), 'incompatible_synthetic_profiles');
 const nativeEndpoint = 'http://127.0.0.1:47771/responses';
 const nativeRefreshEndpoint = 'http://127.0.0.1:47771/token';
 const mitmHosts = ['cloudcode-pa.googleapis.com','daily-cloudcode-pa.googleapis.com','api.individual.githubcopilot.com','q.us-east-1.amazonaws.com','codewhisperer.us-east-1.amazonaws.com','api2.cursor.sh'];
@@ -69,7 +72,8 @@ function admittedHeaders(request) {
 function validateRequest(body) {
   // Explicit tool_choice and temperature are unsupported by this common profile:
   // the pinned native path drops them, so they are outside this envelope.
-  closedKeys(body, ['model','messages','stream','max_tokens','tools']);
+  closedKeys(body, ['model','messages','stream','max_tokens','tools',...(opencodeSynthetic ? ['tool_choice'] : [])]);
+  if (opencodeSynthetic) { requireThat(body.tool_choice === 'auto', 'unsupported_tool_choice'); validateOpenCodeTools(body.tools); }
   requireThat(body.stream === true && Number.isInteger(body.max_tokens) && body.max_tokens > 0 && body.max_tokens <= 1024 && Array.isArray(body.messages) && body.messages.length > 0 && body.messages.length <= 64, 'unsupported_request');
   if (Object.hasOwn(body,'tools')) {
     requireThat(Array.isArray(body.tools) && body.tools.length > 0 && body.tools.length <= 8, 'unsupported_tools');
@@ -91,12 +95,13 @@ function validateRequest(body) {
     requireThat(object(m), 'unsupported_message');
     if(m.role==='assistant'){
       closedKeys(m,['role','content','tool_calls']);
-      requireThat(!pending.size && (typeof m.content==='string' && m.content.trim().length>0 || m.content===null && Object.hasOwn(m,'tool_calls')), 'unsupported_message');
+      requireThat(!pending.size && (typeof m.content==='string' && m.content.trim().length>0 || (m.content===null || opencodeSynthetic && m.content==='') && Object.hasOwn(m,'tool_calls')), 'unsupported_message');
       if(Object.hasOwn(m,'tool_calls')){
         requireThat(Array.isArray(m.tool_calls) && m.tool_calls.length>0 && m.tool_calls.length<=8, 'unsupported_tool_call');
         for(const call of m.tool_calls){
           closedKeys(call,['id','type','function']);closedKeys(call.function,['name','arguments']);
           requireThat(call.type==='function' && toolId(call.id) && !seen.has(call.id) && toolName(call.function.name) && typeof call.function.arguments==='string' && object(JSON.parse(call.function.arguments)), 'unsupported_tool_call');
+          if (opencodeSynthetic) validateOpenCodeArguments(call.function.name,call.function.arguments);
           pending.add(call.id);seen.add(call.id);
         }
       }
@@ -184,7 +189,7 @@ export function project(payload) {
       settings:{requireApiKey:true,comboStrategy:'fallback',accountStrategy:'fill-first',adapters:false,helpers:false,remoteResources:false,proxies:false,autoPing:false,refresh:false},
       bounds:{...nativeProfile.local,providerOutputTokens:null,providerMonetaryCap:null,scope:nativeProfile.scope},terminals:['validated-original-responses-sse','validated-original-json-error']};
   }
-  return { schema: 1, profile: nativeSynthetic ? '9router-0.5.75-synthetic-native-authority-v1' : '9router-0.5.75-synthetic-compatible-chat-v1', liveAdmission:false, nativeLiveAdmission: false, nodes, connections, routes,
+  return { schema: 1, profile: nativeSynthetic ? '9router-0.5.75-synthetic-native-authority-v1' : opencodeSynthetic ? '9router-0.5.75-synthetic-opencode-edit-v1' : '9router-0.5.75-synthetic-compatible-chat-v1', liveAdmission:false, nativeLiveAdmission: false, nodes, connections, routes,
     settings: { requireApiKey: true, comboStrategy: 'fallback', accountStrategy: 'fill-first', adapters: false, helpers: false, remoteResources: false, proxies: false, autoPing: false },
     bounds: { requestBytes: 65536, responseBytes: 1048576, requestMaxTokens: 1024, providerOutputTokens: nativeSynthetic ? null : 1024, ingressMs:3000, totalMs: 30000, subattempts: 16 },
     terminals: ['validated-original-chat-sse', 'validated-original-json-error', ...(nativeSynthetic ? ['validated-original-responses-sse','validated-original-refresh-json'] : [])] };

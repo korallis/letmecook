@@ -1,0 +1,476 @@
+{
+  "name": "gaffer-harness-probe-edit-512-1789405070111",
+  "mode": "edit",
+  "memoryMiB": 512,
+  "acceptedIsolationProfile": false,
+  "image": "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0",
+  "started": "2026-09-14T16:57:50.111Z",
+  "cleanup": true,
+  "commands": [
+    [
+      "version",
+      "--format",
+      "{{json .}}"
+    ],
+    [
+      "create",
+      "--name",
+      "gaffer-harness-probe-edit-512-1789405070111",
+      "--label",
+      "dev.gaffer.harness-probe=gaffer-harness-probe-edit-512-1789405070111",
+      "--platform",
+      "linux/arm64",
+      "--pull",
+      "never",
+      "--network",
+      "none",
+      "--user",
+      "1000:1000",
+      "--cap-drop",
+      "ALL",
+      "--security-opt",
+      "no-new-privileges=true",
+      "--read-only",
+      "--init",
+      "--cgroupns",
+      "private",
+      "--ipc",
+      "private",
+      "--cpus",
+      "0.5",
+      "--memory",
+      "512m",
+      "--memory-swap",
+      "512m",
+      "--pids-limit",
+      "64",
+      "--ulimit",
+      "nofile=256:256",
+      "--ulimit",
+      "core=0:0",
+      "--shm-size",
+      "4m",
+      "--tmpfs",
+      "/work:rw,exec,nosuid,nodev,size=32m,nr_inodes=4096,uid=1000,gid=1000,mode=0700",
+      "--tmpfs",
+      "/tmp:rw,noexec,nosuid,nodev,size=8m,nr_inodes=1024,uid=1000,gid=1000,mode=0700",
+      "--mount",
+      "type=bind,source=<isolated-capture-fixture>,target=/fixture,readonly",
+      "--workdir",
+      "/work",
+      "--log-driver",
+      "local",
+      "--log-opt",
+      "max-size=1m",
+      "--log-opt",
+      "max-file=1",
+      "--log-opt",
+      "compress=false",
+      "--restart",
+      "no",
+      "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0",
+      "/usr/bin/env",
+      "-i",
+      "PATH=/usr/local/bin:/usr/bin:/bin",
+      "HOME=/work",
+      "XDG_CONFIG_HOME=/work/config",
+      "XDG_DATA_HOME=/work/data",
+      "XDG_CACHE_HOME=/work/cache",
+      "XDG_STATE_HOME=/work/state",
+      "node",
+      "/fixture/probe.ts",
+      "edit"
+    ],
+    [
+      "inspect",
+      "gaffer-harness-probe-edit-512-1789405070111"
+    ],
+    [
+      "start",
+      "gaffer-harness-probe-edit-512-1789405070111"
+    ],
+    [
+      "wait",
+      "gaffer-harness-probe-edit-512-1789405070111"
+    ],
+    [
+      "logs",
+      "gaffer-harness-probe-edit-512-1789405070111"
+    ],
+    [
+      "inspect",
+      "gaffer-harness-probe-edit-512-1789405070111"
+    ],
+    [
+      "inspect",
+      "gaffer-harness-probe-edit-512-1789405070111"
+    ],
+    [
+      "rm",
+      "-f",
+      "gaffer-harness-probe-edit-512-1789405070111"
+    ],
+    [
+      "ps",
+      "-aq",
+      "--filter",
+      "label=dev.gaffer.harness-probe=gaffer-harness-probe-edit-512-1789405070111"
+    ]
+  ],
+  "runtime": {
+    "Platform": {
+      "Name": "Docker Desktop 4.86.0 (236216)"
+    },
+    "Version": "29.7.2",
+    "ApiVersion": "1.55",
+    "MinAPIVersion": "1.40",
+    "Os": "linux",
+    "Arch": "arm64",
+    "Components": [
+      {
+        "Name": "Engine",
+        "Version": "29.7.2",
+        "Details": {
+          "ApiVersion": "1.55",
+          "Arch": "arm64",
+          "BuildTime": "Wed Aug  5 18:28:35 2026",
+          "Experimental": "false",
+          "GitCommit": "6a43e3d",
+          "GoVersion": "go1.26.5",
+          "KernelVersion": "6.12.76-linuxkit",
+          "MinAPIVersion": "1.40",
+          "Module": "github.com/moby/moby/v2",
+          "ModuleVersion": "v2.0.0+unknown",
+          "Os": "linux"
+        }
+      },
+      {
+        "Name": "containerd",
+        "Version": "v2.2.5",
+        "Details": {
+          "GitCommit": "e53c7c1516c3b2bff98eb76f1f4117477e6f4e66"
+        }
+      },
+      {
+        "Name": "runc",
+        "Version": "1.3.6",
+        "Details": {
+          "GitCommit": "v1.3.6-0-g491b69ba"
+        }
+      },
+      {
+        "Name": "docker-init",
+        "Version": "0.19.0",
+        "Details": {
+          "GitCommit": "de40ad0"
+        }
+      }
+    ],
+    "GitCommit": "6a43e3d",
+    "GoVersion": "go1.26.5",
+    "KernelVersion": "6.12.76-linuxkit",
+    "BuildTime": "2026-08-05T18:28:35.000000000+00:00"
+  },
+  "preflight": {
+    "Id": "a4582494358aa525c2bd21d99ea20426083c83f73699ec084c301724db9b68e9",
+    "Created": "2026-09-14T16:57:50.148867464Z",
+    "Path": "docker-entrypoint.sh",
+    "Args": [
+      "/usr/bin/env",
+      "-i",
+      "PATH=/usr/local/bin:/usr/bin:/bin",
+      "HOME=/work",
+      "XDG_CONFIG_HOME=/work/config",
+      "XDG_DATA_HOME=/work/data",
+      "XDG_CACHE_HOME=/work/cache",
+      "XDG_STATE_HOME=/work/state",
+      "node",
+      "/fixture/probe.ts",
+      "edit"
+    ],
+    "State": {
+      "Status": "created",
+      "Running": false,
+      "Paused": false,
+      "Restarting": false,
+      "OOMKilled": false,
+      "Dead": false,
+      "Pid": 0,
+      "ExitCode": 0,
+      "Error": "",
+      "StartedAt": "0001-01-01T00:00:00Z",
+      "FinishedAt": "0001-01-01T00:00:00Z"
+    },
+    "Image": "sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0",
+    "ResolvConfPath": "",
+    "HostnamePath": "",
+    "HostsPath": "",
+    "LogPath": "",
+    "Name": "/gaffer-harness-probe-edit-512-1789405070111",
+    "RestartCount": 0,
+    "Driver": "overlayfs",
+    "Platform": "linux",
+    "MountLabel": "",
+    "ProcessLabel": "",
+    "AppArmorProfile": "",
+    "ExecIDs": null,
+    "HostConfig": {
+      "Binds": null,
+      "ContainerIDFile": "",
+      "LogConfig": {
+        "Type": "local",
+        "Config": {
+          "compress": "false",
+          "max-file": "1",
+          "max-size": "1m"
+        }
+      },
+      "NetworkMode": "none",
+      "PortBindings": {},
+      "RestartPolicy": {
+        "Name": "no",
+        "MaximumRetryCount": 0
+      },
+      "AutoRemove": false,
+      "VolumeDriver": "",
+      "VolumesFrom": null,
+      "ConsoleSize": [
+        0,
+        0
+      ],
+      "CapAdd": null,
+      "CapDrop": [
+        "ALL"
+      ],
+      "CgroupnsMode": "private",
+      "Dns": null,
+      "DnsOptions": [],
+      "DnsSearch": [],
+      "ExtraHosts": null,
+      "GroupAdd": null,
+      "IpcMode": "private",
+      "Cgroup": "",
+      "Links": null,
+      "OomScoreAdj": 0,
+      "PidMode": "",
+      "Privileged": false,
+      "PublishAllPorts": false,
+      "ReadonlyRootfs": true,
+      "SecurityOpt": [
+        "no-new-privileges=true"
+      ],
+      "Tmpfs": {
+        "/tmp": "rw,noexec,nosuid,nodev,size=8m,nr_inodes=1024,uid=1000,gid=1000,mode=0700",
+        "/work": "rw,exec,nosuid,nodev,size=32m,nr_inodes=4096,uid=1000,gid=1000,mode=0700"
+      },
+      "UTSMode": "",
+      "UsernsMode": "",
+      "ShmSize": 4194304,
+      "Runtime": "runc",
+      "Isolation": "",
+      "CpuShares": 0,
+      "Memory": 536870912,
+      "NanoCpus": 500000000,
+      "CgroupParent": "",
+      "BlkioWeight": 0,
+      "BlkioWeightDevice": [],
+      "BlkioDeviceReadBps": [],
+      "BlkioDeviceWriteBps": [],
+      "BlkioDeviceReadIOps": [],
+      "BlkioDeviceWriteIOps": [],
+      "CpuPeriod": 0,
+      "CpuQuota": 0,
+      "CpuRealtimePeriod": 0,
+      "CpuRealtimeRuntime": 0,
+      "CpusetCpus": "",
+      "CpusetMems": "",
+      "Devices": [],
+      "DeviceCgroupRules": null,
+      "DeviceRequests": null,
+      "MemoryReservation": 0,
+      "MemorySwap": 536870912,
+      "MemorySwappiness": null,
+      "OomKillDisable": false,
+      "PidsLimit": 64,
+      "Ulimits": [
+        {
+          "Name": "core",
+          "Hard": 0,
+          "Soft": 0
+        },
+        {
+          "Name": "nofile",
+          "Hard": 256,
+          "Soft": 256
+        }
+      ],
+      "CpuCount": 0,
+      "CpuPercent": 0,
+      "IOMaximumIOps": 0,
+      "IOMaximumBandwidth": 0,
+      "Mounts": [
+        {
+          "Type": "bind",
+          "Source": "<isolated-capture-fixture>",
+          "Target": "/fixture",
+          "ReadOnly": true
+        }
+      ],
+      "MaskedPaths": [
+        "/proc/acpi",
+        "/proc/asound",
+        "/proc/interrupts",
+        "/proc/kcore",
+        "/proc/keys",
+        "/proc/latency_stats",
+        "/proc/sched_debug",
+        "/proc/scsi",
+        "/proc/timer_list",
+        "/proc/timer_stats",
+        "/sys/devices/virtual/powercap",
+        "/sys/firmware"
+      ],
+      "ReadonlyPaths": [
+        "/proc/bus",
+        "/proc/fs",
+        "/proc/irq",
+        "/proc/sys",
+        "/proc/sysrq-trigger"
+      ],
+      "Init": true
+    },
+    "Storage": {
+      "RootFS": {
+        "Snapshot": {
+          "Name": "overlayfs"
+        }
+      }
+    },
+    "Mounts": [
+      {
+        "Type": "bind",
+        "Source": "<isolated-capture-fixture>",
+        "Destination": "/fixture",
+        "Mode": "",
+        "RW": false,
+        "Propagation": "rprivate"
+      }
+    ],
+    "Config": {
+      "Hostname": "a4582494358a",
+      "Domainname": "",
+      "User": "1000:1000",
+      "AttachStdin": false,
+      "AttachStdout": true,
+      "AttachStderr": true,
+      "Tty": false,
+      "OpenStdin": false,
+      "StdinOnce": false,
+      "Env": [
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "NODE_VERSION=24.21.0",
+        "YARN_VERSION=1.22.22"
+      ],
+      "Cmd": [
+        "/usr/bin/env",
+        "-i",
+        "PATH=/usr/local/bin:/usr/bin:/bin",
+        "HOME=/work",
+        "XDG_CONFIG_HOME=/work/config",
+        "XDG_DATA_HOME=/work/data",
+        "XDG_CACHE_HOME=/work/cache",
+        "XDG_STATE_HOME=/work/state",
+        "node",
+        "/fixture/probe.ts",
+        "edit"
+      ],
+      "Image": "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0",
+      "Volumes": null,
+      "WorkingDir": "/work",
+      "Entrypoint": [
+        "docker-entrypoint.sh"
+      ],
+      "Labels": {
+        "dev.gaffer.harness-probe": "gaffer-harness-probe-edit-512-1789405070111"
+      }
+    },
+    "NetworkSettings": {
+      "SandboxID": "",
+      "SandboxKey": "",
+      "Ports": {},
+      "Networks": {
+        "none": {
+          "IPAMConfig": null,
+          "Links": null,
+          "Aliases": null,
+          "DriverOpts": null,
+          "GwPriority": 0,
+          "NetworkID": "",
+          "EndpointID": "",
+          "Gateway": "",
+          "IPAddress": "",
+          "MacAddress": "",
+          "IPPrefixLen": 0,
+          "IPv6Gateway": "",
+          "GlobalIPv6Address": "",
+          "GlobalIPv6PrefixLen": 0,
+          "DNSNames": null
+        }
+      }
+    },
+    "ImageManifestDescriptor": {
+      "mediaType": "application/vnd.oci.image.manifest.v1+json",
+      "digest": "sha256:a3acdfc965381ce998d17f8ae1cd297932ab89862fea0b4f61907b59a86e611b",
+      "size": 2495,
+      "annotations": {
+        "com.docker.official-images.bashbrew.arch": "arm64v8",
+        "org.opencontainers.image.base.digest": "sha256:d2b65563319efe6bcb62e08750efeebf61458946f43f6f26fe62f0c1e293ebad",
+        "org.opencontainers.image.base.name": "buildpack-deps:bookworm",
+        "org.opencontainers.image.created": "2026-09-09T18:46:05Z",
+        "org.opencontainers.image.revision": "93a7bafc324a85ac1ee461604cff87cffacb6d7a",
+        "org.opencontainers.image.source": "https://github.com/nodejs/docker-node.git#93a7bafc324a85ac1ee461604cff87cffacb6d7a:24/bookworm",
+        "org.opencontainers.image.url": "https://hub.docker.com/_/node",
+        "org.opencontainers.image.version": "24"
+      },
+      "platform": {
+        "architecture": "arm64",
+        "os": "linux",
+        "variant": "v8"
+      }
+    }
+  },
+  "exit": 0,
+  "stdout": "{\"probe\":\"base\",\"time\":1789405070373,\"sha\":\"949d000dce2ffa54b3ec61d91cc67d6ad9b4545f\"}\n{\"probe\":\"config\",\"time\":1789405070374,\"config\":{\"enabled_providers\":[\"probe\"],\"model\":\"probe/probe-model\",\"small_model\":\"probe/probe-model\",\"share\":\"disabled\",\"autoupdate\":false,\"snapshot\":false,\"formatter\":false,\"lsp\":false,\"mcp\":{},\"plugin\":[],\"instructions\":[],\"permission\":{\"*\":\"deny\",\"edit\":\"allow\"},\"provider\":{\"probe\":{\"npm\":\"@ai-sdk/openai-compatible\",\"name\":\"Synthetic probe\",\"options\":{\"includeUsage\":false,\"baseURL\":\"http://127.0.0.1:8765/v1\",\"apiKey\":\"dummy-not-provider\"},\"models\":{\"probe-model\":{\"name\":\"Probe\",\"tool_call\":true,\"limit\":{\"context\":8192,\"output\":128},\"modalities\":{\"input\":[\"text\"],\"output\":[\"text\"]}}}}},\"experimental\":{\"openTelemetry\":false}}}\n{\"probe\":\"request\",\"time\":1789405073757,\"count\":1,\"method\":\"POST\",\"path\":\"/v1/chat/completions\",\"headers\":{\"authorization\":\"<dummy-redacted>\",\"content-type\":\"application/json\",\"user-agent\":\"opencode/1.18.30 ai-sdk/provider-utils/4.0.23 runtime/bun/1.3.14\",\"x-session-affinity\":\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\",\"x-session-id\":\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\",\"connection\":\"keep-alive\",\"accept\":\"*/*\",\"host\":\"127.0.0.1:8765\",\"accept-encoding\":\"gzip, deflate, br, zstd\",\"content-length\":\"12167\"},\"body\":{\"model\":\"probe-model\",\"max_tokens\":128,\"messages\":[{\"role\":\"system\",\"content\":\"You are opencode, an interactive CLI tool that helps users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.\\n\\nIMPORTANT: You must NEVER generate or guess URLs for the user unless you are confident that the URLs are for helping the user with programming. You may use URLs provided by the user in their messages or local files.\\n\\nIf the user asks for help or wants to give feedback inform them of the following:\\n- /help: Get help with using opencode\\n- To give feedback, users should report the issue at https://github.com/anomalyco/opencode/issues\\n\\nWhen the user directly asks about opencode (eg 'can opencode do...', 'does opencode have...') or asks in second person (eg 'are you able...', 'can you do...'), first use the WebFetch tool to gather information to answer the question from opencode docs at https://opencode.ai\\n\\n# Tone and style\\nYou should be concise, direct, and to the point. When you run a non-trivial bash command, you should explain what the command does and why you are running it, to make sure the user understands what you are doing (this is especially important when you are running a command that will make changes to the user's system).\\nRemember that your output will be displayed on a command line interface. Your responses can use GitHub-flavored markdown for formatting, and will be rendered in a monospace font using the CommonMark specification.\\nOutput text to communicate with the user; all text you output outside of tool use is displayed to the user. Only use tools to complete tasks. Never use tools like Bash or code comments as means to communicate with the user during the session.\\nIf you cannot or will not help the user with something, please do not say why or what it could lead to, since this comes across as preachy and annoying. Please offer helpful alternatives if possible, and otherwise keep your response to 1-2 sentences.\\nOnly use emojis if the user explicitly requests it. Avoid using emojis in all communication unless asked.\\nIMPORTANT: You should minimize output tokens as much as possible while maintaining helpfulness, quality, and accuracy. Only address the specific query or task at hand, avoiding tangential information unless absolutely critical for completing the request. If you can answer in 1-3 sentences or a short paragraph, please do.\\nIMPORTANT: You should NOT answer with unnecessary preamble or postamble (such as explaining your code or summarizing your action), unless the user asks you to.\\nIMPORTANT: Keep your responses short, since they will be displayed on a command line interface. You MUST answer concisely with fewer than 4 lines (not including tool use or code generation), unless user asks for detail. Answer the user's question directly, without elaboration, explanation, or details. One word answers are best. Avoid introductions, conclusions, and explanations. You MUST avoid text before/after your response, such as \\\"The answer is <answer>.\\\", \\\"Here is the content of the file...\\\" or \\\"Based on the information provided, the answer is...\\\" or \\\"Here is what I will do next...\\\". Here are some examples to demonstrate appropriate verbosity:\\n<example>\\nuser: what is 2+2?\\nassistant: 4\\n</example>\\n\\n<example>\\nuser: is 11 a prime number?\\nassistant: Yes\\n</example>\\n\\n<example>\\nuser: what command should I run to list files in the current directory?\\nassistant: ls\\n</example>\\n\\n<example>\\nuser: what command should I run to watch files in the current directory?\\nassistant: [use the ls tool to list the files in the current directory, then read docs/commands in the relevant file to find out how to watch files]\\nnpm run dev\\n</example>\\n\\n<example>\\nuser: what files are in the directory src/?\\nassistant: [runs ls and sees foo.c, bar.c, baz.c]\\nuser: which file contains the implementation of foo?\\nassistant: src/foo.c\\n</example>\\n\\n<example>\\nuser: write tests for new feature\\nassistant: [uses grep and glob search tools to find where similar tests are defined, uses concurrent read file tool use blocks in one tool call to read relevant files at the same time, uses edit file tool to write new tests]\\n</example>\\n\\n# Proactiveness\\nYou are allowed to be proactive, but only when the user asks you to do something. You should strive to strike a balance between:\\n1. Doing the right thing when asked, including taking actions and follow-up actions\\n2. Not surprising the user with actions you take without asking\\nFor example, if the user asks you how to approach something, you should do your best to answer their question first, and not immediately jump into taking actions.\\n3. Do not add additional code explanation summary unless requested by the user. After working on a file, just stop, rather than providing an explanation of what you did.\\n\\n# Following conventions\\nWhen making changes to files, first understand the file's code conventions. Mimic code style, use existing libraries and utilities, and follow existing patterns.\\n- NEVER assume that a given library is available, even if it is well known. Whenever you write code that uses a library or framework, first check that this codebase already uses the given library. For example, you might look at neighboring files, or check the package.json (or cargo.toml, and so on depending on the language).\\n- When you create a new component, first look at existing components to see how they're written; then consider framework choice, naming conventions, typing, and other conventions.\\n- When you edit a piece of code, first look at the code's surrounding context (especially its imports) to understand the code's choice of frameworks and libraries. Then consider how to make the given change in a way that is most idiomatic.\\n- Always follow security best practices. Never introduce code that exposes or logs secrets and keys. Never commit secrets or keys to the repository.\\n\\n# Code style\\n- IMPORTANT: DO NOT ADD ***ANY*** COMMENTS unless asked\\n\\n# Doing tasks\\nThe user will primarily request you perform software engineering tasks. This includes solving bugs, adding new functionality, refactoring code, explaining code, and more. For these tasks the following steps are recommended:\\n- Use the available search tools to understand the codebase and the user's query. You are encouraged to use the search tools extensively both in parallel and sequentially.\\n- Implement the solution using all tools available to you\\n- Verify the solution if possible with tests. NEVER assume specific test framework or test script. Check the README or search codebase to determine the testing approach.\\n- VERY IMPORTANT: When you have completed a task, you MUST run the lint and typecheck commands (e.g. npm run lint, npm run typecheck, ruff, etc.) with Bash if they were provided to you to ensure your code is correct. If you are unable to find the correct command, ask the user for the command to run and if they supply it, proactively suggest writing it to AGENTS.md so that you will know to run it next time.\\nNEVER commit changes unless the user explicitly asks you to. It is VERY IMPORTANT to only commit when explicitly asked, otherwise the user will feel that you are being too proactive.\\n\\n- Tool results and user messages may include <system-reminder> tags. <system-reminder> tags contain useful information and reminders. They are NOT part of the user's provided input or the tool result.\\n\\n# Tool usage policy\\n- When doing file search, prefer to use the Task tool in order to reduce context usage.\\n- You have the capability to call multiple tools in a single response. When multiple independent pieces of information are requested, batch your tool calls together for optimal performance. When making multiple bash tool calls, you MUST send a single message with multiple tools calls to run the calls in parallel. For example, if you need to run \\\"git status\\\" and \\\"git diff\\\", send a single message with two tool calls to run the calls in parallel.\\n\\nYou MUST answer concisely with fewer than 4 lines of text (not including tool use or code generation), unless user asks for detail.\\n\\nIMPORTANT: Before you begin work, think about what the code you're editing is supposed to do based on the filenames directory structure.\\n\\n# Code References\\n\\nWhen referencing specific functions or pieces of code include the pattern `file_path:line_number` to allow the user to easily navigate to the source code location.\\n\\n<example>\\nuser: Where are errors from the client handled?\\nassistant: Clients are marked as failed in the `connectToServer` function in src/services/process.ts:712.\\n</example>\\n\\nYou are powered by the model named probe-model. The exact model ID is probe/probe-model\\nHere is some useful information about the environment you are running in:\\n<env>\\n  Working directory: /work/repo\\n  Workspace root folder: /work/repo\\n  Is directory a git repo: yes\\n  Platform: linux\\n  Today's date: Mon Sep 14 2026\\n</env>\"},{\"role\":\"user\",\"content\":\"\\\"Change greeting.txt from hello to hello from probe.\\\"\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"edit\",\"description\":\"Performs exact string replacements in files. \\n\\nUsage:\\n- You must use your `Read` tool at least once in the conversation before editing. This tool will error if you attempt an edit without reading the file. \\n- When editing text from Read tool output, ensure you preserve the exact indentation (tabs/spaces) as it appears AFTER the line number prefix. The line number prefix format is: line number + colon + space (e.g., `1: `). Everything after that space is the actual file content to match. Never include any part of the line number prefix in the oldString or newString.\\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.\\n- Only use emojis if the user explicitly requests it. Avoid adding emojis to files unless asked.\\n- The edit will FAIL if `oldString` is not found in the file with an error \\\"oldString not found in content\\\".\\n- The edit will FAIL if `oldString` is found multiple times in the file with an error \\\"Found multiple matches for oldString. Provide more surrounding lines in oldString to identify the correct match.\\\" Either provide a larger string with more surrounding context to make it unique or use `replaceAll` to change every instance of `oldString`. \\n- Use `replaceAll` for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.\\n\",\"parameters\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"filePath\":{\"type\":\"string\",\"description\":\"The absolute path to the file to modify\"},\"oldString\":{\"type\":\"string\",\"description\":\"The text to replace\"},\"newString\":{\"type\":\"string\",\"description\":\"The text to replace it with (must be different from oldString)\"},\"replaceAll\":{\"type\":\"boolean\",\"description\":\"Replace all occurrences of oldString (default false)\"}},\"required\":[\"filePath\",\"oldString\",\"newString\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"write\",\"description\":\"Writes a file to the local filesystem.\\n\\nUsage:\\n- This tool will overwrite the existing file if there is one at the provided path.\\n- If this is an existing file, you MUST use the Read tool first to read the file's contents. This tool will fail if you did not read the file first.\\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.\\n- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.\\n- Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.\\n\",\"parameters\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"content\":{\"type\":\"string\",\"description\":\"The content to write to the file\"},\"filePath\":{\"type\":\"string\",\"description\":\"The absolute path to the file to write (must be absolute, not relative)\"}},\"required\":[\"content\",\"filePath\"]}}}],\"tool_choice\":\"auto\",\"stream\":true}}\n{\"probe\":\"response-close\",\"time\":1789405073758,\"count\":1,\"ended\":true}\n{\"probe\":\"request\",\"time\":1789405074965,\"count\":2,\"method\":\"POST\",\"path\":\"/v1/chat/completions\",\"headers\":{\"authorization\":\"<dummy-redacted>\",\"content-type\":\"application/json\",\"user-agent\":\"opencode/1.18.30 ai-sdk/provider-utils/4.0.23 runtime/bun/1.3.14\",\"x-session-affinity\":\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\",\"x-session-id\":\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\",\"connection\":\"keep-alive\",\"accept\":\"*/*\",\"host\":\"127.0.0.1:8765\",\"accept-encoding\":\"gzip, deflate, br, zstd\",\"content-length\":\"12494\"},\"body\":{\"model\":\"probe-model\",\"max_tokens\":128,\"messages\":[{\"role\":\"system\",\"content\":\"You are opencode, an interactive CLI tool that helps users with software engineering tasks. Use the instructions below and the tools available to you to assist the user.\\n\\nIMPORTANT: You must NEVER generate or guess URLs for the user unless you are confident that the URLs are for helping the user with programming. You may use URLs provided by the user in their messages or local files.\\n\\nIf the user asks for help or wants to give feedback inform them of the following:\\n- /help: Get help with using opencode\\n- To give feedback, users should report the issue at https://github.com/anomalyco/opencode/issues\\n\\nWhen the user directly asks about opencode (eg 'can opencode do...', 'does opencode have...') or asks in second person (eg 'are you able...', 'can you do...'), first use the WebFetch tool to gather information to answer the question from opencode docs at https://opencode.ai\\n\\n# Tone and style\\nYou should be concise, direct, and to the point. When you run a non-trivial bash command, you should explain what the command does and why you are running it, to make sure the user understands what you are doing (this is especially important when you are running a command that will make changes to the user's system).\\nRemember that your output will be displayed on a command line interface. Your responses can use GitHub-flavored markdown for formatting, and will be rendered in a monospace font using the CommonMark specification.\\nOutput text to communicate with the user; all text you output outside of tool use is displayed to the user. Only use tools to complete tasks. Never use tools like Bash or code comments as means to communicate with the user during the session.\\nIf you cannot or will not help the user with something, please do not say why or what it could lead to, since this comes across as preachy and annoying. Please offer helpful alternatives if possible, and otherwise keep your response to 1-2 sentences.\\nOnly use emojis if the user explicitly requests it. Avoid using emojis in all communication unless asked.\\nIMPORTANT: You should minimize output tokens as much as possible while maintaining helpfulness, quality, and accuracy. Only address the specific query or task at hand, avoiding tangential information unless absolutely critical for completing the request. If you can answer in 1-3 sentences or a short paragraph, please do.\\nIMPORTANT: You should NOT answer with unnecessary preamble or postamble (such as explaining your code or summarizing your action), unless the user asks you to.\\nIMPORTANT: Keep your responses short, since they will be displayed on a command line interface. You MUST answer concisely with fewer than 4 lines (not including tool use or code generation), unless user asks for detail. Answer the user's question directly, without elaboration, explanation, or details. One word answers are best. Avoid introductions, conclusions, and explanations. You MUST avoid text before/after your response, such as \\\"The answer is <answer>.\\\", \\\"Here is the content of the file...\\\" or \\\"Based on the information provided, the answer is...\\\" or \\\"Here is what I will do next...\\\". Here are some examples to demonstrate appropriate verbosity:\\n<example>\\nuser: what is 2+2?\\nassistant: 4\\n</example>\\n\\n<example>\\nuser: is 11 a prime number?\\nassistant: Yes\\n</example>\\n\\n<example>\\nuser: what command should I run to list files in the current directory?\\nassistant: ls\\n</example>\\n\\n<example>\\nuser: what command should I run to watch files in the current directory?\\nassistant: [use the ls tool to list the files in the current directory, then read docs/commands in the relevant file to find out how to watch files]\\nnpm run dev\\n</example>\\n\\n<example>\\nuser: what files are in the directory src/?\\nassistant: [runs ls and sees foo.c, bar.c, baz.c]\\nuser: which file contains the implementation of foo?\\nassistant: src/foo.c\\n</example>\\n\\n<example>\\nuser: write tests for new feature\\nassistant: [uses grep and glob search tools to find where similar tests are defined, uses concurrent read file tool use blocks in one tool call to read relevant files at the same time, uses edit file tool to write new tests]\\n</example>\\n\\n# Proactiveness\\nYou are allowed to be proactive, but only when the user asks you to do something. You should strive to strike a balance between:\\n1. Doing the right thing when asked, including taking actions and follow-up actions\\n2. Not surprising the user with actions you take without asking\\nFor example, if the user asks you how to approach something, you should do your best to answer their question first, and not immediately jump into taking actions.\\n3. Do not add additional code explanation summary unless requested by the user. After working on a file, just stop, rather than providing an explanation of what you did.\\n\\n# Following conventions\\nWhen making changes to files, first understand the file's code conventions. Mimic code style, use existing libraries and utilities, and follow existing patterns.\\n- NEVER assume that a given library is available, even if it is well known. Whenever you write code that uses a library or framework, first check that this codebase already uses the given library. For example, you might look at neighboring files, or check the package.json (or cargo.toml, and so on depending on the language).\\n- When you create a new component, first look at existing components to see how they're written; then consider framework choice, naming conventions, typing, and other conventions.\\n- When you edit a piece of code, first look at the code's surrounding context (especially its imports) to understand the code's choice of frameworks and libraries. Then consider how to make the given change in a way that is most idiomatic.\\n- Always follow security best practices. Never introduce code that exposes or logs secrets and keys. Never commit secrets or keys to the repository.\\n\\n# Code style\\n- IMPORTANT: DO NOT ADD ***ANY*** COMMENTS unless asked\\n\\n# Doing tasks\\nThe user will primarily request you perform software engineering tasks. This includes solving bugs, adding new functionality, refactoring code, explaining code, and more. For these tasks the following steps are recommended:\\n- Use the available search tools to understand the codebase and the user's query. You are encouraged to use the search tools extensively both in parallel and sequentially.\\n- Implement the solution using all tools available to you\\n- Verify the solution if possible with tests. NEVER assume specific test framework or test script. Check the README or search codebase to determine the testing approach.\\n- VERY IMPORTANT: When you have completed a task, you MUST run the lint and typecheck commands (e.g. npm run lint, npm run typecheck, ruff, etc.) with Bash if they were provided to you to ensure your code is correct. If you are unable to find the correct command, ask the user for the command to run and if they supply it, proactively suggest writing it to AGENTS.md so that you will know to run it next time.\\nNEVER commit changes unless the user explicitly asks you to. It is VERY IMPORTANT to only commit when explicitly asked, otherwise the user will feel that you are being too proactive.\\n\\n- Tool results and user messages may include <system-reminder> tags. <system-reminder> tags contain useful information and reminders. They are NOT part of the user's provided input or the tool result.\\n\\n# Tool usage policy\\n- When doing file search, prefer to use the Task tool in order to reduce context usage.\\n- You have the capability to call multiple tools in a single response. When multiple independent pieces of information are requested, batch your tool calls together for optimal performance. When making multiple bash tool calls, you MUST send a single message with multiple tools calls to run the calls in parallel. For example, if you need to run \\\"git status\\\" and \\\"git diff\\\", send a single message with two tool calls to run the calls in parallel.\\n\\nYou MUST answer concisely with fewer than 4 lines of text (not including tool use or code generation), unless user asks for detail.\\n\\nIMPORTANT: Before you begin work, think about what the code you're editing is supposed to do based on the filenames directory structure.\\n\\n# Code References\\n\\nWhen referencing specific functions or pieces of code include the pattern `file_path:line_number` to allow the user to easily navigate to the source code location.\\n\\n<example>\\nuser: Where are errors from the client handled?\\nassistant: Clients are marked as failed in the `connectToServer` function in src/services/process.ts:712.\\n</example>\\n\\nYou are powered by the model named probe-model. The exact model ID is probe/probe-model\\nHere is some useful information about the environment you are running in:\\n<env>\\n  Working directory: /work/repo\\n  Workspace root folder: /work/repo\\n  Is directory a git repo: yes\\n  Platform: linux\\n  Today's date: Mon Sep 14 2026\\n</env>\"},{\"role\":\"user\",\"content\":\"\\\"Change greeting.txt from hello to hello from probe.\\\"\"},{\"role\":\"assistant\",\"content\":\"\",\"tool_calls\":[{\"id\":\"call_probe_edit_1\",\"type\":\"function\",\"function\":{\"name\":\"edit\",\"arguments\":\"{\\\"filePath\\\":\\\"/work/repo/greeting.txt\\\",\\\"oldString\\\":\\\"hello\\\",\\\"newString\\\":\\\"hello from probe\\\"}\"}}]},{\"role\":\"tool\",\"tool_call_id\":\"call_probe_edit_1\",\"content\":\"Edit applied successfully.\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"edit\",\"description\":\"Performs exact string replacements in files. \\n\\nUsage:\\n- You must use your `Read` tool at least once in the conversation before editing. This tool will error if you attempt an edit without reading the file. \\n- When editing text from Read tool output, ensure you preserve the exact indentation (tabs/spaces) as it appears AFTER the line number prefix. The line number prefix format is: line number + colon + space (e.g., `1: `). Everything after that space is the actual file content to match. Never include any part of the line number prefix in the oldString or newString.\\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.\\n- Only use emojis if the user explicitly requests it. Avoid adding emojis to files unless asked.\\n- The edit will FAIL if `oldString` is not found in the file with an error \\\"oldString not found in content\\\".\\n- The edit will FAIL if `oldString` is found multiple times in the file with an error \\\"Found multiple matches for oldString. Provide more surrounding lines in oldString to identify the correct match.\\\" Either provide a larger string with more surrounding context to make it unique or use `replaceAll` to change every instance of `oldString`. \\n- Use `replaceAll` for replacing and renaming strings across the file. This parameter is useful if you want to rename a variable for instance.\\n\",\"parameters\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"filePath\":{\"type\":\"string\",\"description\":\"The absolute path to the file to modify\"},\"oldString\":{\"type\":\"string\",\"description\":\"The text to replace\"},\"newString\":{\"type\":\"string\",\"description\":\"The text to replace it with (must be different from oldString)\"},\"replaceAll\":{\"type\":\"boolean\",\"description\":\"Replace all occurrences of oldString (default false)\"}},\"required\":[\"filePath\",\"oldString\",\"newString\"]}}},{\"type\":\"function\",\"function\":{\"name\":\"write\",\"description\":\"Writes a file to the local filesystem.\\n\\nUsage:\\n- This tool will overwrite the existing file if there is one at the provided path.\\n- If this is an existing file, you MUST use the Read tool first to read the file's contents. This tool will fail if you did not read the file first.\\n- ALWAYS prefer editing existing files in the codebase. NEVER write new files unless explicitly required.\\n- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.\\n- Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.\\n\",\"parameters\":{\"$schema\":\"https://json-schema.org/draft/2020-12/schema\",\"type\":\"object\",\"properties\":{\"content\":{\"type\":\"string\",\"description\":\"The content to write to the file\"},\"filePath\":{\"type\":\"string\",\"description\":\"The absolute path to the file to write (must be absolute, not relative)\"}},\"required\":[\"content\",\"filePath\"]}}}],\"tool_choice\":\"auto\",\"stream\":true}}\n{\"probe\":\"response-close\",\"time\":1789405074965,\"count\":2,\"ended\":true}\n{\"probe\":\"native-stdout\",\"time\":1789405074983,\"chunk\":\"{\\\"type\\\":\\\"step_start\\\",\\\"timestamp\\\":1789405074978,\\\"sessionID\\\":\\\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\\\",\\\"part\\\":{\\\"id\\\":\\\"prt_0a0da92b600118gUol1QTzbdxH\\\",\\\"messageID\\\":\\\"msg_0a0da8eb7001qSTCN1oaK1IcCd\\\",\\\"sessionID\\\":\\\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\\\",\\\"type\\\":\\\"step-start\\\"}}\\n\"}\n{\"probe\":\"native-stdout\",\"time\":1789405074989,\"chunk\":\"{\\\"type\\\":\\\"tool_use\\\",\\\"timestamp\\\":1789405074988,\\\"sessionID\\\":\\\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\\\",\\\"part\\\":{\\\"type\\\":\\\"tool\\\",\\\"tool\\\":\\\"edit\\\",\\\"callID\\\":\\\"call_probe_edit_1\\\",\\\"state\\\":{\\\"status\\\":\\\"completed\\\",\\\"input\\\":{\\\"filePath\\\":\\\"/work/repo/greeting.txt\\\",\\\"oldString\\\":\\\"hello\\\",\\\"newString\\\":\\\"hello from probe\\\"},\\\"output\\\":\\\"Edit applied successfully.\\\",\\\"metadata\\\":{\\\"diagnostics\\\":{},\\\"diff\\\":\\\"Index: /work/repo/greeting.txt\\\\n===================================================================\\\\n--- /work/repo/greeting.txt\\\\n+++ /work/repo/greeting.txt\\\\n@@ -1,1 +1,1 @@\\\\n-hello\\\\n+hello from probe\\\\n\\\",\\\"filediff\\\":{\\\"file\\\":\\\"/work/repo/greeting.txt\\\",\\\"patch\\\":\\\"Index: /work/repo/greeting.txt\\\\n===================================================================\\\\n--- /work/repo/greeting.txt\\\\n+++ /work/repo/greeting.txt\\\\n@@ -1,1 +1,1 @@\\\\n-hello\\\\n+hello from probe\\\\n\\\",\\\"additions\\\":1,\\\"deletions\\\":1},\\\"truncated\\\":false},\\\"title\\\":\\\"greeting.txt\\\",\\\"time\\\":{\\\"start\\\":1789405074372,\\\"end\\\":1789405074577}},\\\"id\\\":\\\"prt_0a0da92ef001eYspjnEu65Z5ev\\\",\\\"sessionID\\\":\\\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\\\",\\\"messageID\\\":\\\"msg_0a0da8eb7001qSTCN1oaK1IcCd\\\"}}\\n\"}\n{\"probe\":\"native-stdout\",\"time\":1789405074991,\"chunk\":\"{\\\"type\\\":\\\"step_finish\\\",\\\"timestamp\\\":1789405074991,\\\"sessionID\\\":\\\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\\\",\\\"part\\\":{\\\"id\\\":\\\"prt_0a0da94a2001oukpKWScs2HFah\\\",\\\"reason\\\":\\\"tool-calls\\\",\\\"messageID\\\":\\\"msg_0a0da8eb7001qSTCN1oaK1IcCd\\\",\\\"sessionID\\\":\\\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\\\",\\\"type\\\":\\\"step-finish\\\",\\\"tokens\\\":{\\\"input\\\":0,\\\"output\\\":0,\\\"reasoning\\\":0,\\\"cache\\\":{\\\"write\\\":0,\\\"read\\\":0}},\\\"cost\\\":0}}\\n\"}\n{\"probe\":\"native-stdout\",\"time\":1789405075298,\"chunk\":\"{\\\"type\\\":\\\"step_start\\\",\\\"timestamp\\\":1789405075298,\\\"sessionID\\\":\\\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\\\",\\\"part\\\":{\\\"id\\\":\\\"prt_0a0da9744001841Iw86pLiFQPj\\\",\\\"messageID\\\":\\\"msg_0a0da954d00149TU7vQLSTbYtD\\\",\\\"sessionID\\\":\\\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\\\",\\\"type\\\":\\\"step-start\\\"}}\\n\"}\n{\"probe\":\"native-stdout\",\"time\":1789405075299,\"chunk\":\"{\\\"type\\\":\\\"text\\\",\\\"timestamp\\\":1789405075298,\\\"sessionID\\\":\\\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\\\",\\\"part\\\":{\\\"id\\\":\\\"prt_0a0da974a001Zctt567xEpeFnf\\\",\\\"messageID\\\":\\\"msg_0a0da954d00149TU7vQLSTbYtD\\\",\\\"sessionID\\\":\\\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\\\",\\\"type\\\":\\\"text\\\",\\\"text\\\":\\\"Synthetic probe complete.\\\",\\\"time\\\":{\\\"start\\\":1789405075274,\\\"end\\\":1789405075280}}}\\n{\\\"type\\\":\\\"step_finish\\\",\\\"timestamp\\\":1789405075299,\\\"sessionID\\\":\\\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\\\",\\\"part\\\":{\\\"id\\\":\\\"prt_0a0da97520013Wlx3H1ZLXcLec\\\",\\\"reason\\\":\\\"stop\\\",\\\"messageID\\\":\\\"msg_0a0da954d00149TU7vQLSTbYtD\\\",\\\"sessionID\\\":\\\"ses_f5f2574d7ffeKQj9ImYL1l9JLH\\\",\\\"type\\\":\\\"step-finish\\\",\\\"tokens\\\":{\\\"input\\\":0,\\\"output\\\":0,\\\"reasoning\\\":0,\\\"cache\\\":{\\\"write\\\":0,\\\"read\\\":0}},\\\"cost\\\":0}}\\n\"}\n{\"probe\":\"exit\",\"time\":1789405075382,\"code\":0,\"signal\":null,\"requests\":2,\"file\":\"hello from probe\\n\",\"diff\":\"diff --git a/greeting.txt b/greeting.txt\\nindex ce01362..e1e163e 100644\\n--- a/greeting.txt\\n+++ b/greeting.txt\\n@@ -1 +1 @@\\n-hello\\n+hello from probe\\n\"}\n",
+  "stderr": "",
+  "final": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 0,
+    "Error": "",
+    "StartedAt": "2026-09-14T16:57:50.200948172Z",
+    "FinishedAt": "2026-09-14T16:57:55.386803883Z"
+  },
+  "binarySHA256": "01edb5839aa10d5b09133fedcb335a062ecad6e82552933bb14f71756f2b296b",
+  "sourceCommit": "3104c1428ec91f809e5ab86631300de41eb6952e",
+  "configProfile": "opencode-1.18.30-usage-disabled-edit-v1",
+  "usage": "unknown",
+  "syntheticOnly": true,
+  "reproductionSources": {
+    "launch.ts": {
+      "text": "import assert from 'node:assert/strict';\nimport {execFile} from 'node:child_process';\nimport {promisify} from 'node:util';\nimport {writeFile} from 'node:fs/promises';\nconst exec=promisify(execFile);\nconst root='<isolated-capture-fixture>';\nconst mode=process.argv[2]??'version';\nconst memory=process.argv[3]??'128';\nassert.ok(['128','512'].includes(memory));\nconst name=`gaffer-harness-probe-${mode}-${memory}-${Date.now()}`;\nconst image='node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0';\nconst evidence:any={name,mode,memoryMiB:Number(memory),acceptedIsolationProfile:memory==='128',image,started:new Date().toISOString(),cleanup:false,commands:[]};\nconst run=async(args:string[],timeout=15000)=>{evidence.commands.push(args);return await exec('docker',['--context','desktop-linux',...args],{timeout,maxBuffer:4*1024*1024});};\nawait writeFile(`${root}/${mode}-${memory}-evidence.json`,JSON.stringify(evidence,null,2)+'\\n');\ntry {\n const v=JSON.parse((await run(['version','--format','{{json .}}'])).stdout);\n assert.equal(v.Server.Version,'29.7.2');assert.equal(v.Server.KernelVersion,'6.12.76-linuxkit');assert.equal(v.Server.Arch,'arm64');\n evidence.runtime=v.Server;\n await run(['create','--name',name,'--label',`dev.gaffer.harness-probe=${name}`,'--platform','linux/arm64','--pull','never','--network','none','--user','1000:1000','--cap-drop','ALL','--security-opt','no-new-privileges=true','--read-only','--init','--cgroupns','private','--ipc','private','--cpus','0.5','--memory',memory+'m','--memory-swap',memory+'m','--pids-limit','64','--ulimit','nofile=256:256','--ulimit','core=0:0','--shm-size','4m','--tmpfs','/work:rw,exec,nosuid,nodev,size=32m,nr_inodes=4096,uid=1000,gid=1000,mode=0700','--tmpfs','/tmp:rw,noexec,nosuid,nodev,size=8m,nr_inodes=1024,uid=1000,gid=1000,mode=0700','--mount',`type=bind,source=${root},target=/fixture,readonly`,'--workdir','/work','--log-driver','local','--log-opt','max-size=1m','--log-opt','max-file=1','--log-opt','compress=false','--restart','no',image,'/usr/bin/env','-i','PATH=/usr/local/bin:/usr/bin:/bin','HOME=/work','XDG_CONFIG_HOME=/work/config','XDG_DATA_HOME=/work/data','XDG_CACHE_HOME=/work/cache','XDG_STATE_HOME=/work/state',...(mode==='version'?['/fixture/opencode','--version']:['node','/fixture/probe.ts',mode])]);\n const s=JSON.parse((await run(['inspect',name])).stdout)[0];evidence.preflight=s;\n assert.equal(s.Config.User,'1000:1000');assert.equal(s.HostConfig.NetworkMode,'none');assert.equal(s.HostConfig.ReadonlyRootfs,true);assert.equal(s.HostConfig.Memory,Number(memory)*1024*1024);assert.equal(s.Mounts.length,1);assert.equal(s.Mounts[0].RW,false);assert.deepEqual(s.HostConfig.CapDrop,['ALL']);assert.equal(s.HostConfig.Init,true);\n await run(['start',name]);\n try{evidence.exit=Number((await run(['wait',name],45000)).stdout.trim());}catch(e:any){evidence.timeout=e.message; evidence.beforeStop=(await run(['top',name,'-eo','pid,ppid,comm'])).stdout; await run(['stop','--timeout','1',name]);}\n const logs=await run(['logs',name]);evidence.stdout=logs.stdout;evidence.stderr=logs.stderr;\n evidence.final=JSON.parse((await run(['inspect',name])).stdout)[0].State;\n console.log(JSON.stringify({exit:evidence.exit,final:evidence.final,stdout:evidence.stdout,stderr:evidence.stderr}));\n}catch(e:any){evidence.error=e.stack;console.error(e.message);process.exitCode=1;}\nfinally {\n const s=JSON.parse((await run(['inspect',name])).stdout)[0];assert.equal(s.Config.Labels['dev.gaffer.harness-probe'],name);await run(['rm','-f',name]);assert.equal((await run(['ps','-aq','--filter',`label=dev.gaffer.harness-probe=${name}`])).stdout.trim(),'');evidence.cleanup=true;await writeFile(`${root}/${mode}-${memory}-evidence.json`,JSON.stringify(evidence,null,2)+'\\n');\n}\n",
+      "capturedSHA256BeforePublicPathRedaction": "617b4bc5d3ed9f97ecf2ca3ba2cd9796fc278d229cba0d309288c2a78ce6b9f3",
+      "publicTemplateSHA256": "ed5e717f57e5839c2805199142c6dbf6d4e4ea1d4bc399c5a2cfd0eb6ec0931b"
+    },
+    "probe.ts": {
+      "text": "import {createServer} from 'node:http';\nimport {spawn,execFileSync} from 'node:child_process';\nimport {mkdirSync,writeFileSync,readFileSync,readdirSync} from 'node:fs';\nconst mode=process.argv[2];\nconst log=(type:string, data:any)=>console.log(JSON.stringify({probe:type,time:Date.now(),...data}));\nmkdirSync('/work/repo');writeFileSync('/work/repo/greeting.txt','hello\\n');\nexecFileSync('git',['init','-q','/work/repo']);execFileSync('git',['-C','/work/repo','add','.']);execFileSync('git',['-C','/work/repo','-c','user.name=Probe','-c','user.email=probe@example.invalid','commit','-qm','Synthetic public-domain fixture']);\nlog('base',{sha:execFileSync('git',['-C','/work/repo','rev-parse','HEAD'],{encoding:'utf8'}).trim()});\nlet count=0;\nconst server=createServer(async(req,res)=>{\n let text='';for await (const c of req){text+=c;if(text.length>300000){res.writeHead(413).end();return;}}\n const body=JSON.parse(text);log('request',{count:++count,method:req.method,path:req.url,headers:{...req.headers,authorization:'<dummy-redacted>'},body});\n res.on('close',()=>log('response-close',{count,ended:res.writableEnded}));\n if(count>3){res.writeHead(429).end(JSON.stringify({error:{message:'probe request cap'}}));return;}\n if(mode==='strict'){res.writeHead(400,{'content-type':'application/json'}).end(JSON.stringify({error:{message:'Unsupported field: max_tokens',type:'invalid_request_error',code:'unsupported_field'}}));return;}\n if(mode==='stall'){return;}\n res.writeHead(200,{'content-type':'text/event-stream','cache-control':'no-cache'});\n const delta=(d:any,finish:any=null)=>res.write('data: '+JSON.stringify({id:`chatcmpl-probe-${count}`,object:'chat.completion.chunk',created:1,model:'probe-model',choices:[{index:0,delta:d,finish_reason:finish}]})+'\\n\\n');\n delta({role:'assistant',content:''});\n if(mode==='edit'&&count===1){delta({tool_calls:[{index:0,id:'call_probe_edit_1',type:'function',function:{name:'edit',arguments:'{\"filePath\":\"/work/repo/greeting.txt\",'}}]});delta({tool_calls:[{index:0,function:{arguments:'\"oldString\":\"hello\",\"newString\":\"hello from probe\"}'}}]});delta({},'tool_calls');}\n else {delta({content:'Synthetic probe '});delta({content:'complete.'});delta({},'stop');}\n res.end('data: [DONE]\\n\\n');\n});\nserver.listen(8765,'127.0.0.1');\nconst config={enabled_providers:['probe'],model:'probe/probe-model',small_model:'probe/probe-model',share:'disabled',autoupdate:false,snapshot:false,formatter:false,lsp:false,mcp:{},plugin:[],instructions:[],permission:{'*':'deny',edit:mode==='edit'?'allow':'deny'},provider:{probe:{npm:'@ai-sdk/openai-compatible',name:'Synthetic probe',options:{includeUsage:false,baseURL:'http://127.0.0.1:8765/v1',apiKey:'dummy-not-provider'},models:{'probe-model':{name:'Probe',tool_call:true,limit:{context:8192,output:128},modalities:{input:['text'],output:['text']}}}}},experimental:{openTelemetry:false}};\nwriteFileSync('/work/config.json',JSON.stringify(config));log('config',{config});\nconst env:any={PATH:'/usr/local/bin:/usr/bin:/bin',HOME:'/work',XDG_CONFIG_HOME:'/work/config',XDG_DATA_HOME:'/work/data',XDG_CACHE_HOME:'/work/cache',XDG_STATE_HOME:'/work/state',OPENCODE_CONFIG:'/work/config.json',OPENCODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX:'128',OPENCODE_EXPERIMENTAL_NATIVE_LLM:'false'};\nfor(const k of ['DISABLE_PROJECT_CONFIG','PURE','DISABLE_DEFAULT_PLUGINS','DISABLE_EXTERNAL_SKILLS','DISABLE_CLAUDE_CODE','DISABLE_LSP_DOWNLOAD','DISABLE_MODELS_FETCH','DISABLE_AUTOUPDATE','DISABLE_AUTOCOMPACT','EXPERIMENTAL_DISABLE_FILEWATCHER'])env['OPENCODE_'+k]='1';\nconst child=spawn('/fixture/opencode',['run','--format','json','--model','probe/probe-model','--title','Fixed synthetic probe','Change greeting.txt from hello to hello from probe.'],{cwd:'/work/repo',env,stdio:['ignore','pipe','pipe']});\nchild.stdout.on('data',x=>log('native-stdout',{chunk:x.toString()}));child.stderr.on('data',x=>log('native-stderr',{chunk:x.toString()}));\nconst deadline=setTimeout(()=>{log('deadline',{pid:child.pid});child.kill('SIGTERM');setTimeout(()=>child.kill('SIGKILL'),1000).unref();},25000);\nchild.on('exit',(code,signal)=>{clearTimeout(deadline);log('exit',{code,signal,requests:count,file:readFileSync('/work/repo/greeting.txt','utf8'),diff:execFileSync('git',['-C','/work/repo','diff'],{encoding:'utf8'})});server.closeAllConnections();server.close();});\n",
+      "capturedSHA256BeforePublicPathRedaction": "763cfe919fe508da24f255d678f40585ed5772d1e3ed9d33c2d92ddd68c2df10",
+      "publicTemplateSHA256": "763cfe919fe508da24f255d678f40585ed5772d1e3ed9d33c2d92ddd68c2df10"
+    }
+  },
+  "reproductionNote": "The public launcher template replaces its original temporary capture directory with <isolated-capture-fixture>. Captured source digests describe the exact executed originals; publicTemplateSHA256 hashes the displayed template. Set a fresh absolute fixture directory, stage the pinned binary and two scripts, and run launch.ts edit 512."
+}
