@@ -48,6 +48,14 @@ The documentation tooling is separate from Gaffer's proposed runtime.
 The build layout lives in `reader-template.html.in`; `index.html` is the reader.
 The old `reader-template.html` address redirects to the reader.
 
+Development is tracked in the public [korallis/letmecook repository](https://github.com/korallis/letmecook).
+The [GitHub issues](https://github.com/korallis/letmecook/issues) divide specification,
+implementation and validation into one-PR outcomes. Use the
+[implementation index](https://github.com/korallis/letmecook/blob/main/docs/implementation-plan.md)
+to navigate dependencies, and the
+[Astra playbook](https://github.com/korallis/letmecook/blob/main/docs/astra-playbook.md)
+for issue execution instructions.
+
 ## What you own
 
 You own the orchestration process, task records, context files, execution machines

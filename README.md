@@ -22,6 +22,7 @@ request fallback. Gaffer owns task authority, execution, recovery and review.
 | [Technical specification](docs/spec.md) | System contracts and failure handling |
 | [Roadmap](docs/roadmap.md) | M0–M6, with evidence gates |
 | [GitHub issues](https://github.com/korallis/letmecook/issues) | Assignable specification, implementation and validation work |
+| [Implementation index](docs/implementation-plan.md) | Issue sequence, entry points and PRD traceability |
 | [Milestones](https://github.com/korallis/letmecook/milestones) | Delivery sequence |
 | [Astra playbook](docs/astra-playbook.md) | How GPT-6 Astra should execute an issue |
 | [Contributing](CONTRIBUTING.md) | One issue, one branch, one pull request |
