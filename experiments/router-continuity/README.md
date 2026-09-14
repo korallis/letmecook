@@ -79,6 +79,7 @@ network-none containers. It cannot launch a live endpoint or import live secrets
 
 ```sh
 npm --prefix experiments/router-continuity ci --ignore-scripts
+npm --prefix experiments/planner-probe ci --ignore-scripts
 npm --prefix experiments/router-continuity run check
 npm --prefix experiments/router-continuity test
 GAFFER_ROUTER_SOURCE=/absolute/pinned/public/router \
@@ -141,13 +142,14 @@ prepared manifest, selects only the packet's declared profile, grants the two fi
 attempts, and retains immutable private observations. Worker staging, 30-second
 worker walls, 45-second grants and control/artifact overhead count against the
 existing deadline. Each new member needs 45 seconds remaining. It never prepares,
-starts, resets or restarts a scope. On failure it retains available evidence and
-removes only its workers; the suite coordinator owns shared deployment stop and
-retention. No configured evidence label automatically establishes live acceptance.
+starts, resets or restarts a scope. On failure it physically stops workers and the shared deployment. It removes its
+workers only after durable evidence retention; storage uncertainty retains stopped
+container logs and staging references. No configured evidence label automatically establishes live acceptance.
 
 Optional packaging and this consumer have passed an actual synthetic deployment
-exercise. The final worker/planner stack, shared suite sequencing, concrete live
-timers and independent controls review remain prerequisites to live use. Source-host,
+exercise. The integrated worker/planner stack, prepared suite and finite timing variant are
+implemented below. Fresh independent controls review and actual bounded live
+evidence remain prerequisites to live acceptance. Source-host,
 credential and billing mutations remain outside this fixture; routine fixture
 implementation does not create an additional operator approval flow.
 

@@ -1,1 +1,1 @@
-{"name":"gaffer-router-continuity-experiment","private":true,"type":"module","engines":{"node":">=24"},"scripts":{"check":"tsc --noEmit","test":"node --test control.test.mjs client.test.ts","prove":"node run.ts"},"devDependencies":{"@types/node":"24.3.0","typescript":"5.9.3"}}
+{"name":"gaffer-router-continuity-experiment","private":true,"type":"module","engines":{"node":">=24"},"scripts":{"check":"tsc --noEmit","test":"node --test control.test.mjs client.test.ts suite.test.ts","prove":"node run.ts"},"devDependencies":{"@types/node":"24.3.0","typescript":"5.9.3"}}

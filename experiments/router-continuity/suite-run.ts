@@ -63,7 +63,7 @@ export async function runSuite(recordArgument:string,packetDigest:string,outputA
    if(consumer==='worker')request=prepareRun(policy,binding,{...tag,baseSHA,brief:BRIEF,approval:'allow',limits:{wallMs:plan.wallMs,outputBytes:262144},token:grant.token});else if(consumer==='planner')request={binding,policy,token:grant.token,suite:tag};else request={schema:2,fixture:FIXTURE,...tag,baseSHA,settingsDigest:settingsDigest('ask'),bindingDigest:digest(binding),wallMs:plan.wallMs,outputBytes:262144,token:grant.token};
    await attached(phase,policy,binding,request,plan);x=await current();if(phase==='continuity_a'){report.transition=await cli('continuity-transition',TRANSITION);await save();}report.scopeAfter=x.current.scope;
   }
-  report.continuity=qualifyPair(report.phases[2].qualified,report.phases[3].qualified,report.transition);report.physicalAttempts=joinedPhysical(report.phases,scope,report.scopeAfter);report.result='passed';await save();
+  const {evidence:_fixtureEvidence,live:_fixtureLive,...continuityFacts}=qualifyPair(report.phases[2].qualified,report.phases[3].qualified,report.transition);report.continuity=continuityFacts;report.physicalAttempts=joinedPhysical(report.phases,scope,report.scopeAfter);report.result='passed';await save();
  }catch(error:any){report.result='failed';report.error=String(error.stack??error);try{await save();}catch{report.reportPersistenceFailed=true;}throw error;}
  finally{
   // Report failure cannot suppress independent physical stop.

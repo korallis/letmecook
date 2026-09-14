@@ -1,0 +1,45 @@
+name: Router continuity preparation
+on:
+  pull_request:
+    paths:
+      - 'experiments/router-continuity/**'
+      - 'experiments/harness/**'
+      - 'experiments/planner-probe/**'
+      - 'experiments/inference-boundary/**'
+      - 'experiments/router-boundary-bridge/**'
+      - 'experiments/native-evaluation/**'
+      - 'experiments/router-authority-extension/overlay/**'
+      - 'tests/fixtures/harness/**'
+      - 'tests/fixtures/planner/**'
+      - '.github/workflows/router-continuity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'experiments/router-continuity/**'
+      - 'experiments/harness/**'
+      - 'experiments/planner-probe/**'
+      - 'experiments/inference-boundary/**'
+      - 'experiments/router-boundary-bridge/**'
+      - 'experiments/native-evaluation/**'
+      - 'experiments/router-authority-extension/overlay/**'
+      - 'tests/fixtures/harness/**'
+      - 'tests/fixtures/planner/**'
+      - '.github/workflows/router-continuity.yml'
+permissions:
+  contents: read
+jobs:
+  continuity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            experiments/router-continuity/package-lock.json
+            experiments/planner-probe/package-lock.json
+      - run: npm ci --prefix experiments/router-continuity --ignore-scripts
+      - run: npm ci --prefix experiments/planner-probe --ignore-scripts
+      - run: npm --prefix experiments/router-continuity run check
+      - run: npm --prefix experiments/router-continuity test
