@@ -83,6 +83,13 @@ test('two and three requests preserve every ordered call, encrypted continuation
     assert.equal(result.promptDigest, digest(e.expected.prompt)); assert.equal(result.contextDigest, digest(e.expected.context));
   }
 });
+test('delayed CLI event delivery is allowed, but a continuation before tool execution ends is refused', () => {
+  const e=fixture(), next=e.requests[1].startedAt;
+  eventChange(e,1,n=>n.timestamp=next+1);eventChange(e,2,n=>n.timestamp=next+2);
+  assert.equal(verifyBaselineTranscript(e).physicalAttempts,2);
+  eventChange(e,1,n=>n.part.state.time.end=next+1);
+  assert.throws(()=>verifyBaselineTranscript(e),/baseline_tool_before_durable/);
+});
 test('fallback is charged as a distinct per-request ordinal and matched to an original terminal receipt', () => {
   for (const count of [2, 3]) {
     const e = fixture(count, true), result = verifyBaselineTranscript(e);

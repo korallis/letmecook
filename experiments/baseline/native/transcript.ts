@@ -102,7 +102,8 @@ export function verifyBaselineTranscript(input: unknown) {
     const tools = events.filter(event => event.type === 'tool_use');
     const isFinal = i === count - 1;
     check(events.every(event => event.native.timestamp >= persisted.at) && events.at(-1)!.native.part.reason === (isFinal ? 'stop' : 'tool-calls') && (isFinal ? calls.length === 0 && d.nativeOutput.some((item: any) => item.type === 'message') : calls.length > 0) && tools.length === calls.length, 'baseline_native_terminal');
-    if (!isFinal) check(events.at(-1)!.native.timestamp <= e.requests[i + 1].startedAt, 'baseline_step_request_order');
+    // CLI events are delivered asynchronously and can trail the next request.
+    // The exact continuation and the tool's execution end bind that request below.
     for (let j = 0; j < calls.length; j++) {
       const call = calls[j], tool = tools[j].native.part;
       const results = e.requests[i + 1].body.input.slice(-calls.length), result = results[j];
