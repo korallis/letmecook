@@ -1,0 +1,23 @@
+name: Baseline records
+on:
+  push:
+    branches: [main]
+    paths: ['experiments/**', 'tests/fixtures/tasks/**', 'tests/fixtures/harness/**', 'docs/evidence/baseline-native-case01-run.json', '.github/workflows/baseline.yml']
+  pull_request:
+    paths: ['experiments/**', 'tests/fixtures/tasks/**', 'tests/fixtures/harness/**', 'docs/evidence/baseline-native-case01-run.json', '.github/workflows/baseline.yml']
+permissions:
+  contents: read
+jobs:
+  records:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: experiments/baseline/package-lock.json
+      - run: npm --prefix experiments/baseline ci --ignore-scripts
+      - run: npm --prefix experiments/baseline run check
+      - run: npm --prefix experiments/baseline test
+      - run: node tests/fixtures/tasks/check.ts

@@ -17,3 +17,4 @@ jobs:
           cache-dependency-path: docs/package-lock.json
       - run: npm --prefix docs ci
       - run: npm --prefix docs run check
+      - run: node tests/fixtures/tasks/check.ts

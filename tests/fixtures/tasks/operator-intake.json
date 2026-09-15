@@ -1,0 +1,280 @@
+{
+  "contractVersion": 1,
+  "status": "intended-outcomes-approved-awaiting-registration",
+  "recordedAt": "2026-09-14T18:58:37Z",
+  "source": "The session user explicitly approved the three prepared intended outcomes and conditional live-trial permissions. This records approval of the briefs, not acceptance of completed outputs or a live observation.",
+  "privateManifest": {
+    "reference": "operator-owned:baseline-candidates-20260914-v1",
+    "sha256": "4c39749342353505ef40134d1041caeb9b0d9476eab6a31728e1877c5a8c49fa",
+    "access": "Private operator evidence store; never resolve by fetching private contents into the public repository."
+  },
+  "missingInputs": [
+    "Reviewed implementation and deployment controls for the approved native profile; no eligible live path is recorded yet.",
+    "Pinned harness/router versions, named endpoint/route, model configuration and execution/isolation profile with successful preflight.",
+    "Exact runnable checks/prerequisites and private starting-commit mapping frozen into a registered fixture.",
+    "Local inference-attempt and elapsed-limit enforcement, stop mechanism and measurement setup recorded for each run."
+  ],
+  "cases": [
+    {
+      "id": "operator-01",
+      "taskClass": "ci-dependency-update",
+      "intendedOutcome": "Evaluate and prepare the narrowly scoped package-manager CI action update while preserving immutable pins and the selected package-manager version. Separate existing dependency-audit failures from regressions introduced by this update.",
+      "scope": "Only the two existing action references and their version comments; necessary verification evidence. No dependency refresh, workflow permission expansion, audit suppression or unrelated CI changes.",
+      "acceptanceCriteria": [
+        "Both intended action references use the same reviewed immutable revision.",
+        "Selected Node/package-manager versions and the dependency lock remain unchanged.",
+        "Changed-action behavior is verified in the selected isolated CI-equivalent environment; existing failures are compared against the same starting dependency graph.",
+        "Report every unresolved verification failure; do not call the update merge-ready while repository-required gates fail."
+      ],
+      "requiredChecks": [
+        "Review the exact action diff and upstream release changes.",
+        "Run the repository immutable-action-pin check and workflow lint in the isolated environment.",
+        "Compare dependency manifests and lockfile between the registered base and candidate.",
+        "Run frozen dependency installation and the required security audit at both revisions with matching tooling/advisory evidence.",
+        "Run required CI gates or record platform/network blockers explicitly."
+      ],
+      "feasibilityReason": "Smallest candidate and recommended first harness task once route/private-source permissions and a bounded execution profile are registered. Existing CI failures prevent a green-readiness claim. Intended outcome and conditional model exposure are now approved; execution eligibility still awaits reviewed controls and registered prerequisites.",
+      "expectedResponse": "Produce the narrow reviewed update and a failure-attribution report. Escalate inherited security blockers without suppressing them or silently expanding dependency scope.",
+      "origin": "operator",
+      "selectionProvenance": "agent-proposed-under-user-delegation",
+      "partition": "development",
+      "capture": "Evaluate and fix selected existing pull requests in the operator-selected private repository (redacted paraphrase).",
+      "repository": {
+        "reference": "private:operator-selected-repository",
+        "startingCommit": null,
+        "startingCommitRef": "operator-owned:baseline-candidates-20260914-v1#operator-01",
+        "prerequisites": "Exact revisions, commands, toolchain and CI evidence are retained in the private manifest. No repository scripts executed on the host."
+      },
+      "dataPermissions": {
+        "localInspection": "Authorized source and CI review plus isolated static analysis.",
+        "publicPublication": "Redacted brief and opaque evidence references only.",
+        "prohibitedPublication": [
+          "Private repository identity/URLs",
+          "Private source or diffs",
+          "Exact private commit mappings",
+          "Unredacted CI/Doctor reports",
+          "Personal data and credentials"
+        ],
+        "modelExposure": {
+          "status": "approved-pending-controls-review",
+          "authorityRef": "operator-owned:baseline-approvals-20260914-v1",
+          "allowedData": [
+            "necessary source",
+            "necessary diffs"
+          ],
+          "excludedData": [
+            "secrets",
+            "production/user data"
+          ],
+          "route": "9Router",
+          "providers": "existing Codex subscriptions only",
+          "paidApiFallback": false
+        },
+        "externalEffects": "No merge, deployment, account changes or public disclosure of private artifacts."
+      },
+      "feasibility": "needs-clarification",
+      "operatorLabel": {
+        "kind": "intended-outcome-approval",
+        "decision": "approved",
+        "operatorId": "session-user",
+        "sourceRef": "operator-owned:baseline-approvals-20260914-v1#operator-01",
+        "recordedAt": "2026-09-14T18:58:37Z",
+        "recordedAtMeaning": "time the assistant observed the explicit approval; not an asserted message timestamp",
+        "messageTimestamp": null,
+        "approvedOutcome": "Evaluate and prepare the narrowly scoped package-manager CI action update while preserving immutable pins and the selected package-manager version. Separate existing dependency-audit failures from regressions introduced by this update."
+      },
+      "registrationStatus": "not-registered"
+    },
+    {
+      "id": "operator-02",
+      "taskClass": "swift-runtime-patch",
+      "intendedOutcome": "Evaluate and prepare a patch-level Swift runtime update while retaining unrelated platform dependency pins and generated-client consistency.",
+      "scope": "The selected Swift dependency declaration and resolver-owned lock update only; do not manually patch generated clients or change application behavior.",
+      "acceptanceCriteria": [
+        "Only the intended runtime version changes semantically.",
+        "Unrelated platform dependencies remain correctly resolved on the required platform.",
+        "Generated-client drift checks and Swift package tests pass.",
+        "Required native platform checks run on an available supported toolchain, or their unavailability is stated without a compatibility claim."
+      ],
+      "requiredChecks": [
+        "Review manifest and complete lock diff, including removed pins.",
+        "Resolve dependencies using the registered supported native toolchain.",
+        "Run existing generated-client consistency check and Swift package tests.",
+        "Run required native build/test and repository gates in an authorized environment."
+      ],
+      "feasibilityReason": "Bounded change, but the proposed lock update also removes unrelated platform pins. Native-platform resolver/build evidence is required; a Linux-only run cannot establish native compatibility. Intended outcome and conditional model exposure are now approved; execution eligibility still awaits reviewed controls and registered prerequisites.",
+      "expectedResponse": "Preserve platform lock completeness, prepare the patch, and report exact checks plus platform blockers. Do not treat a nominal patch version as proof of compatibility.",
+      "origin": "operator",
+      "selectionProvenance": "agent-proposed-under-user-delegation",
+      "partition": "development",
+      "capture": "Evaluate and fix selected existing pull requests in the operator-selected private repository (redacted paraphrase).",
+      "repository": {
+        "reference": "private:operator-selected-repository",
+        "startingCommit": null,
+        "startingCommitRef": "operator-owned:baseline-candidates-20260914-v1#operator-02",
+        "prerequisites": "Exact revisions, commands, toolchain and CI evidence are retained in the private manifest. No repository scripts executed on the host."
+      },
+      "dataPermissions": {
+        "localInspection": "Authorized source and CI review plus isolated static analysis.",
+        "publicPublication": "Redacted brief and opaque evidence references only.",
+        "prohibitedPublication": [
+          "Private repository identity/URLs",
+          "Private source or diffs",
+          "Exact private commit mappings",
+          "Unredacted CI/Doctor reports",
+          "Personal data and credentials"
+        ],
+        "modelExposure": {
+          "status": "approved-pending-controls-review",
+          "authorityRef": "operator-owned:baseline-approvals-20260914-v1",
+          "allowedData": [
+            "necessary source",
+            "necessary diffs"
+          ],
+          "excludedData": [
+            "secrets",
+            "production/user data"
+          ],
+          "route": "9Router",
+          "providers": "existing Codex subscriptions only",
+          "paidApiFallback": false
+        },
+        "externalEffects": "No merge, deployment, account changes or public disclosure of private artifacts."
+      },
+      "feasibility": "needs-clarification",
+      "operatorLabel": {
+        "kind": "intended-outcome-approval",
+        "decision": "approved",
+        "operatorId": "session-user",
+        "sourceRef": "operator-owned:baseline-approvals-20260914-v1#operator-02",
+        "recordedAt": "2026-09-14T18:58:37Z",
+        "recordedAtMeaning": "time the assistant observed the explicit approval; not an asserted message timestamp",
+        "messageTimestamp": null,
+        "approvedOutcome": "Evaluate and prepare a patch-level Swift runtime update while retaining unrelated platform dependency pins and generated-client consistency."
+      },
+      "registrationStatus": "not-registered"
+    },
+    {
+      "id": "operator-03",
+      "taskClass": "development-toolchain-compatibility-review",
+      "intendedOutcome": "Assess a grouped JavaScript development-tool update, identify changes compatible with the pinned runtime/framework, and produce a bounded keep/split/defer recommendation with a React Doctor baseline.",
+      "scope": "Dependency compatibility analysis and a proposed minimal subset. Major toolchain migrations and application/styling rewrites are outside this case. Implementation of a selected subset requires a newly frozen brief.",
+      "acceptanceCriteria": [
+        "Every grouped change is assigned a compatibility decision supported by its runtime/framework constraints.",
+        "Baseline failures are distinguished from candidate-introduced failures.",
+        "React Doctor runs with a pinned version and full scope; findings are triaged as evidence, not automatically treated as confirmed defects.",
+        "Recommend an explicit minimal subset or defer the group, without weakening tests or migrating the existing styling system."
+      ],
+      "requiredChecks": [
+        "Compare grouped manifest/lock changes against pinned runtime and framework constraints.",
+        "Run pinned React Doctor in a read-only, network-isolated source environment and retain its full report privately.",
+        "Register base/candidate web lint, typecheck, unit test and build comparisons for any selected subset.",
+        "Record remaining security and native-platform gates separately."
+      ],
+      "feasibilityReason": "Feasible as a bounded diagnosis after registration. The grouped update contains major changes and cannot be accepted as a routine bump without broader migration scope. A static Doctor preflight exists privately; it is not an evaluated harness result. Intended outcome and conditional model exposure are now approved; execution eligibility still awaits reviewed controls and registered prerequisites.",
+      "expectedResponse": "Return a compatibility matrix, triaged static findings and a minimal follow-up brief. Do not silently implement all major upgrades.",
+      "origin": "operator",
+      "selectionProvenance": "agent-proposed-under-user-delegation",
+      "partition": "development",
+      "capture": "Evaluate and fix selected existing pull requests in the operator-selected private repository (redacted paraphrase).",
+      "repository": {
+        "reference": "private:operator-selected-repository",
+        "startingCommit": null,
+        "startingCommitRef": "operator-owned:baseline-candidates-20260914-v1#operator-03",
+        "prerequisites": "Exact revisions, commands, toolchain and CI evidence are retained in the private manifest. No repository scripts executed on the host."
+      },
+      "dataPermissions": {
+        "localInspection": "Authorized source and CI review plus isolated static analysis.",
+        "publicPublication": "Redacted brief and opaque evidence references only.",
+        "prohibitedPublication": [
+          "Private repository identity/URLs",
+          "Private source or diffs",
+          "Exact private commit mappings",
+          "Unredacted CI/Doctor reports",
+          "Personal data and credentials"
+        ],
+        "modelExposure": {
+          "status": "approved-pending-controls-review",
+          "authorityRef": "operator-owned:baseline-approvals-20260914-v1",
+          "allowedData": [
+            "necessary source",
+            "necessary diffs"
+          ],
+          "excludedData": [
+            "secrets",
+            "production/user data"
+          ],
+          "route": "9Router",
+          "providers": "existing Codex subscriptions only",
+          "paidApiFallback": false
+        },
+        "externalEffects": "No merge, deployment, account changes or public disclosure of private artifacts."
+      },
+      "feasibility": "needs-clarification",
+      "operatorLabel": {
+        "kind": "intended-outcome-approval",
+        "decision": "approved",
+        "operatorId": "session-user",
+        "sourceRef": "operator-owned:baseline-approvals-20260914-v1#operator-03",
+        "recordedAt": "2026-09-14T18:58:37Z",
+        "recordedAtMeaning": "time the assistant observed the explicit approval; not an asserted message timestamp",
+        "messageTimestamp": null,
+        "approvedOutcome": "Assess a grouped JavaScript development-tool update, identify changes compatible with the pinned runtime/framework, and produce a bounded keep/split/defer recommendation with a React Doctor baseline."
+      },
+      "registrationStatus": "not-registered"
+    }
+  ],
+  "revision": 2,
+  "recordedAtMeaning": "time the assistant observed the explicit approval; not an asserted message timestamp",
+  "previousRevision": {
+    "path": "history/operator-intake-20260914-proposed.json",
+    "sha256": "3ea6bdbcd7ce08b6064759593cefc25137665977cd281d4fbda126cdb4c3579e",
+    "status": "historical-proposal-before-explicit-approval"
+  },
+  "authority": {
+    "reference": "operator-owned:baseline-approvals-20260914-v1",
+    "sha256": "7a39e686d12777dfafaf3cae408ffd10fd3554c0e40c1a6c70592d789013ea6f",
+    "sourceKind": "explicit-user-message",
+    "operatorId": "session-user",
+    "recordedAt": "2026-09-14T18:58:37Z",
+    "recordedAtMeaning": "time the assistant observed the explicit approval; not an asserted message timestamp",
+    "messageTimestamp": null,
+    "intendedOutcomesApproved": true,
+    "completedOutputsAccepted": false,
+    "operatorMinutesObserved": false,
+    "access": "Private operator evidence store; public checks validate declarations and do not retrieve or authenticate the source."
+  },
+  "liveTrialAuthorization": {
+    "status": "approved-pending-controls-review",
+    "authorityRef": "operator-owned:baseline-approvals-20260914-v1",
+    "executionStatus": "blocked",
+    "controlsReviewStatus": "pending",
+    "approvedProfile": "native-subscription-local-v1",
+    "strictDefaultRetained": true,
+    "deployment": "isolated local copy of existing 9Router setup",
+    "model": "Astra",
+    "effort": "xhigh",
+    "providers": "existing Codex subscriptions only",
+    "paidApiFallback": false,
+    "initialPublicChecks": {
+      "maximumInferenceAttempts": 10,
+      "maximumElapsedMs": 600000,
+      "scope": "aggregate"
+    },
+    "perBaselineCase": {
+      "maximumInferenceAttempts": 32,
+      "maximumElapsedMs": 900000,
+      "scope": "per-case"
+    },
+    "retriesCount": true,
+    "concurrentCases": 1,
+    "providerOutputCap": "unavailable",
+    "providerMonetaryCap": "unavailable",
+    "unknownRemoteWorkBlocksReplacement": true,
+    "preconditions": [
+      "Approved native profile and deployment controls pass review.",
+      "Pinned harness/router route and execution/isolation profile pass preflight.",
+      "Register exact private fixture revisions, runnable prerequisites, local limit enforcement and stop mechanism before dispatch."
+    ]
+  }
+}

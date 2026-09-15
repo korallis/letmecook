@@ -26,7 +26,7 @@ coverage and actual verification results. Explain omitted or blocked validation.
 The implementing task covers its branch and PR; merging and deployment remain
 separate operator decisions. GitHub review and required checks govern merge.
 
-For the current documentation-only repository:
+For documentation reader changes:
 
 ```sh
 npm --prefix docs ci
@@ -34,10 +34,10 @@ npm --prefix docs run build
 npm --prefix docs run check
 ```
 
-Keep generated HTML synchronized. Future foundation issues add executable app
-checks; do not claim those commands exist today. Evidence reports must identify
-versions, fixtures, commands, observations and limitations. Report a failed gate
-honestly; waiting for a real seven-day cohort cannot be replaced with invented data.
+Keep generated HTML synchronized. Run experiment-specific checks from the changed
+experiment's README. Evidence reports must identify versions, fixtures, commands,
+observations and limitations. Report a failed gate honestly; waiting for a real
+seven-day cohort cannot be replaced with invented data.
 
 Never commit credentials, private transcripts or personal fixture data. Live model
 probes use operator-configured 9Router connections and declared budgets. The normal
