@@ -1,10 +1,13 @@
 # Local workflow store scaffold (#11, provisional)
 
 Runnable Go/SQLite metadata foundation on the decided-but-unlocked narrow Go core.
-**Related to #11, not its formal acceptance.** #9 is still unlocked; #10 O1–O8,
-including execution/runtime qualification, remain open. This reversible extension
-of #94 adds persistent empty installation/reopen and fail-closed restart handling.
-It supplies no execution authority, supported worker runtime or product readiness.
+This store is an **operator-authorized reversible provisional deliverable**,
+reconciling the merged #94 store toward the decided (not-yet-locked) foundation.
+**Full #11 acceptance reconciliation is deliberately deferred until #9 is accepted
+and locked and #10 O1–O8 close**, including execution/runtime qualification.
+This extension adds persistent empty installation/reopen and fail-closed restart
+handling. It supplies no formal #11 acceptance, execution authority, supported worker
+runtime, execution readiness or product readiness.
 The [decision](../../docs/decisions/0001-execution-foundation.md) and
 [execution contract](../../docs/contracts/execution.md) retain their acceptance gates.
 
