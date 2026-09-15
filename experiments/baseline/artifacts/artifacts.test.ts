@@ -143,11 +143,9 @@ test('async operations bind store, rules, manifests and references at entry', as
   mutableStore.directory += '/missing'; mutableRef.sha256 = '0'.repeat(64); mutableRef.ref = 'record-' + mutableRef.sha256 + '.json';
   assert.deepEqual(await reading, { original: true });
   const mutableRules = structuredClone(rules), mutableManifest = structuredClone(manifest), captureStore = { ...store };
-  async function* changingProducer() {
-    mutableRules.writePaths = ['a.ts', 'unread.txt']; mutableManifest.files[2] = file('unread.txt', 'replacement'); captureStore.directory += '/missing';
-    yield archive();
-  }
-  const base = await captureSnapshot(changingProducer(), mutableManifest, mutableRules, captureStore, 'base');
+  const mutableArchive = archive(), capturing = captureSnapshot(mutableArchive, mutableManifest, mutableRules, captureStore, 'base');
+  mutableArchive.fill(0); mutableRules.writePaths = ['a.ts', 'unread.txt']; mutableManifest.files[2] = file('unread.txt', 'replacement'); captureStore.directory += '/missing';
+  const base = await capturing;
   assert.deepEqual((await readSnapshot(store, base)).manifest, manifest);
   const swapped = structuredClone(base), pending = readSnapshot(store, swapped); swapped.bytes = valueRef;
   assert.deepEqual((await pending).manifest, manifest);
@@ -233,7 +231,7 @@ test('malformed and dangerous archives fail closed', async t => {
     Buffer.concat([valid, valid]), checksumBad, paddingBad, binarySize, badMagic, badVersion, badField]) await assert.rejects(parseArchive(bytes));
 });
 
-test('archive inventory, source, controls, metadata, stream and byte limits are enforced', async () => {
+test('archive inventory, source, controls, metadata and buffered byte limits are enforced', async () => {
   const atLimit = Array.from({ length: CASE01_LIMITS.files }, (_, i) => ({ name: 'repo/f' + i, content: i ? '' : 'x'.repeat(CASE01_LIMITS.sourceBytes) }));
   assert.equal((await parseArchive(tar([root, ...atLimit]))).length, 64);
   const cases = [
@@ -248,15 +246,13 @@ test('archive inventory, source, controls, metadata, stream and byte limits are 
     Buffer.alloc(CASE01_LIMITS.archiveBytes + 512),
   ];
   for (const bytes of cases) await assert.rejects(parseArchive(bytes));
-  const bytes = archive();
-  async function* chunked() { for (let i = 0; i < bytes.length; i += 13) yield bytes.subarray(i, i + 13); }
-  assert.deepEqual(await parseArchive(chunked()), files);
-  let closed = false;
-  async function* overLimit() { try { yield Buffer.alloc(CASE01_LIMITS.archiveBytes); yield Buffer.alloc(1); } finally { closed = true; } }
-  await assert.rejects(parseArchive(overLimit()), /archive_bytes_limit/); assert.equal(closed, true);
-  async function* emptyChunks() { for (let i = 0; i <= CONTROL_LIMITS.chunks; i++) yield Buffer.alloc(0); }
-  await assert.rejects(parseArchive(emptyChunks()), /archive_chunk_limit/);
-  await assert.rejects(parseArchive((async function* () { yield 'invalid'; })() as any), /archive_chunk/);
+  const bytes = archive(), padded = Buffer.alloc(CASE01_LIMITS.archiveBytes); bytes.copy(padded);
+  assert.deepEqual(await parseArchive(new Uint8Array(padded)), files);
+  await assert.rejects(parseArchive(new Uint8Array(CASE01_LIMITS.archiveBytes + 1)), /archive_bytes_limit/);
+  let consumed = false;
+  const stream = { async *[Symbol.asyncIterator]() { consumed = true; yield bytes; } };
+  for (const input of [null, {}, 'invalid', bytes.buffer, stream]) await assert.rejects(parseArchive(input as any), /archive_input/);
+  assert.equal(consumed, false);
 });
 
 test('snapshot admission rejects additions, deletions, modes, binary writes and partial candidates', async () => withStore(async store => {

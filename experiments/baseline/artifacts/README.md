@@ -25,7 +25,7 @@ identity. A failed retention may leave an unacknowledged temporary or final reco
 callers must treat rejection as failure and can retry the same content.
 
 `makeManifest` accepts full file descriptors with optional validated base64 content.
-`captureSnapshot` consumes a frozen `Uint8Array` or `AsyncIterable<Uint8Array>` of
+`captureSnapshot` consumes a frozen `Uint8Array` (including Node.js `Buffer`) of
 uncompressed USTAR, per-entry PAX, or GNU long-name tar with an initial `repo/`
 directory header (any portable basename), or `./`. It never extracts. Every entry
 is validated, including entries outside `readPaths` and bounded root `.git/`
@@ -42,9 +42,9 @@ checked against both the file digest and complete manifest on readback.
 
 Limits: 64 source files, 65,536 total source bytes, 1,048,576 archive/artifact bytes;
 256 control files totaling 524,288 bytes, 256 directories, 64 metadata headers
-totaling 16,384 bytes, and 65,536 yielded archive chunks. JSON also has depth 32 and
-100,000-value limits. The caller owns the deadline for an archive producer that
-stalls without yielding; this API bounds yielded data. This is a small synthetic
+totaling 16,384 bytes. JSON also has depth 32 and 100,000-value limits.
+The capture caller bounds archive bytes and its Docker command deadline before
+admission. This is a small synthetic
 POSIX store, with no garbage collector, cross-process transaction or OS isolation.
 
 ## Verification

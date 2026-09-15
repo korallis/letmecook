@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { createHash } from 'node:crypto';
 import { canonicalJSON } from './artifacts/store.ts';
-import { readEvidence, readSnapshot } from './artifacts/index.ts';
+import { readEvidence, readSnapshot, retainEvidence } from './artifacts/index.ts';
 import { verifyBaselineTranscript } from './native/transcript.ts';
 import { collectDataset } from './collect.ts';
 import { validateRetainedRun } from './retained.ts';
@@ -55,6 +55,29 @@ test('every retained capture record is required: deletion and substituted bytes 
       await assert.rejects(replay(), /ENOENT/);
     } finally { await rm(directory,{recursive:true,force:true}); }
   }
+});
+
+test('same-run failed terminal journals supersede valid passed captures without rewriting history', async t => {
+  const capture = JSON.parse(await readFile(new URL('../../docs/evidence/baseline-native-case01-run.json', import.meta.url), 'utf8'));
+  for (const example of capture.cases) await t.test(example.scenario, async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'baseline-terminal-')), store = { directory };
+    try {
+      for (const [name, record] of Object.entries(example.records)) await writeFile(join(directory, name), canonicalJSON(record), { mode: 0o600 });
+      const journal: any = await readEvidence(store, example.journal), original = await readFile(join(directory, example.journal.ref));
+      const pending = { ...journal, result: 'failed', cleanup: false }; delete pending.cleanupResults; delete pending.repositoryDestroyed;
+      await retainEvidence(store, 'run-journal', pending);
+      await retainEvidence(store, 'run-journal', { ...journal, run: journal.run + '-other', result: 'failed', error: 'AbortError: This operation was aborted' });
+      await validateRetainedRun(store, journal, 'replay');
+      const stopped = await retainEvidence(store, 'run-journal', { ...journal, result: 'failed', error: 'AbortError: This operation was aborted' });
+      const terminal: any = await readEvidence(store, stopped);
+      assert.equal(terminal.run, journal.run); assert.equal(terminal.repositoryDestroyed, true);
+      await validateRetainedRun(store, terminal, 'replay');
+      await assert.rejects(validateRetainedRun(store, await readEvidence(store, example.journal), 'replay'), /superseded_terminal_run/);
+      assert.deepEqual(await readFile(join(directory, example.journal.ref)), original);
+      await writeFile(join(directory, stopped.ref), '{}');
+      await assert.rejects(validateRetainedRun(store, journal, 'replay'), /evidence_digest_mismatch/);
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  });
 });
 
 test('valid content identities cannot substitute mismatched joins or synthetic placeholders', async () => {

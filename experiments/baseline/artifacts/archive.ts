@@ -3,25 +3,11 @@ import { CASE01_LIMITS, type SnapshotFile } from '../execution-contract.ts';
 import { hashBytes } from './store.ts';
 import { makeManifest, sourcePath } from './manifest.ts';
 
-export type FrozenArchive = Uint8Array | AsyncIterable<Uint8Array>;
 // Git controls are never source artifacts. These independent limits also bound a normal
 // freshly initialized synthetic Git repository without admitting unlimited ignored bytes.
-export const CONTROL_LIMITS = Object.freeze({ bytes: 524288, entries: 256, directories: 256, metadataBytes: 16384, metadataEntries: 64, chunks: 65536 });
+export const CONTROL_LIMITS = Object.freeze({ bytes: 524288, entries: 256, directories: 256, metadataBytes: 16384, metadataEntries: 64 });
 const decoder = new TextDecoder('utf-8', { fatal: true });
 const zero = (b: Uint8Array) => b.every(v => v === 0);
-async function collect(archive: FrozenArchive) {
-  if (archive instanceof Uint8Array) {
-    assert(archive.byteLength <= CASE01_LIMITS.archiveBytes, 'archive_bytes_limit'); return Buffer.from(archive);
-  }
-  assert(archive && typeof archive[Symbol.asyncIterator] === 'function', 'archive_input');
-  // ponytail: case01 fits in 1 MiB; use incremental parsing if its registered ceiling grows.
-  const bytes = Buffer.alloc(CASE01_LIMITS.archiveBytes); let size = 0, chunks = 0;
-  for await (const chunk of archive) {
-    assert(++chunks <= CONTROL_LIMITS.chunks, 'archive_chunk_limit'); assert(chunk instanceof Uint8Array, 'archive_chunk');
-    assert(size + chunk.byteLength <= CASE01_LIMITS.archiveBytes, 'archive_bytes_limit'); bytes.set(chunk, size); size += chunk.byteLength;
-  }
-  return bytes.subarray(0, size);
-}
 function field(bytes: Buffer) {
   const end = bytes.indexOf(0);
   if (end !== -1) assert(zero(bytes.subarray(end)), 'archive_field_padding');
@@ -63,8 +49,10 @@ function archivePath(path: string) {
  * Requires the initial exported directory header: repo/ (any portable basename)
  * or ./ from `docker cp container:/work/repo/. -`. Never extracts or follows links.
  */
-export async function parseArchive(archive: FrozenArchive): Promise<SnapshotFile[]> {
-  const bytes = await collect(archive);
+export async function parseArchive(archive: Uint8Array): Promise<SnapshotFile[]> {
+  assert(archive instanceof Uint8Array, 'archive_input');
+  assert(archive.byteLength <= CASE01_LIMITS.archiveBytes, 'archive_bytes_limit');
+  const bytes = Buffer.from(archive);
   assert(bytes.length >= 1024 && bytes.length % 512 === 0, 'archive_block_alignment');
   let offset = 0, headerCount = 0, metadataBytes = 0, metadataCount = 0, controlBytes = 0, controlEntries = 0, directories = 0, sourceBytes = 0;
   let root: string | undefined, pending: Record<string, string> | undefined, longName: string | undefined, ended = false;

@@ -2,11 +2,10 @@ import assert from 'node:assert/strict';
 import type { CandidateBundle, CaseRules, EvidenceStore, Revision, SnapshotBytes, SnapshotManifest, SnapshotRef } from '../execution-contract.ts';
 import { canonicalJSON, exact, readEvidence, retainEvidence, validateEvidenceRef } from './store.ts';
 import { changedPaths, makeManifest, validateManifest, validateRules, validateSnapshotBytes } from './manifest.ts';
-import { parseArchive, type FrozenArchive } from './archive.ts';
+import { parseArchive } from './archive.ts';
 
 export { retainEvidence, readEvidence } from './store.ts';
 export { makeManifest } from './manifest.ts';
-export type { FrozenArchive } from './archive.ts';
 
 function copyRef(ref: SnapshotRef): SnapshotRef {
   exact(ref, 'manifest bytes treeDigest'); validateEvidenceRef(ref.manifest); validateEvidenceRef(ref.bytes);
@@ -32,7 +31,7 @@ function textWrites(bytes: SnapshotBytes, rules: CaseRules) {
 }
 
 /** Capture only a frozen Docker export. Read permissions never filter the inventory. */
-export async function captureSnapshot(archive: FrozenArchive, baseManifest: SnapshotManifest,
+export async function captureSnapshot(archive: Uint8Array, baseManifest: SnapshotManifest,
   rules: CaseRules, store: EvidenceStore, revision: Revision): Promise<SnapshotRef> {
   validateManifest(baseManifest); validateRules(rules, baseManifest);
   assert(revision === 'base' || revision === 'candidate', 'snapshot_revision');

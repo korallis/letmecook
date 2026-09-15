@@ -14,10 +14,11 @@ import { PassThrough } from 'node:stream';
 import { join, dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
+import { tmpdir } from 'node:os';
 const root=resolve(import.meta.dirname,'../..'), url=p=>pathToFileURL(join(root,p)).href;
 const mode=process.argv[2]??'control';
 const stopSignal=process.argv[3]??'SIGINT';
-const base=await fs.realpath(await fs.mkdtemp('/tmp/gaffer-coordinator-')),parent=join(base,'new-parent');await fs.mkdir(parent);const output=join(parent,'run');
+const base=await fs.realpath(await fs.mkdtemp(join(tmpdir(),'gaffer-coordinator-'))),parent=join(base,'new-parent');await fs.mkdir(parent);const output=join(parent,'run');
 const capture=JSON.parse(await fs.readFile(join(root,'docs/evidence/baseline-native-case01-run.json'),'utf8')).cases[0];
 const j=capture.records[capture.journal.ref],get=ref=>structuredClone(capture.records[ref.ref]);
 const verified=get(j.transcript),capturedInput=get(j.verificationInput),capturedObservation=get(j.observation);
@@ -29,7 +30,7 @@ await fs.writeFile(join(source,'open-sse/config/codexInstructions.js'),instructi
 await fs.writeFile(join(source,'package.json'),'{"type":"module"}');
 const tarDir=join(base,'tar');await fs.mkdir(tarDir);
 for(const f of get(get(j.candidate).candidate.bytes).files){await fs.mkdir(dirname(join(tarDir,f.path)),{recursive:true});await fs.writeFile(join(tarDir,f.path),Buffer.from(f.contentBase64,'base64'),{mode:f.mode});await fs.chmod(join(tarDir,f.path),f.mode);}
-const tar=cp.execFileSync('tar',['--format=ustar','-cf','-','.'],{cwd:tarDir,maxBuffer:1048576});
+let tar;
 const open=async(...args)=>{const handle=await fs.open(...args);return new Proxy(handle,{get(target,key){if(key==='sync')return async()=>{const path=String(args[0]);log.push({event:'sync',path});
     if((mode==='sync-run-failure'&&path===output)||(mode==='sync-parent-failure'&&path===parent)||(mode==='sync-ancestor-failure'&&path===base))throw Error('injected ancestry sync failure');
     await target.sync();
@@ -136,10 +137,18 @@ mock.module(url('experiments/baseline/artifacts/index.ts'),{exports:{...artifact
 }}});
 process.env.GAFFER_DOCKER_CONTEXT='synthetic-test-double';process.env.GAFFER_ROUTER_SOURCE=source;process.env.GAFFER_OPENCODE_SOURCE=source;process.env.GAFFER_OPENCODE_BINARY=join(base,'not-executed');
 try{
+  const {PINS_CHECK}=await import(url('experiments/baseline/checks/fixture.ts'));
+  await fs.writeFile(join(tarDir,'checks/pins.mjs'),PINS_CHECK);
+  tar=cp.execFileSync('tar',['--format=ustar','-cf','-','.'],{cwd:tarDir,maxBuffer:1048576});
   const {runCase}=await import(url('experiments/baseline/run-case.ts'));
   let result,error;try{result=await runCase(output,'two-requests');}catch(e){error=String(e);}
   const journals=(await fs.readdir(join(output,'evidence'))).filter(x=>x.startsWith('run-journal-'));
   const records=await Promise.all(journals.map(async name=>JSON.parse(await fs.readFile(join(output,'evidence',name),'utf8'))));
+  if(mode==='final-save-stop'){
+    const {validateRetainedRun}=await import(url('experiments/baseline/retained.ts'));
+    const passed=records.filter(r=>r.result==='passed');assert.equal(passed.length,1);
+    for(const report of passed)await assert.rejects(validateRetainedRun({directory:join(output,'evidence')},report,'replay'),/superseded_terminal_run/);
+  }
   const last=records.find(r=>Array.isArray(r.cleanupResults)&&(!signalEmitted||r.result==='failed'));
   const summary={mode,result,error,signalEmitted,scopeStartedAfterStop:log.some(x=>x.event==='control'&&x.command==='start'&&x.stopped),workerCreatedAfterStop:log.some(x=>x.event==='docker'&&x.args[0]==='create'&&x.args[x.args.indexOf('--name')+1]?.endsWith('-worker')&&x.stopped),checks,acknowledged:Boolean(last?.acknowledgement),repositoryDestroyed:last?.repositoryDestroyed??false,cleanup:last?.cleanup,parentSyncAtDestruction:log.find(x=>x.event==='repository-destroy'),deletedEvidence:log.find(x=>x.event==='deleted-evidence-before-ack'),output};
   assert.equal(summary.scopeStartedAfterStop,false);assert.equal(summary.workerCreatedAfterStop,false);

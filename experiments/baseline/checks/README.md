@@ -65,6 +65,10 @@ node --test experiments/baseline/checks/checks.test.ts
 node experiments/baseline/checks/proof.ts /private/new-synthetic-proof-directory
 ```
 
+The pin fixture owns exact output bytes for both workflow files: only the supplied
+version-tag replacements qualify. Commented pins and additional bytes fail. This
+is a synthetic byte contract, not a YAML or upstream workflow validator.
+
 Tests use real containers for the two-file pin fixture, inherited frozen fake
 audit failure, writes/egress/control isolation, timeout, flood, detached
 descendants, abnormal exit, abort and cleanup uncertainty. Admission tests cover

@@ -1,5 +1,6 @@
 // Read-only qualification of the public synthetic case's retained record graph.
 import assert from 'node:assert/strict';
+import { readdir } from 'node:fs/promises';
 import { readEvidence, readSnapshot } from './artifacts/index.ts';
 import { validateEvidenceRef } from './artifacts/store.ts';
 import { changedPaths, validateSnapshotBytes } from './artifacts/manifest.ts';
@@ -113,6 +114,12 @@ export async function validateRetainedRun(store: EvidenceStore, report: any, pha
       assert.equal(report.cleanup, true); assert.equal(report.repositoryDestroyed, true);
       assert(report.cleanupResults.every((result: string) => result === 'fulfilled'));
       assert(!report.error && !report.persistenceFailed, 'failed_finalization');
+      for (const ref of await readdir(store.directory)) {
+        if (!ref.startsWith('run-journal-') || !ref.endsWith('.json')) continue;
+        const journal = await get({ ref, sha256: ref.slice(-69, -5) });
+        if (journal.run === report.run && Array.isArray(journal.cleanupResults))
+          assert(journal.result === 'passed' && !journal.error && !journal.persistenceFailed, 'superseded_terminal_run');
+      }
     }
     const dataset = await get(report.dataset); assert.deepEqual(dataset.registrations, [registration]); assert.equal(dataset.runs.length, 1);
     const record = dataset.runs[0]; assert.equal(record.runId, report.run); assert.equal(record.registrationDigest, digest(registration)); assert.equal(record.registrationCommit, report.registrationCommit);

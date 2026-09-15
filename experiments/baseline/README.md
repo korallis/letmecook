@@ -85,6 +85,11 @@ registration, packet, candidate, transcript and checks after retained-byte readb
 registration, invocation, receipt, snapshot, check and dataset joins. Offline replay
 uses the same read-only validator; it never repairs missing evidence. Only the three
 declared synthetic approval/eligibility/effort placeholders remain unresolved.
+Replay requires the retained store's immutable run journals as well as the selected
+journal's references. A failed terminal journal for the same run rejects an earlier
+passed journal; intermediate journals and other runs do not supersede it. Historical
+journals remain unchanged. A stop cannot undo source removal already completed
+before that stop.
 
 SIGINT/SIGTERM fence scope admission, worker dispatch and success acknowledgement,
 including after awaited control, persistence and check operations. Bounded owned

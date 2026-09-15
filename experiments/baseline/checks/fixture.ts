@@ -9,7 +9,7 @@ import { IMAGE, NODE, BINARY_DIGEST, ENVIRONMENT_DIGEST } from './index.ts';
 
 export const PINS_CHECK = `import fs from 'node:fs';
 const pins=JSON.parse(fs.readFileSync('/inputs/pins.json','utf8')); const errors=[];
-for(const [path,expected] of Object.entries(pins.files)) { const text=fs.readFileSync('/repo/'+path,'utf8'); if(!text.includes('uses: '+expected+'\\n')) errors.push(path); }
+for(const [path,expected] of Object.entries(pins.files)) { if(!fs.readFileSync('/repo/'+path).equals(Buffer.from('steps:\\n  - uses: '+expected+'\\n'))) errors.push(path); }
 console.log(JSON.stringify({kind:'synthetic-pins-check',checked:Object.keys(pins.files),errors}));process.exitCode=errors.length?1:0;`;
 export const AUDIT_CHECK = `import fs from 'node:fs';
 const advisory=JSON.parse(fs.readFileSync('/inputs/advisory.json','utf8'));const lock=JSON.parse(fs.readFileSync('/repo/lock.json','utf8'));
