@@ -40,7 +40,7 @@ func assignment(s *Store) p.Message {
 func TestPersistentTransactionsAndRecovery(t *testing.T) {
 	s, artifacts := persistent(t)
 	fresh := snapshot(t, s)
-	if fresh.Mode != "store-only" || fresh.SchemaVersion != 3 || len(fresh.Tasks) != 0 || len(fresh.Events) != 0 {
+	if fresh.Mode != "store-only" || fresh.SchemaVersion != 4 || len(fresh.Tasks) != 0 || len(fresh.Events) != 0 {
 		t.Fatal(fresh)
 	}
 	m := assignment(s)
@@ -109,7 +109,7 @@ func TestPersistentMigrationAndFixtureRefusal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.Exec("DROP TABLE credentials; DROP TABLE enrollments; DROP TABLE principals; DROP TRIGGER events_no_update; DROP TRIGGER events_no_delete; ALTER TABLE metadata DROP COLUMN artifacts_dir; PRAGMA user_version=1")
+	_, err = db.Exec("DROP TABLE execution_grant_heads; DROP TABLE execution_invalidations; DROP TABLE execution_grants; DROP TABLE credentials; DROP TABLE enrollments; DROP TABLE principals; DROP TRIGGER events_no_update; DROP TRIGGER events_no_delete; ALTER TABLE metadata DROP COLUMN artifacts_dir; PRAGMA user_version=1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestPersistentMigrationAndFixtureRefusal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.meta.SchemaVersion != 3 || r.meta.Generation != generation {
+	if r.meta.SchemaVersion != 4 || r.meta.Generation != generation {
 		t.Fatal("migration identity")
 	}
 	r.Close()

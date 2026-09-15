@@ -8,8 +8,9 @@ embedded fixture shell remain provisional; `docs/contracts/execution.md` owns pr
 reconciliation, `cmd/gafferd/README.md` owns explicit install flags, fixture separation,
 read API and checks; `cmd/gafferd/IDENTITY.md` owns provisional mTLS bootstrap,
 enrollment and local recovery (not runner eligibility); and
-`web/README.md` owns the shell build that must precede the Go build. None accepts
-#9/#10 or supplies execution authority. No supported execution
+`web/README.md` owns the shell build that must precede the Go build.
+`internal/authority/README.md` owns provisional grant APIs and their trust/dispatch
+boundary. None accepts #9/#10 or permits execution. No supported execution
 runtime or original downstream acceptance follows from these slices or the decision record.
 
 ## Issue workflow

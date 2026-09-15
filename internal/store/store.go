@@ -1,4 +1,5 @@
-// Package store owns local SQLite workflow metadata, never execution authority.
+// Package store owns local SQLite workflow metadata and immutable provisional grants.
+// It supplies no dispatch, runtime or external-effect authority.
 package store
 
 import (
@@ -12,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	p "github.com/korallis/letmecook/schemas/execution"
 	a "github.com/korallis/letmecook/schemas/readapi"
@@ -73,7 +75,7 @@ func open(ctx context.Context, dir string) (*Store, error) {
 }
 
 // Open creates or reopens persistent, non-executing metadata. Paths are explicit;
-// no fixture import, restore, runner, grant or artifact custody is provided.
+// no fixture import, restore, runner or artifact custody is provided.
 func Open(ctx context.Context, dir, artifactsDir string) (*Store, error) {
 	var err error
 	if dir, err = prepareDirectory(dir); err != nil {
@@ -219,7 +221,7 @@ func (s *Store) migrate(ctx context.Context) error {
 			}
 		}
 		version = 1
-	} else if version != 1 && (s.fixture || version != 2 && version != 3) {
+	} else if version != 1 && (s.fixture || version != 2 && version != 3 && version != 4) {
 		return fmt.Errorf("unsupported schema version")
 	}
 	mode := "fixture-only"
@@ -239,6 +241,15 @@ PRAGMA user_version=2;`); err != nil {
 				return err
 			}
 			version = 3
+		}
+		if version == 3 {
+			if _, err = tx.ExecContext(ctx, grantSchema); err != nil {
+				return err
+			}
+			version = 4
+		}
+		if err = expireGrants(ctx, tx, time.Now().UnixMilli()); err != nil {
+			return err
 		}
 	}
 	boot := newID()
@@ -365,7 +376,7 @@ func (s *Store) assign(ctx context.Context, m p.Message) error {
 }
 
 // transition consumes validated synthetic messages only. No exported write API,
-// process evidence, result/receipt persistence, grants or acceptance exists.
+// process evidence, result/receipt persistence or acceptance exists.
 func (s *Store) transition(ctx context.Context, m p.Message) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

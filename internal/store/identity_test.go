@@ -167,7 +167,7 @@ func TestIdentityMigrationAndFixtureRefusal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec("DROP TABLE credentials; DROP TABLE enrollments; DROP TABLE principals; PRAGMA user_version=2"); err != nil {
+	if _, err := db.Exec("DROP TABLE execution_grant_heads; DROP TABLE execution_invalidations; DROP TABLE execution_grants; DROP TABLE credentials; DROP TABLE enrollments; DROP TABLE principals; PRAGMA user_version=2"); err != nil {
 		t.Fatal(err)
 	}
 	db.Close()
@@ -176,7 +176,7 @@ func TestIdentityMigrationAndFixtureRefusal(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer r.Close()
-	if r.meta.SchemaVersion != 3 || r.meta.Generation != generation {
+	if r.meta.SchemaVersion != 4 || r.meta.Generation != generation {
 		t.Fatal("v2 migration")
 	}
 	if ok, err := r.IdentityConfigured(ctx); err != nil || ok {
