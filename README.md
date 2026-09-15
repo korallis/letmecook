@@ -11,7 +11,8 @@ and issue-based workflow now sit alongside isolated feasibility experiments and
 the [provisional execution protocol](schemas/execution/README.md),
 [local Go/SQLite store scaffold](cmd/gafferd/README.md) and
 [embedded read-only shell](web/README.md). These reversible application
-slices have no execution, inference or acceptance authority. The
+slices include [immutable grant checks](internal/authority/README.md), not an
+execution runtime, inference or acceptance path. The
 [foundation decision record](docs/decisions/0001-execution-foundation.md) selects a
 narrow Go build, not yet locked: measured comparison, Docker-free confinement,
 live conformance, baseline evidence and fresh Opus review remain open. No worker
