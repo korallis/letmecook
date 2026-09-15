@@ -22,6 +22,7 @@ type Case struct {
 	Op          string            `json:"op"`
 	Message     string            `json:"message"`
 	Previous    string            `json:"previous"`
+	Selected    string            `json:"selected"`
 	Wire        *string           `json:"wire"`
 	Hex         string            `json:"hex"`
 	Padding     int               `json:"padding"`
@@ -82,7 +83,7 @@ func evaluate(s Suite, c Case) (any, error) {
 			return err.Error(), nil
 		}
 		return p.OK, nil
-	case "current", "replay", "transition", "ack":
+	case "current", "session", "replay", "transition", "ack":
 		m, err := load(c.Message)
 		if err != nil {
 			return err.Error(), nil
@@ -90,6 +91,8 @@ func evaluate(s Suite, c Case) (any, error) {
 		switch c.Op {
 		case "current":
 			return p.CheckCurrent(m, current), nil
+		case "session":
+			return p.CheckSession(m, current, c.Selected), nil
 		case "replay":
 			previous, err := load(c.Previous)
 			if err != nil {

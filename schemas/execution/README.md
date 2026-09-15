@@ -1,10 +1,15 @@
-# Provisional execution protocol v1
+# Provisional execution protocol
 
 Issue [#93](https://github.com/korallis/letmecook/issues/93), draft contract.
 **Not locked: fresh independent contract review remains required.** This slice
 neither accepts nor unblocks #9, #89, #10, original #11, or their dependents.
 The ordering exception permits reversible types and synthetic consistency checks,
 not a selected foundation, supported runtime or execution authority.
+
+The [M1-01 execution contract](../../docs/contracts/execution.md) develops #10's
+state/evidence, acknowledgement, restart/restore and safe-retry rules directly from
+these artifacts. Its v2 control-message additions preserve historical v1 fixtures.
+Named obligations O1–O8 remain open before #9/#10 acceptance; no runtime is added.
 
 ## Scope and interfaces
 
@@ -25,8 +30,12 @@ outputs. It is not a process simulator or proof of distributed safety.
 
 ## Wire identity and validation
 
-- Version is exactly `execution-provisional-v1`; no implicit negotiation or
-  downgrade. Unknown versions return `unknown_version`.
+- `Decode` / `decode` accept historical `execution-provisional-v1` and
+  `execution-provisional-v2`. Unknown versions return `unknown_version`.
+  `CheckSession` / `checkSession` require exact negotiated v2 and a matching
+  message version; no implicit downgrade or relabelling of v1 journal records.
+  Lease and result-ack pairs also reject mixed versions. The M1-01 contract
+  specifies singleton TLS ALPN negotiation; no TLS stack is implemented here.
 - Every message has `message_id`, `kind` and `identity` containing `generation`,
   `task_id`, `attempt_id`, `epoch`. IDs/nonces/boot identities are canonical lowercase
   UUIDv4 values; epochs are integers in `1..9007199254740991`.
@@ -55,7 +64,12 @@ Messages: `assign` (assignment ID, input digest, route), `lease_request` (nonce,
 runner/daemon boot IDs, request-send monotonic milliseconds), `lease_reply` (same
 nonce/boots, validity), `transition` (expected revision, from/to attempt state),
 `result` (manifest identity), `result_ack` (same manifest plus durable receipt ID).
-All fields not belonging to that kind reject.
+V2 additionally defines `accept` (assignment ID and boots), `refuse` (request
+message ID and named reason), `cancel` (stop ID and boots) and `terminated`
+(stop ID, boots, local/remote observations and evidence digest). V1 rejects these
+kinds. All fields not belonging to that kind reject. See the M1-01 wire table for
+direction, correlation and owner-evidence preconditions; decoding is not evidence
+of durable assignment acceptance or verified stop.
 
 Route records contain only `route_ref`, `decision_digest`, `policy_digest` and
 `limits_profile`. References match `[a-z][a-z0-9_-]{0,63}`: no endpoint, URL, account,
@@ -135,7 +149,7 @@ measured bounds, timer, watchdog, persistence or retry permission.
 Manifest identity is `{manifest_id, sha256, bytes}`; SHA-256 covers exact manifest
 bytes, with `bytes` in `1..1048576`. This is an opaque manifest reference, not an
 archive implementation or a claim that referenced blobs exist. Manifest content,
-path handling, chunking and custody format remain for #9/#10 reconciliation.
+path handling, chunking and custody format remain open under M1-01 obligation O6.
 
 A durable result receipt must bind the current full identity and exact manifest.
 The pure acknowledgement check requires matching `result` and `result_ack` plus
@@ -156,6 +170,9 @@ verification nor local acceptance nor publication authority. #94 has no custody
 owner and therefore cannot issue real result acknowledgements.
 
 ## Reconciliation checklist — required before #9/#10 acceptance
+
+The [M1-01 named obligations](../../docs/contracts/execution.md#8-9-reconciliation-obligations)
+map these requirements to O1–O8, including every v2 addition. All remain open.
 
 - [ ] #9 independently compares measured foundations; retain, port or discard these
   types without treating sunk effort as selection evidence. Confirm module paths.

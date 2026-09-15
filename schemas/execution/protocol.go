@@ -11,7 +11,8 @@ import (
 	"unicode/utf8"
 )
 
-const Version = "execution-provisional-v1"
+const Version = "execution-provisional-v1" // Historical #93 fixture format.
+const FencedVersion = "execution-provisional-v2"
 const MaxBytes = 8192
 const MaxInteger int64 = 9007199254740991
 
@@ -20,20 +21,21 @@ type Refusal string
 func (r Refusal) Error() string { return string(r) }
 
 const (
-	OK                Refusal = "ok"
-	Duplicate         Refusal = "duplicate"
-	Malformed         Refusal = "malformed"
-	Oversized         Refusal = "oversized"
-	UnknownVersion    Refusal = "unknown_version"
-	StaleGeneration   Refusal = "stale_generation"
-	StaleAttempt      Refusal = "stale_attempt"
-	IdentityConflict  Refusal = "identity_conflict"
-	RevisionConflict  Refusal = "revision_conflict"
-	InvalidTransition Refusal = "invalid_transition"
-	NonceMismatch     Refusal = "nonce_mismatch"
-	BootMismatch      Refusal = "boot_mismatch"
-	DelayedReply      Refusal = "delayed_reply"
-	AckNotDurable     Refusal = "ack_not_durable"
+	OK                     Refusal = "ok"
+	Duplicate              Refusal = "duplicate"
+	Malformed              Refusal = "malformed"
+	Oversized              Refusal = "oversized"
+	UnknownVersion         Refusal = "unknown_version"
+	StaleGeneration        Refusal = "stale_generation"
+	StaleAttempt           Refusal = "stale_attempt"
+	IdentityConflict       Refusal = "identity_conflict"
+	RevisionConflict       Refusal = "revision_conflict"
+	InvalidTransition      Refusal = "invalid_transition"
+	NonceMismatch          Refusal = "nonce_mismatch"
+	BootMismatch           Refusal = "boot_mismatch"
+	DelayedReply           Refusal = "delayed_reply"
+	AckNotDurable          Refusal = "ack_not_durable"
+	ReconciliationRequired Refusal = "reconciliation_required"
 )
 
 type Identity struct {
@@ -81,7 +83,8 @@ const (
 
 // Message is a closed wire union. Decode and every check enforce kind-specific
 // fields; pointers distinguish absent fields from required numeric zero.
-// ponytail: six small variants; split payload structs when additional kinds land.
+// ponytail: flat closed union for these ten variants; split payload structs if
+// kind-specific fields grow beyond this specification.
 type Message struct {
 	Version          string       `json:"version"`
 	MessageID        string       `json:"message_id"`
@@ -100,6 +103,12 @@ type Message struct {
 	To               AttemptState `json:"to,omitempty"`
 	Manifest         *Manifest    `json:"manifest,omitempty"`
 	ReceiptID        string       `json:"receipt_id,omitempty"`
+	InReplyTo        string       `json:"in_reply_to,omitempty"`
+	Reason           Refusal      `json:"reason,omitempty"`
+	StopID           string       `json:"stop_id,omitempty"`
+	ConfirmedProcess string       `json:"confirmed_process,omitempty"`
+	RemoteWork       string       `json:"remote_work,omitempty"`
+	EvidenceDigest   string       `json:"evidence_digest,omitempty"`
 }
 type Timing struct {
 	RunnerBoot    string `json:"runner_boot"`
@@ -182,7 +191,7 @@ func Decode(data []byte) (Message, error) {
 	if !ok {
 		return Message{}, Malformed
 	}
-	if version, ok := m["version"].(string); ok && version != Version {
+	if version, ok := m["version"].(string); ok && !in(version, Version, FencedVersion) {
 		return Message{}, UnknownVersion
 	}
 	extras := map[string][]string{
@@ -192,9 +201,15 @@ func Decode(data []byte) (Message, error) {
 		"transition":    {"expected_revision", "from", "to"},
 		"result":        {"manifest"}, "result_ack": {"manifest", "receipt_id"},
 	}
+	if m["version"] == FencedVersion {
+		extras["accept"] = []string{"assignment_id", "runner_boot", "daemon_boot"}
+		extras["refuse"] = []string{"in_reply_to", "reason"}
+		extras["cancel"] = []string{"stop_id", "runner_boot", "daemon_boot"}
+		extras["terminated"] = []string{"stop_id", "runner_boot", "daemon_boot", "confirmed_process", "remote_work", "evidence_digest"}
+	}
 	kind, ok := m["kind"].(string)
 	extra, known := extras[kind]
-	if !ok || !known || m["version"] != Version || !fields(m, append([]string{"version", "message_id", "identity", "kind"}, extra...)...) {
+	if !ok || !known || !in(m["version"], any(Version), any(FencedVersion)) || !fields(m, append([]string{"version", "message_id", "identity", "kind"}, extra...)...) {
 		return Message{}, Malformed
 	}
 	if !matches(m["message_id"], uuid) || !identityShape(m["identity"]) {
@@ -225,6 +240,22 @@ func Decode(data []byte) (Message, error) {
 		if kind == "result_ack" {
 			valid = valid && matches(m["receipt_id"], uuid)
 		}
+	case "accept", "cancel", "terminated":
+		valid = matches(m["runner_boot"], uuid) && matches(m["daemon_boot"], uuid)
+		if kind == "accept" {
+			valid = valid && matches(m["assignment_id"], uuid)
+		} else {
+			valid = valid && matches(m["stop_id"], uuid)
+		}
+		if kind == "terminated" {
+			valid = valid && in(m["confirmed_process"], any("not_started"), any("terminated")) &&
+				in(m["remote_work"], any("quiescent"), any("unknown")) && matches(m["evidence_digest"], hash)
+		}
+	case "refuse":
+		reason, ok := m["reason"].(string)
+		valid = ok && matches(m["in_reply_to"], uuid) && in(Refusal(reason), Malformed, Oversized, UnknownVersion,
+			StaleGeneration, StaleAttempt, IdentityConflict, RevisionConflict, InvalidTransition,
+			NonceMismatch, BootMismatch, DelayedReply, AckNotDurable, ReconciliationRequired)
 	}
 	if !valid {
 		return Message{}, Malformed
@@ -363,6 +394,19 @@ func CheckCurrent(m Message, c Identity) Refusal {
 	}
 	return current(m, c)
 }
+
+// CheckSession binds a decoded message to the exact negotiated execution version.
+// A matching string is not proof of TLS negotiation, peer identity or authority.
+func CheckSession(m Message, c Identity, selected string) Refusal {
+	if r := CheckCurrent(m, c); r != OK {
+		return r
+	}
+	if selected != FencedVersion || m.Version != selected {
+		return UnknownVersion
+	}
+	return OK
+}
+
 func CheckReplay(m, previous Message, c Identity) Refusal {
 	if r := CheckCurrent(m, c); r != OK {
 		return r
@@ -423,6 +467,9 @@ func CheckLease(request, reply Message, c Identity, t Timing) LeaseCheck {
 			return refuse(r)
 		}
 	}
+	if request.Version != reply.Version {
+		return refuse(UnknownVersion)
+	}
 	if request.RunnerBoot != t.RunnerBoot || reply.RunnerBoot != t.RunnerBoot || request.DaemonBoot != t.DaemonBoot || reply.DaemonBoot != t.DaemonBoot {
 		return refuse(BootMismatch)
 	}
@@ -454,6 +501,9 @@ func CheckAck(result, ack Message, c Identity, receipt Receipt) Refusal {
 		if r := current(m, c); r != OK {
 			return r
 		}
+	}
+	if result.Version != ack.Version {
+		return UnknownVersion
 	}
 	if *result.Manifest != *ack.Manifest {
 		return IdentityConflict
