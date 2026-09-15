@@ -11,3 +11,6 @@ node_modules/
 coverage/
 dist/
 tmp/
+!web/dist/
+web/dist/*
+!web/dist/.gitkeep

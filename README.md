@@ -8,9 +8,10 @@ machine, and review the exact changes with verification evidence.
 
 **M0 experiments are in progress.** The reviewed v0.4 design, documentation reader
 and issue-based workflow now sit alongside isolated feasibility experiments and
-the [provisional execution protocol](schemas/execution/README.md) and
-[fixture-only Go/SQLite daemon](cmd/gafferd/README.md). This reversible application
-slice has no execution, inference or acceptance authority; milestone evidence
+the [provisional execution protocol](schemas/execution/README.md),
+[fixture-only Go/SQLite daemon](cmd/gafferd/README.md) and
+[embedded read-only shell](web/README.md). These reversible application
+slices have no execution, inference or acceptance authority; milestone evidence
 still determines the selected foundation and supported runtime.
 See the [inference boundary proof](docs/evidence/inference-boundary.md),
 [passive status experiment](experiments/router-status/README.md),
