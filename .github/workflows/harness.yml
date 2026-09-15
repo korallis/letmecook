@@ -8,6 +8,8 @@ on:
       - 'experiments/router-authority-extension/overlay/**'
       - 'experiments/isolation/**'
       - 'tests/fixtures/harness/**'
+      - 'tests/fixtures/tasks/check.ts'
+      - 'tests/fixtures/tasks/package.json'
       - '.github/workflows/harness.yml'
   push:
     branches: [main]
@@ -18,6 +20,8 @@ on:
       - 'experiments/router-authority-extension/overlay/**'
       - 'experiments/isolation/**'
       - 'tests/fixtures/harness/**'
+      - 'tests/fixtures/tasks/check.ts'
+      - 'tests/fixtures/tasks/package.json'
       - '.github/workflows/harness.yml'
 permissions:
   contents: read
