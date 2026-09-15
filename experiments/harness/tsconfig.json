@@ -1,4 +1,4 @@
 {
-  "compilerOptions": { "target": "ES2023", "module": "NodeNext", "strict": true, "allowImportingTsExtensions": true, "noEmit": true, "erasableSyntaxOnly": true, "typeRoots": ["./node_modules/@types"] },
-  "include": ["*.ts", "../../tests/fixtures/harness/*.ts"]
+  "compilerOptions": { "target": "ES2023", "module": "preserve", "moduleResolution": "bundler", "strict": true, "allowImportingTsExtensions": true, "noEmit": true, "erasableSyntaxOnly": true, "typeRoots": ["./node_modules/@types"] },
+  "include": ["*.ts", "../../tests/fixtures/harness/*.ts", "../../tests/fixtures/tasks/check.ts"]
 }
