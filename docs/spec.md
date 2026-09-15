@@ -940,7 +940,9 @@ missing measurements and bounds M1 ownership. Existing `cmd/gafferd/`,
 `internal/store/`, `internal/httpapi/` and `schemas/` stay provisional until
 #9/#10/#11 reconciliation; do not create parallel `internal/http/` or `internal/api/`
 owners. Future `cmd/gaffer-runner/` owns one qualified runner and `cmd/gaffer/` the
-local CLI. `web/` remains the UI path, not present at the decision's base.
+local CLI. `web/` now contains the merged #95 read-only fixture shell, not the
+M2 authenticated workflow. The merged [#10 v2 contract](https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md)
+owns execution semantics; its O1–O8 obligations remain open before acceptance.
 
 [M0](roadmap.md) is not passed: the first live trial
 failed with unknown remote work, #89 has no newly measured Docker-free profile,
