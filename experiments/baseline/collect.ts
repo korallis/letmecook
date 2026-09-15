@@ -46,7 +46,10 @@ export function collectDataset(input: unknown) {
     const r = started[i], reasons: string[] = [];
     if (started.slice(0, i).some(previous => previous.origin === r.origin && previous.scope.quiescence === 'unknown')) reasons.push('started-after-unknown-original');
     if (started.slice(0, i).some(previous => previous.origin === r.origin && time(previous.endedAt) > time(r.startedAt))) reasons.push('concurrent-case');
-    if (r.attempts.some((a: Row, n: number) => n < r.attempts.length - 1 && a.operations.some((o: Row) => o.outcome === 'unknown'))) reasons.push('replacement-after-unknown-original');
+    // Physical operations are ordered inside each ordered harness attempt. A
+    // fallback in the same attempt is still a replacement after unknown work.
+    if (r.attempts.some((a: Row, n: number) => a.operations.some((o: Row, operation: number) =>
+      o.outcome === 'unknown' && (operation < a.operations.length - 1 || n < r.attempts.length - 1)))) reasons.push('replacement-after-unknown-original');
     violations.set(r.runId, reasons);
   }
   const rows = runs.map((run, index) => {

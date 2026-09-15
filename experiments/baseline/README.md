@@ -123,8 +123,10 @@ Public summaries copy no caller IDs, arbitrary text, commands, paths, references
 private SHAs or digests. They use fixed record aliases, the three public case IDs,
 validated enums and numeric facts. Unknown CSV cells are empty, not zero. Known
 measured seconds, estimated seconds and incomplete all-in effort are separate.
-Sequence incidents such as replacement after an unknown original or concurrent
-cases remain visible and disqualify accepted counts. This reports supplied data;
+Sequence incidents such as a physical send after an unknown original (including
+fallback within the same harness attempt), a later harness attempt, or concurrent
+cases remain visible and disqualify accepted counts. A terminal unknown without a
+later operation remains unknown without inventing a replacement. This reports supplied data;
 it neither controls future execution nor discovers omitted runs. Input-set
 completeness remains explicitly caller-declared.
 

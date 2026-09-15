@@ -104,6 +104,38 @@ test('records sequence incidents without discarding attempted replacements after
   assert.equal(rows[1].outputLabel, 'accepted'); assert.equal(rows[1].acceptedWithinRegisteredBounds, false);
 });
 
+test('unknown then another physical send in the same final attempt is flagged and retained unchanged', () => {
+  for (const source of ['original', 'router-fallback']) {
+    const input = fixture(), run = input.runs[0];
+    run.attempts[1].operations.unshift({ id: 'unknown-in-same-attempt', source: 'original', outcome: 'unknown', evidence: ref('unknown-original') });
+    run.attempts[1].operations[1].source = source;
+    run.scope.physicalAttempts = 3; run.scope.quiescence = 'unknown';
+    const result = collectDataset(input), row = result.publicJSON.rows[0];
+    assert.deepEqual(result.privateJSON.runs, input.runs);
+    assert.equal(row.unknownOriginal, true); assert.equal(row.physicalAttempts, 3);
+    assert.deepEqual(row.sequenceViolations, ['replacement-after-unknown-original']);
+    assert.equal(row.acceptedWithinRegisteredBounds, false);
+  }
+});
+
+test('known failure then router fallback in the same final attempt is not an unknown-work replacement', () => {
+  const input = fixture(), run = input.runs[0];
+  run.attempts[1].operations.unshift({ id: 'failed-in-same-attempt', source: 'original', outcome: 'failure', evidence: ref('failed-original') });
+  run.scope.physicalAttempts = 3;
+  const result = collectDataset(input), row = result.publicJSON.rows[0];
+  assert.deepEqual(result.privateJSON.runs, input.runs); assert.equal(row.unknownOriginal, false);
+  assert.equal(row.physicalFailureCount, 2); assert.deepEqual(row.sequenceViolations, []);
+});
+
+test('terminal unknown with no later send or attempt stays unknown without inventing a replacement', () => {
+  const input = fixture(), run = input.runs[0];
+  run.attempts[1].operations.push({ id: 'terminal-unknown', source: 'original', outcome: 'unknown', evidence: ref('terminal-unknown') });
+  run.scope.physicalAttempts = 3; run.scope.quiescence = 'unknown';
+  const result = collectDataset(input), row = result.publicJSON.rows[0];
+  assert.deepEqual(result.privateJSON.runs, input.runs); assert.equal(row.unknownOriginal, true);
+  assert.equal(row.physicalAttempts, 3); assert.deepEqual(row.sequenceViolations, []);
+});
+
 test('public projection never copies private free text, paths, IDs or references, including CSV formulas', () => {
   const input = fixture(), sentinel = '=HYPERLINK("https://private.example.invalid/secret","source")';
   changedRegistration(input, r => {
