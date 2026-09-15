@@ -12,7 +12,7 @@ go test -race ./...
 node tests/fixtures/protocol/check.ts
 ```
 
-Node runs TypeScript directly; Go uses only stdlib. These commands match the
+Node runs TypeScript directly; protocol checks use only Go stdlib. These commands match the
 [protocol workflow](../../../.github/workflows/execution-protocol.yml).
 No application dependency or test framework is added.
 `check.ts` calls the actual TypeScript validator/check interfaces, runs the Go
@@ -20,7 +20,7 @@ fixture command with the same JSON, and asserts every output against both explic
 expectations and its peer. `go test` independently runs the same expectations.
 `main.go` is an owned test command, not a product runner or service.
 
-`cases.json` owns synthetic wire messages, raw malformed byte cases, all 100
+`data/cases.json` owns synthetic wire messages, raw malformed byte cases, all 100
 attempt-state edge checks, and named expected adverse traces. `decode` consumes
 JSON text/hex bytes with optional space padding (including exact/over-size bounds).
 Other cases reference named wire messages, decode them, then execute public checks.

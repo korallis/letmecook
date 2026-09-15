@@ -1,9 +1,10 @@
 # Working on letmecook
 
 Build with GPT-6 Astra. The product's working name is Gaffer. Most reviewed design
-describes intended behaviour, not existing APIs. The reversible #93 protocol slice
-is provisional; see `schemas/execution/README.md` for boundaries and reconciliation,
-and `tests/fixtures/protocol/README.md` for checks. It does not accept #9/#10.
+describes intended behaviour, not existing APIs. The reversible #93 protocol and
+#94 fixture-only daemon remain provisional; see `schemas/execution/README.md` for
+reconciliation and `cmd/gafferd/README.md` for startup, read API and checks.
+Neither accepts #9/#10 nor supplies execution authority.
 
 ## Issue workflow
 

@@ -10,7 +10,7 @@ import (
 )
 
 func TestSharedFixtures(t *testing.T) {
-	data, err := os.ReadFile("cases.json")
+	data, err := os.ReadFile("data/cases.json")
 	if err != nil {
 		t.Fatal(err)
 	}

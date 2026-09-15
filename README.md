@@ -8,8 +8,10 @@ machine, and review the exact changes with verification evidence.
 
 **M0 experiments are in progress.** The reviewed v0.4 design, documentation reader
 and issue-based workflow now sit alongside isolated feasibility experiments and
-the [provisional execution protocol](schemas/execution/README.md). The application
-is not implemented yet; milestone evidence determines what gets built next.
+the [provisional execution protocol](schemas/execution/README.md) and
+[fixture-only Go/SQLite daemon](cmd/gafferd/README.md). This reversible application
+slice has no execution, inference or acceptance authority; milestone evidence
+still determines the selected foundation and supported runtime.
 See the [inference boundary proof](docs/evidence/inference-boundary.md),
 [passive status experiment](experiments/router-status/README.md),
 [Linux isolation proof](docs/evidence/linux-profile.md), and the
@@ -61,7 +63,7 @@ npm --prefix docs run check
 
 The initial application direction is Go for the daemon and runner, and React with
 TypeScript for the web client. M0 validates the execution foundation before the
-application scaffold is committed to that choice.
+application foundation is selected; #93–#95 permit only reversible provisional work.
 
 MIT is intended for original code and documentation; no licence has yet been
 applied. The release backlog includes the licence and dependency decision.

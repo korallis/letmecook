@@ -2,9 +2,9 @@ name: Provisional execution protocol
 on:
   push:
     branches: [main]
-    paths: ['go.mod', 'schemas/execution/**', 'tests/fixtures/protocol/**', 'experiments/inference-boundary/json.ts', 'experiments/inference-boundary/package*.json', '.github/workflows/execution-protocol.yml']
+    paths: ['go.mod', 'go.sum', 'schemas/execution/**', 'tests/fixtures/protocol/**', 'experiments/inference-boundary/json.ts', 'experiments/inference-boundary/package*.json', '.github/workflows/execution-protocol.yml']
   pull_request:
-    paths: ['go.mod', 'schemas/execution/**', 'tests/fixtures/protocol/**', 'experiments/inference-boundary/json.ts', 'experiments/inference-boundary/package*.json', '.github/workflows/execution-protocol.yml']
+    paths: ['go.mod', 'go.sum', 'schemas/execution/**', 'tests/fixtures/protocol/**', 'experiments/inference-boundary/json.ts', 'experiments/inference-boundary/package*.json', '.github/workflows/execution-protocol.yml']
 permissions:
   contents: read
 jobs:

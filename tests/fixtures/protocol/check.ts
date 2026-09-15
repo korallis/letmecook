@@ -6,7 +6,7 @@ import * as p from '../../../schemas/execution/protocol.ts';
 
 // Fixture payloads deliberately include malformed values. This is test data, not
 // an application API; production checks consume the actual wire/typed boundaries.
-const suite = JSON.parse(readFileSync(new URL('./cases.json', import.meta.url), 'utf8'));
+const suite = JSON.parse(readFileSync(new URL('./data/cases.json', import.meta.url), 'utf8'));
 const load = (name: string): p.Message => {
   assert.ok(Object.hasOwn(suite.messages, name), `missing fixture message ${name}`);
   return p.decode(Buffer.from(JSON.stringify(suite.messages[name])));
