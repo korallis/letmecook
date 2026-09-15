@@ -9,7 +9,8 @@ import { createHash } from 'node:crypto';
 import { parseJSON } from '../inference-boundary/json.ts';
 import { exact, list, digest, canonical, time, type Row } from './validation.ts';
 import { validateRegistration } from './registration.ts';
-import { validateRun, effort, CATEGORIES } from './observations.ts';
+import { validateRun, effort, effortDecimals, CATEGORIES } from './observations.ts';
+import { addDecimals, sumDecimals, decimalNumber, decimalText, decimalExcess } from './decimal.ts';
 
 function usage(run: Row) {
   const complete = run.usageCoverage === 'complete' && run.usage.length > 0;
@@ -60,15 +61,19 @@ export function collectDataset(input: unknown) {
     const registration = byDigest.get(run.registrationDigest)!, trial = effort(run), followUp = effort(run, 'follow-up');
     const incident = violations.get(run.runId) ?? [];
     const operatorCap = registration.operatorEffort.maximumActiveSeconds;
+    const trialDecimals = effortDecimals(run);
+    const operatorExcess = operatorCap === null || !trial.complete ? null : decimalExcess(trialDecimals.total, operatorCap);
     const operations: Row[] = run.attempts.flatMap((a: Row) => a.operations);
     const knownLowerBounds = { physicalAttempts: Math.max(operations.length, run.scope?.physicalAttempts ?? 0), measuredOperatorSeconds: trial.measuredSeconds };
     const provenOverruns = { physicalAttempts: Math.max(0, knownLowerBounds.physicalAttempts - 32),
-      measuredOperatorSeconds: operatorCap === null ? null : Math.max(0, knownLowerBounds.measuredOperatorSeconds - operatorCap) };
+      measuredOperatorSeconds: operatorCap === null ? null : decimalNumber(decimalExcess(trialDecimals.measured, operatorCap)) };
     const wallElapsedMs = run.startedAt === null ? null : time(run.endedAt) - time(run.startedAt);
     const overruns = { physicalAttempts: run.scope?.physicalAttempts === null || !run.scope ? null : Math.max(0, run.scope.physicalAttempts - 32),
       elapsedMs: run.elapsedMs === null ? null : Math.max(0, run.elapsedMs - 900000),
       wallElapsedMs: wallElapsedMs === null ? null : Math.max(0, wallElapsedMs - 900000),
-      operatorSeconds: operatorCap === null || trial.totalSeconds === null ? null : Math.max(0, trial.totalSeconds - operatorCap) };
+      operatorSeconds: operatorExcess === null ? null : decimalNumber(operatorExcess),
+      operatorSecondsExact: operatorExcess === null ? null : decimalText(operatorExcess) };
+    const categories = CATEGORIES.map(category => [category, sumDecimals(run.operatorIntervals.filter((i: Row) => i.category === category && i.confidence !== 'unknown').map((i: Row) => i.durationSeconds))] as const);
     const followUpComplete = run.followUp.completedAt !== null;
     // Allowlisted projection: no copied caller IDs, free text, commands, paths, refs or hashes.
     return { record: `case-${String(index + 1).padStart(3, '0')}`, origin: run.origin,
@@ -79,16 +84,21 @@ export function collectDataset(input: unknown) {
       physicalAttempts: run.scope?.physicalAttempts ?? null, knownLowerBounds, provenOverruns, physicalFailureCount: operations.filter((o: Row) => o.outcome === 'failure').length,
       unknownOriginal: run.scope ? run.scope.quiescence === 'unknown' : null,
       elapsedMs: run.elapsedMs, wallElapsedMs, waitingMs: run.waitingMs, trialEffort: trial, followUpEffort: followUp,
-      knownSecondsByCategory: Object.fromEntries(CATEGORIES.map(category => [category, run.operatorIntervals.filter((i: Row) => i.category === category && i.confidence !== 'unknown').reduce((n: number, i: Row) => n + i.durationSeconds, 0)])),
+      knownSecondsByCategory: Object.fromEntries(categories.map(([category, total]) => [category, decimalNumber(total)])),
+      knownSecondsByCategoryExact: Object.fromEntries(categories.map(([category, total]) => [category, decimalText(total)])),
       checks: Object.fromEntries(['passed', 'failed', 'not-run', 'unknown'].map(status => [status, run.checks.filter((c: Row) => c.status === status).length])),
       usage: usage(run), ownershipCostObservationCount: run.ownershipCosts.length, overruns, sequenceViolations: incident,
       followUpComplete, defects: Object.fromEntries(['critical', 'major', 'minor'].map(severity => [severity, run.followUp.defects.filter((d: Row) => d.severity === severity).length])),
       disputedDefects: run.followUp.defects.filter((d: Row) => d.status === 'disputed').length };
   });
   const cohort = rows.filter(r => r.origin === 'operator'), accepted = cohort.filter(r => r.acceptedWithinRegisteredBounds).length;
-  const sum = (phase: 'trialEffort' | 'followUpEffort') => cohort.length && cohort.every(r => r[phase].complete) ? cohort.reduce((n, r) => n + r[phase].totalSeconds!, 0) : null;
-  const trialSeconds = sum('trialEffort'), followUpSeconds = sum('followUpEffort');
-  const allInSeconds = trialSeconds !== null && followUpSeconds !== null && cohort.every(r => r.outputLabel !== 'accepted' || r.followUpComplete) ? trialSeconds + followUpSeconds : null;
+  const sum = (phase: 'trial' | 'follow-up') => {
+    const totals = runs.filter(r => r.origin === 'operator').map(r => effortDecimals(r, phase));
+    return totals.length && totals.every(e => e.complete) ? addDecimals(totals.map(e => e.total)) : null;
+  };
+  const trialTotal = sum('trial'), followUpTotal = sum('follow-up');
+  const allInTotal = trialTotal !== null && followUpTotal !== null && cohort.every(r => r.outputLabel !== 'accepted' || r.followUpComplete) ? addDecimals([trialTotal, followUpTotal]) : null;
+  const trialSeconds = trialTotal === null ? null : decimalNumber(trialTotal), allInSeconds = allInTotal === null ? null : decimalNumber(allInTotal);
   const publicJSON = { schema: 1, kind: 'baseline-public-measurement', evidenceAuthenticated: false, executionAuthorized: false,
     inputSetCompleteness: 'caller-declared', syntheticExcluded: rows.length - cohort.length,
     cohort: { registered: cohort.length, registeredFeasible: cohort.filter(r => r.eligibility === 'feasible').length,
@@ -97,11 +107,13 @@ export function collectDataset(input: unknown) {
       outcomes: Object.fromEntries(['accepted', 'rejected', 'failed', 'budget-exhausted', 'blocked', 'cancelled', 'unknown'].map(status => [status, cohort.filter(r => r.status === status).length])),
       completionRate: cohort.some(r => r.started) ? accepted / cohort.filter(r => r.started).length : null,
       trialSeconds, allInSeconds, minutesPerAcceptedOutcome: accepted && allInSeconds !== null ? allInSeconds / 60 / accepted : null,
+      exactSeconds: { trial: trialTotal === null ? null : decimalText(trialTotal), allIn: allInTotal === null ? null : decimalText(allInTotal) },
       completedQualityComparison: false }, rows };
-  const columns = ['record', 'origin', 'case', 'status', 'started', 'output_label', 'accepted_within_bounds', 'harness_attempts', 'physical_attempts', 'known_physical_attempt_lower_bound', 'proven_physical_overrun', 'elapsed_ms', 'wall_elapsed_ms', 'wall_overrun_ms', 'known_measured_seconds', 'proven_measured_operator_overrun_seconds', 'estimated_seconds', 'total_trial_seconds', 'effort_confidence', 'follow_up_complete'];
+  const columns = ['record', 'origin', 'case', 'status', 'started', 'output_label', 'accepted_within_bounds', 'harness_attempts', 'physical_attempts', 'known_physical_attempt_lower_bound', 'proven_physical_overrun', 'elapsed_ms', 'wall_elapsed_ms', 'wall_overrun_ms', 'known_measured_seconds', 'proven_measured_operator_overrun_seconds', 'estimated_seconds', 'total_trial_seconds', 'effort_confidence', 'follow_up_complete', 'estimated_seconds_exact', 'total_trial_seconds_exact', 'operator_overrun_seconds', 'operator_overrun_seconds_exact'];
   const cells = rows.map(r => [r.record, r.origin, r.case, r.status, r.started, r.outputLabel, r.acceptedWithinRegisteredBounds, r.harnessAttempts, r.physicalAttempts,
     r.knownLowerBounds.physicalAttempts, r.provenOverruns.physicalAttempts, r.elapsedMs, r.wallElapsedMs, r.overruns.wallElapsedMs, r.trialEffort.measuredSeconds,
-    r.provenOverruns.measuredOperatorSeconds, r.trialEffort.estimatedSeconds, r.trialEffort.totalSeconds, r.trialEffort.confidence, r.followUpComplete]);
+    r.provenOverruns.measuredOperatorSeconds, r.trialEffort.estimatedSeconds, r.trialEffort.totalSeconds, r.trialEffort.confidence, r.followUpComplete,
+    r.trialEffort.exactSeconds.estimated, r.trialEffort.exactSeconds.total, r.overruns.operatorSeconds, r.overruns.operatorSecondsExact]);
   const csv = [columns, ...cells].map(row => row.map(value => value === null ? '' : String(value)).join(',')).join('\n') + '\n';
   return { privateJSON: { schema: 1, kind: 'retained-baseline-inputs', evidenceAuthenticated: false, registrations, runs }, publicJSON, csv };
 }

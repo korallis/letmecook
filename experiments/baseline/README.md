@@ -115,6 +115,22 @@ positive breach has been established from that lower bound, not that the complet
 total is zero or within budget. A record-only effort treatment has no cap or
 proven effort-overrun value.
 
+Effort sums and cap comparisons use exact decimal arithmetic over each parsed JSON
+number's canonical decimal spelling, including exponent notation. The input number
+domain and fractional precision are unchanged; no epsilon or rounding to a fixed
+number of decimal places is applied. For example, one measured second plus ten
+179.9-second estimates is exactly 1800 seconds. A positive decimal excess still
+fails the cap even when its rounded numeric total would equal the cap.
+
+Numeric summary fields remain convenient projections. Their generated decimal
+companions preserve exact arithmetic when JSON/JavaScript numbers cannot represent
+the result: effort `exactSeconds`, `overruns.operatorSecondsExact`,
+`knownSecondsByCategoryExact`, and cohort `exactSeconds`. CSV includes exact
+estimated/trial seconds and the numeric/exact operator overrun. Unknown complete
+totals remain null/empty in both representations. Category and cohort sums use the
+original interval values, including across phases, rather than rounded subtotals.
+Decimal text is generated from validated numbers; it contains no caller free text.
+
 Place actual input in an operator-owned directory with mode 0700 and a file with
 mode 0600. The output parent must also be private and already exist. Then:
 
@@ -149,7 +165,7 @@ complete manifest hashes private records and remains private too.
 
 Public summaries copy no caller IDs, arbitrary text, commands, paths, references,
 private SHAs or digests. They use fixed record aliases, the three public case IDs,
-validated enums and numeric facts. Unknown CSV cells are empty, not zero. Known
+validated enums, numeric facts and generated exact decimal text. Unknown CSV cells are empty, not zero. Known
 measured seconds, estimated seconds and incomplete all-in effort are separate.
 Sequence incidents such as a physical send after an unknown original (including
 fallback within the same harness attempt), a later harness attempt, or concurrent

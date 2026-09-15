@@ -2,20 +2,27 @@
 import assert from 'node:assert/strict';
 import { exact, list, text, id, sha, number, integer, oneOf, time, reference, nullableReference, references, unique, digest, type Row } from './validation.ts';
 import { validateRegistration } from './registration.ts';
+import { addDecimals, sumDecimals, decimalNumber, decimalText, decimalExcess } from './decimal.ts';
 
 export const CATEGORIES = ['capture', 'planning', 'approval', 'review', 'correction', 'recovery', 'setup'] as const;
 export const STATUSES = ['accepted', 'rejected', 'failed', 'budget-exhausted', 'blocked', 'cancelled', 'unknown'] as const;
 
-export function effort(run: Row, phase: 'trial' | 'follow-up' = 'trial') {
+export function effortDecimals(run: Row, phase: 'trial' | 'follow-up' = 'trial') {
   const rows = run.operatorIntervals.filter((x: Row) => x.phase === phase);
-  // Sum measured milliseconds before conversion so fractional intervals cannot
-  // manufacture a tiny positive overrun at an exact whole-second cap.
-  const measuredSeconds = rows.filter((x: Row) => x.confidence === 'measured').reduce((n: number, x: Row) => n + time(x.end) - time(x.start), 0) / 1000;
-  const estimatedSeconds = rows.filter((x: Row) => x.confidence === 'estimated').reduce((n: number, x: Row) => n + x.durationSeconds, 0);
+  // Measured values already match UTC milliseconds. Estimates retain every
+  // decimal digit of their supplied numeric values, including exponent notation.
+  const measured = sumDecimals(rows.filter((x: Row) => x.confidence === 'measured').map((x: Row) => x.durationSeconds));
+  const estimated = sumDecimals(rows.filter((x: Row) => x.confidence === 'estimated').map((x: Row) => x.durationSeconds));
   const complete = rows.length > 0 && run.operatorCoverage[phase] === 'complete' && !rows.some((x: Row) => x.confidence === 'unknown');
-  return { measuredSeconds, estimatedSeconds, unknownIntervals: rows.filter((x: Row) => x.confidence === 'unknown').length,
-    complete, totalSeconds: complete ? measuredSeconds + estimatedSeconds : null,
+  return { measured, estimated, total: addDecimals([measured, estimated]), complete, unknownIntervals: rows.filter((x: Row) => x.confidence === 'unknown').length,
     confidence: !complete ? 'unknown' : rows.some((x: Row) => x.confidence === 'estimated') ? 'estimated' : 'measured' };
+}
+
+export function effort(run: Row, phase: 'trial' | 'follow-up' = 'trial') {
+  const e = effortDecimals(run, phase);
+  return { measuredSeconds: decimalNumber(e.measured), estimatedSeconds: decimalNumber(e.estimated), unknownIntervals: e.unknownIntervals,
+    complete: e.complete, totalSeconds: e.complete ? decimalNumber(e.total) : null, confidence: e.confidence,
+    exactSeconds: { measured: decimalText(e.measured), estimated: decimalText(e.estimated), total: e.complete ? decimalText(e.total) : null } };
 }
 
 export function validateRun(input: unknown, frozen: unknown): Row {
@@ -130,7 +137,7 @@ export function validateRun(input: unknown, frozen: unknown): Row {
       assert(input.checks.some((c: Row) => c.checkId === check.id && c.revision === revision && (revision !== 'candidate' ||
         c.attemptId === input.attempts.at(-1).id && digest(c.candidateArtifact) === digest(a.artifact))), 'required_check_observation_missing_or_wrong_candidate');
     }
-    const e = effort(input); if (registration.operatorEffort.treatment === 'cap-including-preparation') assert(e.totalSeconds !== null && e.totalSeconds <= registration.operatorEffort.maximumActiveSeconds, 'accepted_effort_bound_unknown_or_exhausted');
+    const e = effortDecimals(input); if (registration.operatorEffort.treatment === 'cap-including-preparation') assert(e.complete && decimalExcess(e.total, registration.operatorEffort.maximumActiveSeconds).units === 0n, 'accepted_effort_bound_unknown_or_exhausted');
   }
   if (input.status === 'rejected') assert.equal(a.decision, 'rejected', 'operator_rejection_required');
   return structuredClone(input);

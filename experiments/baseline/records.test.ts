@@ -18,6 +18,14 @@ function shiftRun(run: Row, milliseconds: number) {
   shift(run, ['startedAt', 'endedAt']); shift(run.scope, ['startedAt', 'deadlineAt']); run.attempts.forEach((a: Row) => shift(a, ['startedAt', 'endedAt']));
   run.operatorIntervals.forEach((i: Row) => shift(i, ['start', 'end'])); shift(run.acceptance, ['labelledAt']); shift(run.followUp, ['startedAt', 'dueAt', 'completedAt']);
 }
+function withEffort(input: Row, measuredSeconds: number | null, estimates: number[]) {
+  const run = input.runs[0], [measured, estimated] = run.operatorIntervals;
+  run.operatorCoverage.trial = 'complete';
+  run.operatorIntervals = estimates.map((durationSeconds, i) => ({ ...estimated, id: 'estimate-' + i, durationSeconds }));
+  if (measuredSeconds !== null) run.operatorIntervals.unshift({ ...measured, durationSeconds: measuredSeconds,
+    end: new Date(Date.parse(measured.start) + measuredSeconds * 1000).toISOString() });
+  return input;
+}
 
 test('closed frozen registration binds identity, source, scope, toolchain and exact approved bounds without granting authority', () => {
   const r = fixture().registrations[0], valid = registrationIdentity(r);
@@ -55,7 +63,7 @@ test('failed requests, fallback, failed checks and measured/estimated/unknown ef
   const input = fixture(), result = collectDataset(input), row = result.publicJSON.rows[0];
   assert.deepEqual(result.privateJSON.runs, input.runs); assert.deepEqual(result.privateJSON.registrations, input.registrations);
   assert.equal(row.harnessAttempts, 2); assert.equal(row.physicalAttempts, 2); assert.equal(row.physicalFailureCount, 1); assert.equal(row.checks.failed, 2);
-  assert.deepEqual(row.trialEffort, { measuredSeconds: 30, estimatedSeconds: 12, unknownIntervals: 1, complete: false, totalSeconds: null, confidence: 'unknown' });
+  assert.deepEqual(row.trialEffort, { measuredSeconds: 30, estimatedSeconds: 12, unknownIntervals: 1, complete: false, totalSeconds: null, confidence: 'unknown', exactSeconds: { measured: '30', estimated: '12', total: null } });
   assert.equal(row.usage.inputTokens, null); assert.equal(row.usage.incrementalCash, null); assert.equal(row.outputLabel, null);
   assert.equal(result.publicJSON.syntheticExcluded, 1); assert.equal(result.publicJSON.cohort.registered, 0); assert.equal(result.publicJSON.cohort.completionRate, null); assert.equal(result.publicJSON.cohort.minutesPerAcceptedOutcome, null);
   assert.match(result.csv, /,30,0,12,,unknown,/); assert(!result.csv.includes('synthetic-run'));
@@ -165,6 +173,93 @@ test('measured lower bounds prove effort overruns despite unknown intervals, whi
   run.operatorIntervals = [...Array.from({ length: 10 }, (_, i) => ({ ...measured, id: 'fraction-' + i, durationSeconds: 0.1,
     start: new Date(Date.parse(measured.start) + i * 100).toISOString(), end: new Date(Date.parse(measured.start) + (i + 1) * 100).toISOString() })), ...run.operatorIntervals.slice(1)];
   const row = collectDataset(fractional).publicJSON.rows[0]; assert.equal(row.knownLowerBounds.measuredOperatorSeconds, 1); assert.equal(row.provenOverruns.measuredOperatorSeconds, 0); assert.equal(row.trialEffort.totalSeconds, null);
+});
+
+test('decimal mixed and estimated effort qualifies below and at the cap and preserves real overruns above it', () => {
+  for (const measured of [1, null]) for (const [last, expected, excess] of measured === null
+    ? [[180.899, '1799.999', '0'], [180.9, '1800', '0'], [180.901, '1800.001', '0.001']] as const
+    : [[179.899, '1799.999', '0'], [179.9, '1800', '0'], [179.901, '1800.001', '0.001']] as const) {
+    const input = withEffort(acceptedFixture(), measured, [...Array(9).fill(179.9), last]);
+    if (excess === '0') assert.equal(collectDataset(input).publicJSON.rows[0].acceptedWithinRegisteredBounds, true);
+    else assert.throws(() => collectDataset(input), /accepted_effort_bound/);
+    input.runs[0].status = 'failed';
+    for (const reverse of [false, true]) {
+      if (reverse) input.runs[0].operatorIntervals.reverse();
+      const result = collectDataset(input), row = result.publicJSON.rows[0]; assert.deepEqual(result.privateJSON.runs, input.runs);
+      assert.equal(row.trialEffort.totalSeconds, Number(expected)); assert.equal(row.trialEffort.exactSeconds.total, expected);
+      assert.equal(row.trialEffort.confidence, 'estimated'); assert.equal(row.knownLowerBounds.measuredOperatorSeconds, measured ?? 0);
+      assert.equal(row.overruns.operatorSeconds, Number(excess)); assert.equal(row.overruns.operatorSecondsExact, excess);
+      assert.equal(row.provenOverruns.measuredOperatorSeconds, 0);
+      const [header, data] = result.csv.trimEnd().split('\n').map(line => line.split(','));
+      assert.equal(data[header.indexOf('total_trial_seconds_exact')], expected); assert.equal(data[header.indexOf('operator_overrun_seconds_exact')], excess);
+    }
+  }
+});
+
+test('exponent estimates and precision beyond the rounded total retain exact cap decisions without a tolerance', () => {
+  for (const [estimates, exact, excess] of [
+    [[0.9999999, 9e-8], '0.99999999', '0'], [[0.9999999, 1e-7], '1', '0'], [[0.9999999, 1.1e-7], '1.00000001', '0.00000001'],
+    [[0.7, 0.30000000000000004], '1.00000000000000004', '0.00000000000000004'],
+    [[1, Number.MIN_VALUE], '1.' + '0'.repeat(323) + '5', '0.' + '0'.repeat(323) + '5'],
+  ] as const) {
+    const input = withEffort(changedRegistration(acceptedFixture(), r => { r.operatorEffort.maximumActiveSeconds = 1; }), null, [...estimates]);
+    if (excess === '0') assert.equal(collectDataset(input).publicJSON.rows[0].acceptedWithinRegisteredBounds, true);
+    else assert.throws(() => collectDataset(input), /accepted_effort_bound/);
+    input.runs[0].status = 'failed'; const row = collectDataset(input).publicJSON.rows[0];
+    assert.equal(row.trialEffort.exactSeconds.estimated, exact); assert.equal(row.trialEffort.exactSeconds.total, exact);
+    assert.equal(row.overruns.operatorSecondsExact, excess); assert.equal(row.overruns.operatorSeconds, Number(excess));
+    assert.equal(row.knownLowerBounds.measuredOperatorSeconds, 0); assert.equal(row.trialEffort.confidence, 'estimated');
+  }
+  const large = withEffort(fixture(), null, [1e15, 0.01]);
+  const row = collectDataset(large).publicJSON.rows[0]; assert.equal(row.trialEffort.exactSeconds.estimated, '1000000000000000.01');
+  assert.equal(row.trialEffort.estimatedSeconds, 1e15); assert.equal(row.overruns.operatorSecondsExact, '999999999998200.01');
+});
+
+test('decimal sums retain unknown totals, separate estimates, and exact category observations', () => {
+  const input = withEffort(fixture(), 1, Array(10).fill(179.9));
+  input.runs[0].operatorIntervals.forEach((i: Row) => { i.category = 'review'; });
+  input.runs[0].operatorIntervals.push(fixture().runs[0].operatorIntervals[2]);
+  const result = collectDataset(input), row = result.publicJSON.rows[0];
+  assert.deepEqual(result.privateJSON.runs, input.runs); assert.equal(row.trialEffort.exactSeconds.estimated, '1799');
+  assert.equal(row.trialEffort.exactSeconds.total, null); assert.equal(row.trialEffort.totalSeconds, null); assert.equal(row.trialEffort.confidence, 'unknown');
+  assert.equal(row.overruns.operatorSeconds, null); assert.equal(row.overruns.operatorSecondsExact, null);
+  assert.equal(row.knownLowerBounds.measuredOperatorSeconds, 1); assert.equal(row.provenOverruns.measuredOperatorSeconds, 0);
+  assert.equal(row.knownSecondsByCategory.review, 1800); assert.equal(row.knownSecondsByCategoryExact.review, '1800');
+});
+
+test('cohort sums use original decimal observations across cases and phases without summing rounded projections', async () => {
+  const intake = JSON.parse(await readFile(new URL('../../tests/fixtures/tasks/operator-intake.json', import.meta.url), 'utf8'));
+  const cases = intake.cases.map((approved: Row, index: number) => {
+    // Invented observations exercising the public operator-cohort projection in
+    // memory only. This test does not register, persist, or run an operator case.
+    const input = withEffort(fixture(), null, index === 0 ? [0.1, 1e-18] : [index === 1 ? 0.2 : 0.3]);
+    const r = input.registrations[0], run = input.runs[0]; r.origin = run.origin = 'operator'; r.caseId = approved.id;
+    r.authority = { ref: intake.authority.reference, sha256: intake.authority.sha256 }; r.fixture.manifest = { ref: intake.privateManifest.reference, sha256: intake.privateManifest.sha256 };
+    r.approvedCaseDigest = digest(approved); r.criteria = approved.acceptanceCriteria.map((x: string, i: number) => ({ id: 'criterion-' + i, textDigest: digest(x) }));
+    r.checks[0].criterionIds = r.criteria.map((c: Row) => c.id); r.checks[1].criterionIds = [r.criteria[0].id]; run.registrationDigest = digest(r);
+    run.runId = 'decimal-case-' + index; run.scope.id = 'decimal-scope-' + index; shiftRun(run, index * 120000);
+    run.operatorCoverage['follow-up'] = 'complete'; run.operatorIntervals.push({ ...run.operatorIntervals[0], id: 'follow-up', phase: 'follow-up', durationSeconds: [0.1, 0.2, 0.3][index] });
+    return input;
+  });
+  const input = { schema: 1, registrations: cases.flatMap((c: Row) => c.registrations), runs: cases.flatMap((c: Row) => c.runs) };
+  for (const reverse of [false, true]) {
+    if (reverse) input.runs.reverse(); const result = collectDataset(input), cohort = result.publicJSON.cohort;
+    assert.deepEqual(result.privateJSON.runs, input.runs); assert.equal(cohort.accepted, 0); assert.equal(cohort.trialSeconds, 0.6); assert.equal(cohort.allInSeconds, 1.2);
+    assert.deepEqual(cohort.exactSeconds, { trial: '0.600000000000000001', allIn: '1.200000000000000001' });
+  }
+});
+
+test('collector CLI exports the exact-cap decimal review repro with no invented overrun', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'gaffer-baseline-decimal-cli-'));
+  try {
+    const input = withEffort(acceptedFixture(), 1, Array(10).fill(179.9)), file = join(root, 'input.json'), output = join(root, 'export');
+    await writeFile(file, JSON.stringify(input), { mode: 0o600 });
+    const response = execFileSync(process.execPath, [new URL('./collect.ts', import.meta.url).pathname, file, output], { timeout: 5000, encoding: 'utf8' });
+    assert.deepEqual(JSON.parse(response), { collected: true, operatorCases: 0, syntheticExcluded: 1, executionAuthorized: false });
+    const summary = JSON.parse(await readFile(join(output, 'public-summary.json'), 'utf8'));
+    assert.equal(summary.rows[0].trialEffort.totalSeconds, 1800); assert.equal(summary.rows[0].overruns.operatorSeconds, 0);
+    assert.equal(summary.rows[0].acceptedWithinRegisteredBounds, true); assert.equal(summary.rows[0].trialEffort.confidence, 'estimated');
+  } finally { await rm(root, { recursive: true, force: true }); }
 });
 
 test('operator overlap, duplicate case records and reuse cannot manufacture lower effort or extra successes', () => {
