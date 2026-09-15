@@ -370,8 +370,9 @@ Check the selected runtime identity and required controls before launch. Missing
 unsupported or drifted controls fail closed without a host-shell, worktree-only
 or Docker-required fallback. Unknown termination quarantines the profile until
 reconciled. Docker-based development tests remain valid for their measured scope;
-they cannot establish Docker-free product execution. The historical #5 profile
-is Docker-based and does not prove native Linux, macOS, Windows or another VM.
+they cannot establish Docker-free product execution. The historical #5 profile,
+[`m0-linuxkit-arm64-docker29-uds-v1`](https://github.com/korallis/letmecook/blob/main/docs/evidence/linux-profile.md), a Docker-based
+synthetic experiment that does not prove native Linux, macOS, Windows or another VM.
 
 Path allowlists and diff validation detect scope breaches. They do not replace OS
 containment. Shell denylists are not a containment mechanism for arbitrary scripts.
