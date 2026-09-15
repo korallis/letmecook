@@ -17,6 +17,7 @@ mount configuration: SQLite still relies on honest OS/device sync semantics.
 
 ```sh
 mkdir -p .local
+npm --prefix web ci --ignore-scripts && npm --prefix web run build
 CGO_ENABLED=0 go build -trimpath -buildvcs=false -o .local/gafferd ./cmd/gafferd
 .local/gafferd
 ```
@@ -74,9 +75,11 @@ encoded paths and unknown routes reject. Methods other than GET (including HEAD
 and OPTIONS) return 405. Missing/foreign Host, foreign/null/duplicate Origin,
 forwarding headers and cross-site fetch metadata reject. Allowed Host is exactly
 `127.0.0.1:<actual-port>`; optional Origin is exactly `http://` plus that Host.
-No permissive CORS, OPTIONS preflight support, static assets or cross-origin UI
-server exception. #95 must preserve same-origin reads or explicitly reconcile its
-serving boundary; this slice adds no such bypass.
+No permissive CORS, OPTIONS preflight support or cross-origin UI server exception.
+#95 serves its embedded read-only shell from this same origin at `GET /` and
+hashed `GET /assets/<name>.(js|css)` under the same boundary checks; see
+[`web/README.md`](../../web/README.md). Build `web/dist` before the Go build or
+`/` answers `503 ui_unavailable`.
 
 ## Store correctness and limits
 

@@ -16,6 +16,7 @@ import (
 	"github.com/korallis/letmecook/internal/store"
 	p "github.com/korallis/letmecook/schemas/execution"
 	a "github.com/korallis/letmecook/schemas/readapi"
+	"github.com/korallis/letmecook/web"
 )
 
 // New binds Host/Origin validation to the actual already-open loopback listener.
@@ -69,7 +70,32 @@ func New(s *store.Store, addr net.Addr) (http.Handler, error) {
 			refuse(400, "invalid_request")
 			return
 		}
-		if r.URL.RawPath != "" || (r.URL.Path != "/api/v1/status" && r.URL.Path != "/api/v1/snapshot") {
+		if r.URL.RawPath != "" {
+			refuse(404, "not_found")
+			return
+		}
+		// Embedded read-only shell shares this origin, so browser reads need no
+		// CORS or proxy exception. Same GET-only boundary checks apply above.
+		if r.URL.Path == "/" || strings.HasPrefix(r.URL.Path, "/assets/") {
+			if r.URL.RawQuery != "" || r.URL.ForceQuery {
+				refuse(400, "invalid_query")
+				return
+			}
+			body, contentType, ok := web.Asset(r.URL.Path)
+			if !ok && r.URL.Path == "/" {
+				refuse(503, "ui_unavailable")
+				return
+			}
+			if !ok {
+				refuse(404, "not_found")
+				return
+			}
+			w.Header().Set("Content-Type", contentType)
+			w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+			w.Write(body)
+			return
+		}
+		if r.URL.Path != "/api/v1/status" && r.URL.Path != "/api/v1/snapshot" {
 			refuse(404, "not_found")
 			return
 		}

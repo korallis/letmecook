@@ -2,9 +2,9 @@ name: Provisional Go fixture foundation
 on:
   push:
     branches: [main]
-    paths: ['go.mod', 'go.sum', 'cmd/**', 'internal/**', 'schemas/**', 'tests/fixtures/protocol/**', 'tests/fixtures/readapi/**', 'experiments/inference-boundary/json.ts', 'experiments/inference-boundary/package*.json', '.github/workflows/go-foundation.yml']
+    paths: ['go.mod', 'go.sum', 'cmd/**', 'internal/**', 'schemas/**', 'web/**', 'tests/fixtures/protocol/**', 'tests/fixtures/readapi/**', 'experiments/inference-boundary/json.ts', 'experiments/inference-boundary/package*.json', '.github/workflows/go-foundation.yml']
   pull_request:
-    paths: ['go.mod', 'go.sum', 'cmd/**', 'internal/**', 'schemas/**', 'tests/fixtures/protocol/**', 'tests/fixtures/readapi/**', 'experiments/inference-boundary/json.ts', 'experiments/inference-boundary/package*.json', '.github/workflows/go-foundation.yml']
+    paths: ['go.mod', 'go.sum', 'cmd/**', 'internal/**', 'schemas/**', 'web/**', 'tests/fixtures/protocol/**', 'tests/fixtures/readapi/**', 'experiments/inference-boundary/json.ts', 'experiments/inference-boundary/package*.json', '.github/workflows/go-foundation.yml']
 permissions:
   contents: read
 jobs:
@@ -26,9 +26,13 @@ jobs:
           cache-dependency-path: experiments/inference-boundary/package-lock.json
       - run: go mod verify
       - run: npm --prefix experiments/inference-boundary ci --ignore-scripts
+      - name: Embedded shell build
+        run: |
+          npm --prefix web ci --ignore-scripts
+          npm --prefix web run build
       - name: Format and types
         run: |
-          test -z "$(gofmt -l cmd internal schemas tests/fixtures/protocol)"
+          test -z "$(gofmt -l cmd internal schemas web tests/fixtures/protocol)"
           experiments/inference-boundary/node_modules/.bin/tsc --noEmit --strict --target es2023 --module nodenext --allowImportingTsExtensions schemas/execution/protocol.ts schemas/readapi/types.ts tests/fixtures/protocol/check.ts tests/fixtures/readapi/check.ts --typeRoots experiments/inference-boundary/node_modules/@types
           go vet ./...
       - name: Reproducible CGO-free build

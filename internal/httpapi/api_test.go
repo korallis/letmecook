@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -126,6 +127,20 @@ func TestRealStoreAPI(t *testing.T) {
 		{"GET", "/api/v1/grant", "", "", false, 404},
 		{"GET", "/api/v1/accept", "", "", false, 404},
 		{"GET", "/api/v1/publish", "", "", false, 404},
+		{"GET", "/", "evil.example", "", false, 403},
+		{"GET", "/", "", "https://evil.example", false, 403},
+		{"GET", "/?import=/private/state", "", "", false, 400},
+		{"GET", "/?", "", "", false, 400},
+		{"POST", "/", "", "", true, 405},
+		{"GET", "/index.html", "", "", false, 404},
+		{"GET", "/assets/", "", "", false, 404},
+		{"GET", "/assets/../api/v1/status", "", "", false, 404},
+		{"GET", "/assets/%2e%2e/index.html", "", "", false, 404},
+		{"GET", "/assets/missing.js", "", "", false, 404},
+		{"GET", "/assets/missing.js?enable=actions", "", "", false, 400},
+		{"GET", "/dist/index.html", "", "", false, 404},
+		{"GET", "/web/dist/index.html", "", "", false, 404},
+		{"GET", "/ui/enable", "", "", false, 404},
 	}
 	for _, c := range cases {
 		t.Run(c.method+c.path+c.origin+c.host, func(t *testing.T) {
@@ -178,6 +193,50 @@ func TestRealStoreAPI(t *testing.T) {
 	defer res.Body.Close()
 	if res.StatusCode != 503 {
 		t.Fatal("unavailable store reported healthy")
+	}
+}
+
+// The embedded shell is served from the same loopback origin under the same
+// GET-only boundary; every asset is a hashed build output or refused.
+func TestEmbeddedShell(t *testing.T) {
+	_, ts := server(t)
+	client := ts.Client()
+	res, err := client.Get(ts.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	if res.StatusCode == 503 {
+		if !strings.Contains(string(body), `"error":"ui_unavailable"`) || res.Header.Get("Content-Type") != "application/json" {
+			t.Fatalf("unbuilt shell response %d %s", res.StatusCode, body)
+		}
+		t.Skip("web/dist not built; run npm --prefix web run build for the served-shell assertions")
+	}
+	if res.StatusCode != 200 || res.Header.Get("Content-Type") != "text/html; charset=utf-8" || !strings.HasPrefix(string(body), "<!doctype html>") || !strings.Contains(res.Header.Get("Content-Security-Policy"), "script-src 'self'") || res.Header.Get("Cache-Control") != "no-store" || res.Header.Get("Access-Control-Allow-Origin") != "" {
+		t.Fatalf("shell %d %v %.80s", res.StatusCode, res.Header, body)
+	}
+	for _, m := range regexp.MustCompile(`(?:src|href)="(/assets/[^"]+)"`).FindAllStringSubmatch(string(body), -1) {
+		res, err := client.Get(ts.URL + m[1])
+		if err != nil {
+			t.Fatal(err)
+		}
+		asset, _ := io.ReadAll(res.Body)
+		res.Body.Close()
+		want := "text/javascript; charset=utf-8"
+		if strings.HasSuffix(m[1], ".css") {
+			want = "text/css; charset=utf-8"
+		}
+		if res.StatusCode != 200 || res.Header.Get("Content-Type") != want || len(asset) == 0 || res.Header.Get("X-Content-Type-Options") != "nosniff" {
+			t.Fatalf("asset %s %d %v", m[1], res.StatusCode, res.Header)
+		}
+		if strings.HasSuffix(m[1], ".js") {
+			for _, forbidden := range []string{"EventSource", "serviceWorker", "WebSocket", "localStorage", "sessionStorage", "indexedDB", "document.cookie", "method:\"POST\"", "/api/v1/enroll", "/api/v1/grant", "/api/v1/accept"} {
+				if strings.Contains(string(asset), forbidden) {
+					t.Fatalf("shell bundle contains %q", forbidden)
+				}
+			}
+		}
 	}
 }
 

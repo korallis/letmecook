@@ -2,9 +2,10 @@
 
 Build with GPT-6 Astra. The product's working name is Gaffer. Most reviewed design
 describes intended behaviour, not existing APIs. The reversible #93 protocol and
-#94 fixture-only daemon remain provisional; see `schemas/execution/README.md` for
-reconciliation and `cmd/gafferd/README.md` for startup, read API and checks.
-Neither accepts #9/#10 nor supplies execution authority.
+#94 fixture-only daemon and #95 embedded shell stay provisional; see
+`schemas/execution/README.md` for reconciliation, `cmd/gafferd/README.md` for
+startup, read API and checks, and `web/README.md` for the shell build that must
+precede the Go build. None accepts #9/#10 or supplies execution authority.
 
 ## Issue workflow
 
