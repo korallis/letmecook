@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -49,7 +50,11 @@ func next(t *testing.T, s *Store, to p.AttemptState) p.Message {
 	t.Helper()
 	task := snapshot(t, s).Tasks[0]
 	revision := task.Attempt.Revision
-	return p.Message{Version: p.Version, MessageID: newID(), Kind: "transition", Identity: task.Attempt.Identity, ExpectedRevision: &revision, From: task.Attempt.State, To: to}
+	version := p.Version
+	if !s.fixture {
+		version = p.FencedVersion
+	}
+	return p.Message{Version: version, MessageID: newID(), Kind: "transition", Identity: task.Attempt.Identity, ExpectedRevision: &revision, From: task.Attempt.State, To: to}
 }
 func sqlExec(t *testing.T, s *Store, query string) {
 	t.Helper()
@@ -368,11 +373,20 @@ func TestOwnedStoreProcess(t *testing.T) {
 	if mode == "" {
 		return
 	}
-	s, err := open(ctx, os.Getenv("GAFFER_OWNED_TEST_DIR"))
+	var s *Store
+	var err error
+	if artifacts := os.Getenv("GAFFER_OWNED_TEST_ARTIFACTS"); artifacts != "" {
+		s, err = Open(ctx, os.Getenv("GAFFER_OWNED_TEST_DIR"), artifacts)
+	} else {
+		s, err = open(ctx, os.Getenv("GAFFER_OWNED_TEST_DIR"))
+	}
 	if mode == "compete" {
 		if err == nil {
 			s.Close()
 			os.Exit(2)
+		}
+		if !errors.Is(err, syscall.EWOULDBLOCK) {
+			t.Fatal("expected OS ownership conflict", err)
 		}
 		fmt.Println("locked")
 		return

@@ -25,7 +25,7 @@ export async function startDaemon(): Promise<{ base: string; stop: () => Promise
   };
   try {
     execFileSync('go', ['build', '-trimpath', '-buildvcs=false', '-o', binary, './cmd/gafferd'], { cwd: root, stdio: 'inherit', env: { ...process.env, CGO_ENABLED: '0' } });
-    daemon = spawn(binary, [], { cwd: dir, stdio: ['ignore', 'pipe', 'inherit'] });
+    daemon = spawn(binary, ['--fixture'], { cwd: dir, stdio: ['ignore', 'pipe', 'inherit'] });
     closed = new Promise<void>(resolve => daemon!.once('close', () => resolve()));
     const base = await new Promise<string>((resolve, reject) => {
       let output = '';

@@ -1,4 +1,4 @@
-// Package store owns disposable public-fixture SQLite state, never execution authority.
+// Package store owns local SQLite workflow metadata, never execution authority.
 package store
 
 import (
@@ -20,11 +20,12 @@ import (
 )
 
 type Store struct {
-	mu   sync.Mutex
-	db   *sql.DB
-	lock *os.File
-	dir  string
-	meta a.Metadata
+	mu      sync.Mutex
+	db      *sql.DB
+	lock    *os.File
+	dir     string
+	meta    a.Metadata
+	fixture bool
 }
 
 func newID() string {
@@ -66,13 +67,37 @@ func New(ctx context.Context) (*Store, error) {
 	return s, nil
 }
 
-// open is private: only New and same-package disposable recovery tests call it.
-func open(ctx context.Context, dir string) (_ *Store, err error) {
+// open retains historical fixture stores only for tests and explicit --fixture mode.
+func open(ctx context.Context, dir string) (*Store, error) {
+	return openStore(ctx, dir, true)
+}
+
+// Open creates or reopens persistent, non-executing metadata. Paths are explicit;
+// no fixture import, restore, runner, grant or artifact custody is provided.
+func Open(ctx context.Context, dir, artifactsDir string) (*Store, error) {
+	var err error
+	if dir, err = prepareDirectory(dir); err != nil {
+		return nil, err
+	}
+	if artifactsDir, err = prepareDirectory(artifactsDir); err != nil {
+		return nil, err
+	}
+	artifacts, err := openDirectory(artifactsDir)
+	if err != nil {
+		return nil, err
+	}
+	if err = errors.Join(artifacts.Sync(), artifacts.Close()); err != nil {
+		return nil, err
+	}
+	return openStore(ctx, dir, false)
+}
+
+func openStore(ctx context.Context, dir string, fixture bool) (_ *Store, err error) {
 	lock, err := lockDirectory(dir)
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{lock: lock, dir: dir}
+	s := &Store{lock: lock, dir: dir, fixture: fixture}
 	defer func() {
 		if err != nil {
 			err = errors.Join(err, s.Close())
@@ -83,8 +108,8 @@ func open(ctx context.Context, dir string) (_ *Store, err error) {
 		if e != nil && !os.IsNotExist(e) {
 			return nil, e
 		}
-		if e == nil && !st.Mode().IsRegular() {
-			return nil, fmt.Errorf("non-regular store file")
+		if e == nil && (!st.Mode().IsRegular() || st.Mode().Perm() != 0600 || !privateFile(st)) {
+			return nil, fmt.Errorf("store files must be private, owned, regular and singly linked")
 		}
 	}
 	path := filepath.Join(dir, "state.db")
@@ -127,13 +152,16 @@ func open(ctx context.Context, dir string) (_ *Store, err error) {
 	if err = s.migrate(ctx); err != nil {
 		return nil, err
 	}
+	if err = s.lock.Sync(); err != nil {
+		return nil, err
+	}
 	return s, nil
 }
 
 const schema = `
 CREATE TABLE metadata (singleton INTEGER PRIMARY KEY CHECK(singleton=1), generation TEXT NOT NULL UNIQUE, daemon_boot TEXT NOT NULL UNIQUE) STRICT;
 CREATE TABLE tasks (id TEXT PRIMARY KEY, state TEXT NOT NULL CHECK(state IN ('ready','reconciling','verifying','awaiting_review'))) STRICT;
--- ponytail: one fixture attempt per task; replacement/epoch admission requires measured reconciliation.
+-- ponytail: one attempt per task; replacement/epoch admission belongs to #15 after authority/reconciliation.
 CREATE TABLE attempts (
  id TEXT PRIMARY KEY, task_id TEXT NOT NULL UNIQUE REFERENCES tasks(id),
  epoch INTEGER NOT NULL CHECK(epoch BETWEEN 1 AND 9007199254740991),
@@ -160,9 +188,16 @@ func (s *Store) migrate(ctx context.Context) error {
 		return err
 	}
 	defer tx.Rollback()
-	var version int
+	var version, application int
+	if err = tx.QueryRowContext(ctx, "PRAGMA application_id").Scan(&application); err != nil {
+		return err
+	}
 	if err = tx.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil {
 		return err
+	}
+	const applicationID = 0x47414646 // GAFF: separates persistent state from #94 fixtures.
+	if (s.fixture && application != 0) || (!s.fixture && (application != applicationID && (application != 0 || version != 0))) {
+		return fmt.Errorf("incompatible store identity; fixture import is not supported")
 	}
 	if version == 0 {
 		var tables int
@@ -178,21 +213,49 @@ func (s *Store) migrate(ctx context.Context) error {
 		if _, err = tx.ExecContext(ctx, "INSERT INTO metadata VALUES (1,?,?)", newID(), newID()); err != nil {
 			return err
 		}
-	} else if version != 1 {
+		if !s.fixture {
+			if _, err = tx.ExecContext(ctx, fmt.Sprintf("PRAGMA application_id=%d", applicationID)); err != nil {
+				return err
+			}
+		}
+		version = 1
+	} else if version != 1 && (s.fixture || version != 2) {
 		return fmt.Errorf("unsupported schema version")
+	}
+	mode := "fixture-only"
+	if !s.fixture {
+		mode = "store-only"
+		if version == 1 {
+			if _, err = tx.ExecContext(ctx, `ALTER TABLE metadata ADD COLUMN artifacts_dir TEXT NOT NULL DEFAULT '';
+CREATE TRIGGER events_no_update BEFORE UPDATE ON events BEGIN SELECT RAISE(ABORT,'events are append-only'); END;
+CREATE TRIGGER events_no_delete BEFORE DELETE ON events BEGIN SELECT RAISE(ABORT,'events are append-only'); END;
+PRAGMA user_version=2;`); err != nil {
+				return err
+			}
+			version = 2
+		}
 	}
 	boot := newID()
 	if _, err = tx.ExecContext(ctx, "UPDATE metadata SET daemon_boot=? WHERE singleton=1", boot); err != nil {
 		return err
 	}
-	s.meta = a.Metadata{Version: a.Version, Mode: "fixture-only", MissingCapabilities: a.MissingCapabilities(), DaemonBoot: boot, SchemaVersion: 1}
-	if err = tx.QueryRowContext(ctx, "SELECT generation FROM metadata WHERE singleton=1").Scan(&s.meta.Generation); err != nil {
+	meta := a.Metadata{Version: a.Version, Mode: mode, MissingCapabilities: a.MissingCapabilities(), DaemonBoot: boot, SchemaVersion: version}
+	if err = tx.QueryRowContext(ctx, "SELECT generation FROM metadata WHERE singleton=1").Scan(&meta.Generation); err != nil {
 		return err
 	}
-	if err = s.meta.Validate(); err != nil {
+	if err = meta.Validate(); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if !s.fixture {
+		if err = recoverAttempts(ctx, tx, meta.Generation); err != nil {
+			return err
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	s.meta = meta
+	return nil
 }
 
 func (s *Store) seed(ctx context.Context) error {
@@ -232,11 +295,17 @@ func record(ctx context.Context, tx *sql.Tx, m p.Message, revision int64) error 
 func (s *Store) assign(ctx context.Context, m p.Message) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.db == nil {
+		return fmt.Errorf("store closed")
+	}
 	if r := p.CheckCurrent(m, m.Identity); r != p.OK {
 		return r
 	}
 	if m.Kind != "assign" {
 		return p.Malformed
+	}
+	if !s.fixture && m.Version != p.FencedVersion {
+		return p.UnknownVersion
 	}
 	if m.Identity.Generation != s.meta.Generation {
 		return p.StaleGeneration
@@ -294,11 +363,23 @@ func (s *Store) assign(ctx context.Context, m p.Message) error {
 func (s *Store) transition(ctx context.Context, m p.Message) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.db == nil {
+		return fmt.Errorf("store closed")
+	}
 	if r := p.CheckCurrent(m, m.Identity); r != p.OK {
 		return r
 	}
 	if m.Kind != "transition" {
 		return p.Malformed
+	}
+	if !s.fixture {
+		if m.Version != p.FencedVersion {
+			return p.UnknownVersion
+		}
+		// Without authority, process or custody owners, only fail-closed edges exist.
+		if m.To != p.Unknown && m.To != p.Stopping {
+			return p.ReconciliationRequired
+		}
 	}
 	if m.Identity.Generation != s.meta.Generation {
 		return p.StaleGeneration
@@ -399,7 +480,10 @@ func (s *Store) Snapshot(ctx context.Context, taskID string, limit int) (a.Snaps
 	for rows.Next() {
 		var t a.Task
 		t.Attempt.Identity.Generation = s.meta.Generation
-		t.Attempt.Observation = p.Observation{Desired: "stop", ConfirmedProcess: "not_started", RemoteWork: "unknown", Quarantined: true}
+		t.Attempt.Observation = p.Observation{Desired: "stop", ConfirmedProcess: "unknown", RemoteWork: "unknown", Quarantined: true}
+		if s.fixture {
+			t.Attempt.Observation.ConfirmedProcess = "not_started"
+		}
 		if err = rows.Scan(&t.TaskID, &t.State, &t.Attempt.Identity.AttemptID, &t.Attempt.Identity.Epoch, &t.Attempt.State, &t.Attempt.Revision); err != nil {
 			rows.Close()
 			return v, err
@@ -461,6 +545,9 @@ func (s *Store) Close() error {
 func (s *Store) Dispose() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if !s.fixture {
+		return fmt.Errorf("persistent state cannot be disposed")
+	}
 	if s.lock == nil {
 		var err error
 		s.lock, err = lockDirectory(s.dir)

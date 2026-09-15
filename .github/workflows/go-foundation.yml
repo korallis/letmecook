@@ -1,4 +1,4 @@
-name: Provisional Go fixture foundation
+name: Provisional Go workflow store
 on:
   push:
     branches: [main]
@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 jobs:
-  fixture-foundation:
+  workflow-store:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -40,7 +40,8 @@ jobs:
           CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$RUNNER_TEMP/gafferd-a" ./cmd/gafferd
           CGO_ENABLED=0 go build -trimpath -buildvcs=false -o "$RUNNER_TEMP/gafferd-b" ./cmd/gafferd
           cmp "$RUNNER_TEMP/gafferd-a" "$RUNNER_TEMP/gafferd-b"
-      - run: go test -race -count=1 ./...
+      - name: Real store and daemon crash, migration and ownership tests
+        run: go test -race -count=1 ./...
       - run: CGO_ENABLED=0 go test -count=1 ./...
       - run: node tests/fixtures/protocol/check.ts
       - run: node tests/fixtures/readapi/check.ts

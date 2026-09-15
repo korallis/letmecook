@@ -6,8 +6,8 @@ export const MAX_ITEMS = 50;
 export const MAX_BYTES = 1048576;
 export const MISSING_CAPABILITIES = ['execution', 'inference', 'artifact_custody', 'result_ack', 'acceptance', 'publication', 'merge', 'state_import', 'sessions'] as const;
 export type Metadata = {
-  version: typeof VERSION; mode: 'fixture-only'; missing_capabilities: [...typeof MISSING_CAPABILITIES];
-  generation: string; daemon_boot: string; schema_version: 1;
+  version: typeof VERSION; mode: 'fixture-only' | 'store-only'; missing_capabilities: [...typeof MISSING_CAPABILITIES];
+  generation: string; daemon_boot: string; schema_version: 1 | 2;
 };
 export type Attempt = { identity: Identity; state: AttemptState; revision: number; observation: Observation };
 export type Task = { task_id: string; state: TaskState; attempt: Attempt };
@@ -33,7 +33,7 @@ export function decode(bytes: Uint8Array, kind: 'status' | 'snapshot'): Status |
   }
   const v = parseJSON(text); object(v);
   fields(v, [...metadata, ...(kind === 'status' ? ['task_count', 'event_count'] : ['tasks', 'events'])]);
-  require(v.version === VERSION && v.mode === 'fixture-only' && v.schema_version === 1);
+  require(v.version === VERSION && (v.mode === 'fixture-only' && v.schema_version === 1 || v.mode === 'store-only' && v.schema_version === 2));
   require(Array.isArray(v.missing_capabilities) && JSON.stringify(v.missing_capabilities) === JSON.stringify(MISSING_CAPABILITIES));
   id(v.generation); id(v.daemon_boot);
   if (kind === 'status') { integer(v.task_count, 0); integer(v.event_count, 0); return v as Status; }
@@ -49,7 +49,7 @@ export function decode(bytes: Uint8Array, kind: 'status' | 'snapshot'): Status |
     id(a.identity.attempt_id); integer(a.identity.epoch); integer(a.revision);
     require(['assigned', 'starting', 'running', 'result_pending', 'stopping', 'unknown', 'succeeded', 'failed', 'cancelled', 'expired'].includes(a.state));
     fields(a.observation, ['desired', 'confirmed_process', 'remote_work', 'quarantined']);
-    require(a.observation.desired === 'stop' && a.observation.confirmed_process === 'not_started' && a.observation.remote_work === 'unknown' && a.observation.quarantined === true);
+    require(a.observation.desired === 'stop' && a.observation.confirmed_process === (v.mode === 'fixture-only' ? 'not_started' : 'unknown') && a.observation.remote_work === 'unknown' && a.observation.quarantined === true);
   }
   let previous = 0;
   for (const e of v.events) {
@@ -57,6 +57,7 @@ export function decode(bytes: Uint8Array, kind: 'status' | 'snapshot'): Status |
     require(e.sequence > previous); previous = e.sequence;
     const m = decodeMessage(new TextEncoder().encode(JSON.stringify(e.message)));
     require(m.identity.generation === v.generation && (m.kind === 'assign' || m.kind === 'transition'));
+    require(v.mode === 'fixture-only' || m.version === 'execution-provisional-v2');
   }
   return v as Snapshot;
 }

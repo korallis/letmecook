@@ -3,7 +3,7 @@
 React / TypeScript / StyleX page compiled by Vite with the official
 `@stylexjs/unplugin` integration and embedded into `gafferd` by `web/embed.go`.
 [`package.json`](package.json) owns the direct dependency pins.
-It renders one bounded snapshot from the #94 fixture-only daemon on load and
+It renders one bounded snapshot from the daemon's fixture mode on load and
 each refresh; the [read contract](../cmd/gafferd/README.md#read-contract-for-95)
 owns the snapshot bounds. Not M1/M2 acceptance, not the #26 shell,
 not authentication, not a supported UI runtime. The
@@ -19,13 +19,15 @@ npm --prefix web ci --ignore-scripts
 npm --prefix web run build          # web/dist (deterministic; ignored by git)
 ```
 
-Then follow the [daemon build and startup](../cmd/gafferd/README.md#bounded-local-startup).
+Then follow the [daemon build and startup](../cmd/gafferd/README.md#bounded-local-startup)
+with `--fixture`. Persistent `store-only` installations expose read API only, not
+this fixture shell; no UI promotion follows from persistent storage.
 Open its printed origin at `/`, replacing `/api/v1/status` in the printed URL.
 
 `go:embed all:dist` includes whatever is in `web/dist` at Go build time. Build the
 shell first; each build removes previous output and restores the tracked
-`.gitkeep` placeholder. A Go binary built without the shell answers `GET /` with
-the daemon's JSON `ui_unavailable` refusal (503) instead of serving any fallback.
+`.gitkeep` placeholder. In fixture mode, a Go binary built without the shell answers
+`GET /` with the daemon's JSON `ui_unavailable` refusal (503) instead of serving any fallback.
 There is no dev-server or proxy path; the shell is tested and served from the
 daemon's own loopback origin.
 

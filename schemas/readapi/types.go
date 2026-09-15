@@ -1,4 +1,4 @@
-// Package readapi defines the provisional, fixture-only read model for #94/#95.
+// Package readapi defines bounded provisional store/fixture read models.
 package readapi
 
 import (
@@ -52,7 +52,7 @@ type Status struct {
 }
 
 func (m Metadata) Validate() error {
-	if m.Version != Version || m.Mode != "fixture-only" || m.SchemaVersion != 1 || !p.ValidID(m.Generation) || !p.ValidID(m.DaemonBoot) || !slices.Equal(m.MissingCapabilities, MissingCapabilities()) {
+	if m.Version != Version || !(m.Mode == "fixture-only" && m.SchemaVersion == 1 || m.Mode == "store-only" && m.SchemaVersion == 2) || !p.ValidID(m.Generation) || !p.ValidID(m.DaemonBoot) || !slices.Equal(m.MissingCapabilities, MissingCapabilities()) {
 		return fmt.Errorf("invalid read metadata")
 	}
 	return nil
@@ -83,7 +83,11 @@ func (s Snapshot) Validate() error {
 		if !slices.Contains([]p.TaskState{p.TaskReady, p.TaskReconciling, p.TaskVerifying, p.TaskAwaitingReview}, t.State) || !slices.Contains([]p.AttemptState{p.Assigned, p.Starting, p.Running, p.Stopping, p.ResultPending, p.Succeeded, p.Failed, p.Cancelled, p.Expired, p.Unknown}, a.State) {
 			return fmt.Errorf("invalid fixture state")
 		}
-		if a.Observation != (p.Observation{Desired: "stop", ConfirmedProcess: "not_started", RemoteWork: "unknown", Quarantined: true}) {
+		process := "unknown"
+		if s.Mode == "fixture-only" {
+			process = "not_started"
+		}
+		if a.Observation != (p.Observation{Desired: "stop", ConfirmedProcess: process, RemoteWork: "unknown", Quarantined: true}) {
 			return fmt.Errorf("invalid fixture observation")
 		}
 	}
@@ -91,6 +95,9 @@ func (s Snapshot) Validate() error {
 	for _, e := range s.Events {
 		if e.Sequence <= previous || e.Sequence > p.MaxInteger || e.Revision < 1 || e.Revision > p.MaxInteger || e.Message.Identity.Generation != s.Generation || (e.Message.Kind != "assign" && e.Message.Kind != "transition") || p.CheckCurrent(e.Message, e.Message.Identity) != p.OK {
 			return fmt.Errorf("invalid event")
+		}
+		if s.Mode == "store-only" && e.Message.Version != p.FencedVersion {
+			return fmt.Errorf("historical message in persistent store")
 		}
 		previous = e.Sequence
 	}

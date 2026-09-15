@@ -1,4 +1,4 @@
-// Package httpapi serves fixture reads and the embedded read-only shell.
+// Package httpapi serves local store reads; only fixtures expose the embedded shell.
 // No authentication or execution surface.
 package httpapi
 
@@ -26,6 +26,10 @@ func New(s *store.Store, addr net.Addr) (http.Handler, error) {
 	if !ok || !tcp.IP.Equal(net.IPv4(127, 0, 0, 1)) || tcp.Port < 1 || tcp.Port > 65535 {
 		return nil, errors.New("loopback listener required")
 	}
+	metadata, err := s.Status(context.Background())
+	if err != nil {
+		return nil, err
+	}
 	host := tcp.String()
 	slots := make(chan struct{}, 16)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -41,7 +45,7 @@ func New(s *store.Store, addr net.Addr) (http.Handler, error) {
 				Error               string   `json:"error"`
 				Mode                string   `json:"mode"`
 				MissingCapabilities []string `json:"missing_capabilities"`
-			}{a.Version, code, "fixture-only", a.MissingCapabilities()})
+			}{a.Version, code, metadata.Mode, a.MissingCapabilities()})
 		}
 		peer, _, err := net.SplitHostPort(r.RemoteAddr)
 		if err != nil || !net.ParseIP(peer).IsLoopback() || r.Host != host || r.URL.IsAbs() || r.URL.Host != "" {
@@ -77,7 +81,7 @@ func New(s *store.Store, addr net.Addr) (http.Handler, error) {
 		}
 		// Embedded read-only shell shares this origin, so browser reads need no
 		// CORS or proxy exception. Same GET-only boundary checks apply above.
-		if r.URL.Path == "/" || strings.HasPrefix(r.URL.Path, "/assets/") {
+		if metadata.Mode == "fixture-only" && (r.URL.Path == "/" || strings.HasPrefix(r.URL.Path, "/assets/")) {
 			if r.URL.RawQuery != "" || r.URL.ForceQuery {
 				refuse(400, "invalid_query")
 				return

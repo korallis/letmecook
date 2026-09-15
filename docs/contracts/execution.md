@@ -9,7 +9,7 @@ original downstream acceptance. It does not select a foundation or supported run
 The merged [#93 types](../../schemas/execution/README.md) and
 [shared Go/TypeScript fixtures](../../tests/fixtures/protocol/README.md) are the
 starting contract, not a competing protocol. `execution-provisional-v1` remains
-readable for the fixture-only daemon. `execution-provisional-v2` adds explicit
+readable in daemon fixture mode. `execution-provisional-v2` adds explicit
 assignment/stop/refusal messages using the same identity, validation and checks.
 The six existing message payloads retain their meanings. No runner, transport,
 store, artifact custody, UI or publication implementation is supplied here.
@@ -273,7 +273,8 @@ lookup. Never mark committed references durable because an event row exists.
 `CheckAck` requires the exact result/ack/receipt identity and manifest,
 `artifacts = verified_durable`, `metadata = manifest_and_result_committed` and
 matching receipt ID. Those flags are trusted custody-owner claims, not proof from
-untrusted JSON or worker declarations. The fixture-only daemon cannot issue them.
+untrusted JSON or worker declarations. See the
+[provisional daemon's capability limits](../../cmd/gafferd/README.md#store-correctness-and-limits).
 Keep runner recovery state until durable ack **and** separate retention policy
 allow deletion. Unacknowledged local data can be lost on disk destruction; report
 that loss. Native session resume requires intact compatible session/environment,
