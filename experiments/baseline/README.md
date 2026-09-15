@@ -81,8 +81,19 @@ tool result, native events, physical sends, durable receipt debit fields and sco
 spending. Tool execution timestamps bind continuation order; CLI event emission
 may arrive after the next request begins. A local acknowledgement binds the frozen
 registration, packet, candidate, transcript and checks after retained-byte readback.
-The original repository volume is destroyed before the candidate is reconstructed
-again from the evidence store. Worker and gateway termination are checked.
+`validateRetainedRun` resolves the complete required record graph and verifies its
+registration, invocation, receipt, snapshot, check and dataset joins. Offline replay
+uses the same read-only validator; it never repairs missing evidence. Only the three
+declared synthetic approval/eligibility/effort placeholders remain unresolved.
+
+SIGINT/SIGTERM fence scope admission, worker dispatch and success acknowledgement,
+including after awaited control, persistence and check operations. Bounded owned
+container cleanup still runs. Before acknowledgement, the evidence directory and
+every ancestor through the filesystem root are synced. A failed ancestry sync
+retains the source volume and evidence; these tests establish ordering and error
+handling, not power-loss survival. Source removal follows verified worker/gateway
+termination, durable export and another complete record readback. Offline replay
+reconstructs both retained historical candidates after their source removal.
 
 The output directory contains content-addressed evidence, a frozen registration
 commit, immutable run journals and the collector's private/public JSON and CSV.

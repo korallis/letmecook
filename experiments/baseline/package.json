@@ -5,7 +5,7 @@
   "engines": { "node": ">=24" },
   "scripts": {
     "check": "tsc --noEmit",
-    "test": "node --test records.test.ts artifacts/artifacts.test.ts native/transcript.test.ts native/input.test.ts native/admission.test.ts capture.test.ts",
+    "test": "node --test records.test.ts artifacts/artifacts.test.ts native/transcript.test.ts native/input.test.ts native/admission.test.ts capture.test.ts run-case.test.ts",
     "test:checks": "node --test checks/checks.test.ts",
     "case01": "node run-case.ts",
     "collect": "node collect.ts",

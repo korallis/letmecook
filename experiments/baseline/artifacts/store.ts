@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { constants, type Stats } from 'node:fs';
-import { open, lstat, link, unlink } from 'node:fs/promises';
+import { open, lstat, link, unlink, realpath } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
-import { isAbsolute, join, resolve } from 'node:path';
+import { isAbsolute, join, resolve, dirname } from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
 import { canonical, parseJSON } from '../../inference-boundary/json.ts';
 import { CASE01_LIMITS, type EvidenceRef, type EvidenceStore } from '../execution-contract.ts';
@@ -55,6 +55,18 @@ const privateDir = (s: Stats) => assert(s.isDirectory() && s.uid === process.get
 const privateFile = (s: Stats) => assert(s.isFile() && s.uid === process.getuid?.() && (s.mode & 0o7777) === 0o600
   && s.nlink === 1 && s.size <= CASE01_LIMITS.artifactBytes, 'private_evidence_file');
 const same = (a: Stats, b: Stats) => assert(a.dev === b.dev && a.ino === b.ino, 'evidence_identity_changed');
+// Sync each name's parent through the filesystem root, including caller-created
+// ancestors. File/child-directory sync alone does not persist those names.
+export async function syncDirectoryAncestry(directory: string) {
+  const original = await lstat(directory);
+  for (let path = await realpath(directory);; path = dirname(path)) {
+    const fd = await open(path, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    try { const identity = await fd.stat(); await fd.sync(); same(identity, await lstat(path)); }
+    finally { await fd.close(); }
+    if (path === dirname(path)) break;
+  }
+  same(original, await lstat(directory));
+}
 async function openDirectory(store: EvidenceStore) {
   exact(store, 'directory');
   assert(typeof store.directory === 'string' && isAbsolute(store.directory) && resolve(store.directory) === store.directory, 'evidence_directory_path');

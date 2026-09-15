@@ -21,6 +21,8 @@ import { stageBaselineWorker } from './native/staging.ts';
 import { validateWorkerInput, wirePrompt, type WorkerInput } from './native/input.ts';
 import { verifyBaselineTranscript } from './native/transcript.ts';
 import { writeExport } from './collect.ts';
+import { syncDirectoryAncestry } from './artifacts/store.ts';
+import { validateRetainedRun } from './retained.ts';
 import { fixture } from './fixture.ts';
 import type { CheckEvidence, EvidenceRef } from './execution-contract.ts';
 
@@ -29,40 +31,50 @@ const image = 'gaffer-router-extension-deps:0.5.75-locked';
 const hash = (bytes: Uint8Array | string) => createHash('sha256').update(bytes).digest('hex');
 
 export async function runCase(directory: string, scenario: 'two-requests' | 'three-requests') {
+  const abort = new AbortController(), onStop = () => abort.abort();
+  for (const signal of ['SIGTERM','SIGINT'] as const) process.on(signal, onStop);
+  try { return await runActiveCase(directory, scenario, abort.signal); }
+  finally { for (const signal of ['SIGTERM','SIGINT'] as const) process.off(signal, onStop); }
+}
+
+async function runActiveCase(directory: string, scenario: 'two-requests' | 'three-requests', signal: AbortSignal) {
+  const active = () => signal.throwIfAborted();
   assert(['two-requests','three-requests'].includes(scenario));
   const source = process.env.GAFFER_ROUTER_SOURCE, binary = process.env.GAFFER_OPENCODE_BINARY, opencodeSource = process.env.GAFFER_OPENCODE_SOURCE;
   assert(source?.startsWith('/') && binary?.startsWith('/') && opencodeSource?.startsWith('/'), 'absolute_public_sources_and_binary_required');
   const context = process.env.GAFFER_DOCKER_CONTEXT ?? (await execute('docker',['context','show'])).stdout.trim(), output = resolve(directory);
-  await mkdir(output, { mode: 0o700 }); // Exclusive run directory; never resumes an unknown run.
+  active(); await mkdir(output, { mode: 0o700 }); // Exclusive run directory; never resumes an unknown run.
   const store = { directory: join(output, 'evidence') }; await mkdir(store.directory, { mode: 0o700 });
   const inputs = join(output, 'inputs'); await mkdir(inputs, { mode: 0o755 });
   const run = 'baseline-' + randomBytes(6).toString('hex'), containers = new Set<string>(), volumes: string[] = [];
-  const abort = new AbortController(), report: any = { schema: 1, run, scenario, live: false, realProviderCalled: false, issueComplete: false, result: 'failed', cleanup: false };
-  const onStop = () => abort.abort(); for (const signal of ['SIGTERM','SIGINT'] as const) process.on(signal, onStop);
-  async function docker(args: string[], timeout = 15000) {
+  const report: any = { schema: 1, run, scenario, live: false, realProviderCalled: false, issueComplete: false, result: 'failed', cleanup: false };
+  async function docker(args: string[], timeout = 15000, cleanup = false) {
+    if (!cleanup) active();
     const result = await execute('docker', ['--context', context, ...args], { timeout, maxBuffer: 2 * 1048576 });
+    if (!cleanup) active();
     return (result.stdout + (args[0] === 'logs' ? result.stderr : '')).trim();
   }
-  async function owned(name: string) { const state = JSON.parse(await docker(['inspect', name]))[0]; assert.equal(state.Config.Labels[LABEL], run); return state; }
+  async function owned(name: string, cleanup = false) { const state = JSON.parse(await docker(['inspect', name], 15000, cleanup))[0]; assert.equal(state.Config.Labels[LABEL], run); return state; }
   async function remove(name: string) {
-    const state = await owned(name); if (state.State.Paused) await docker(['unpause', name]);
-    if (state.State.Running) await docker(['stop','--timeout','1',name]);
-    assert.equal((await owned(name)).State.Pid, 0); await docker(['rm',name]); containers.delete(name);
+    const state = await owned(name, true); if (state.State.Paused) await docker(['unpause', name], 15000, true);
+    if (state.State.Running) await docker(['stop','--timeout','1',name], 15000, true);
+    assert.equal((await owned(name, true)).State.Pid, 0); await docker(['rm',name], 15000, true); containers.delete(name);
   }
   let controlVolume = '', gateway = '', worker = '', scope: any, observation: any, registration: any, registrationRef: EvidenceRef, registrationCommit = '', candidate: EvidenceRef | null = null;
   let child: ReturnType<typeof spawn> | undefined, childDone: Promise<unknown> | undefined;
   async function control(message: unknown) {
+    active();
     const name = run + '-ctl-' + randomBytes(3).toString('hex'); containers.add(name);
     const code = "const http=require('node:http');let body='';process.stdin.on('data',c=>body+=c);process.stdin.on('end',()=>{const q=http.request({socketPath:'/control/gateway.sock',path:'/control',method:'POST'},r=>{let text='';r.on('data',c=>text+=c);r.on('end',()=>console.log(JSON.stringify({status:r.statusCode,body:JSON.parse(text)})))});q.setTimeout(5000,()=>q.destroy());q.on('error',()=>process.exit(1));q.end(body)})";
     await docker([...commonArgs(name,run,false),'--interactive','--mount',`type=volume,source=${controlVolume},target=/control,readonly,volume-nocopy`,image,'node','-e',code]);
     try {
-      const value = JSON.parse(await inputProcess('docker',['--context',context,'start','--attach','--interactive',name],JSON.stringify(message),new AbortController().signal,10000));
-      assert.equal(value.status,200,'baseline_control_refused'); return value.body;
+      active(); const value = JSON.parse(await inputProcess('docker',['--context',context,'start','--attach','--interactive',name],JSON.stringify(message),signal,10000));
+      active(); assert.equal(value.status,200,'baseline_control_refused'); return value.body;
     } finally { await remove(name); }
   }
   async function waitEvent(name: string, event: string, deadline: number) {
     while (Date.now() < deadline) {
-      abort.signal.throwIfAborted(); const state = (await owned(name)).State;
+      active(); const state = (await owned(name)).State;
       for (const line of (await docker(['logs',name])).split('\n')) { let value; try { value = JSON.parse(line); } catch { continue; } if (value.event === event) return value; }
       assert(!['exited','dead'].includes(state.Status), 'container_exited_before_' + event); await delay(50);
     }
@@ -74,6 +86,7 @@ export async function runCase(directory: string, scenario: 'two-requests' | 'thr
     return ref;
   }
   try {
+    active();
     const version = JSON.parse(await docker(['version','--format','{{json .}}'])), info = JSON.parse(await docker(['info','--format','{{json .}}'])); assertRuntime(version,info);
     const runtime = { server: version.Server, image: JSON.parse(await docker(['image','inspect',image]))[0].Id, node: 'v24.21.0', arch: 'arm64' }; assert.equal(runtime.image,IMAGE);
     const sourceCommit = (await execute('git',['rev-parse','HEAD'],{cwd:root})).stdout.trim(), sources: Record<string,string> = {};
@@ -106,22 +119,22 @@ export async function runCase(directory: string, scenario: 'two-requests' | 'thr
     const frozen=join(output,'registration');await mkdir(frozen,{mode:0o700});await writeFile(join(frozen,'registration.json'),JSON.stringify(registration)+'\n',{flag:'wx',mode:0o600});
     const git=(argv:string[])=>execute('git',['-c','core.hooksPath=/dev/null','-c','commit.gpgsign=false','-c','user.name=Gaffer synthetic fixture','-c','user.email=synthetic@example.invalid',...argv],{cwd:frozen,env:{PATH:process.env.PATH,HOME:frozen,GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null'}});
     await git(['init']);await git(['add','registration.json']);await git(['commit','-m','Freeze synthetic baseline declaration']);registrationCommit=(await git(['rev-parse','HEAD'])).stdout.trim();report.registrationCommit=registrationCommit;
-    scope=await control({command:'start',packetDigest:packet.packetDigest,registration});report.scopeStarted=scope;await save();
+    active(); scope=await control({command:'start',packetDigest:packet.packetDigest,registration});active(); report.scopeStarted=scope;await save();active();
     const checks: {revision:'base'|'candidate';check:CheckEvidence}[]=[];
-    for(const id of ['pins','audit'])checks.push({revision:'base',check:await runCheck(await checkJob(store,registrationRef,preparedCase.base,preparedCase.executables,id,'base',scope.started+60000),store,abort.signal)});
+    for(const id of ['pins','audit']) { const job=await checkJob(store,registrationRef,preparedCase.base,preparedCase.executables,id,'base',scope.started+60000);active();checks.push({revision:'base',check:await runCheck(job,store,signal)});active(); }
     assert(checks.every(x=>x.check.cleanup),'base_check_cleanup_unknown');assert(checks.every(x=>x.check.status==='failed'),'synthetic_base_failure_missing');
     const before=await control({command:'inspect'});assert.equal(before.current.scope.spent,0);assert.equal(before.current.journal.reservations.length,0);
     const workerDeadline=Math.min(Date.now()+600000,scope.deadline-240000),grantDeadline=workerDeadline+150000;
     const binding:any={attemptId:'case01_attempt',grantId:'case01_grant',taskId:'case01_task',leaseId:'case01_lease',fence:1,role:'worker',routerId:policy.routerId,routeId:policy.routeId,revision:policy.revision,epoch:policy.epoch,expiresAt:grantDeadline,leaseExpiresAt:grantDeadline,native:{profileDigest:digest(policy.native),scopeId:policy.native.scope.id,authorizationDigest:policy.native.scope.authorizationDigest}};assertNativeBinding(binding,policy);
     for(const [path,expected]of Object.entries(sources))assert.equal(hash(await readFile(join(root,path))),expected,'source_changed_before_dispatch');
     for(const [path,expected]of Object.entries(report.staging.hashes))assert.equal(hash(await readFile(join(stage,path))),expected,'worker_stage_changed');
-    const grant=await control({command:'grant',binding});
+    const grant=await control({command:'grant',binding});active();
     const request:WorkerInput={schema:1,kind:'synthetic-baseline-worker',caseId:'synthetic-case01',registrationDigest:digest(registration),packetDigest:packet.packetDigest,profileDigest:digest(policy.native),bindingDigest:digest(binding),settingsDigest:settingsDigest('allow'),baseTreeDigest:preparedCase.base.treeDigest,context:preparedCase.context,contextDigest:preparedCase.descriptor.contextDigest,prompt:promptFor(preparedCase.context),promptDigest:preparedCase.descriptor.promptDigest,files:preparedCase.files,token:grant.token,deadline:workerDeadline,outputBytes:262144};validateWorkerInput(request);
     const invocation=await retainEvidence(store,'invocation',{...request,token:'<scoped-grant>'});report.invocation=invocation;
-    worker=run+'-worker';containers.add(worker);await docker([...workerArgs(worker,run),'--interactive','--mount',`type=bind,source=${stage},target=/fixture,readonly`,'--mount',`type=volume,source=${routerVolume},target=/router,readonly,volume-nocopy`,'--mount',`type=volume,source=${repositoryVolume},target=/work/repo,volume-nocopy`,image,'node','/fixture/experiments/baseline/native/worker.ts']);
+    active(); worker=run+'-worker';containers.add(worker);await docker([...workerArgs(worker,run),'--interactive','--mount',`type=bind,source=${stage},target=/fixture,readonly`,'--mount',`type=volume,source=${routerVolume},target=/router,readonly,volume-nocopy`,'--mount',`type=volume,source=${repositoryVolume},target=/work/repo,volume-nocopy`,image,'node','/fixture/experiments/baseline/native/worker.ts']);
     const workerState=await owned(worker);assert.equal(workerState.Mounts.length,3);assert(workerState.Mounts.some((m:any)=>m.Type==='volume'&&m.Name===repositoryVolume&&m.Destination==='/work/repo'&&m.RW));
     report.worker={...inspectWorker({...workerState,Mounts:workerState.Mounts.filter((m:any)=>m.Destination!=='/work/repo')},image,run,routerVolume,stage),variant:'baseline-volume-worker768-v1',repositoryVolume};
-    child=spawn('docker',['--context',context,'start','--attach','--interactive',worker],{stdio:['pipe','pipe','pipe']});child.stdout!.resume();child.stderr!.resume();child.stdin!.on('error',()=>{});child.stdin!.end(JSON.stringify(request));childDone=new Promise(resolve=>{child!.once('error',error=>resolve({error:String(error)}));child!.once('close',(code,signal)=>resolve({code,signal}));});
+    active(); child=spawn('docker',['--context',context,'start','--attach','--interactive',worker],{stdio:['pipe','pipe','pipe']});child.stdout!.resume();child.stderr!.resume();child.stdin!.on('error',()=>{});child.stdin!.end(JSON.stringify(request));childDone=new Promise(resolve=>{child!.once('error',error=>resolve({error:String(error)}));child!.once('close',(code,signal)=>resolve({code,signal}));});
     observation=await waitEvent(worker,'baseline_worker_observation',workerDeadline);report.observation=await retainEvidence(store,'worker-observation',observation);
     assert.equal(observation.invalid,false);assert.equal(observation.reason,null);assert.equal(observation.exitCode,0);assert.equal(observation.rejected.length,0);
     await docker(['pause',worker]);assert.equal((await owned(worker)).State.Paused,true);
@@ -129,7 +142,7 @@ export async function runCase(directory: string, scenario: 'two-requests' | 'thr
     const baseManifest=(await readSnapshot(store,preparedCase.base)).manifest,captured=await captureSnapshot(archive.stdout,baseManifest,rulesFor(registration),store,'candidate');
     candidate=await retainCandidate(preparedCase.base,captured,rulesFor(registration),store);report.candidate=candidate;
     const candidateDeadline=Math.min(Date.now()+60000,scope.deadline-120000);
-    for(const id of ['pins','audit'])checks.push({revision:'candidate',check:await runCheck(await checkJob(store,registrationRef,captured,preparedCase.executables,id,'candidate',candidateDeadline),store,abort.signal)});
+    for(const id of ['pins','audit']) { const job=await checkJob(store,registrationRef,captured,preparedCase.executables,id,'candidate',candidateDeadline);active();checks.push({revision:'candidate',check:await runCheck(job,store,signal)});active(); }
     report.checks=checks;assert(checks.every(x=>x.check.cleanup));assert.equal(checks[2].check.status,'passed');assert.equal(checks[3].check.status,'failed');
     const evidence=await control({command:'evidence',attemptId:binding.attemptId}),physical=await control({command:'baseline-proof'});
     assert.equal(physical.registrationDigest,digest(registration));
@@ -149,27 +162,39 @@ export async function runCase(directory: string, scenario: 'two-requests' | 'thr
     report.transcript=await retainEvidence(store,'verified-transcript',verified);assert.equal(verified.physicalAttempts,scenario==='two-requests'?2:3);
     const bundle=await readEvidence(store,candidate);await readSnapshot(store,captured);await readSnapshot(store,preparedCase.base);
     assert(Date.now()<grantDeadline,'baseline_acknowledgement_deadline');
-    report.acknowledgement=await retainEvidence(store,'baseline-ack',{schema:1,kind:'synthetic-baseline-acknowledgement',registration:registrationRef,registrationCommit,packet:report.packet,bindingDigest:digest(binding),scopeDigest:digest(evidence.scope),candidate,bundleDigest:digest(bundle),transcript:report.transcript,checks:checks.map(x=>x.check.observation),independentlyAccepted:false,published:false});
+    active(); await validateRetainedRun(store,report,'before-ack');active();
+    assert.deepEqual(JSON.parse((await git(['show',registrationCommit+':registration.json'])).stdout),registration);active();
+    await syncDirectoryAncestry(store.directory);active();
+    const acknowledgement=await retainEvidence(store,'baseline-ack',{schema:1,kind:'synthetic-baseline-acknowledgement',registration:registrationRef,registrationCommit,packet:report.packet,bindingDigest:digest(binding),scopeDigest:digest(evidence.scope),candidate,bundleDigest:digest(bundle),transcript:report.transcript,checks:checks.map(x=>x.check.observation),independentlyAccepted:false,published:false});
+    active(); await validateRetainedRun(store,{...report,acknowledgement});active();
     assert(Date.now()<grantDeadline,'baseline_acknowledgement_deadline');
+    report.acknowledgement=acknowledgement;
     await control({command:'stop'});assert.equal(Number(await docker(['wait',gateway])),0);assert.equal((await owned(gateway)).State.Pid,0);
     await remove(worker);await childDone;
-    const repositoryState=JSON.parse(await docker(['volume','inspect',repositoryVolume]))[0];assert.equal(repositoryState.Labels[LABEL],run);await docker(['volume','rm',repositoryVolume]);volumes.splice(volumes.indexOf(repositoryVolume),1);
-    await readSnapshot(store,captured);report.repositoryDestroyed=true;
+    await remove(gateway);active();
     const record=fixture().runs[0],endedAt=Date.now();record.runId=run;record.registrationDigest=digest(registration);record.registrationCommit=registrationCommit;
     record.startedAt=new Date(scope.started).toISOString();record.endedAt=new Date(endedAt).toISOString();record.elapsedMs=endedAt-scope.started;record.waitingMs=null;
     record.scope={id:scope.id,startedAt:record.startedAt,deadlineAt:new Date(scope.deadline).toISOString(),physicalAttempts:verified.physicalAttempts,operationsComplete:true,quiescence:'confirmed',evidence:raw};
     record.attempts=[{id:binding.attemptId,startedAt:new Date(observation.startedAt).toISOString(),endedAt:new Date(observation.endedAt).toISOString(),status:'completed',exitCode:0,invocation,progressNotes:registration.fixture.progressSeed,artifact:candidate,observations:[report.observation,raw],operations:evidence.receipts.flatMap((r:any)=>r.operations.map((op:any)=>({id:'operation_'+r.id+'_'+op.ordinal,source:op.ordinal===1?'original':'router-fallback',outcome:op.terminal==='provider_completed'?'success':op.terminal==='unknown'?'unknown':'failure',evidence:raw})))}];
     record.checks=checks.map(({revision,check})=>({id:revision+'-'+check.checkId,checkId:check.checkId,attemptId:revision==='base'?null:binding.attemptId,revision,status:check.status,exitCode:check.status==='passed'||check.status==='failed'?check.exitCode:null,candidateArtifact:revision==='base'?null:candidate,evidence:check.observation}));
     record.operatorIntervals=[];record.usage=[];record.ownershipCosts=[];record.rawObservations=[report.acknowledgement,raw,report.observation];
-    const dataset={schema:1,registrations:[registration],runs:[record]};report.dataset=await retainEvidence(store,'baseline-dataset',dataset);report.export=await writeExport(dataset,join(output,'export'));report.result='passed';
+    const dataset={schema:1,registrations:[registration],runs:[record]};report.dataset=await retainEvidence(store,'baseline-dataset',dataset);report.export=await writeExport(dataset,join(output,'export'));active();await validateRetainedRun(store,report,'replay');active();await save();active();
+    await validateRetainedRun(store,report,'replay');active();
+    const repositoryState=JSON.parse(await docker(['volume','inspect',repositoryVolume]))[0];assert.equal(repositoryState.Labels[LABEL],run);await docker(['volume','rm',repositoryVolume]);volumes.splice(volumes.indexOf(repositoryVolume),1);
+    report.repositoryDestroyed=true;
+    report.result='passed';
   } catch(error) {
-    report.error=String(error);if(gateway)try{report.gatewayLogs=await docker(['logs',gateway]);}catch{}if(worker)try{report.workerLogs=await docker(['logs',worker]);}catch{}
+    report.error=String(error);if(gateway)try{report.gatewayLogs=await docker(['logs',gateway],15000,true);}catch{}if(worker)try{report.workerLogs=await docker(['logs',worker],15000,true);}catch{}
     try { await save(); } catch { report.persistenceFailed=true; }
     throw error;
   } finally {
     const cleanup=await Promise.allSettled([...containers].map(remove));report.cleanup=cleanup.every(x=>x.status==='fulfilled');report.cleanupResults=cleanup.map(x=>x.status);report.retainedStateVolumes=volumes;
-    if(child)child.kill('SIGTERM');for(const signal of ['SIGTERM','SIGINT'] as const)process.off(signal,onStop);
-    report.result=report.result==='passed'&&report.cleanup?'passed':'failed';await save();
+    if(child)child.kill('SIGTERM');
+    report.result=report.result==='passed'&&report.cleanup&&!signal.aborted?'passed':'failed';
+    if(signal.aborted)report.error=String(signal.reason);
+    const savedResult=report.result;await save();
+    if(signal.aborted&&savedResult==='passed') { report.result='failed';report.error=String(signal.reason);await save(); }
+    active();
   }
   return {result:report.result,output,live:false,issueComplete:false};
 }
