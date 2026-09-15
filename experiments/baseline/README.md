@@ -81,10 +81,16 @@ in `observations.ts`, with examples in `fixture.ts`. It retains:
 
 - Scope evidence and observed physical count/completeness/quiescence; ordered
   attempts, every supplied physical original/fallback, failures, progress, artifacts
-  and raw observation references.
+  and raw observation references. Public JSON/CSV report known `wallElapsedMs` and
+  wall overrun separately from nullable, independently supplied `elapsedMs`; a short
+  or missing elapsed observation cannot hide the known wall-clock duration.
 - Declared base/candidate check outcomes. Failed gates do not disappear when an
   operator accepts useful failure-attribution work; acceptance does not mean merge
-  readiness. Not-run/unknown checks retain a source explaining the limitation.
+  readiness. Required candidate checks must bind the final accepted attempt and
+  its accepted artifact through `candidateArtifact`; checks of an earlier candidate
+  cannot qualify the final one. Stale observations remain in the history. Failed,
+  not-run and unknown checks retain a source explaining the limitation and can
+  still support the operator's useful failure-attribution label.
 - Sourced measured/estimated/unknown intervals and coverage by trial/follow-up.
   Empty intervals and incomplete coverage never become a complete zero-effort
   result. Measured intervals must match their UTC duration; overlapping intervals
@@ -105,9 +111,14 @@ mode 0600. The output parent must also be private and already exist. Then:
 node experiments/baseline/collect.ts /private/records/input.json /private/records/export
 ```
 
-Input is bounded to 16 MiB; symlink files, exposed modes, ambiguous JSON keys and
-invalid UTF8 are refused. Output uses an exclusive directory and files, fsyncs the
-records, then writes `complete.json` with exact file-byte SHA-256 digests.
+Input is bounded to 16 MiB; nonblocking open and a regular-file check refuse FIFOs
+without waiting for a writer. FD reads consume at most the limit plus one byte,
+including when a file grows after stat. Symlink files, exposed modes, ambiguous
+JSON keys and invalid UTF8 are refused. Output uses an exclusive directory and
+files, captures opened no-follow directory identities and rechecks their inode,
+device, mode and type around writes and before acknowledgement. Directory
+substitution refuses the export and leaves the original partial files intact.
+The exporter fsyncs the records, then writes `complete.json` with exact file-byte SHA-256 digests.
 Success is acknowledged only after all directory syncs complete. Existing output
 is never overwritten. On storage failure, retain the partial directory; it is not
 a successful export. Raw sidecar evidence referred to by records remains in the

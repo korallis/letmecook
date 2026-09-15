@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { constants } from 'node:fs';
 import { open, mkdir, lstat } from 'node:fs/promises';
+import type { FileHandle } from 'node:fs/promises';
 import { dirname, resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -56,8 +57,10 @@ export function collectDataset(input: unknown) {
     const registration = byDigest.get(run.registrationDigest)!, trial = effort(run), followUp = effort(run, 'follow-up');
     const incident = violations.get(run.runId) ?? [];
     const operatorCap = registration.operatorEffort.maximumActiveSeconds;
+    const wallElapsedMs = run.startedAt === null ? null : time(run.endedAt) - time(run.startedAt);
     const overruns = { physicalAttempts: run.scope?.physicalAttempts === null || !run.scope ? null : Math.max(0, run.scope.physicalAttempts - 32),
       elapsedMs: run.elapsedMs === null ? null : Math.max(0, run.elapsedMs - 900000),
+      wallElapsedMs: wallElapsedMs === null ? null : Math.max(0, wallElapsedMs - 900000),
       operatorSeconds: operatorCap === null || trial.totalSeconds === null ? null : Math.max(0, trial.totalSeconds - operatorCap) };
     const followUpComplete = run.followUp.completedAt !== null;
     // Allowlisted projection: no copied caller IDs, free text, commands, paths, refs or hashes.
@@ -68,7 +71,7 @@ export function collectDataset(input: unknown) {
       harnessAttempts: run.attempts.length, failedHarnessAttempts: run.attempts.filter((a: Row) => a.status !== 'completed').length,
       physicalAttempts: run.scope?.physicalAttempts ?? null, physicalFailureCount: run.attempts.flatMap((a: Row) => a.operations).filter((o: Row) => o.outcome === 'failure').length,
       unknownOriginal: run.scope ? run.scope.quiescence === 'unknown' : null,
-      elapsedMs: run.elapsedMs, waitingMs: run.waitingMs, trialEffort: trial, followUpEffort: followUp,
+      elapsedMs: run.elapsedMs, wallElapsedMs, waitingMs: run.waitingMs, trialEffort: trial, followUpEffort: followUp,
       knownSecondsByCategory: Object.fromEntries(CATEGORIES.map(category => [category, run.operatorIntervals.filter((i: Row) => i.category === category && i.confidence !== 'unknown').reduce((n: number, i: Row) => n + i.durationSeconds, 0)])),
       checks: Object.fromEntries(['passed', 'failed', 'not-run', 'unknown'].map(status => [status, run.checks.filter((c: Row) => c.status === status).length])),
       usage: usage(run), ownershipCostObservationCount: run.ownershipCosts.length, overruns, sequenceViolations: incident,
@@ -88,9 +91,9 @@ export function collectDataset(input: unknown) {
       completionRate: cohort.some(r => r.started) ? accepted / cohort.filter(r => r.started).length : null,
       trialSeconds, allInSeconds, minutesPerAcceptedOutcome: accepted && allInSeconds !== null ? allInSeconds / 60 / accepted : null,
       completedQualityComparison: false }, rows };
-  const columns = ['record', 'origin', 'case', 'status', 'started', 'output_label', 'accepted_within_bounds', 'harness_attempts', 'physical_attempts', 'elapsed_ms', 'known_measured_seconds', 'estimated_seconds', 'total_trial_seconds', 'effort_confidence', 'follow_up_complete'];
+  const columns = ['record', 'origin', 'case', 'status', 'started', 'output_label', 'accepted_within_bounds', 'harness_attempts', 'physical_attempts', 'elapsed_ms', 'wall_elapsed_ms', 'wall_overrun_ms', 'known_measured_seconds', 'estimated_seconds', 'total_trial_seconds', 'effort_confidence', 'follow_up_complete'];
   const cells = rows.map(r => [r.record, r.origin, r.case, r.status, r.started, r.outputLabel, r.acceptedWithinRegisteredBounds, r.harnessAttempts, r.physicalAttempts,
-    r.elapsedMs, r.trialEffort.measuredSeconds, r.trialEffort.estimatedSeconds, r.trialEffort.totalSeconds, r.trialEffort.confidence, r.followUpComplete]);
+    r.elapsedMs, r.wallElapsedMs, r.overruns.wallElapsedMs, r.trialEffort.measuredSeconds, r.trialEffort.estimatedSeconds, r.trialEffort.totalSeconds, r.trialEffort.confidence, r.followUpComplete]);
   const csv = [columns, ...cells].map(row => row.map(value => value === null ? '' : String(value)).join(',')).join('\n') + '\n';
   return { privateJSON: { schema: 1, kind: 'retained-baseline-inputs', evidenceAuthenticated: false, registrations, runs }, publicJSON, csv };
 }
@@ -98,33 +101,57 @@ export function collectDataset(input: unknown) {
 async function privateDirectory(directory: string) {
   const s = await lstat(directory); assert(s.isDirectory() && !s.isSymbolicLink() && s.uid === process.getuid?.() && (s.mode & 0o077) === 0, 'private_owned_directory_required');
 }
+const INPUT_LIMIT = 16 * 1048576;
+export async function readBounded(file: Pick<FileHandle, 'read'>) {
+  const maximum = INPUT_LIMIT;
+  const chunks: Buffer[] = []; let size = 0;
+  while (size <= maximum) {
+    const buffer = Buffer.alloc(Math.min(65536, maximum + 1 - size));
+    const { bytesRead } = await file.read(buffer, 0, buffer.length, null);
+    if (bytesRead === 0) break;
+    size += bytesRead; chunks.push(buffer.subarray(0, bytesRead));
+  }
+  assert(size <= maximum, 'private_bounded_input_required'); return Buffer.concat(chunks, size);
+}
 export async function readInput(filename: string) {
   await privateDirectory(dirname(filename));
-  const file = await open(filename, constants.O_RDONLY | constants.O_NOFOLLOW);
+  const file = await open(filename, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   try {
-    const s = await file.stat(); assert(s.isFile() && s.uid === process.getuid?.() && (s.mode & 0o077) === 0 && s.size <= 16 * 1048576, 'private_bounded_input_required');
-    const bytes = await file.readFile(); assert(bytes.length <= 16 * 1048576, 'private_bounded_input_required');
+    const s = await file.stat(); assert(s.isFile() && s.uid === process.getuid?.() && (s.mode & 0o077) === 0 && s.size <= INPUT_LIMIT, 'private_bounded_input_required');
+    const bytes = await readBounded(file);
     // Reject ambiguous keys/invalid UTF8, then normalize parser-only prototypes.
     return JSON.parse(JSON.stringify(parseJSON(new TextDecoder('utf-8', { fatal: true }).decode(bytes)))) as unknown;
   } finally { await file.close(); }
 }
 export async function writeExport(input: unknown, output: string, beforeWrite: (name: string) => void = () => {}) {
   const result = collectDataset(input); await privateDirectory(dirname(output));
-  await mkdir(output, { mode: 0o700 }); // Exclusive directory; never overwrite/reuse an earlier result.
-  const files = { 'private-records.json': canonical(result.privateJSON) + '\n', 'public-summary.json': JSON.stringify(result.publicJSON, null, 2) + '\n', 'public-summary.csv': result.csv };
-  const write = async (name: string, contents: string) => {
-    beforeWrite(name); const f = await open(join(output, name), constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600);
-    try { await f.writeFile(contents); await f.sync(); } finally { await f.close(); }
-  };
-  for (const [name, contents] of Object.entries(files)) await write(name, contents);
-  const directory = await open(output, 'r');
+  const parent = await open(dirname(output), constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+  let directory: FileHandle | undefined;
   try {
-    await directory.sync();
+    const parentIdentity = await parent.stat();
+    await mkdir(output, { mode: 0o700 }); // Exclusive; never overwrite/reuse an earlier result.
+    directory = await open(output, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    const identity = await directory.stat();
+    const assertIdentity = async () => {
+      for (const [path, expected] of [[output, identity], [dirname(output), parentIdentity]] as const) {
+        const current = await lstat(path);
+        assert(current.isDirectory() && !current.isSymbolicLink() && current.uid === process.getuid?.() && (current.mode & 0o077) === 0 &&
+          current.dev === expected.dev && current.ino === expected.ino, 'export_directory_identity_changed');
+      }
+    };
+    await assertIdentity();
+    const files = { 'private-records.json': canonical(result.privateJSON) + '\n', 'public-summary.json': JSON.stringify(result.publicJSON, null, 2) + '\n', 'public-summary.csv': result.csv };
+    const write = async (name: string, contents: string) => {
+      beforeWrite(name); await assertIdentity();
+      const f = await open(join(output, name), constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | constants.O_NOFOLLOW, 0o600);
+      try { await assertIdentity(); await f.writeFile(contents); await f.sync(); await assertIdentity(); } finally { await f.close(); }
+    };
+    for (const [name, contents] of Object.entries(files)) await write(name, contents);
+    await directory.sync(); await assertIdentity();
     await write('complete.json', canonical({ schema: 1, files: Object.fromEntries(Object.entries(files).map(([name, contents]) => [name, createHash('sha256').update(contents).digest('hex')])) }) + '\n');
-    await directory.sync();
-  } finally { await directory.close(); }
-  const parent = await open(dirname(output), 'r'); try { await parent.sync(); } finally { await parent.close(); }
-  return result.publicJSON;
+    await directory.sync(); await parent.sync(); await assertIdentity();
+    return result.publicJSON;
+  } finally { try { if (directory) await directory.close(); } finally { await parent.close(); } }
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {

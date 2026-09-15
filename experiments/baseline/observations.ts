@@ -57,10 +57,11 @@ export function validateRun(input: unknown, frozen: unknown): Row {
   }
   list(input.checks, 0, 4096); unique(input.checks);
   for (const c of input.checks) {
-    exact(c, 'id checkId attemptId revision status exitCode evidence');
+    exact(c, 'id checkId attemptId revision status exitCode candidateArtifact evidence');
     const declared = registration.checks.find((x: Row) => x.id === c.checkId); assert(declared, 'undeclared_check');
     assert(c.attemptId === null || input.attempts.some((a: Row) => a.id === c.attemptId), 'unknown_check_attempt');
     oneOf(c.revision, declared.revisions === 'both' ? ['base', 'candidate'] : [declared.revisions]);
+    nullableReference(c.candidateArtifact); if (c.revision === 'base') assert.equal(c.candidateArtifact, null, 'base_check_candidate_artifact');
     oneOf(c.status, ['passed', 'failed', 'not-run', 'unknown']); reference(c.evidence);
     if (c.status === 'passed') assert.equal(c.exitCode, 0, 'passing_exit_required');
     else if (c.status === 'failed') integer(c.exitCode, 1, 255);
@@ -124,7 +125,8 @@ export function validateRun(input: unknown, frozen: unknown): Row {
     assert(input.attempts.at(-1)?.status === 'completed', 'accepted_without_completed_attempt');
     assert.deepEqual(input.attempts.at(-1)?.artifact, a.artifact, 'accepted_artifact_mismatch');
     for (const check of registration.checks.filter((c: Row) => c.required)) for (const revision of check.revisions === 'both' ? ['base', 'candidate'] : [check.revisions]) {
-      assert(input.checks.some((c: Row) => c.checkId === check.id && c.revision === revision), 'required_check_observation_missing');
+      assert(input.checks.some((c: Row) => c.checkId === check.id && c.revision === revision && (revision !== 'candidate' ||
+        c.attemptId === input.attempts.at(-1).id && digest(c.candidateArtifact) === digest(a.artifact))), 'required_check_observation_missing_or_wrong_candidate');
     }
     const e = effort(input); if (registration.operatorEffort.treatment === 'cap-including-preparation') assert(e.totalSeconds !== null && e.totalSeconds <= registration.operatorEffort.maximumActiveSeconds, 'accepted_effort_bound_unknown_or_exhausted');
   }

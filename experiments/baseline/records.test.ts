@@ -1,12 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile, stat, readdir, rm, symlink, chmod } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, stat, readdir, rm, symlink, chmod, mkdir } from 'node:fs/promises';
+import { renameSync, symlinkSync, chmodSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import type { FileHandle } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { fixture, acceptedFixture, ref } from './fixture.ts';
 import { validateRegistration, registrationIdentity } from './registration.ts';
-import { collectDataset, readInput, writeExport } from './collect.ts';
+import { collectDataset, readInput, readBounded, writeExport } from './collect.ts';
 import { digest, type Row } from './validation.ts';
 
 function changedRegistration(input: Row, edit: (r: Row) => void) { edit(input.registrations[0]); input.runs[0].registrationDigest = digest(input.registrations[0]); return input; }
@@ -60,6 +63,31 @@ test('human-labelled useful failure-attribution can retain failing gates; accept
   const bad = fixture(); bad.runs[0].status = 'accepted'; assert.throws(() => collectDataset(bad), /operator_acceptance_required/);
 });
 
+test('required candidate observations bind the final accepted attempt and artifact, while stale history is retained', () => {
+  for (const attemptId of ['attempt-one', null]) {
+    const input = acceptedFixture(); input.runs[0].checks.filter((c: Row) => c.revision === 'candidate').forEach((c: Row) => { c.attemptId = attemptId; });
+    assert.throws(() => collectDataset(input), /wrong_candidate/);
+    input.runs[0].status = 'failed'; const result = collectDataset(input);
+    assert.deepEqual(result.privateJSON.runs, input.runs); assert.equal(result.publicJSON.rows[0].acceptedWithinRegisteredBounds, false);
+  }
+  for (const artifact of [null, ref('earlier-candidate')]) {
+    const input = acceptedFixture(); input.runs[0].checks[0].candidateArtifact = artifact;
+    assert.throws(() => collectDataset(input), /wrong_candidate/);
+  }
+  const input = acceptedFixture(), old = { ...input.runs[0].checks[0], id: 'old-pins-check', attemptId: 'attempt-one', candidateArtifact: ref('older-candidate') };
+  input.runs[0].checks.unshift(old); const result = collectDataset(input);
+  assert.deepEqual(result.privateJSON.runs, input.runs); assert.equal(result.publicJSON.rows[0].acceptedWithinRegisteredBounds, true);
+});
+
+test('final candidate-bound failed, not-run and unknown checks remain valid sourced observations', () => {
+  for (const status of ['failed', 'not-run', 'unknown']) {
+    const input = acceptedFixture(), check = input.runs[0].checks[0]; check.status = status; check.exitCode = status === 'failed' ? 1 : null;
+    const result = collectDataset(input); assert.deepEqual(result.privateJSON.runs, input.runs);
+    assert.equal(result.publicJSON.rows[0].acceptedWithinRegisteredBounds, true);
+    assert(result.publicJSON.rows[0].checks[status] > 0);
+  }
+});
+
 test('rejects fabricated acceptance, evidence loss, unknown-zero conversion and changed physical counts', () => {
   const mutations: ((r: Row) => void)[] = [
     r => { r.registrationCommit = null; }, r => { r.scope.physicalAttempts = 1; }, r => { r.scope.operationsComplete = false; },
@@ -84,6 +112,19 @@ test('unknown scope observations, exhausted bounds and late output labels remain
   assert.equal(row.overruns.physicalAttempts, 1); assert.equal(row.overruns.elapsedMs, 100); assert.equal(row.unknownOriginal, true);
   const unknown = fixture(); unknown.runs[0].scope.physicalAttempts = null; unknown.runs[0].scope.operationsComplete = false; unknown.runs[0].scope.quiescence = 'unknown'; unknown.runs[0].elapsedMs = null;
   const u = collectDataset(unknown).publicJSON.rows[0]; assert.equal(u.physicalAttempts, null); assert.equal(u.overruns.elapsedMs, null);
+});
+
+test('known wall elapsed and overrun remain visible beside short or unknown independent elapsed observations', () => {
+  for (const elapsedMs of [60000, null]) {
+    const input = fixture(); input.runs[0].endedAt = '2026-09-15T00:17:00.000Z'; input.runs[0].elapsedMs = elapsedMs;
+    const result = collectDataset(input), row = result.publicJSON.rows[0];
+    assert.deepEqual(result.privateJSON.runs, input.runs); assert.equal(row.elapsedMs, elapsedMs);
+    assert.equal(row.wallElapsedMs, 960000); assert.equal(row.overruns.wallElapsedMs, 60000);
+    assert.equal(row.overruns.elapsedMs, elapsedMs === null ? null : 0);
+    const [headers, values] = result.csv.trimEnd().split('\n').map(line => line.split(','));
+    assert.equal(values[headers.indexOf('elapsed_ms')], elapsedMs === null ? '' : '60000');
+    assert.equal(values[headers.indexOf('wall_elapsed_ms')], '960000'); assert.equal(values[headers.indexOf('wall_overrun_ms')], '60000');
+  }
 });
 
 test('operator overlap, duplicate case records and reuse cannot manufacture lower effort or extra successes', () => {
@@ -181,6 +222,41 @@ test('input refuses exposed files, symlinks, duplicate JSON keys and invalid UTF
     await chmod(file, 0o644); await assert.rejects(readInput(file)); await chmod(file, 0o600);
     await writeFile(file, '{"schema":1,"schema":2}'); await assert.rejects(readInput(file), /invalid_json/);
     await writeFile(file, Buffer.from([0xff])); await assert.rejects(readInput(file));
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('FIFO input is refused promptly before reading or blocking for a writer', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'gaffer-baseline-fifo-'));
+  try {
+    const fifo = join(root, 'input.fifo'); execFileSync('mkfifo', ['-m', '600', fifo], { timeout: 2000 });
+    const code = `const {readInput}=await import(${JSON.stringify(new URL('./collect.ts', import.meta.url).href)}); try { await readInput(process.argv[1]); process.exitCode=2; } catch { console.log('refused'); }`;
+    assert.equal(execFileSync(process.execPath, ['--input-type=module', '-e', code, fifo], { timeout: 2000, encoding: 'utf8' }).trim(), 'refused');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('bounded FD reads stop at the limit plus one even when the input keeps growing after stat', async () => {
+  let consumed = 0; const requested: number[] = [];
+  const growing = { async read(buffer: Buffer, offset: number, length: number) { requested.push(length); buffer.fill(32, offset, offset + length); consumed += length; return { bytesRead: length, buffer }; } } as unknown as Pick<FileHandle, 'read'>;
+  await assert.rejects(readBounded(growing), /private_bounded_input_required/);
+  assert.equal(consumed, 16 * 1048576 + 1); assert(requested.every(n => n <= 65536));
+});
+
+test('directory substitution or mode changes refuse export acknowledgement and retain the original partial files', async () => {
+  for (const stage of ['private-records.json', 'public-summary.json', 'complete.json']) {
+    const root = await mkdtemp(join(tmpdir(), 'gaffer-baseline-swap-'));
+    try {
+      const output = join(root, 'output'), original = join(root, 'original-output'), target = join(root, 'target'); await mkdir(target, { mode: 0o700 });
+      await assert.rejects(writeExport(fixture(), output, name => {
+        if (name === stage) { renameSync(output, original); symlinkSync(target, output); }
+      }), /export_directory_identity_changed/);
+      assert.deepEqual(await readdir(target), []); await assert.rejects(stat(join(original, 'complete.json')), /ENOENT/);
+      assert.equal((await readdir(original)).includes('private-records.json'), stage !== 'private-records.json');
+    } finally { await rm(root, { recursive: true, force: true }); }
+  }
+  const root = await mkdtemp(join(tmpdir(), 'gaffer-baseline-mode-'));
+  try {
+    const output = join(root, 'output'); await assert.rejects(writeExport(fixture(), output, () => { chmodSync(output, 0o755); }), /export_directory_identity_changed/);
+    assert.deepEqual(await readdir(output), []);
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 

@@ -27,9 +27,9 @@ export function fixture(): Row {
       { id: 'attempt-two', startedAt: '2026-09-15T00:01:20.000Z', endedAt: '2026-09-15T00:02:00.000Z', status: 'completed', exitCode: 0, invocation: ref('invocation-2'), progressNotes: ref('progress-2'), artifact: ref('candidate'), observations: [ref('completed-attempt')], operations: [{ id: 'operation-two', source: 'router-fallback', outcome: 'success', evidence: ref('receipt-2') }] },
     ],
     checks: [
-      { id: 'candidate-pins', checkId: 'pins', attemptId: 'attempt-two', revision: 'candidate', status: 'passed', exitCode: 0, evidence: ref('pin-check') },
-      { id: 'base-audit', checkId: 'audit', attemptId: null, revision: 'base', status: 'failed', exitCode: 1, evidence: ref('base-audit') },
-      { id: 'candidate-audit', checkId: 'audit', attemptId: 'attempt-two', revision: 'candidate', status: 'failed', exitCode: 1, evidence: ref('candidate-audit') },
+      { id: 'candidate-pins', checkId: 'pins', attemptId: 'attempt-two', revision: 'candidate', status: 'passed', exitCode: 0, candidateArtifact: ref('candidate'), evidence: ref('pin-check') },
+      { id: 'base-audit', checkId: 'audit', attemptId: null, revision: 'base', status: 'failed', exitCode: 1, candidateArtifact: null, evidence: ref('base-audit') },
+      { id: 'candidate-audit', checkId: 'audit', attemptId: 'attempt-two', revision: 'candidate', status: 'failed', exitCode: 1, candidateArtifact: ref('candidate'), evidence: ref('candidate-audit') },
     ],
     operatorCoverage: { trial: 'incomplete', 'follow-up': 'incomplete' },
     operatorIntervals: [
