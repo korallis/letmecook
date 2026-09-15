@@ -152,6 +152,5 @@ settings and hostile requests, observes zero local HTTP trap hits and no executi
 sentinel. This is evidence for declared input cases, not OS confinement of arbitrary
 future code; no public-network probe or supported runner claim.
 
-Local validation review pipeline is GPT-5.6 Sol-review, not Opus. Fresh required
-Opus review before lock/guarded merge remains operator work; all head changes need
-fresh exact-head review and actual green applicable CI. No merge in this task.
+Issue-specific review and delivery requirements live in
+[issue #94](https://github.com/korallis/letmecook/issues/94).

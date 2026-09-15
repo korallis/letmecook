@@ -243,7 +243,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--oxide);outline-offs
         <span class="carrow" aria-hidden="true">→</span>
         <span class="cbrief"><b>proposed brief</b> remove dead code, pass lint, preserve behaviour<br><b>confirm</b> server auth only <em>· awaiting your approval</em></span>
       </div>
-      <div class="meta">Five documents · evidence, requirements, design and delivery gates<br>14 September 2026 · Pre-code · Proposed features, not implemented behaviour</div>
+      <div class="meta">Five documents · evidence, requirements, design and delivery gates<br>Proposed features, not implemented behaviour</div>
     </header>
     {{ARTICLES}}
   </main>
