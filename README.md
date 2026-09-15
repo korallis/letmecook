@@ -21,6 +21,12 @@ request fallback. Gaffer owns task authority, execution, recovery and review.
 Gaffer is designed for installation on infrastructure **you choose**. The daemon,
 runners and 9Router may share a suitable host or run on separate configured hosts.
 No maintainer machine, hostname, account or private network is a product dependency.
+The released app must support installation and the complete execution workflow,
+including workers, without requiring Docker. Docker is optional for testing.
+Supported unattended execution still requires an independently proven OS/native
+or dedicated VM confinement profile; unavailable profiles block execution.
+This is a product requirement, not a claim that a Docker-free runner or installer
+has already been validated.
 Connect an existing 9Router instance or set up your own; supported migration can
 preserve router configuration without bringing provider credentials into Gaffer.
 See [operator-selected deployment](docs/spec.md#12-operator-selected-deployment).

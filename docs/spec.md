@@ -67,13 +67,20 @@ One operator, one active daemon, one repository, one runner, one harness, one sh
 9Router instance and one code-writing attempt at a time. The alpha acceptance
 fixture uses two subscriptions from the same provider to prove central account
 management; an installation with one connection still works. Go remains the proposed daemon/runner language;
-React and TypeScript implement the UI. Linux is the first unattended execution
-profile. An always-on Mac can host the daemon and run workers in a dedicated Linux
-VM/container environment; native macOS execution needs its own verified boundary.
+React and TypeScript implement the UI. Linux is the first intended unattended
+execution target; an exact Docker-free OS/native or dedicated VM confinement
+profile must be proven before it is supported. A Mac may host the daemon only
+within the validated support matrix. Worker execution from that installation
+requires an explicitly selected, proven Docker-free local or remote profile;
+native macOS and Windows execution each require their own evidence.
 
-Do not promise a dependency-free installation: git, the harness, language/build
-tools, 9Router and an isolation runtime may be required. M0 proves the exact supported
-matrix. No automatic work is placed on client/production hosts.
+The released app must install and complete every supported product execution
+path without requiring Docker, including workers and verification. Docker is
+optional for development and testing; normal product execution does not become
+a test because it invokes a worker. Git, the harness, language/build tools,
+9Router and a proven Docker-free isolation runtime may still be prerequisites.
+Record exact versions and capabilities; an unavailable or unsupported profile
+blocks execution. No automatic work is placed on client/production hosts.
 
 ### 1.2 Operator-selected deployment
 
@@ -83,6 +90,12 @@ Tailscale network, router instance or provider account. An environment used to
 collect development evidence is a test fixture, not an application dependency.
 Exact tested versions belong in the compatibility/evidence matrix; capability
 requirements and explicitly selected isolation profiles govern supported execution.
+The complete supported topology must have a Docker-free setup and operating path
+for the daemon, runner supervisor, scoped inference boundary, 9Router and any
+required execution VM. This includes fresh setup, update and recovery. An operator
+may reuse a compatible Docker-hosted router, but Docker cannot be a prerequisite
+for supported use. Matilda remains an optional configured machine, with no
+mandatory hostname, Tailscale endpoint or maintainer access.
 
 - **Daemon:** choose its host, local state/artifact directories and authenticated
   private endpoint. One active daemon owns authoritative state.
@@ -347,11 +360,18 @@ with no writable shared Git metadata exposed across projects. Worktrees inside o
 trusted isolated environment are permitted only with a documented shared-metadata
 boundary. [Git worktree documentation](https://git-scm.com/docs/git-worktree)
 
-For unattended execution require a tested OS/container/VM confinement profile:
+For supported unattended execution require a proven Docker-free OS/native or
+dedicated VM confinement profile:
 non-root execution, bounded CPU/memory/disk/processes, writable workspace only,
 read-only or copied dependencies where practical, controlled egress and a supervisor
 outside the workspace. Do not mount the host home directory, daemon state,
 unrestricted caches, Docker socket, SSH agent or general forge credentials.
+Check the selected runtime identity and required controls before launch. Missing,
+unsupported or drifted controls fail closed without a host-shell, worktree-only
+or Docker-required fallback. Unknown termination quarantines the profile until
+reconciled. Docker-based development tests remain valid for their measured scope;
+they cannot establish Docker-free product execution. The historical #5 profile
+is Docker-based and does not prove native Linux, macOS, Windows or another VM.
 
 Path allowlists and diff validation detect scope breaches. They do not replace OS
 containment. Shell denylists are not a containment mechanism for arbitrary scripts.
