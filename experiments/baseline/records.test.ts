@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile, stat, readdir, rm, symlink, chmod, mkdir } from 'node:fs/promises';
-import { renameSync, symlinkSync, chmodSync } from 'node:fs';
+import { renameSync, symlinkSync, chmodSync, unlinkSync, writeFileSync, readFileSync, mkdirSync, linkSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import type { FileHandle } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -13,6 +13,11 @@ import { collectDataset, readInput, readBounded, writeExport } from './collect.t
 import { digest, type Row } from './validation.ts';
 
 function changedRegistration(input: Row, edit: (r: Row) => void) { edit(input.registrations[0]); input.runs[0].registrationDigest = digest(input.registrations[0]); return input; }
+function shiftRun(run: Row, milliseconds: number) {
+  const shift = (record: Row, fields: string[]) => fields.forEach(key => { if (record[key] !== null) record[key] = new Date(Date.parse(record[key]) + milliseconds).toISOString(); });
+  shift(run, ['startedAt', 'endedAt']); shift(run.scope, ['startedAt', 'deadlineAt']); run.attempts.forEach((a: Row) => shift(a, ['startedAt', 'endedAt']));
+  run.operatorIntervals.forEach((i: Row) => shift(i, ['start', 'end'])); shift(run.acceptance, ['labelledAt']); shift(run.followUp, ['startedAt', 'dueAt', 'completedAt']);
+}
 
 test('closed frozen registration binds identity, source, scope, toolchain and exact approved bounds without granting authority', () => {
   const r = fixture().registrations[0], valid = registrationIdentity(r);
@@ -53,7 +58,7 @@ test('failed requests, fallback, failed checks and measured/estimated/unknown ef
   assert.deepEqual(row.trialEffort, { measuredSeconds: 30, estimatedSeconds: 12, unknownIntervals: 1, complete: false, totalSeconds: null, confidence: 'unknown' });
   assert.equal(row.usage.inputTokens, null); assert.equal(row.usage.incrementalCash, null); assert.equal(row.outputLabel, null);
   assert.equal(result.publicJSON.syntheticExcluded, 1); assert.equal(result.publicJSON.cohort.registered, 0); assert.equal(result.publicJSON.cohort.completionRate, null); assert.equal(result.publicJSON.cohort.minutesPerAcceptedOutcome, null);
-  assert.match(result.csv, /,30,12,,unknown,/); assert(!result.csv.includes('synthetic-run'));
+  assert.match(result.csv, /,30,0,12,,unknown,/); assert(!result.csv.includes('synthetic-run'));
 });
 
 test('human-labelled useful failure-attribution can retain failing gates; acceptance is never inferred', () => {
@@ -127,6 +132,41 @@ test('known wall elapsed and overrun remain visible beside short or unknown inde
   }
 });
 
+test('supplied physical operations and observed counts retain proven overruns without inventing a complete total', () => {
+  for (const count of [0, 1, 31, 32, 33, 64]) {
+    const input = fixture(), run = input.runs[0]; run.attempts[0].operations = [];
+    run.attempts[1].operations = Array.from({ length: count }, (_, i) => ({ id: 'observed-' + i, source: i % 2 ? 'router-fallback' : 'original', outcome: i % 3 ? 'success' : 'failure', evidence: ref('receipt-' + i) }));
+    run.scope.physicalAttempts = null; run.scope.operationsComplete = false; run.scope.quiescence = 'unknown';
+    const result = collectDataset(input), row = result.publicJSON.rows[0];
+    assert.deepEqual(result.privateJSON.runs, input.runs); assert.equal(row.physicalAttempts, null); assert.equal(row.overruns.physicalAttempts, null);
+    assert.equal(row.knownLowerBounds.physicalAttempts, count); assert.equal(row.provenOverruns.physicalAttempts, Math.max(0, count - 32));
+    const [header, data] = result.csv.trimEnd().split('\n').map(line => line.split(','));
+    assert.equal(data[header.indexOf('physical_attempts')], ''); assert.equal(data[header.indexOf('known_physical_attempt_lower_bound')], String(count));
+    assert.equal(data[header.indexOf('proven_physical_overrun')], String(Math.max(0, count - 32)));
+  }
+  const counted = fixture(); counted.runs[0].scope.physicalAttempts = 40; counted.runs[0].scope.operationsComplete = false; counted.runs[0].scope.quiescence = 'unknown';
+  const row = collectDataset(counted).publicJSON.rows[0]; assert.equal(row.knownLowerBounds.physicalAttempts, 40); assert.equal(row.provenOverruns.physicalAttempts, 8);
+});
+
+test('measured lower bounds prove effort overruns despite unknown intervals, while estimates remain separate', () => {
+  for (const measured of [1800, 1801]) for (const estimated of [12, 1801]) {
+    const input = fixture(), run = input.runs[0]; const interval = run.operatorIntervals[0]; interval.start = '2026-09-14T23:00:00.000Z';
+    interval.end = new Date(Date.parse(interval.start) + measured * 1000).toISOString(); interval.durationSeconds = measured; run.operatorIntervals[1].durationSeconds = estimated;
+    const result = collectDataset(input), row = result.publicJSON.rows[0];
+    assert.deepEqual(result.privateJSON.runs, input.runs); assert.equal(row.trialEffort.totalSeconds, null); assert.equal(row.overruns.operatorSeconds, null);
+    assert.equal(row.knownLowerBounds.measuredOperatorSeconds, measured); assert.equal(row.trialEffort.estimatedSeconds, estimated);
+    assert.equal(row.provenOverruns.measuredOperatorSeconds, Math.max(0, measured - 1800));
+    const [header, data] = result.csv.trimEnd().split('\n').map(line => line.split(','));
+    assert.equal(data[header.indexOf('total_trial_seconds')], ''); assert.equal(data[header.indexOf('proven_measured_operator_overrun_seconds')], String(Math.max(0, measured - 1800)));
+  }
+  const uncapped = changedRegistration(fixture(), r => { r.operatorEffort.treatment = 'record-only'; r.operatorEffort.maximumActiveSeconds = null; });
+  assert.equal(collectDataset(uncapped).publicJSON.rows[0].provenOverruns.measuredOperatorSeconds, null);
+  const fractional = changedRegistration(fixture(), r => { r.operatorEffort.maximumActiveSeconds = 1; }), run = fractional.runs[0], measured = run.operatorIntervals[0];
+  run.operatorIntervals = [...Array.from({ length: 10 }, (_, i) => ({ ...measured, id: 'fraction-' + i, durationSeconds: 0.1,
+    start: new Date(Date.parse(measured.start) + i * 100).toISOString(), end: new Date(Date.parse(measured.start) + (i + 1) * 100).toISOString() })), ...run.operatorIntervals.slice(1)];
+  const row = collectDataset(fractional).publicJSON.rows[0]; assert.equal(row.knownLowerBounds.measuredOperatorSeconds, 1); assert.equal(row.provenOverruns.measuredOperatorSeconds, 0); assert.equal(row.trialEffort.totalSeconds, null);
+});
+
 test('operator overlap, duplicate case records and reuse cannot manufacture lower effort or extra successes', () => {
   const input = fixture(); input.runs[0].operatorIntervals.push({ ...input.runs[0].operatorIntervals[0], id: 'overlap' }); assert.throws(() => collectDataset(input), /overlapping_operator/);
   const twice = fixture(); twice.runs.push(structuredClone(twice.runs[0])); assert.throws(() => collectDataset(twice), /duplicate_run/);
@@ -138,11 +178,31 @@ test('records sequence incidents without discarding attempted replacements after
   const input = fixture(), a = input.runs[0]; a.scope.quiescence = 'unknown'; a.attempts[0].operations[0].outcome = 'unknown';
   const second = acceptedFixture(), b = second.runs[0]; second.registrations[0].caseId = 'synthetic-next'; b.registrationDigest = digest(second.registrations[0]); b.runId = 'next-run'; b.scope.id = 'next-scope';
   b.operatorIntervals = []; b.operatorCoverage.trial = 'incomplete'; b.status = 'failed';
+  shiftRun(b, 1000);
   input.registrations.push(second.registrations[0]); input.runs.push(b);
   const rows = collectDataset(input).publicJSON.rows;
   assert(rows[0].sequenceViolations.includes('replacement-after-unknown-original'));
   assert(rows[1].sequenceViolations.includes('started-after-unknown-original')); assert(rows[1].sequenceViolations.includes('concurrent-case'));
   assert.equal(rows[1].outputLabel, 'accepted'); assert.equal(rows[1].acceptedWithinRegisteredBounds, false);
+});
+
+test('all overlapping cases lose qualification independently of input order, including equal, staggered and contained intervals', () => {
+  for (const [offset, duration, overlaps] of [[0, 60000, true], [30000, 60000, true], [10000, 40000, true], [60000, 60000, false], [120000, 60000, false]] as const) {
+    const accepted = acceptedFixture(), other = fixture(); changedRegistration(other, r => { r.caseId = 'synthetic-other'; });
+    const b = other.runs[0]; b.runId = 'other-run'; b.scope.id = 'other-scope'; b.operatorIntervals.forEach((i: Row) => { i.operatorId = 'other-operator'; });
+    shiftRun(b, offset); b.endedAt = new Date(Date.parse(b.startedAt) + duration).toISOString(); b.attempts[1].endedAt = b.endedAt; b.elapsedMs = duration;
+    const input = { schema: 1, registrations: [...accepted.registrations, ...other.registrations], runs: [...accepted.runs, ...other.runs] };
+    const byRun = () => { const result = collectDataset(input); assert.deepEqual(result.privateJSON.runs, input.runs); return Object.fromEntries(input.runs.map((r, i) => [r.runId, { incidents: result.publicJSON.rows[i].sequenceViolations, qualified: result.publicJSON.rows[i].acceptedWithinRegisteredBounds }])); };
+    const forward = byRun(); input.runs.reverse(); input.registrations.reverse(); assert.deepEqual(byRun(), forward);
+    assert.equal(forward['synthetic-run'].incidents.includes('concurrent-case'), overlaps); assert.equal(forward['other-run'].incidents.includes('concurrent-case'), overlaps);
+    assert.equal(forward['synthetic-run'].qualified, !overlaps);
+  }
+  const cases = [acceptedFixture(), fixture(), fixture()];
+  cases.forEach((input, index) => { changedRegistration(input, r => { r.caseId = 'synthetic-chain-' + index; }); const run = input.runs[0]; run.runId = 'chain-' + index; run.scope.id = 'scope-' + index; run.operatorIntervals.forEach((i: Row) => { i.operatorId = 'operator-' + index; }); shiftRun(run, index * 30000); });
+  for (const order of [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]) {
+    const rows = collectDataset({ schema: 1, registrations: cases.flatMap(x => x.registrations), runs: order.map(i => cases[i].runs[0]) }).publicJSON.rows;
+    assert(rows.every(r => r.sequenceViolations.includes('concurrent-case') && !r.acceptedWithinRegisteredBounds));
+  }
 });
 
 test('unknown then another physical send in the same final attempt is flagged and retained unchanged', () => {
@@ -258,6 +318,50 @@ test('directory substitution or mode changes refuse export acknowledgement and r
     const output = join(root, 'output'); await assert.rejects(writeExport(fixture(), output, () => { chmodSync(output, 0o755); }), /export_directory_identity_changed/);
     assert.deepEqual(await readdir(output), []);
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('every retained data file is revalidated before completion across deletion, substitution, content and private-property changes', async () => {
+  for (const filename of ['private-records.json', 'public-summary.json', 'public-summary.csv']) {
+    for (const change of ['delete', 'identical-replacement', 'in-place-content', 'symlink', 'directory', 'fifo', 'exposed-mode', 'private-mode-change', 'hardlink']) {
+      const root = await mkdtemp(join(tmpdir(), 'gaffer-baseline-file-change-'));
+      try {
+        const output = join(root, 'output'); let original: Buffer | undefined;
+        await assert.rejects(writeExport(fixture(), output, name => {
+          if (name !== 'complete.json') return;
+          const file = join(output, filename); original = readFileSync(file);
+          if (change === 'delete') unlinkSync(file);
+          if (change === 'identical-replacement') { renameSync(file, join(root, 'retained-original')); writeFileSync(file, original, { mode: 0o600 }); }
+          if (change === 'in-place-content') writeFileSync(file, Buffer.alloc(original.length, 120));
+          if (change === 'symlink') { renameSync(file, join(root, 'retained-original')); symlinkSync(join(root, 'retained-original'), file); }
+          if (change === 'directory') { renameSync(file, join(root, 'retained-original')); mkdirSync(file, { mode: 0o700 }); }
+          if (change === 'fifo') { renameSync(file, join(root, 'retained-original')); execFileSync('mkfifo', ['-m', '600', file], { timeout: 2000 }); }
+          if (change === 'exposed-mode') chmodSync(file, 0o644);
+          if (change === 'private-mode-change') chmodSync(file, 0o400);
+          if (change === 'hardlink') linkSync(file, join(root, 'linked-original'));
+        }), /export_file_|ENOENT/);
+        assert(original && original.length > 0); await assert.rejects(stat(join(output, 'complete.json')), /ENOENT/);
+        for (const unchanged of ['private-records.json', 'public-summary.json', 'public-summary.csv'].filter(name => name !== filename)) assert((await stat(join(output, unchanged))).isFile());
+      } finally { await rm(root, { recursive: true, force: true }); }
+    }
+  }
+});
+
+test('final acknowledgement revalidates all files including the completion manifest after directory syncs', async () => {
+  for (const filename of ['private-records.json', 'public-summary.json', 'public-summary.csv', 'complete.json']) {
+    const root = await mkdtemp(join(tmpdir(), 'gaffer-baseline-final-content-'));
+    const handle = await (await import('node:fs/promises')).open(join(root, 'prototype'), 'a', 0o600), prototype = Object.getPrototypeOf(handle); await handle.close();
+    const originalSync = prototype.sync; let syncs = 0;
+    const output = join(root, 'output');
+    prototype.sync = async function (this: FileHandle, ...args: unknown[]) {
+      const result = await originalSync.apply(this, args);
+      if (++syncs === 7) { const file = join(output, filename); writeFileSync(file, Buffer.alloc(readFileSync(file).length, 120)); }
+      return result;
+    };
+    try {
+      await assert.rejects(writeExport(fixture(), output), /export_file_content_changed/);
+      assert.equal(syncs, 7); assert.deepEqual((await readdir(output)).sort(), ['complete.json', 'private-records.json', 'public-summary.csv', 'public-summary.json']);
+    } finally { prototype.sync = originalSync; await rm(root, { recursive: true, force: true }); }
+  }
 });
 
 test('blocked unstarted case retains preparation overhead and no scope, attempts, acceptance or usage is invented', () => {

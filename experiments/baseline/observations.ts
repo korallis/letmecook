@@ -8,7 +8,9 @@ export const STATUSES = ['accepted', 'rejected', 'failed', 'budget-exhausted', '
 
 export function effort(run: Row, phase: 'trial' | 'follow-up' = 'trial') {
   const rows = run.operatorIntervals.filter((x: Row) => x.phase === phase);
-  const measuredSeconds = rows.filter((x: Row) => x.confidence === 'measured').reduce((n: number, x: Row) => n + x.durationSeconds, 0);
+  // Sum measured milliseconds before conversion so fractional intervals cannot
+  // manufacture a tiny positive overrun at an exact whole-second cap.
+  const measuredSeconds = rows.filter((x: Row) => x.confidence === 'measured').reduce((n: number, x: Row) => n + time(x.end) - time(x.start), 0) / 1000;
   const estimatedSeconds = rows.filter((x: Row) => x.confidence === 'estimated').reduce((n: number, x: Row) => n + x.durationSeconds, 0);
   const complete = rows.length > 0 && run.operatorCoverage[phase] === 'complete' && !rows.some((x: Row) => x.confidence === 'unknown');
   return { measuredSeconds, estimatedSeconds, unknownIntervals: rows.filter((x: Row) => x.confidence === 'unknown').length,

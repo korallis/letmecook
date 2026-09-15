@@ -104,6 +104,17 @@ in `observations.ts`, with examples in `fixture.ts`. It retains:
   labels remain null. A late accepted output can remain `budget-exhausted` and is
   excluded from in-budget successes. Follow-up cannot finish before seven days.
 
+Public `knownLowerBounds` and `provenOverruns` preserve already-established budget
+breaches when the complete total is unknown. The physical lower bound is the larger
+of the distinct supplied operation count and any observed scope count. The effort
+lower bound contains measured trial seconds only; estimates remain separate.
+Thus 33 supplied operations or 1801 measured seconds retain their positive overrun
+against 32/1800 even with missing receipts or recovery intervals. The full total
+and its full overrun remain null when unavailable. A zero proven overrun means no
+positive breach has been established from that lower bound, not that the complete
+total is zero or within budget. A record-only effort treatment has no cap or
+proven effort-overrun value.
+
 Place actual input in an operator-owned directory with mode 0700 and a file with
 mode 0600. The output parent must also be private and already exist. Then:
 
@@ -118,6 +129,12 @@ JSON keys and invalid UTF8 are refused. Output uses an exclusive directory and
 files, captures opened no-follow directory identities and rechecks their inode,
 device, mode and type around writes and before acknowledgement. Directory
 substitution refuses the export and leaves the original partial files intact.
+Created file descriptors remain open through final verification. Before completion
+and acknowledgement, every retained file must still match its pathname/inode,
+private regular-file properties, size and expected bytes, including the completion
+manifest itself. Missing, substituted or altered files refuse acknowledgement;
+partial output remains for inspection. This is persistence verification at those
+observation points, not a security boundary against the file owner.
 The exporter fsyncs the records, then writes `complete.json` with exact file-byte SHA-256 digests.
 Success is acknowledged only after all directory syncs complete. Existing output
 is never overwritten. On storage failure, retain the partial directory; it is not
@@ -137,7 +154,9 @@ measured seconds, estimated seconds and incomplete all-in effort are separate.
 Sequence incidents such as a physical send after an unknown original (including
 fallback within the same harness attempt), a later harness attempt, or concurrent
 cases remain visible and disqualify accepted counts. A terminal unknown without a
-later operation remains unknown without inventing a replacement. This reports supplied data;
+later operation remains unknown without inventing a replacement. Every overlapping
+case in the same provenance cohort is flagged, independently of input order;
+adjacent half-open run intervals do not overlap. This reports supplied data;
 it neither controls future execution nor discovers omitted runs. Input-set
 completeness remains explicitly caller-declared.
 
