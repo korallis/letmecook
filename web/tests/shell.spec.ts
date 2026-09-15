@@ -145,9 +145,9 @@ test('keyboard path, visible focus, semantics and reduced motion', async ({ page
   await page.keyboard.press('Enter');
   await expect(status(page)).toHaveText(/^Read/);
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  expect(await page.getByRole('button').evaluate(e => getComputedStyle(e).transitionProperty)).toBe('none');
+  expect(await page.getByRole('button').evaluate(e => getComputedStyle(e).transitionDuration)).toBe('0s');
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  expect(await page.getByRole('button').evaluate(e => getComputedStyle(e).transitionProperty)).toBe('background-color');
+  expect(await page.getByRole('button').evaluate(e => getComputedStyle(e).transitionDuration)).toBe('0s');
 });
 
 for (const [name, width, scheme] of [['360-light', 360, 'light'], ['360-dark', 360, 'dark'], ['1280-light', 1280, 'light'], ['1280-dark', 1280, 'dark']] as const) {
@@ -162,6 +162,30 @@ for (const [name, width, scheme] of [['360-light', 360, 'light'], ['360-dark', 3
     await page.screenshot({ path: `${shots}/${name}.png`, fullPage: true });
   });
 }
+
+test('theme changes keep refresh text contrast at least 4.5:1 throughout', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'no-preference' });
+  await page.goto(base + '/');
+  await expect(status(page)).toHaveText(/^Read/);
+  for (const colorScheme of ['dark', 'light'] as const) {
+    const samples = page.evaluate(async () => {
+      const luminance = (color: string) => color.match(/[\d.]+/g)!.slice(0, 3).map(Number)
+        .map(v => v / 255).map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4)
+        .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i]!, 0);
+      const ratios: number[] = [];
+      const end = performance.now() + 500;
+      do {
+        const style = getComputedStyle(document.querySelector('button')!);
+        const foreground = luminance(style.color), background = luminance(style.backgroundColor);
+        ratios.push((Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05));
+        await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      } while (performance.now() < end);
+      return ratios;
+    });
+    await page.emulateMedia({ colorScheme });
+    expect(Math.min(...await samples), colorScheme).toBeGreaterThanOrEqual(4.5);
+  }
+});
 
 test('direct browser requests cannot enable actions, imports or remote binding', async ({ page }) => {
   await page.goto(base + '/');

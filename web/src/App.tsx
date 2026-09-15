@@ -5,7 +5,6 @@ import { readSnapshot, STATUS_WORDS, type ReadState } from './read.ts';
 import { colors, space, type } from './tokens.stylex.ts';
 
 const NARROW = '@media (max-width: 40rem)';
-const REDUCED = '@media (prefers-reduced-motion: reduce)';
 
 const s = stylex.create({
   page: {
@@ -39,8 +38,6 @@ const s = stylex.create({
     outlineStyle: 'solid',
     outlineColor: colors.focus,
     outlineOffset: 2,
-    transitionProperty: { default: 'background-color', [REDUCED]: 'none' },
-    transitionDuration: '120ms',
   },
   section: { marginBlock: space.lg },
   heading: { fontFamily: type.family, fontSize: type.size, letterSpacing: type.tracking, textTransform: 'uppercase', marginBlock: space.sm, borderBottomWidth: 1, borderBottomStyle: 'solid', borderBottomColor: colors.rule, paddingBottom: space.xs },
