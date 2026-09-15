@@ -29,9 +29,45 @@ One issue → one `codex/<issue-number>-<short-name>` branch → one PR containi
 
 Follow [AGENTS.md](../AGENTS.md), [Contributing](../CONTRIBUTING.md) and the [Astra playbook](astra-playbook.md). Assigned implementation includes its branch and PR; merge, deployment and release publication remain separate decisions. Creating this backlog does not launch its implementation.
 
-M0 experiments establish the selected foundation. Application package paths in later issues are proposed starting points until that decision lands. The coding agent is Astra; configured runtime model routes remain a separate product choice, always through 9Router.
+The [foundation decision record](decisions/0001-execution-foundation.md) selects a
+narrow Go build with explicit unresolved gates; #9 remains open and original
+implementation dependencies do not change. Application paths below identify
+proposed owners, not permission to scaffold them. The coding agent is Astra;
+runtime model routes remain a separate product choice, always through 9Router.
 
 When a prerequisite lands, review its evidence and update dependent readiness labels. Cancelled or failed-capability issues cannot unblock a dependent implementation by being closed. Long-running gates require actual observations; fixes discovered by a gate get their own focused issue and PR.
+
+## Foundation path reconciliation
+
+The #9 record uses base `27aa5b367e4ae6a017931e6882fd58598a9efab6`.
+`cmd/gafferd/`, `internal/store/`, `internal/httpapi/`, `schemas/execution/` and
+`schemas/readapi/` exist only as #93/#94 provisional fixture code. `web/` is still
+#95's intended path, absent on that base. Retain/reconcile/port/discard decisions
+and the bounded M1 plan live in the [decision](decisions/0001-execution-foundation.md#bounded-m1-ownership-and-path-plan).
+No existing package supplies grants, runner execution, artifact custody or sessions.
+
+Affected GitHub issue-body navigation hints were updated and read back on
+15 September 2026 as follows; outcomes, dependencies, acceptance criteria and
+9Router ownership stay unchanged. No comments, assignees or issue states changed. Avoid creating separate
+packages merely to reproduce the old path list.
+
+| Issue | Updated navigation hint |
+| --- | --- |
+| [#11](https://github.com/korallis/letmecook/issues/11) | `go.mod`, `cmd/gafferd/`, `internal/store/`, `schemas/readapi/`, `internal/httpapi/`; migrations remain in store until splitting is useful |
+| [#13](https://github.com/korallis/letmecook/issues/13) | `internal/identity/`, `internal/httpapi/` and future runner transport authentication; no parallel HTTP owner |
+| [#15](https://github.com/korallis/letmecook/issues/15) | `internal/scheduler/`, `internal/authority/`, `internal/store/` for atomic outbox/route decision/reservation writes; no independent outbox store |
+| [#17](https://github.com/korallis/letmecook/issues/17) | `internal/runner/`, `internal/runnerjournal/`, `internal/httpapi/`; spool/replay shares the runner and API owners |
+| [#20](https://github.com/korallis/letmecook/issues/20) | `internal/reconcile/`, `internal/store/`, `internal/runner/`; bounded retry stays in reconciliation until a separate owner is needed |
+| [#22](https://github.com/korallis/letmecook/issues/22) | `cmd/gaffer/`, `schemas/readapi/`, `internal/httpapi/`, `tests/cli/`; reuse typed API rather than add `internal/api/` |
+| [#26](https://github.com/korallis/letmecook/issues/26) | `web/`, `internal/httpapi/`, `internal/identity/`, `docs/operations/private-access.md`; replace `internal/http/session/` hint |
+| [#27](https://github.com/korallis/letmecook/issues/27) | `web/src/router/`, `internal/httpapi/`, `docs/operations/9router.md`; replace `internal/http/router/` hint |
+| [#32](https://github.com/korallis/letmecook/issues/32) | `web/src/tasks/`, `internal/httpapi/`; replace `internal/http/events/` hint; product SSE remains unimplemented |
+| [#34](https://github.com/korallis/letmecook/issues/34) | `web/src/review/`, `internal/httpapi/`, `internal/review/`; replace `internal/http/review/` hint |
+
+Other issue hints retain their intended owners. #10 reconciles provisional wire
+semantics before #11 promotion; #89 must newly qualify worker **and verifier**
+confinement before supported execution. Publication remains #35/#36, separate
+from local acceptance; no model/account router package is introduced.
 
 ## M0 — Evidence and feasibility
 

@@ -4,7 +4,11 @@ Issue [#93](https://github.com/korallis/letmecook/issues/93), draft contract.
 **Not locked: fresh independent contract review remains required.** This slice
 neither accepts nor unblocks #9, #89, #10, original #11, or their dependents.
 The ordering exception permits reversible types and synthetic consistency checks,
-not a selected foundation, supported runtime or execution authority.
+not a selected foundation, supported runtime or execution authority. The
+[#9 decision record](../../docs/decisions/0001-execution-foundation.md#provisional-slice-reconciliation)
+now selects a narrow Go build pending acceptance; retain these types provisionally
+and reconcile every semantic/version limit under #10 before promotion. That record
+is not a measured gate pass and grants no downstream execution authority.
 
 The [M1-01 execution contract](../../docs/contracts/execution.md) develops #10's
 state/evidence, acknowledgement, restart/restore and safe-retry rules directly from

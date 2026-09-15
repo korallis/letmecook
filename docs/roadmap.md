@@ -1,6 +1,6 @@
 # Gaffer — Roadmap
 
-**Status:** proposed baseline v0.4 · **Updated:** 14 September 2026
+**Status:** proposed baseline v0.4; foundation decision recorded, not locked · **Updated:** 15 September 2026
 
 Companions: [PRD](PRD.md), [specification](spec.md), [evaluation](evaluation.md).
 
@@ -9,10 +9,14 @@ shared model-access layer from M0, including multiple subscriptions per provider
 The gates validate that integration rather than deciding whether to include it.
 This plan replaces the original
 rough 29-week plan, whose ordering delayed essential controls until after parallel
-execution. No calendar estimate is credible before testing the harness, isolation
-and reuse assumptions. Timebox M0 to roughly five focused engineering days, record
-actual effort, then estimate M1–M2 from the observed work. This is a planning
-recommendation, not a delivery commitment.
+execution. No calendar commitment is credible while isolation, live and reuse gates remain
+unmeasured. The original M0 recommendation was roughly five focused engineering
+days, not an observed effort result. The
+[foundation decision](https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md)
+records the actual activity span, unknown person-hours, remaining M1 estimate of
+25–45 focused engineering days and M2 estimate of 23–42 days plus at least seven
+calendar days of dogfood. These are planning ranges after entry gates, excluding
+unknown M0 remediation and operator waits, not a release date.
 
 ## Release sequence
 
@@ -28,9 +32,11 @@ M6  External usability and v1       offline drafts, install, restore, honest lim
 Later: automatic curation, learned idioms, auto-merge, desktop runners
 ```
 
-Every exit checkbox is uncompleted. These are acceptance tests to build and run,
-not claims of current implementation. Failing a gate can narrow scope or favour
-reuse; it need not produce another subsystem.
+Exit checkboxes are milestone acceptance gates, not an implementation-status
+tracker. Component experiments and reversible #93/#94 code do not pass a milestone;
+#95 remains open at the decision's base. The recorded build choice leaves #9 open
+pending required measurements and fresh Opus review. Failing a gate can narrow
+scope or favour reuse; it need not produce another subsystem.
 
 ## M0 — Evidence and feasibility
 
@@ -61,9 +67,18 @@ shared 9Router instance, and is a new Gaffer foundation justified?
 - [ ] Baseline task results, operator minutes and total overhead are recorded with a repeatable test method.
 - [ ] The task-routing contract and development counterexamples are reviewed; alpha implementation and a separate static-versus-task-aware comparison are tracked without changing the identical-route whole-product baseline.
 
-**Decision:** adopt/extend if a maintained project satisfies the critical boundaries
-with less maintenance than a new core. Build a narrow core only if the missing
-operator workflow and control semantics justify it. Gaffer's account-routing layer
+**Recorded choice:** build a narrow Go core, retaining SQLite, an embedded
+React/TypeScript/StyleX UI and OpenCode 1.18.30 as the first adapter target. The
+[comparison and reconciliation plan](https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md)
+is not locked and establishes **no supported execution runtime**. Fresh Opus review,
+paired candidate execution/cost, Docker-free #89 confinement plus adapter/verifier
+integration, live worker/planner/continuity and real baseline observations remain
+open. The failed one-send live trial grants no retry. Original dependency edges
+remain; only the approved provisional slices have an ordering exception.
+
+Revisit adopt/extend if a maintained project proves the critical boundaries with
+less owned maintenance than the narrow core. Do not count provisional sunk effort
+in that comparison. Gaffer's account-routing layer
 is already delegated to 9Router. Fix or document specific adapter/protocol gaps;
 do not turn them into a competing native-account manager or silently bypass the
 shared router. API-backed connections can also be configured in 9Router when chosen.

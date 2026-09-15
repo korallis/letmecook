@@ -110,9 +110,18 @@ versus owning foundational execution/security code. Adopt a tool outright if it
 solves the need. Extend it if the missing pieces fit stable boundaries. Start a
 new core only with a written explanation of the gaps and recurring maintenance cost.
 
-**Unresolved:** this documentation review does not run or certify those products,
-select a fork, inspect their complete licences, or commit to a new core. Those are
-explicit M0 decisions, not assumptions hidden inside the architecture.
+**15 September decision update:** the
+[foundation decision record](https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md)
+compares freshly pinned intentic and Claudexor on this rubric and selects a narrow
+Go build, preserving 9Router ownership. It challenges the strongest alternative,
+extending Claudexor's existing lifecycle, and records licence/dependency limits,
+control gaps, costs, first adapter target and provisional-slice disposition.
+This is a decision record, not a completed measured comparison or locked M0 exit.
+Neither candidate was executed; paired workflow/effort results remain unknown.
+Fresh Opus review, Docker-free #89 proof, live #6/#7/#8 acceptance and real #1
+baseline evidence remain blocked. The failed live attempt remains failed; no
+retry is authorized by the decision. Historical shortlist findings above retain
+their 14 September source-only scope.
 
 ## 4. Provider and gateway feasibility
 
@@ -350,9 +359,10 @@ a reliable measure of its remaining allowance.
 | Production hosts | Excluded from initial supported execution | Separate deployment/threat review and explicit user need |
 | Release timing | Estimate after feasibility; gates before dates | M0 yields observed implementation effort |
 
-Unknowns remain real: which harness/9Router/isolation combination passes on your
-hardware, whether an existing project can be extended, how much the brief workflow
-improves your work, and what level of concurrency your actual accounts sustain.
+Unknowns remain real: which Docker-free harness/9Router/isolation combination
+passes on your hardware, the measured cost of extending either candidate versus
+the selected narrow build, how much the brief workflow improves your work, and
+what level of concurrency your actual accounts sustain.
 The choice of shared routing through 9Router is settled; these are integration and
 product-value experiments around that foundation.
 

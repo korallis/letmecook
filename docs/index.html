@@ -677,9 +677,18 @@ small capture-to-review fixture on each. Record the cost of adding missing workf
 versus owning foundational execution/security code. Adopt a tool outright if it
 solves the need. Extend it if the missing pieces fit stable boundaries. Start a
 new core only with a written explanation of the gaps and recurring maintenance cost.</p>
-<p><strong>Unresolved:</strong> this documentation review does not run or certify those products,
-select a fork, inspect their complete licences, or commit to a new core. Those are
-explicit M0 decisions, not assumptions hidden inside the architecture.</p>
+<p><strong>15 September decision update:</strong> the
+<a href="https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md">foundation decision record</a>
+compares freshly pinned intentic and Claudexor on this rubric and selects a narrow
+Go build, preserving 9Router ownership. It challenges the strongest alternative,
+extending Claudexor&#39;s existing lifecycle, and records licence/dependency limits,
+control gaps, costs, first adapter target and provisional-slice disposition.
+This is a decision record, not a completed measured comparison or locked M0 exit.
+Neither candidate was executed; paired workflow/effort results remain unknown.
+Fresh Opus review, Docker-free #89 proof, live #6/#7/#8 acceptance and real #1
+baseline evidence remain blocked. The failed live attempt remains failed; no
+retry is authorized by the decision. Historical shortlist findings above retain
+their 14 September source-only scope.</p>
 <h2 id="evaluation-4-provider-and-gateway-feasibility">4. Provider and gateway feasibility</h2>
 <h3 id="evaluation-9router-is-the-model-access-foundation">9Router is the model-access foundation</h3>
 <p>The user selected 9Router to centralize every agent&#39;s model access and support
@@ -935,9 +944,10 @@ a reliable measure of its remaining allowance.</p>
 <td>M0 yields observed implementation effort</td>
 </tr>
 </tbody></table></div>
-<p>Unknowns remain real: which harness/9Router/isolation combination passes on your
-hardware, whether an existing project can be extended, how much the brief workflow
-improves your work, and what level of concurrency your actual accounts sustain.
+<p>Unknowns remain real: which Docker-free harness/9Router/isolation combination
+passes on your hardware, the measured cost of extending either candidate versus
+the selected narrow build, how much the brief workflow improves your work, and
+what level of concurrency your actual accounts sustain.
 The choice of shared routing through 9Router is settled; these are integration and
 product-value experiments around that foundation.</p>
 <h2 id="evaluation-8-documentation-maintenance">8. Documentation maintenance</h2>
@@ -1369,7 +1379,11 @@ without claiming equivalence from a small sample. See <a href="#evaluation-6-how
 <p><strong>Status:</strong> proposed baseline v0.4 · <strong>Updated:</strong> 15 September 2026</p>
 <p>Companions: <a href="#prd">product requirements</a>, <a href="#evaluation">evaluation</a>,
 <a href="#roadmap">delivery sequence</a>. This is a design to implement and test, not a
-statement that the security or durability properties already exist.</p>
+statement that the security or durability properties already exist. The
+<a href="https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md">foundation decision record</a>
+selects a narrow Go build from the available evidence, pending measured comparison,
+Docker-free confinement and fresh Opus review. It does not complete #9 or unlock
+original downstream work.</p>
 <h2 id="spec-1-architecture-and-ownership">1. Architecture and ownership</h2>
 <p>Use one active daemon with SQLite on local storage, a responsive web application,
 and independently supervised runners. The daemon owns workflow truth; each runner
@@ -1420,8 +1434,10 @@ nor outbound traffic from 9Router to model providers and from delivery to GitHub
 <p>One operator, one active daemon, one repository, one runner, one harness, one shared
 9Router instance and one code-writing attempt at a time. The alpha acceptance
 fixture uses two subscriptions from the same provider to prove central account
-management; an installation with one connection still works. Go remains the proposed daemon/runner language;
-React and TypeScript implement the UI. Linux is the first intended unattended
+management; the design also permits a single-connection installation, not yet
+validated. The decision target is Go 1.26.5 with SQLite, an embedded
+React/TypeScript/StyleX UI and the pinned OpenCode 1.18.30 adapter first.
+No supported worker/verifier runtime is established yet. Linux is the first intended unattended
 execution target; an exact Docker-free OS/native or dedicated VM confinement
 profile must be proven before it is supported. A Mac may host the daemon only
 within the validated support matrix. Worker execution from that installation
@@ -2227,8 +2243,8 @@ team execution pool is required for the solo product.</p>
 </thead>
 <tbody><tr>
 <td>Core/runner</td>
-<td>Keep Go as proposed; prove supervision and packaging</td>
-<td>M0 comparison shows a maintained foundation or TypeScript implementation materially reduces total delivery cost</td>
+<td>Narrow Go 1.26.5 build selected in decision record; lock and execution remain blocked</td>
+<td>Same-workflow reuse proof materially reduces owned correctness code; provisional effort is not a selection reason</td>
 </tr>
 <tr>
 <td>State</td>
@@ -2237,8 +2253,8 @@ team execution pool is required for the solo product.</p>
 </tr>
 <tr>
 <td>UI</td>
-<td>React + TypeScript, served by daemon, SSE</td>
-<td>Actual offline/mobile validation</td>
+<td>React + TypeScript + StyleX, embedded in daemon; product SSE in M2</td>
+<td>Actual authenticated/mobile validation; #95 fixture shell is not product acceptance</td>
 </tr>
 <tr>
 <td>Knowledge</td>
@@ -2268,22 +2284,37 @@ team execution pool is required for the solo product.</p>
 </tbody></table></div>
 <p>The expensive architecture choice is not the programming language. It is owning
 process containment, durable distributed execution and external
-effect reconciliation. <a href="#roadmap-m0-evidence-and-feasibility">M0</a> must establish
-whether an existing project can carry those responsibilities better. Provider
-credential handling and account/request routing are delegated to 9Router.</p>
+effect reconciliation. The
+<a href="https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md">decision record</a>
+compares pinned intentic and Claudexor source against the same workflow, names
+missing measurements and bounds M1 ownership. Existing <code>cmd/gafferd/</code>,
+<code>internal/store/</code>, <code>internal/httpapi/</code> and <code>schemas/</code> stay provisional until
+#9/#10/#11 reconciliation; do not create parallel <code>internal/http/</code> or <code>internal/api/</code>
+owners. Future <code>cmd/gaffer-runner/</code> owns one qualified runner and <code>cmd/gaffer/</code> the
+local CLI. <code>web/</code> remains the UI path, not present at the decision&#39;s base.</p>
+<p><a href="#roadmap-m0-evidence-and-feasibility">M0</a> is not passed: the first live trial
+failed with unknown remote work, #89 has no newly measured Docker-free profile,
+and real baseline/candidate workflow measurements and fresh Opus review remain
+pending. No first supported execution runtime or retry authority follows from
+this design choice. Provider credential handling and account/request routing
+remain delegated to 9Router.</p>
 </article>
 <article class="doc" id="roadmap" data-doc="roadmap"><h1 id="roadmap-gaffer-roadmap">Gaffer — Roadmap</h1>
-<p><strong>Status:</strong> proposed baseline v0.4 · <strong>Updated:</strong> 14 September 2026</p>
+<p><strong>Status:</strong> proposed baseline v0.4; foundation decision recorded, not locked · <strong>Updated:</strong> 15 September 2026</p>
 <p>Companions: <a href="#prd">PRD</a>, <a href="#spec">specification</a>, <a href="#evaluation">evaluation</a>.</p>
 <p>This is a sequence of evidence gates for a solo maintainer. 9Router is the selected
 shared model-access layer from M0, including multiple subscriptions per provider.
 The gates validate that integration rather than deciding whether to include it.
 This plan replaces the original
 rough 29-week plan, whose ordering delayed essential controls until after parallel
-execution. No calendar estimate is credible before testing the harness, isolation
-and reuse assumptions. Timebox M0 to roughly five focused engineering days, record
-actual effort, then estimate M1–M2 from the observed work. This is a planning
-recommendation, not a delivery commitment.</p>
+execution. No calendar commitment is credible while isolation, live and reuse gates remain
+unmeasured. The original M0 recommendation was roughly five focused engineering
+days, not an observed effort result. The
+<a href="https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md">foundation decision</a>
+records the actual activity span, unknown person-hours, remaining M1 estimate of
+25–45 focused engineering days and M2 estimate of 23–42 days plus at least seven
+calendar days of dogfood. These are planning ranges after entry gates, excluding
+unknown M0 remediation and operator waits, not a release date.</p>
 <h2 id="roadmap-release-sequence">Release sequence</h2>
 <pre><code class="language-text">M0  Evidence and feasibility        prove 9Router integration; decide Gaffer reuse
 M1  Durable bounded execution       one task, one runner, recoverable artifact
@@ -2295,9 +2326,11 @@ M6  External usability and v1       offline drafts, install, restore, honest lim
 
 Later: automatic curation, learned idioms, auto-merge, desktop runners
 </code></pre>
-<p>Every exit checkbox is uncompleted. These are acceptance tests to build and run,
-not claims of current implementation. Failing a gate can narrow scope or favour
-reuse; it need not produce another subsystem.</p>
+<p>Exit checkboxes are milestone acceptance gates, not an implementation-status
+tracker. Component experiments and reversible #93/#94 code do not pass a milestone;
+#95 remains open at the decision&#39;s base. The recorded build choice leaves #9 open
+pending required measurements and fresh Opus review. Failing a gate can narrow
+scope or favour reuse; it need not produce another subsystem.</p>
 <h2 id="roadmap-m0-evidence-and-feasibility">M0 — Evidence and feasibility</h2>
 <p><strong>Question:</strong> can the intended workflow run through a containable harness and the
 shared 9Router instance, and is a new Gaffer foundation justified?</p>
@@ -2325,9 +2358,17 @@ shared 9Router instance, and is a new Gaffer foundation justified?</p>
 <li><input disabled="" type="checkbox"> Baseline task results, operator minutes and total overhead are recorded with a repeatable test method.</li>
 <li><input disabled="" type="checkbox"> The task-routing contract and development counterexamples are reviewed; alpha implementation and a separate static-versus-task-aware comparison are tracked without changing the identical-route whole-product baseline.</li>
 </ul>
-<p><strong>Decision:</strong> adopt/extend if a maintained project satisfies the critical boundaries
-with less maintenance than a new core. Build a narrow core only if the missing
-operator workflow and control semantics justify it. Gaffer&#39;s account-routing layer
+<p><strong>Recorded choice:</strong> build a narrow Go core, retaining SQLite, an embedded
+React/TypeScript/StyleX UI and OpenCode 1.18.30 as the first adapter target. The
+<a href="https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md">comparison and reconciliation plan</a>
+is not locked and establishes <strong>no supported execution runtime</strong>. Fresh Opus review,
+paired candidate execution/cost, Docker-free #89 confinement plus adapter/verifier
+integration, live worker/planner/continuity and real baseline observations remain
+open. The failed one-send live trial grants no retry. Original dependency edges
+remain; only the approved provisional slices have an ordering exception.</p>
+<p>Revisit adopt/extend if a maintained project proves the critical boundaries with
+less owned maintenance than the narrow core. Do not count provisional sunk effort
+in that comparison. Gaffer&#39;s account-routing layer
 is already delegated to 9Router. Fix or document specific adapter/protocol gaps;
 do not turn them into a competing native-account manager or silently bypass the
 shared router. API-backed connections can also be configured in 9Router when chosen.</p>

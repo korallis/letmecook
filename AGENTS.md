@@ -1,11 +1,14 @@
 # Working on letmecook
 
 Build with GPT-6 Astra. The product's working name is Gaffer. Most reviewed design
-describes intended behaviour, not existing APIs. The reversible #93 protocol and
-#94 fixture-only daemon and #95 embedded shell stay provisional; see
-`schemas/execution/README.md` for reconciliation, `cmd/gafferd/README.md` for
-startup, read API and checks, and `web/README.md` for the shell build that must
-precede the Go build. None accepts #9/#10 or supplies execution authority.
+describes intended behaviour, not existing APIs. See
+`docs/decisions/0001-execution-foundation.md` for the build choice, package owners
+and unresolved #9 gates. The reversible #93 protocol, #94 fixture-only daemon and
+#95 embedded shell remain provisional; `schemas/execution/README.md` owns protocol
+reconciliation, `cmd/gafferd/README.md` owns startup, read API and checks, and
+`web/README.md` owns the shell build that must precede the Go build. None accepts
+#9/#10 or supplies execution authority. No supported execution
+runtime or original downstream acceptance follows from these slices or the decision record.
 
 ## Issue workflow
 
