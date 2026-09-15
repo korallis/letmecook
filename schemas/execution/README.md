@@ -1,10 +1,15 @@
-# Provisional execution protocol v1
+# Provisional execution protocol
 
 Issue [#93](https://github.com/korallis/letmecook/issues/93), draft contract.
 **Not locked: fresh independent contract review remains required.** This slice
 neither accepts nor unblocks #9, #89, #10, original #11, or their dependents.
 The ordering exception permits reversible types and synthetic consistency checks,
 not a selected foundation, supported runtime or execution authority.
+
+The [M1-01 execution contract](../../docs/contracts/execution.md) develops #10's
+state/evidence, acknowledgement, restart/restore and safe-retry rules directly from
+these artifacts. Its v2 control-message additions preserve historical v1 fixtures.
+Named obligations O1–O8 remain open before #9/#10 acceptance; no runtime is added.
 
 ## Scope and interfaces
 
@@ -25,8 +30,12 @@ outputs. It is not a process simulator or proof of distributed safety.
 
 ## Wire identity and validation
 
-- Version is exactly `execution-provisional-v1`; no implicit negotiation or
-  downgrade. Unknown versions return `unknown_version`.
+- `Decode` / `decode` accept historical `execution-provisional-v1` and
+  `execution-provisional-v2`. Unknown versions return `unknown_version`.
+  `CheckSession` / `checkSession` require exact negotiated v2 and a matching
+  message version; no implicit downgrade or relabelling of v1 journal records.
+  Lease and result-ack pairs also reject mixed versions. The M1-01 contract
+  specifies singleton TLS ALPN negotiation; no TLS stack is implemented here.
 - Every message has `message_id`, `kind` and `identity` containing `generation`,
   `task_id`, `attempt_id`, `epoch`. IDs/nonces/boot identities are canonical lowercase
   UUIDv4 values; epochs are integers in `1..9007199254740991`.
@@ -51,11 +60,11 @@ outputs. It is not a process simulator or proof of distributed safety.
   identities return `stale_attempt`. A future consumer preserves stale evidence
   separately and never promotes it into current acceptance.
 
-Messages: `assign` (assignment ID, input digest, route), `lease_request` (nonce,
-runner/daemon boot IDs, request-send monotonic milliseconds), `lease_reply` (same
-nonce/boots, validity), `transition` (expected revision, from/to attempt state),
-`result` (manifest identity), `result_ack` (same manifest plus durable receipt ID).
-All fields not belonging to that kind reject.
+The closed message union and kind-specific fields live in
+[`protocol.go`](protocol.go) / [`protocol.ts`](protocol.ts). See the
+[M1-01 wire contract](../../docs/contracts/execution.md#2-version-and-wire-contract)
+for direction, correlation and owner-evidence preconditions; decoding is not
+evidence of durable assignment acceptance or verified stop.
 
 Route records contain only `route_ref`, `decision_digest`, `policy_digest` and
 `limits_profile`. References match `[a-z][a-z0-9_-]{0,63}`: no endpoint, URL, account,
@@ -72,18 +81,9 @@ These protocol records do not implement grants or either limits profile.
 Attempt state changes require matching current identity and `expected_revision`;
 revision mismatch or exhaustion of the safe-integer range returns
 `revision_conflict`. The future state owner must increment revision on accepted
-changes, not replays; the pure check mutates no state. Allowed edges (all other
-edges return `invalid_transition`):
-
-| From | To |
-| --- | --- |
-| assigned | starting, stopping, unknown |
-| starting | running, stopping, unknown |
-| running | result_pending, stopping, unknown |
-| result_pending | succeeded, failed, stopping, unknown |
-| stopping | cancelled, expired, unknown |
-| unknown | stopping, cancelled, expired, result_pending |
-| succeeded, failed, cancelled, expired | none |
+changes, not replays; the pure check mutates no state. Disallowed edges return
+`invalid_transition`. The [M1-01 state contract](../../docs/contracts/execution.md#3-state-and-evidence-rules)
+owns transition evidence requirements over the shared schema's allowed edges.
 
 Task state is a separate read model: `draft`, `ready`, `active`, `verifying`,
 `awaiting_review`, `accepted`, `reconciling`, `blocked`, `failed`, `cancelled`.
@@ -121,21 +121,17 @@ check. The trace supplies these inputs explicitly; no pending-request tracker is
 implemented here. Network partition requires stop, invalidates outstanding nonces
 and marks process and remote state unknown; no timeout proves termination.
 
-The future daemon must durably record each issuance **before sending**, retain the
-latest potentially valid lease even after lost replies, and fence new admission on
-restart. Its replacement barrier must use its own conservative latest issuance
-bound plus drift and termination margin; runner timestamps are not daemon expiry
-proof. Boot change cancels pending requests and old local deadlines. Restore also
-changes generation. Unknown clock/scheduling/isolation/process or remote-work
-assumptions quarantine instead of permitting replacement. This slice supplies no
-measured bounds, timer, watchdog, persistence or retry permission.
+The [M1-01 lease contract](../../docs/contracts/execution.md#4-initial-lease-renewal-and-replacement-barrier)
+owns durable issuance, daemon restart and restore barriers, including disconnected
+runners' installed cutoffs. This slice supplies no measured bounds, timer, watchdog,
+persistence or retry permission.
 
 ## Result identity and acknowledgement
 
 Manifest identity is `{manifest_id, sha256, bytes}`; SHA-256 covers exact manifest
 bytes, with `bytes` in `1..1048576`. This is an opaque manifest reference, not an
 archive implementation or a claim that referenced blobs exist. Manifest content,
-path handling, chunking and custody format remain for #9/#10 reconciliation.
+path handling, chunking and custody format remain open under M1-01 obligation O6.
 
 A durable result receipt must bind the current full identity and exact manifest.
 The pure acknowledgement check requires matching `result` and `result_ack` plus
@@ -157,26 +153,9 @@ owner and therefore cannot issue real result acknowledgements.
 
 ## Reconciliation checklist — required before #9/#10 acceptance
 
-- [ ] #9 independently compares measured foundations; retain, port or discard these
-  types without treating sunk effort as selection evidence. Confirm module paths.
-- [ ] Reconcile every message, refusal, state edge, fixture and size/version limit
-  with selected foundation; define migration/compatibility or change version.
-- [ ] Prove durable generation/epoch/revision allocation, assignment/message
-  deduplication, transaction/outbox ordering, restore and one-daemon ownership.
-- [ ] Measure Docker-free isolation and complete process-tree stop on exact selected
-  runtime; retain #89 and all original live/installation gates independently.
-- [ ] Establish clock drift, scheduling, watchdog, renewal cancellation, daemon
-  issuance/replacement bounds and restart recovery using real adverse processes.
-- [ ] Bind route decisions to actual authority and current full-graph evidence;
-  preserve native/strict limits and unknown remote-work reservations.
-- [ ] Select manifest/custody format; prove sync/crash/disk-full/lost-ack behaviour
-  against real blobs and store. Never substitute event durability for custody.
-- [ ] Define evidence-authorized recovery and task acceptance transitions separately
-  from desired state, result ack, execution, publication and merge.
-- [ ] Satisfy the contract-review requirement in #93 before lock and obtain
-  independent exact-final-head code review plus actual applicable CI. Head changes
-  require renewed review; a different validation reviewer does not satisfy the
-  issue's required contract review.
+The [M1-01 named obligations](../../docs/contracts/execution.md#8-9-reconciliation-obligations)
+own this checklist, including every v2 addition. Record evidence and closure there;
+the fixture guide does not establish foundation or runtime acceptance.
 
 ## Checks
 

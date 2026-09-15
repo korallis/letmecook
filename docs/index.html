@@ -1590,16 +1590,11 @@ execution generation, attempt and epoch. Late output is retained as stale eviden
 <li>If termination/isolation cannot be trusted, quarantine the runner and require
 reconciliation; do not use a timeout as proof that an uncontrolled process died.</li>
 </ol>
-<p>Initial test configuration: renew every five seconds, 30-second lease, five-second
-termination grace. Record the precise monotonic-deadline protocol and maximum
-clock/scheduling assumptions in the implementation. A renewal is bound to a fresh runner nonce and its monotonic request-send time.
-The runner computes its deadline from that send time, never from delayed response
-receipt, and rejects responses received after expiry. The daemon persists each
-issued lease before sending it and waits beyond the latest potentially valid
-deadline plus bounded clock-drift and termination margins before replacement.
-Initial leases use the same runner-initiated request/nonce exchange. If the required
-timing assumptions cannot be established, quarantine instead of redispatching.
-Publish the measured stop bound rather than treating these defaults as proven.</p>
+<p>The provisional <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md#4-initial-lease-renewal-and-replacement-barrier">execution contract §4</a>
+owns the initial handshake, request-send monotonic cutoffs, renewal/restart barriers
+and timing examples. Publish measured clock, scheduling and stop bounds for the
+selected runtime; examples are not qualification evidence. Unknown bounds quarantine
+instead of permitting redispatch.</p>
 <p>At-least-once message delivery is expected. Exactly-once arbitrary shell side
 effects are not promised. Isolate retriable local work and mediate external effects
 through a separate idempotent/reconciled delivery path.</p>
@@ -2151,23 +2146,14 @@ refuse a second scheduler against the same live state directory.</p>
 <p>Use TLS with revocable runner identities. A short-lived single-use bootstrap token
 is exchanged for a runner credential; it is not reused as a perpetual password.
 Do not log join/session tokens. Protocol messages carry version and message ID.</p>
-<pre><code class="language-text">hello {runner_id, protocol_version, known_generation, policy_hash, capabilities, journal_summary}
-welcome {generation_id, reconciliation_required}
-assign {generation_id, assignment_id, attempt_id, epoch, lease, input_manifest, grant, policy_hash}
-accept/refuse {generation_id, assignment_id, reason?}
-renew {generation_id, attempt_id, epoch, nonce} → lease {generation_id, nonce, validity}
-stream {generation_id, attempt_id, epoch, sequence, chunk}
-result {generation_id, attempt_id, epoch, manifest_digest, usage}
-result_ack {generation_id, attempt_id, epoch, manifest_digest}
-cancel {generation_id, attempt_id, epoch, reason}
-terminated {generation_id, attempt_id, epoch, status, recovery_manifest?}
-</code></pre>
-<p>Every generation is unique across restores. Runners persist the accepted generation,
-reject older-generation commands, and terminate/reconcile surviving attempts on a
-generation change. The daemon rejects prior-generation renewals/results/delivery
-requests; it can retain their artifacts as recovery evidence. Resume after restore
-requires acknowledged generation change or conservative lease expiry for every
-possibly active old runner.</p>
+<p>The provisional <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md#2-version-and-wire-contract">execution contract</a>
+owns execution message semantics, version negotiation and acknowledgements, using
+the shared Go/TypeScript schema. Bootstrap, journal/state sync, stream and upload
+encodings remain named reconciliation obligations there; this design does not
+define a competing wire schema.</p>
+<p>Restore admission follows the contract&#39;s
+<a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md#4-initial-lease-renewal-and-replacement-barrier">fencing and replacement barrier</a>,
+including original-daemon ownership and every possibly active old runner.</p>
 <p>All commands use the existing runner-initiated connection. Artifacts upload through
 an authenticated bounded endpoint. Streams are backpressured; spool locally within
 a cap and indicate truncation rather than allowing logs to exhaust memory/disk.</p>

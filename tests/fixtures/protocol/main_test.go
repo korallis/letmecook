@@ -46,6 +46,9 @@ func TestTypedBoundaries(t *testing.T) {
 	if got := p.CheckCurrent(p.Message{}, p.Identity{}); got != p.Malformed {
 		t.Fatal(got)
 	}
+	if got := p.CheckSession(p.Message{}, p.Identity{}, p.FencedVersion); got != p.Malformed {
+		t.Fatal(got)
+	}
 	if got := p.CheckReplay(p.Message{}, p.Message{}, p.Identity{}); got != p.Malformed {
 		t.Fatal(got)
 	}

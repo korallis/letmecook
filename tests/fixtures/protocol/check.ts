@@ -23,6 +23,7 @@ function evaluate(c: any): unknown {
         p.decode(wire); return 'ok';
       }
       case 'current': return p.checkCurrent(load(c.message), current);
+      case 'session': return p.checkSession(load(c.message), current, c.selected);
       case 'replay': return p.checkReplay(load(c.message), load(c.previous), current);
       case 'transition': return p.checkTransition(load(c.message) as p.Transition, current, c.state, c.revision);
       case 'lease': return p.checkLease(load(c.request) as p.LeaseRequest, load(c.reply) as p.LeaseReply, current, c.timing);
@@ -53,6 +54,8 @@ for (let i = 0; i < actual.length; i++) {
 }
 for (const check of [
   () => p.checkCurrent({} as p.Message, suite.current),
+  () => p.checkSession({} as p.Message, suite.current, p.FENCED_VERSION),
+  () => p.checkSession(load('assign'), suite.current, null as unknown as string),
   () => p.checkReplay({} as p.Message, load('assign'), suite.current),
   () => p.checkTransition({} as p.Transition, suite.current, 'assigned', 1),
   () => p.checkLease({} as p.LeaseRequest, load('reply') as p.LeaseReply, suite.current, {} as p.Timing),

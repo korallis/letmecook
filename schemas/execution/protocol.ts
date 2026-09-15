@@ -1,10 +1,11 @@
 import { canonical, parseJSON } from '../../experiments/inference-boundary/json.ts';
 
-export const VERSION = 'execution-provisional-v1' as const;
+export const VERSION = 'execution-provisional-v1' as const; // Historical #93 fixture format.
+export const FENCED_VERSION = 'execution-provisional-v2' as const;
 export const MAX_BYTES = 8192;
 export type Refusal = 'ok' | 'duplicate' | 'malformed' | 'oversized' | 'unknown_version'
   | 'stale_generation' | 'stale_attempt' | 'identity_conflict' | 'revision_conflict'
-  | 'invalid_transition' | 'nonce_mismatch' | 'boot_mismatch' | 'delayed_reply' | 'ack_not_durable';
+  | 'invalid_transition' | 'nonce_mismatch' | 'boot_mismatch' | 'delayed_reply' | 'ack_not_durable' | 'reconciliation_required';
 export type Identity = { generation: string; task_id: string; attempt_id: string; epoch: number };
 export type Route = { route_ref: string; decision_digest: string; policy_digest: string;
   limits_profile: 'strict-provider-output-v1' | 'native-subscription-local-v1' };
@@ -13,14 +14,21 @@ export type AttemptState = 'assigned' | 'starting' | 'running' | 'stopping' | 'r
   | 'succeeded' | 'failed' | 'cancelled' | 'expired' | 'unknown';
 export type TaskState = 'draft' | 'ready' | 'active' | 'verifying' | 'awaiting_review'
   | 'accepted' | 'reconciling' | 'blocked' | 'failed' | 'cancelled';
-type Envelope = { version: typeof VERSION; message_id: string; identity: Identity };
+type Envelope = { version: typeof VERSION | typeof FENCED_VERSION; message_id: string; identity: Identity };
 export type Assignment = Envelope & { kind: 'assign'; assignment_id: string; input_digest: string; route: Route };
 export type LeaseRequest = Envelope & { kind: 'lease_request'; nonce: string; runner_boot: string; daemon_boot: string; sent_ms: number };
 export type LeaseReply = Envelope & { kind: 'lease_reply'; nonce: string; runner_boot: string; daemon_boot: string; validity_ms: number };
 export type Transition = Envelope & { kind: 'transition'; expected_revision: number; from: AttemptState; to: AttemptState };
 export type Result = Envelope & { kind: 'result'; manifest: Manifest };
 export type ResultAck = Envelope & { kind: 'result_ack'; manifest: Manifest; receipt_id: string };
-export type Message = Assignment | LeaseRequest | LeaseReply | Transition | Result | ResultAck;
+type FencedEnvelope = Envelope & { version: typeof FENCED_VERSION };
+type Boots = { runner_boot: string; daemon_boot: string };
+export type Accept = FencedEnvelope & Boots & { kind: 'accept'; assignment_id: string };
+export type Refuse = FencedEnvelope & { kind: 'refuse'; in_reply_to: string; reason: Exclude<Refusal, 'ok' | 'duplicate'> };
+export type Cancel = FencedEnvelope & Boots & { kind: 'cancel'; stop_id: string };
+export type Terminated = FencedEnvelope & Boots & { kind: 'terminated'; stop_id: string;
+  confirmed_process: 'not_started' | 'terminated'; remote_work: 'quiescent' | 'unknown'; evidence_digest: string };
+export type Message = Assignment | LeaseRequest | LeaseReply | Transition | Result | ResultAck | Accept | Refuse | Cancel | Terminated;
 export type Timing = { received_ms: number; drift_ms: number; termination_ms: number;
   runner_boot: string; daemon_boot: string; prior_stop_by_ms: number | null; nonce_active: boolean };
 export type Receipt = { identity: Identity; manifest: Manifest; receipt_id: string;
@@ -58,14 +66,20 @@ function manifest(v: unknown): asserts v is Manifest {
 function validate(v: unknown): asserts v is Message {
   require(v !== null && typeof v === 'object' && !Array.isArray(v));
   const m = v as Record<string, any>;
-  if (typeof m.version === 'string' && m.version !== VERSION) fail('unknown_version');
-  require(m.version === VERSION);
+  if (typeof m.version === 'string' && m.version !== VERSION && m.version !== FENCED_VERSION) fail('unknown_version');
+  require([VERSION, FENCED_VERSION].includes(m.version));
   const common = ['version', 'message_id', 'identity', 'kind'];
   const extra: Record<string, string[]> = {
     assign: ['assignment_id', 'input_digest', 'route'], lease_request: ['nonce', 'runner_boot', 'daemon_boot', 'sent_ms'],
     lease_reply: ['nonce', 'runner_boot', 'daemon_boot', 'validity_ms'], transition: ['expected_revision', 'from', 'to'],
     result: ['manifest'], result_ack: ['manifest', 'receipt_id'],
   };
+  if (m.version === FENCED_VERSION) {
+    extra.accept = ['assignment_id', 'runner_boot', 'daemon_boot'];
+    extra.refuse = ['in_reply_to', 'reason'];
+    extra.cancel = ['stop_id', 'runner_boot', 'daemon_boot'];
+    extra.terminated = ['stop_id', 'runner_boot', 'daemon_boot', 'confirmed_process', 'remote_work', 'evidence_digest'];
+  }
   require(typeof m.kind === 'string' && Object.hasOwn(extra, m.kind));
   fields(m, [...common, ...extra[m.kind]]); id(m.message_id); identity(m.identity);
   switch (m.kind) {
@@ -80,6 +94,19 @@ function validate(v: unknown): asserts v is Message {
       if (m.kind === 'lease_request') integer(m.sent_ms); else integer(m.validity_ms, 1, 30000); break;
     case 'transition': integer(m.expected_revision, 1); require(states.includes(m.from) && states.includes(m.to)); break;
     case 'result': case 'result_ack': manifest(m.manifest); if (m.kind === 'result_ack') id(m.receipt_id); break;
+    case 'accept': case 'cancel': case 'terminated':
+      id(m.runner_boot); id(m.daemon_boot);
+      if (m.kind === 'accept') id(m.assignment_id); else id(m.stop_id);
+      if (m.kind === 'terminated') {
+        require(['not_started', 'terminated'].includes(m.confirmed_process) && ['quiescent', 'unknown'].includes(m.remote_work));
+        digest(m.evidence_digest);
+      }
+      break;
+    case 'refuse':
+      id(m.in_reply_to);
+      require(['malformed', 'oversized', 'unknown_version', 'stale_generation', 'stale_attempt', 'identity_conflict',
+        'revision_conflict', 'invalid_transition', 'nonce_mismatch', 'boot_mismatch', 'delayed_reply',
+        'ack_not_durable', 'reconciliation_required'].includes(m.reason)); break;
   }
 }
 
@@ -106,6 +133,12 @@ function current(m: Message, c: Identity): Refusal {
 }
 export function checkCurrent(m: Message, c: Identity): Refusal {
   message(m); identity(c); return current(m, c);
+}
+/** Exact negotiated execution version; not proof of TLS, peer identity or authority. */
+export function checkSession(m: Message, c: Identity, selected: string): Refusal {
+  message(m); identity(c); require(typeof selected === 'string');
+  const refusal = current(m, c); if (refusal !== 'ok') return refusal;
+  return selected === FENCED_VERSION && m.version === selected ? 'ok' : 'unknown_version';
 }
 /** Compare against a durable owner's retained message; this function retains nothing. */
 export function checkReplay(m: Message, previous: Message, c: Identity): Refusal {
@@ -134,6 +167,7 @@ export function checkLease(request: LeaseRequest, reply: LeaseReply, c: Identity
   if (timing.prior_stop_by_ms !== null) integer(timing.prior_stop_by_ms);
   require(typeof timing.nonce_active === 'boolean');
   for (const m of [request, reply]) { const reason = current(m, c); if (reason !== 'ok') return { reason }; }
+  if (request.version !== reply.version) return { reason: 'unknown_version' };
   if (request.runner_boot !== timing.runner_boot || reply.runner_boot !== timing.runner_boot ||
     request.daemon_boot !== timing.daemon_boot || reply.daemon_boot !== timing.daemon_boot) return { reason: 'boot_mismatch' };
   if (!timing.nonce_active || request.nonce !== reply.nonce) return { reason: 'nonce_mismatch' };
@@ -152,6 +186,7 @@ export function checkAck(result: Result, ack: ResultAck, c: Identity, receipt: R
   require(['unknown', 'verified_durable'].includes(receipt.artifacts));
   require(['event_only', 'manifest_and_result_committed'].includes(receipt.metadata));
   for (const m of [result, ack]) { const refusal = current(m, c); if (refusal !== 'ok') return refusal; }
+  if (result.version !== ack.version) return 'unknown_version';
   if (canonical(result.manifest) !== canonical(ack.manifest)) return 'identity_conflict';
   if (canonical(receipt.identity) !== canonical(c) || canonical(receipt.manifest) !== canonical(result.manifest) ||
     receipt.receipt_id !== ack.receipt_id || receipt.artifacts !== 'verified_durable' || receipt.metadata !== 'manifest_and_result_committed') return 'ack_not_durable';
