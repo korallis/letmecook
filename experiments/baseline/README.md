@@ -249,12 +249,7 @@ completeness remains explicitly caller-declared.
 
 ## Remaining issue-1 work
 
-No real case has been registered or observed by this slice. The native suite still
-uses fixed greeting/planner fixtures. Real repository admission, native tools or
-declared-check runner, baseline session timings, multi-file/report artifact
-qualification, durable candidate bytes and sequential case orchestration remain
-separate additive experiment work. Real preflight, resolved private mapping,
-actual scope/receipt/check observations, operator timers and final human labels
-are also missing. Unknown original work blocks replacement regardless of whether
-a declaration validates. No M0 completion, quality or productivity claim follows
-from a synthetic export.
+See the [measurement contract's completion ledger](../../docs/evidence/baseline.md#completion-ledger)
+for real-baseline blockers. The synthetic runner above admits only its frozen
+fixture with two writable files; it does not implement real repository admission,
+operator-case artifact qualification or sequential multi-case orchestration.

@@ -45,8 +45,9 @@ no new account routing or raw database access was added. Filesystem tests cover
 sync failures and substitution; they do not prove power-loss survival. The selected
 Docker context is an operator choice, and no Matilda dependency is introduced.
 
-Issue #1 and PR #64 remain open/draft. Real baseline registration, live evidence,
-operator labels and follow-up remain incomplete. The original live request with
+See [PR #64](https://github.com/korallis/letmecook/pull/64) for delivery status.
+Real baseline registration, live evidence, operator labels and follow-up remain
+incomplete. The original live request with
 unknown outcome is unchanged; these synthetic runs grant no live replacement.
 The M0 foundation decision, application UI, StyleX and React Doctor remain later
 work required by the issue plan.

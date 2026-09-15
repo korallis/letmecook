@@ -7,15 +7,13 @@ The session user approved the prepared case outcomes and conditional model expos
 The approval was observed at `2026-09-14T18:58:37Z`; this is the assistant's recording
 time, not an asserted user-message timestamp. Exact starting commits, source evidence
 and the approval record remain private. No completed outputs have been accepted,
-and no baseline attempts or operator-minute observations have been collected.
+and no real baseline attempts or operator-minute observations have been collected.
 This document does not establish a product benefit or satisfy the M0 live-baseline gate.
 
-An additive [offline registration and record collector](../../experiments/baseline/README.md)
-now binds frozen declarations to supplied actual-run observations and exports
-private JSON plus restrictive public JSON/CSV summaries. It is tested with public
-synthetic records only. It has no live coordinator, repository adapter or check
-runner and authenticates no referenced evidence. The original intake, historical
-proposal, synthetic examples and unstarted template remain preserved.
+Collection and public synthetic execution are documented in the
+[baseline experiment guide](../../experiments/baseline/README.md). Its
+[retained native mechanics evidence](baseline-native-case01.md) is excluded from
+real-baseline measurement.
 
 The first initial live suite subsequently failed after one physical attempt with
 an unknown original (an original HTTP success had an unsupported response shape).
@@ -239,9 +237,9 @@ No provider credentials or management credentials belong in a worker fixture.
    redacted raw observations and run records together; calculate results from that
    pinned set. Never silently discard failures or replace raw data with a summary.
 
-No universal live command is supplied because the intended harness/route has not
-been selected for this baseline. The registered record must include the exact
-working invocation and prerequisites before someone else can reproduce the run.
+No live baseline command is supplied because no real case has a completed
+executable registration. Its record must include the exact authorized invocation
+and prerequisites before someone else can reproduce the run.
 Avoid putting access tokens in command arguments, transcripts or this repository.
 
 From the repository root, check the committed templates and documentation with:
