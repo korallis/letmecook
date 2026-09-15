@@ -161,7 +161,25 @@ func (s *Store) changeExecution(ctx context.Context, expectedID string, grant g.
 		if liveErr == nil && grant.Actor == old.Actor && reflect.DeepEqual(grant.Envelope, old.Envelope) {
 			return old, nil
 		}
-		if err := g.Replacement(grant.Envelope, old.Envelope); err != nil {
+		rows, err := tx.QueryContext(ctx, "SELECT body FROM execution_grants WHERE task_id=? ORDER BY revision DESC", grant.TaskID)
+		if err != nil {
+			return g.Grant{}, err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var body string
+			if err := rows.Scan(&body); err != nil {
+				return g.Grant{}, err
+			}
+			retained, err := g.DecodeGrant(body)
+			if err != nil {
+				return g.Grant{}, err
+			}
+			if err := g.Replacement(grant.Envelope, retained.Envelope); err != nil {
+				return g.Grant{}, err
+			}
+		}
+		if err := errors.Join(rows.Err(), rows.Close()); err != nil {
 			return g.Grant{}, err
 		}
 		if !approval {

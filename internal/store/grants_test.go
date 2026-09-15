@@ -523,6 +523,76 @@ func TestExecutionGrantProcessCrash(t *testing.T) {
 	}
 }
 
+func TestExecutionGrantReintroducedRouteHistory(t *testing.T) {
+	s, artifacts := persistent(t)
+	grant := grantFixture()
+	grant.Envelope.Routes[0].RouteRevision = 2
+	grant.Envelope.Routes[0].Policy.Number = 2
+	grant.Envelope.Routes[0].Evidence.Number = 2
+	grant = approve(t, s, "", grant)
+	narrowed := cloneGrant(t, grant)
+	narrowed.ID, narrowed.Revision = newID(), 2
+	narrowed.Envelope.Routes = narrowed.Envelope.Routes[1:]
+	narrowed, err := s.RestrictExecution(ctx, grant.ID, narrowed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := invalidations(t, s)
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Open(ctx, s.dir, artifacts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	third := cloneGrant(t, grant)
+	third.ID, third.Revision = newID(), 3
+	third.Envelope.RouteDecision = g.Revision{Number: 2, SHA256: strings.Repeat("c", 64)}
+	for _, tc := range []struct {
+		name   string
+		change func(*g.Route)
+	}{
+		{"route rollback", func(v *g.Route) { v.RouteRevision = 1 }},
+		{"same revision changed content", func(v *g.Route) { v.SettingsDigest = strings.Repeat("d", 64) }},
+		{"policy rollback", func(v *g.Route) { v.RouteRevision++; v.Policy.Number-- }},
+		{"policy hash conflict", func(v *g.Route) { v.RouteRevision++; v.Policy.SHA256 = strings.Repeat("d", 64) }},
+		{"evidence rollback", func(v *g.Route) { v.RouteRevision++; v.Evidence.Number-- }},
+		{"evidence hash conflict", func(v *g.Route) { v.RouteRevision++; v.Evidence.SHA256 = strings.Repeat("d", 64) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			candidate := cloneGrant(t, third)
+			candidate.ID = newID()
+			tc.change(&candidate.Envelope.Routes[0])
+			_, err := r.ApproveExecution(ctx, narrowed.ID, candidate)
+			requireReason(t, err, "stale_revision")
+			_, err = r.ExecutionGrant(ctx, candidate.ID)
+			requireReason(t, err, "unknown_grant")
+			requireReason(t, r.CheckExecution(ctx, requestFor(t, candidate)), "unknown_grant")
+			if err := r.CheckExecution(ctx, requestFor(t, narrowed)); err != nil {
+				t.Fatal("rejection lost current authority", err)
+			}
+			if after := invalidations(t, r); !reflect.DeepEqual(before, after) {
+				t.Fatal("rejection changed invalidations", after)
+			}
+		})
+	}
+	third = approve(t, r, narrowed.ID, third)
+	if err := r.CheckExecution(ctx, requestFor(t, third)); err != nil {
+		t.Fatal("unchanged retained route refused", err)
+	}
+	fourth := cloneGrant(t, third)
+	fourth.ID, fourth.Revision = newID(), 4
+	fourth.Envelope.RouteDecision = g.Revision{Number: 3, SHA256: strings.Repeat("d", 64)}
+	fourth.Envelope.Routes[0].RouteRevision++
+	fourth.Envelope.Routes[0].Policy = fourth.Envelope.RouteDecision
+	fourth.Envelope.Routes[0].Evidence = fourth.Envelope.RouteDecision
+	fourth = approve(t, r, third.ID, fourth)
+	if err := r.CheckExecution(ctx, requestFor(t, fourth)); err != nil {
+		t.Fatal("fresh route revisions refused", err)
+	}
+}
+
 func TestExecutionGrantRevisionContinuityAndValidity(t *testing.T) {
 	s, _ := persistent(t)
 	grant := grantFixture()
