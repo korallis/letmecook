@@ -1,47 +1,55 @@
 # Provisional embedded read-only shell (#95)
 
-React 19 / TypeScript 5.9 / StyleX 0.19 page compiled by Vite with the official
+React / TypeScript / StyleX page compiled by Vite with the official
 `@stylexjs/unplugin` integration and embedded into `gafferd` by `web/embed.go`.
-It renders one bounded `GET /api/v1/snapshot?limit=50` read from the #94
-fixture-only daemon and nothing else. Not M1/M2 acceptance, not the #26 shell,
+[`package.json`](package.json) owns the direct dependency pins.
+It renders one bounded snapshot from the #94 fixture-only daemon on load and
+each refresh; the [read contract](../cmd/gafferd/README.md#read-contract-for-95)
+owns the snapshot bounds. Not M1/M2 acceptance, not the #26 shell,
 not authentication, not a supported UI runtime; retain, port or discard it with
 the #9 foundation decision.
 
 ## Build and serve
 
+Use Node.js satisfying [`package.json`'s `engines`](package.json). From the repository root:
+
 ```sh
 npm --prefix web ci --ignore-scripts
 npm --prefix web run build          # web/dist (deterministic; ignored by git)
-CGO_ENABLED=0 go build -trimpath -buildvcs=false -o .local/gafferd ./cmd/gafferd
-.local/gafferd                      # open the printed origin at /
 ```
+
+Then follow the [daemon build and startup](../cmd/gafferd/README.md#bounded-local-startup).
+Open its printed origin at `/`, replacing `/api/v1/status` in the printed URL.
 
 `go:embed all:dist` includes whatever is in `web/dist` at Go build time. Build the
 shell first; each build removes previous output and restores the tracked
-`.gitkeep` placeholder. A Go binary built without the shell answers `GET /` with the daemon's JSON
-`ui_unavailable` refusal (503) instead of serving any fallback. There is no dev
-server, proxy or CORS path: the daemon refuses foreign `Host`/`Origin`, so the
-shell is only ever tested and served from the daemon's own loopback origin.
+`.gitkeep` placeholder. A Go binary built without the shell answers `GET /` with
+the daemon's JSON `ui_unavailable` refusal (503) instead of serving any fallback.
+There is no dev-server or proxy path; the shell is tested and served from the
+daemon's own loopback origin.
 
-Only `/` (index.html) and hashed `/assets/<name>.js|css` are servable. Both go
-through every existing #94 boundary check (loopback peer, exact Host/Origin,
-no forwarding headers, GET only, no query, no body, 512-byte URI) and a stricter
-`script-src 'self'; connect-src 'self'` CSP. Everything else is 404/400/405 JSON.
+The shell serves `/` (index.html) and embedded `/assets/<name>.js|css` files;
+Vite generates hashed names, while `Asset` in [`embed.go`](embed.go) owns path
+validation. Both routes pass the daemon's [boundary checks](../cmd/gafferd/README.md#read-contract-for-95)
+and reject queries. The shell CSP permits only same-origin scripts, styles and
+connections, and forbids framing, base URLs and form actions. Other shell paths
+are refused as JSON.
 
 ## What the page shows and refuses
 
-- Single `tokens.stylex.ts` (`defineVars`) with light/dark pairs at 8.4:1 or
-  better; all styling via `stylex.create`/`stylex.props`. No CSS framework,
-  component library, router, state library or second styling system.
-- Status is one explicit word set from `src/read.ts`: `Loading`, `Read`,
-  `Empty`, `Server error (HTTP, code)`, `Malformed (HTTP)`, `Unavailable`,
-  `Unknown`. Colour never carries meaning. Labels reuse the daemon's own
+- Single [`tokens.stylex.ts`](src/tokens.stylex.ts) (`defineVars`) owns light/dark
+  colours and typography. Component styling uses `stylex.create`/`stylex.props`;
+  `global.css` sets the browser colour scheme and removes the body margin. No CSS
+  framework, component library, router, state library or second styling system.
+- [`STATUS_WORDS` in `src/read.ts`](src/read.ts) owns the explicit status labels;
+  HTTP status and validated daemon error code add detail when available.
+  Status never depends on colour. Labels reuse the daemon's own
   vocabulary (`fixture-only`, `missing_capabilities`, protocol states,
   `not_started`, `quarantined`) and never claim saved, acknowledged, executed,
   accepted or reviewed.
-- Every response is decoded with the shared `schemas/readapi/types.ts` runtime
-  schema; error bodies must match the daemon's closed error shape or are treated
-  as malformed. Responses over 1 MiB, non-JSON, redirects and unknown codes fail
+- Successful snapshots are decoded with the shared `schemas/readapi/types.ts`
+  runtime schema; error bodies must match the daemon's closed error shape or are treated
+  as malformed. Oversized responses, non-JSON, redirects and unknown codes fail
   closed. The single control is "Refresh snapshot".
 - No login, device, task action, approval, stop claim, router/account state,
   SSE, WebSocket, service worker, storage, cookies or offline state exist. The

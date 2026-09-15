@@ -15,9 +15,11 @@ Other OS/filesystems fail closed, including NFS, SMB, FUSE, overlay and volatile
 filesystems. An allowlisted filesystem is not qualification of every hardware or
 mount configuration: SQLite still relies on honest OS/device sync semantics.
 
+For the embedded page, complete the [shell build](../../web/README.md#build-and-serve)
+before building the daemon. The read API can run without the page.
+
 ```sh
 mkdir -p .local
-npm --prefix web ci --ignore-scripts && npm --prefix web run build
 CGO_ENABLED=0 go build -trimpath -buildvcs=false -o .local/gafferd ./cmd/gafferd
 .local/gafferd
 ```
@@ -44,9 +46,9 @@ Go validates store projections before writing JSON; TypeScript `decode(bytes,
 'status' | 'snapshot')` validates untrusted bounded responses at runtime, not a
 static type assertion. This daemon projects historical v1 fixture messages; the
 [execution schema guide](../../schemas/execution/README.md) owns shared decoder
-compatibility. No extra schema library or UI dependency.
+compatibility. The decoders require no extra schema library or UI dependency.
 
-Only these routes exist:
+Read API routes:
 
 | Request | Response |
 | --- | --- |
@@ -76,10 +78,8 @@ and OPTIONS) return 405. Missing/foreign Host, foreign/null/duplicate Origin,
 forwarding headers and cross-site fetch metadata reject. Allowed Host is exactly
 `127.0.0.1:<actual-port>`; optional Origin is exactly `http://` plus that Host.
 No permissive CORS, OPTIONS preflight support or cross-origin UI server exception.
-#95 serves its embedded read-only shell from this same origin at `GET /` and
-hashed `GET /assets/<name>.(js|css)` under the same boundary checks; see
-[`web/README.md`](../../web/README.md). Build `web/dist` before the Go build or
-`/` answers `503 ui_unavailable`.
+The embedded shell shares these boundary checks; its routes and unbuilt response
+are documented in [`web/README.md`](../../web/README.md#build-and-serve).
 
 ## Store correctness and limits
 
@@ -118,7 +118,7 @@ hashed `GET /assets/<name>.(js|css)` under the same boundary checks; see
 ```sh
 npm --prefix experiments/inference-boundary ci --ignore-scripts
 go mod verify
-test -z "$(gofmt -l cmd internal schemas tests/fixtures/protocol)"
+test -z "$(gofmt -l cmd internal schemas web tests/fixtures/protocol)"
 experiments/inference-boundary/node_modules/.bin/tsc --noEmit --strict --target es2023 --module nodenext --allowImportingTsExtensions schemas/execution/protocol.ts schemas/readapi/types.ts tests/fixtures/protocol/check.ts tests/fixtures/readapi/check.ts --typeRoots experiments/inference-boundary/node_modules/@types
 go vet ./...
 go test -race -count=1 ./...

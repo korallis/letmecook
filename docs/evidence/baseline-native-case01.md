@@ -49,5 +49,5 @@ See [PR #64](https://github.com/korallis/letmecook/pull/64) for delivery status.
 Real baseline registration, live evidence, operator labels and follow-up remain
 incomplete. The original live request with
 unknown outcome is unchanged; these synthetic runs grant no live replacement.
-The M0 foundation decision, application UI, StyleX and React Doctor remain later
-work required by the issue plan.
+For current application implementation status and foundation limits, see the
+[project README](../../README.md).

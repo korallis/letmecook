@@ -1,7 +1,7 @@
 import { keys, parseJSON } from '../../experiments/inference-boundary/json.ts';
 import { decode, MAX_BYTES, MAX_ITEMS, MISSING_CAPABILITIES, VERSION, type Snapshot } from '../../schemas/readapi/types.ts';
 
-// Closed set of daemon error codes (internal/httpapi/api.go). Anything else is malformed.
+// Read API error codes (internal/httpapi/api.go); shell-only refusals are not snapshot responses.
 export const ERROR_CODES = ['boundary_refused', 'origin_refused', 'proxy_refused', 'read_only', 'invalid_request',
   'not_found', 'invalid_query', 'invalid_id', 'invalid_bound', 'busy', 'store_unavailable', 'invalid_snapshot'] as const;
 export type ErrorCode = (typeof ERROR_CODES)[number];

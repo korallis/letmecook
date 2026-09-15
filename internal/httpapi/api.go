@@ -1,4 +1,5 @@
-// Package httpapi serves only fixture reads. No authentication or execution surface.
+// Package httpapi serves fixture reads and the embedded read-only shell.
+// No authentication or execution surface.
 package httpapi
 
 import (
