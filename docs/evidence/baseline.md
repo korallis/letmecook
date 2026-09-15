@@ -10,6 +10,20 @@ and the approval record remain private. No completed outputs have been accepted,
 and no baseline attempts or operator-minute observations have been collected.
 This document does not establish a product benefit or satisfy the M0 live-baseline gate.
 
+An additive [offline registration and record collector](../../experiments/baseline/README.md)
+now binds frozen declarations to supplied actual-run observations and exports
+private JSON plus restrictive public JSON/CSV summaries. It is tested with public
+synthetic records only. It has no live coordinator, repository adapter or check
+runner and authenticates no referenced evidence. The original intake, historical
+proposal, synthetic examples and unstarted template remain preserved.
+
+The first initial live suite subsequently failed after one physical attempt with
+an unknown original (an original HTTP success had an unsupported response shape).
+This is separate from the still-unstarted real baseline cohort. See
+[PR 85](https://github.com/korallis/letmecook/pull/85) for the current native-suite
+evidence. Unknown original work continues to block all live replacement and
+baseline execution; no exception authority is recorded by this update.
+
 This is an isolated measurement contract for the [PRD validation measures](../PRD.md#6-validation-and-success-measures),
 [evaluation design](../evaluation.md#6-how-to-test-the-product-hypothesis) and
 [M0 exit evidence](../roadmap.md#m0--evidence-and-feasibility). It implements no

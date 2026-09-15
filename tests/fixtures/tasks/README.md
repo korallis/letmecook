@@ -77,3 +77,11 @@ claim readiness, rewrite history or invent measurement evidence.
 These design records remain unregistered: future frozen registrations and real run
 records are separate reviewed artifacts. This checker is not a run collector or
 general observation validator and cannot establish evidence or label authenticity.
+
+The additive [offline record experiment](../../../experiments/baseline/README.md)
+now validates separate frozen declarations and supplied actual-run records, retains
+them privately and produces restrictive JSON/CSV summaries. Its synthetic tests
+exercise failure retention, unknown effort, acceptance claims and partial storage.
+It does not stage private source, execute checks, call a provider, start a scope or
+authenticate referenced evidence. These original intake/history/template files
+remain unchanged, and no real baseline is registered by this tooling.
