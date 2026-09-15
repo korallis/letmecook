@@ -83,6 +83,10 @@ test('two and three requests preserve every ordered call, encrypted continuation
     assert.equal(result.promptDigest, digest(e.expected.prompt)); assert.equal(result.contextDigest, digest(e.expected.context));
   }
 });
+test('canonical storage preserves the original normalized wire identity after key ordering changes', () => {
+  const e=fixture(3,true);
+  assert.deepEqual(verifyBaselineTranscript(JSON.parse(canonical(e))),verifyBaselineTranscript(e));
+});
 test('delayed CLI event delivery is allowed, but a continuation before tool execution ends is refused', () => {
   const e=fixture(), next=e.requests[1].startedAt;
   eventChange(e,1,n=>n.timestamp=next+1);eventChange(e,2,n=>n.timestamp=next+2);

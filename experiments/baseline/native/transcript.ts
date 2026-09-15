@@ -67,12 +67,14 @@ export function verifyBaselineTranscript(input: unknown) {
     check(typeof r.requestId === 'string' && /^[a-f0-9]{32}$/.test(r.requestId) && !requestIds.has(r.requestId), 'baseline_request_identity');
     requestIds.add(r.requestId);
     check(r.path === '/v1/responses' && r.status === 200 && [r.startedAt, r.firstResponseAt, r.endedAt].every(time) && r.startedAt >= (i ? e.requests[i - 1].endedAt : scope.started) && r.startedAt <= r.firstResponseAt && r.firstResponseAt <= r.endedAt && r.endedAt < deadline, 'baseline_request_order');
-    check(typeof r.rawBody === 'string' && Buffer.byteLength(r.rawBody) <= p.limits.requestBytes && JSON.stringify(parseJSON(r.rawBody)) === JSON.stringify(r.body), 'baseline_body_mismatch');
+    check(typeof r.rawBody === 'string' && Buffer.byteLength(r.rawBody) <= p.limits.requestBytes && same(parseJSON(r.rawBody),r.body), 'baseline_body_mismatch');
     object(r.headers); check(!Object.hasOwn(r.headers, 'authorization') && Object.values(r.headers).every(v => typeof v === 'string'), 'baseline_headers');
     // Authorization was stripped by the relay; a fixed placeholder checks only its reviewed metadata shape.
     const headers = validateHeaders(Object.entries({ ...(r.headers as Record<string, string>), authorization: 'Bearer synthetic' }).flat(), r.body, 'synthetic', r.rawBody);
     check(same(headers, r.headers), 'baseline_headers');
-    const body = validateNativeRequest(r.body, n, p.routerModel, previous);
+    // Rebuild the boundary's normalized wire string from retained raw bytes;
+    // canonical evidence storage can reorder keys in the parsed body copy.
+    const body = validateNativeRequest(parseJSON(r.rawBody), n, p.routerModel, previous);
     if (i === 0) check(same(body.input, [{ role: 'developer', content: x.context }, { role: 'user', content: [{ type: 'input_text', text: x.prompt }] }]), 'baseline_prompt_context');
     exact(d, ['requestId', 'taskId', 'attemptId', 'router', 'verdict', 'evidence', 'completionDigest', 'delivery', 'nativeOutput']);
     exact(d.router, ['policy', 'binding', 'requestDigest', 'send', 'nativeRequest']);
