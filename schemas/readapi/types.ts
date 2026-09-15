@@ -7,7 +7,7 @@ export const MAX_BYTES = 1048576;
 export const MISSING_CAPABILITIES = ['execution', 'inference', 'artifact_custody', 'result_ack', 'acceptance', 'publication', 'merge', 'state_import', 'sessions'] as const;
 export type Metadata = {
   version: typeof VERSION; mode: 'fixture-only' | 'store-only'; missing_capabilities: [...typeof MISSING_CAPABILITIES];
-  generation: string; daemon_boot: string; schema_version: 1 | 2;
+  generation: string; daemon_boot: string; schema_version: 1 | 2 | 3;
 };
 export type Attempt = { identity: Identity; state: AttemptState; revision: number; observation: Observation };
 export type Task = { task_id: string; state: TaskState; attempt: Attempt };
@@ -33,7 +33,7 @@ export function decode(bytes: Uint8Array, kind: 'status' | 'snapshot'): Status |
   }
   const v = parseJSON(text); object(v);
   fields(v, [...metadata, ...(kind === 'status' ? ['task_count', 'event_count'] : ['tasks', 'events'])]);
-  require(v.version === VERSION && (v.mode === 'fixture-only' && v.schema_version === 1 || v.mode === 'store-only' && v.schema_version === 2));
+  require(v.version === VERSION && (v.mode === 'fixture-only' && v.schema_version === 1 || v.mode === 'store-only' && (v.schema_version === 2 || v.schema_version === 3)));
   require(Array.isArray(v.missing_capabilities) && JSON.stringify(v.missing_capabilities) === JSON.stringify(MISSING_CAPABILITIES));
   id(v.generation); id(v.daemon_boot);
   if (kind === 'status') { integer(v.task_count, 0); integer(v.event_count, 0); return v as Status; }

@@ -52,7 +52,7 @@ type Status struct {
 }
 
 func (m Metadata) Validate() error {
-	if m.Version != Version || !(m.Mode == "fixture-only" && m.SchemaVersion == 1 || m.Mode == "store-only" && m.SchemaVersion == 2) || !p.ValidID(m.Generation) || !p.ValidID(m.DaemonBoot) || !slices.Equal(m.MissingCapabilities, MissingCapabilities()) {
+	if m.Version != Version || !(m.Mode == "fixture-only" && m.SchemaVersion == 1 || m.Mode == "store-only" && (m.SchemaVersion == 2 || m.SchemaVersion == 3)) || !p.ValidID(m.Generation) || !p.ValidID(m.DaemonBoot) || !slices.Equal(m.MissingCapabilities, MissingCapabilities()) {
 		return fmt.Errorf("invalid read metadata")
 	}
 	return nil

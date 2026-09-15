@@ -6,7 +6,8 @@ describes intended behaviour, not existing APIs. See
 and unresolved #9 gates. The reversible protocol, local store scaffold and
 embedded fixture shell remain provisional; `docs/contracts/execution.md` owns protocol
 reconciliation, `cmd/gafferd/README.md` owns explicit install flags, fixture separation,
-read API and checks, and
+read API and checks; `cmd/gafferd/IDENTITY.md` owns provisional mTLS bootstrap,
+enrollment and local recovery (not runner eligibility); and
 `web/README.md` owns the shell build that must precede the Go build. None accepts
 #9/#10 or supplies execution authority. No supported execution
 runtime or original downstream acceptance follows from these slices or the decision record.

@@ -1,12 +1,13 @@
-# Local workflow store scaffold (#11, provisional)
+# Local workflow store and identity scaffold (#11/#13, provisional)
 
 Runnable Go/SQLite metadata foundation on the decided-but-unlocked narrow Go core.
 This store is an **operator-authorized reversible provisional deliverable**,
 reconciling the merged #94 store toward the decided (not-yet-locked) foundation.
 **Full #11 acceptance reconciliation is deliberately deferred until #9 is accepted
 and locked and #10 O1–O8 close**, including execution/runtime qualification.
-This extension adds persistent empty installation/reopen and fail-closed restart
-handling. It supplies no formal #11 acceptance, execution authority, supported worker
+This extension adds persistent empty installation/reopen, fail-closed restart
+handling and a pinned mTLS owner/runner identity boundary. #13 closure is also
+deferred pending accepted/locked #9/#10; identity enrollment grants no execution. It supplies no formal #11 acceptance, execution authority, supported worker
 runtime, execution readiness or product readiness.
 The [decision](../../docs/decisions/0001-execution-foundation.md) and
 [execution contract](../../docs/contracts/execution.md) retain their acceptance gates.
@@ -38,8 +39,10 @@ Stop with Ctrl-C/SIGTERM. Re-run the same command to reopen. Shutdown never dele
 persistent state. Startup prints `store-only http://127.0.0.1:<port>/api/v1/status`
 only after ownership, migration, boot/recovery transaction and directory sync.
 `GET` that URL or replace `status` with `snapshot`. Fresh installation is empty.
-No task creation, execution, grant, enrollment, mutation or import endpoint exists.
-Store write primitives remain private; tests exercise them with synthetic v2 inputs.
+Before owner bootstrap, this loopback-only mode has no mutation endpoint. After
+bootstrap, plaintext startup refuses; use the HTTPS identity configuration below.
+No task creation, execution, grant or import endpoint exists. Workflow write
+primitives remain private; tests exercise them with synthetic v2 inputs.
 
 Installation configuration is **flags only**:
 
@@ -47,30 +50,40 @@ Installation configuration is **flags only**:
 | --- | --- |
 | `--state-dir` | Absolute clean path on local disk. Creates final directory only, under an existing parent; private owned mode 0700. Holds `state.db`, WAL/SHM and directory-inode ownership lock. |
 | `--artifacts-dir` | Same path, ownership and creation requirements as `--state-dir`, validated on each startup. May change on reopen or share/nest with other configured directories; no artifact lock or persisted path binding. Reserved location only: no uploads, artifact writes, custody or acknowledgements. |
-| `--listen` | Exact `127.0.0.1:<port>`, 0..65535; 0 requests an ephemeral port. All three install flags required. No DNS lookup, wildcard, remote binding or proxy exception. |
+| `--listen` | Explicit IP:port, 0..65535; plaintext requires exact `127.0.0.1`. HTTPS permits an operator-selected IP (including explicit wildcard); no DNS discovery or proxy exception. 0 requests an ephemeral port. |
 | `--fixture` | Exclusive alternative to install flags: creates/seeds fresh disposable public #94 data and serves the existing shell. Graceful exit removes only this owned fixture directory. |
 
 Choose any operator-controlled host meeting the local storage requirements. No
 configuration discovery from HOME, environment, files, repository plugins, accounts,
 proxy/router variables or a private network. Unknown/positional flags reject.
-Runner and 9Router infrastructure configuration belongs to their future owners;
-this process has neither client and stores no provider credentials.
+The identity API accepts connections only; it never contacts, discovers or enrolls
+network hosts on its own. Runner runtime and 9Router clients remain absent; no
+provider credentials are stored.
 
-**The listener is not authentication.** This provisional daemon has no sessions or
-owner identity. Local programs can read its metadata. Use disposable synthetic data
-only; do not expose it through a proxy or use it for private product data. Remote
-installation access remains blocked until authenticated HTTPS/session work lands.
-A private network alone will not provide authorization.
+**Plaintext loopback mode is not authentication.** Before owner bootstrap, local
+programs can read metadata. Use disposable synthetic data only in that mode; never
+proxy it. Owner bootstrap permanently requires authenticated HTTPS for this store.
+Browser sessions remain absent. A private network alone provides no authorization.
 
 For historical fixture UI/tests use `.local/gafferd --fixture`. Abrupt fixture death
 may leave `/tmp/gaffer-fixture-*`; no persistent startup imports it. Never bulk-delete
 other processes' stores. Persistent and fixture databases have different SQLite
 application identities, checked before migration; no version relabelling/import.
 
+## Owner bootstrap and runner enrollment
+
+[Identity setup, API and recovery](IDENTITY.md) owns the provisional #13 boundary.
+Local `--bootstrap-owner-cert` / `--recover-owner-cert` commands are offline and
+exclusive with listener/fixture flags. HTTPS startup requires `--tls-cert`,
+`--tls-key`, `--endpoint` plus existing install flags. Enrollment pins an explicitly
+selected machine's certificate and consumes a ten-minute one-use token; runners
+join disabled. No browser session or execution permission follows.
+
 ## Read contract for #95
 
 `schemas/readapi/types.go` / `types.ts` retain `read-provisional-v1`, extending its
-closed mode/schema combinations: `fixture-only` / schema 1, `store-only` / schema 2.
+closed mode/schema combinations: `fixture-only` / schema 1, `store-only` / schema 2
+or 3. New persistent opens migrate to 3; clients retain historical schema 2 reads.
 Old strict clients refuse the new mode rather than misreading it as fixture data.
 Go validates projections before JSON; TypeScript `decode(bytes, 'status' | 'snapshot')`
 validates bounded input at runtime. The fixture shell remains fixture-only and is
@@ -95,12 +108,14 @@ Tasks sorted by ID; events by ascending sequence. Each array independently caps 
 `limit` (default/max 50, minimum 1). Unknown canonical task returns 404. Bounded
 snapshot is not full history/export, pagination, streaming or result custody.
 
-Existing boundary remains: URI 512 bytes, headers 4 KiB plus Go parser overhead,
-responses 1 MiB, 16 active DB requests, 2-second query/header and 3-second read/write
-budgets. Reject unknown/duplicate query keys, noncanonical bounds/IDs, bodies,
-encoded paths, non-GET methods, foreign Host/Origin, forwarding headers and
-cross-site fetch metadata. Host equals actual listener, optional Origin equals
-`http://` plus Host. No permissive CORS, preflight or cross-origin exception.
+Read boundary: URI 512 bytes, headers 4 KiB plus Go parser overhead, responses
+1 MiB, 16 active DB requests, 2-second query/header and 3-second read/write budgets.
+Reject unknown/duplicate query keys, noncanonical bounds/IDs, bodies, encoded paths,
+non-GET methods, foreign Host/Origin, forwarding headers and cross-site fetch
+metadata. Plaintext Host equals actual listener; optional Origin equals `http://`
+plus Host. HTTPS Host equals configured endpoint, rejects every Origin, Cookie and
+Authorization header, and requires a current owner credential for store reads.
+No CORS, preflight, browser session or cross-origin exception.
 
 ## Store correctness and limits
 
@@ -121,8 +136,9 @@ cross-site fetch metadata. Host equals actual listener, optional Origin equals
   New directory parents and DB directory entries synced before ready. Commit errors
   never become successful writes/acks. No hardware power-loss/fsync-failure claim.
 - One schema owner. Empty persistent schema migrates transactionally through base
-  metadata/tasks/attempts/events to schema 2 (append-only event triggers; legacy
-  artifact-location column retained but unused). Persistent application ID
+  metadata/tasks/attempts/events through schema 2 (append-only event triggers; legacy
+  artifact-location column retained but unused) to schema 3 (principals,
+  credential-pin tombstones and expiring enrollment hashes). Persistent application ID
   `0x47414646` distinguishes it from #94.
   Unknown schemas, unrecognized DBs and fixture imports fail closed. Migration,
   fresh boot and restart recovery share one commit. Generation survives ordinary
@@ -140,7 +156,7 @@ cross-site fetch metadata. Host equals actual listener, optional Origin equals
   Unknown/terminal history is not replayed or resumed. Exhaustion/errors abort
   startup rather than wrapping revision or fabricating safe state.
 - Artifact directory is explicit configuration, **not artifact durability**. No blob,
-  manifest, result receipt, lease, runner, inference, grants, repository access,
+  manifest, result receipt, lease, runner runtime, inference, grants, repository access,
   acceptance, publication or merge exists. Store event durability proves none of
   #10's physical custody, fencing, stop or live-evidence obligations.
 

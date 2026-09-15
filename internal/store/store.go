@@ -219,7 +219,7 @@ func (s *Store) migrate(ctx context.Context) error {
 			}
 		}
 		version = 1
-	} else if version != 1 && (s.fixture || version != 2) {
+	} else if version != 1 && (s.fixture || version != 2 && version != 3) {
 		return fmt.Errorf("unsupported schema version")
 	}
 	mode := "fixture-only"
@@ -233,6 +233,12 @@ PRAGMA user_version=2;`); err != nil {
 				return err
 			}
 			version = 2
+		}
+		if version == 2 {
+			if _, err = tx.ExecContext(ctx, identitySchema); err != nil {
+				return err
+			}
+			version = 3
 		}
 	}
 	boot := newID()
