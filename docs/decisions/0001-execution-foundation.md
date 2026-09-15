@@ -287,13 +287,15 @@ records changed issue navigation hints without changing dependencies or outcomes
 ### Provisional slice reconciliation
 
 - **#93/#10 — retain merged v1/v2 contracts and shared fixtures, reconcile before use.**
-  The merged [M1-01 contract](../contracts/execution.md) owns semantics at the existing
+  The merged-but-provisional [M1-01 contract](../contracts/execution.md) owns semantics at the existing
   Go/TypeScript paths. Preserve historical `execution-provisional-v1` fixture records;
   v2 adds `accept`, `refuse`, `cancel`, `terminated` and exact session-version checks.
   Do not relabel v1 journals or treat decoding/negotiation as authority. No transport,
   runner, lease persistence or custody implementation follows from the merge.
   The contract owns [O1–O8 and their closure evidence](../contracts/execution.md#8-9-reconciliation-obligations).
-  All remain **OPEN**; this record closes no obligation or contract acceptance gate.
+  All remain **OPEN** pending foundation lock and their required evidence; lock itself
+  still waits on live evidence and fresh Opus review. This record completes no
+  contract reconciliation, obligation or acceptance gate.
 - **#94 — retain bounded storage/API mechanics, not product state.** Keep driver,
   notices, private directory/lock/transaction and adverse SQLite/read API tests.
   Reconcile schema/migrations under #11 after #10; extend or replace rows as required.
@@ -373,7 +375,7 @@ invalidates the estimates rather than silently enlarging M1.
 | Docker-free entire operating path | Each candidate's daemon, worker/verifier, router and recovery assessed separately | No measured passing complete path; Docker optional for tests only |
 | Architecture and affected issue path hints | Specification, roadmap, evaluation and implementation index reconciled | Hints are planning only; original dependencies/authority unchanged |
 | M0 effort, M1/M2 estimate or blockers | Observed activity and missing timers separated from estimates; blockers named | No claimed measured person-days, live throughput or release date |
-| Provisional #93–#95 disposition | All three slices merged; actual #95 assets/evidence retained and #93 reconciled to merged #10 v2 above | O1–O8 closure, #10 acceptance, #11 product promotion and authenticated #26 remain blocked; no supported execution |
+| Provisional #93–#95 disposition | All three slices merged; actual #95 assets/evidence retained; #10 v2 merged as a provisional contract, with #93/#10 reconciliation still open | O1–O8 closure, #10 acceptance, #11 product promotion and authenticated #26 remain blocked; no supported execution |
 | Independent decision lock | Fresh independent pipeline review is planned on **GPT-5.6 Sol-review, not Opus** | Fresh **Opus** review remains pending operator-side before lock; pipeline review cannot substitute |
 
 Original decision-change verification (before this merged-code reconciliation):

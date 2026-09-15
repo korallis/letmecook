@@ -31,6 +31,8 @@ M6  External usability and v1       offline drafts, install, restore, honest lim
 Later: automatic curation, learned idioms, auto-merge, desktop runners
 ```
 
+#93, #94 and #95 are all merged as provisional slices; no acceptance or lock follows.
+
 Exit checkboxes are milestone acceptance gates, not an implementation-status
 tracker. The [foundation reconciliation](https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md#provisional-slice-reconciliation)
 owns provisional-slice disposition; the [execution contract](https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md#8-9-reconciliation-obligations)
