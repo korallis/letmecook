@@ -75,7 +75,7 @@ export async function runCase(directory: string, scenario: 'two-requests' | 'thr
   }
   try {
     const version = JSON.parse(await docker(['version','--format','{{json .}}'])), info = JSON.parse(await docker(['info','--format','{{json .}}'])); assertRuntime(version,info);
-    const runtime = { server: version.Server, image: JSON.parse(await docker(['image','inspect',image]))[0].Id, node: '24.21.0', arch: 'arm64' }; assert.equal(runtime.image,IMAGE);
+    const runtime = { server: version.Server, image: JSON.parse(await docker(['image','inspect',image]))[0].Id, node: 'v24.21.0', arch: 'arm64' }; assert.equal(runtime.image,IMAGE);
     const sourceCommit = (await execute('git',['rev-parse','HEAD'],{cwd:root})).stdout.trim(), sources: Record<string,string> = {};
     async function walk(directory: string) { for (const item of await readdir(join(root,directory),{withFileTypes:true})) { if (item.name === 'node_modules' || item.name === 'evidence') continue; const path=directory+'/'+item.name; assert(!item.isSymbolicLink()); if(item.isDirectory()) await walk(path); else if(/\.(ts|mjs|json|txt)$/.test(path)) sources[path]=hash(await readFile(join(root,path))); } }
     for(const directory of ['experiments/baseline','experiments/harness','experiments/native-evaluation','experiments/inference-boundary','experiments/router-authority-extension','experiments/router-boundary-bridge']) await walk(directory);
