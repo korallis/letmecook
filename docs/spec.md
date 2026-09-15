@@ -942,7 +942,7 @@ missing measurements and bounds M1 ownership. Existing `cmd/gafferd/`,
 owners. Future `cmd/gaffer-runner/` owns one qualified runner and `cmd/gaffer/` the
 local CLI. `web/` remains the UI path, not present at the decision's base.
 
-[M0](roadmap.md#m0-evidence-and-feasibility) is not passed: the first live trial
+[M0](roadmap.md) is not passed: the first live trial
 failed with unknown remote work, #89 has no newly measured Docker-free profile,
 and real baseline/candidate workflow measurements and fresh Opus review remain
 pending. No first supported execution runtime or retry authority follows from
