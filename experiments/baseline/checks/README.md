@@ -28,15 +28,14 @@ The candidate must preserve the complete base file inventory and modes, with
 content changes confined to registered write paths. Caller job/store objects are
 copied before asynchronous reads; checked bytes are staged under a private path.
 
-Each probe/check receives its own container: 128 MiB memory and memory-swap limit,
+Each probe/check receives its own container with Docker's init process: 128 MiB memory and memory-swap limit,
 32 PIDs, half a CPU, no network, read-only root and input mounts, a 16 MiB noexec
 tmpfs, UID/GID 65532, all capabilities dropped and no new privileges. Actual Docker
 inspection is checked before start. Creation uses `--pull=never`, an explicit
 environment, private IPC/cgroup namespaces, no healthcheck and no Docker log file.
 No inference, control, provider or Docker socket is mounted. The host invokes
-`/opt/homebrew/bin/docker` with argument arrays and the fixed local socket
-`unix:///Users/leebarry/.docker/run/docker.sock`, ignoring ambient Docker context.
-Checks may
+the installed `docker` CLI with argument arrays. `GAFFER_DOCKER_CONTEXT` selects
+the operator's context; otherwise Docker uses its configured context. Checks may
 create descendants within the container; final removal stops the whole container.
 
 Jobs require an absolute deadline within 60 seconds and a combined stdout/stderr

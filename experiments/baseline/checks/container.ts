@@ -11,9 +11,8 @@ type Command = { code: number | null; stdout: Buffer; stderr: Buffer; reason: st
 export async function docker(args: string[], deadline: number, bytes = 65536, signal?: AbortSignal): Promise<Command> {
   if (signal?.aborted || Date.now() >= deadline) return { code: null, stdout: Buffer.alloc(0), stderr: Buffer.alloc(0), reason: signal?.aborted ? 'aborted' : 'deadline' };
   return new Promise(resolve => {
-    // ponytail: this local profile fixes Homebrew Docker; add a validated profile for another host.
-    const child = spawn('/opt/homebrew/bin/docker', ['--host', 'unix:///Users/leebarry/.docker/run/docker.sock', ...args], {
-      stdio: ['ignore', 'pipe', 'pipe'], shell: false, env: { ...process.env, DOCKER_CONTEXT: '' },
+    const child = spawn('docker', [...(process.env.GAFFER_DOCKER_CONTEXT ? ['--context', process.env.GAFFER_DOCKER_CONTEXT] : []), ...args], {
+      stdio: ['ignore', 'pipe', 'pipe'], shell: false,
     });
     const stdout: Buffer[] = [], stderr: Buffer[] = []; let size = 0, reason: string | null = null;
     const stop = (why: string) => { reason ??= why; child.kill('SIGKILL'); };
@@ -30,7 +29,7 @@ function inspectSettings(value: any, mounts: { source: string; target: string }[
   const h = value.HostConfig, c = value.Config;
   const imageEnv = Object.entries(ENVIRONMENT.env);
   if (value.Image !== IMAGE || h.NetworkMode !== 'none' || h.Memory !== 134217728 || h.MemorySwap !== 134217728 || h.PidsLimit !== 32 || h.NanoCpus !== 500000000 ||
-    h.ReadonlyRootfs !== true || h.Privileged !== false || h.PublishAllPorts !== false || h.CapAdd?.length || h.Devices?.length || h.DeviceRequests?.length || h.Binds?.length ||
+    h.ReadonlyRootfs !== true || h.Init !== true || h.Privileged !== false || h.PublishAllPorts !== false || h.CapAdd?.length || h.Devices?.length || h.DeviceRequests?.length || h.Binds?.length ||
     h.PidMode !== '' || h.IpcMode !== 'private' || h.CgroupnsMode !== 'private' || h.UTSMode !== '' || h.RestartPolicy.Name !== 'no' || h.LogConfig.Type !== 'none' || JSON.stringify(h.CapDrop) !== '["ALL"]' ||
     JSON.stringify(h.SecurityOpt) !== '["no-new-privileges"]' || JSON.stringify(c.Healthcheck?.Test) !== '["NONE"]' || c.User !== '65532:65532' || c.Hostname !== 'baseline-check' || c.WorkingDir !== cwd ||
     JSON.stringify(c.Entrypoint) !== JSON.stringify([NODE]) || JSON.stringify(c.Cmd) !== JSON.stringify(argv.slice(1)) ||
@@ -52,7 +51,7 @@ export async function runContainer(argv: string[], cwd: string, mounts: { source
   const record = (phase: string, command: Command) => { result.diagnostics.push({ phase, code: command.code, reason: command.reason, stdoutBase64: command.stdout.subarray(0, 8192).toString('base64'), stderrBase64: command.stderr.subarray(0, 8192).toString('base64') }); };
   let identifier = name;
   try {
-    const create = await docker(['create', '--pull=never', '--name', name, '--network', 'none', '--read-only', '--memory', '128m', '--memory-swap', '128m', '--pids-limit', '32', '--cpus', '0.5',
+    const create = await docker(['create', '--pull=never', '--name', name, '--network', 'none', '--read-only', '--init', '--memory', '128m', '--memory-swap', '128m', '--pids-limit', '32', '--cpus', '0.5',
       '--ipc', 'private', '--cgroupns', 'private', '--log-driver', 'none', '--no-healthcheck',
       '--cap-drop', 'ALL', '--security-opt', 'no-new-privileges', '--user', '65532:65532', '--hostname', 'baseline-check', '--workdir', cwd,
       '--tmpfs', '/tmp:rw,noexec,nosuid,nodev,size=16777216,mode=1777', ...mounts.flatMap(m => ['--mount', `type=bind,src=${m.source},dst=${m.target},readonly`]),

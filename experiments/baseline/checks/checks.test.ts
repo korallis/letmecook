@@ -106,7 +106,7 @@ console.log('readonly-egress-control-isolation-confirmed');`;
   const f = await checkFixture(store, code); const oldMask = process.umask(0o077); let result;
   try { result = await runCheck(f.job, store, signal()); } finally { process.umask(oldMask); }
   assert.equal(result.status, 'passed'); const retained = await observation(store, result);
-  assert.equal(retained.execution.inspection.network, 'none'); assert.deepEqual(retained.execution.inspection.mounts, [{ target: '/repo', readonly: true }, { target: '/inputs', readonly: true }]);
+  assert.equal(retained.execution.inspection.network, 'none'); assert.deepEqual(retained.execution.inspection.mounts.toSorted((a: any, b: any) => a.target.localeCompare(b.target)), [{ target: '/inputs', readonly: true }, { target: '/repo', readonly: true }]);
   assert.match(Buffer.from(retained.execution.stdoutBase64, 'base64').toString(), /isolation-confirmed/); await absent(retained.execution.id);
 }));
 
