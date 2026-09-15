@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { makeManifest } from '../artifacts/manifest.ts';
 import { settingsDigest } from '../../harness/native/client.ts';
-import { bytesDigest, validateWorkerInput, type WorkerInput } from './input.ts';
+import { bytesDigest, validateWorkerInput, wirePrompt, type WorkerInput } from './input.ts';
 
 function fixture(): WorkerInput {
   const files = ['ci/first.yml','ci/second.yml'].map(path => ({ path, mode: 0o644 as const, size: 6, sha256: bytesDigest('hello\n'), contentBase64: Buffer.from('hello\n').toString('base64') }));
@@ -11,6 +11,10 @@ function fixture(): WorkerInput {
 }
 test('the worker accepts a bounded complete snapshot and excludes the scoped token from its invocation digest', () => {
   const input=fixture(), identity=validateWorkerInput(input,1); input.token='f'.repeat(64);assert.equal(validateWorkerInput(input,1),identity);
+});
+test('the pinned CLI preserves literal newlines and backslashes while escaping quotes in a spaced argument', () => {
+  assert.equal(wirePrompt('plain'), 'plain');
+  assert.equal(wirePrompt('Use this\n{"path":"a\\b"}'), '"Use this\n{\\"path\\":\\"a\\b\\"}"');
 });
 test('changed base, context, settings, undeclared fields, non-synthetic identity and expired deadlines are refused', () => {
   const mutations: ((value:any)=>void)[]=[

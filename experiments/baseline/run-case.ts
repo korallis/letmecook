@@ -18,7 +18,7 @@ import { prepareCase, promptFor, checkJob, rulesFor, WRITE_PATHS } from './case0
 import { retainEvidence, readEvidence, readSnapshot, captureSnapshot, retainCandidate } from './artifacts/index.ts';
 import { runCheck, IMAGE } from './checks/index.ts';
 import { stageBaselineWorker } from './native/staging.ts';
-import { validateWorkerInput, type WorkerInput } from './native/input.ts';
+import { validateWorkerInput, wirePrompt, type WorkerInput } from './native/input.ts';
 import { verifyBaselineTranscript } from './native/transcript.ts';
 import { writeExport } from './collect.ts';
 import { fixture } from './fixture.ts';
@@ -111,7 +111,7 @@ export async function runCase(directory: string, scenario: 'two-requests' | 'thr
     for(const id of ['pins','audit'])checks.push({revision:'base',check:await runCheck(await checkJob(store,registrationRef,preparedCase.base,preparedCase.executables,id,'base',scope.started+60000),store,abort.signal)});
     assert(checks.every(x=>x.check.cleanup),'base_check_cleanup_unknown');assert(checks.every(x=>x.check.status==='failed'),'synthetic_base_failure_missing');
     const before=await control({command:'inspect'});assert.equal(before.current.scope.spent,0);assert.equal(before.current.journal.reservations.length,0);
-    const workerDeadline=Math.min(Date.now()+600000,scope.deadline-240000),grantDeadline=workerDeadline+60000;
+    const workerDeadline=Math.min(Date.now()+600000,scope.deadline-240000),grantDeadline=workerDeadline+150000;
     const binding:any={attemptId:'case01_attempt',grantId:'case01_grant',taskId:'case01_task',leaseId:'case01_lease',fence:1,role:'worker',routerId:policy.routerId,routeId:policy.routeId,revision:policy.revision,epoch:policy.epoch,expiresAt:grantDeadline,leaseExpiresAt:grantDeadline,native:{profileDigest:digest(policy.native),scopeId:policy.native.scope.id,authorizationDigest:policy.native.scope.authorizationDigest}};assertNativeBinding(binding,policy);
     for(const [path,expected]of Object.entries(sources))assert.equal(hash(await readFile(join(root,path))),expected,'source_changed_before_dispatch');
     for(const [path,expected]of Object.entries(report.staging.hashes))assert.equal(hash(await readFile(join(stage,path))),expected,'worker_stage_changed');
@@ -143,10 +143,12 @@ export async function runCase(directory: string, scenario: 'two-requests' | 'thr
     const sourceLock=JSON.parse(await readFile(join(root,'experiments/router-authority-extension/source-lock.json'),'utf8'));
     const instructionsPath='open-sse/config/codexInstructions.js';assert.equal(hash(await readFile(join(source!,instructionsPath))),sourceLock.files[instructionsPath]);
     const {CODEX_DEFAULT_INSTRUCTIONS}=await import(pathToFileURL(join(source!,instructionsPath)).href);
-    const verified=verifyBaselineTranscript({schema:1,origin:'synthetic',caseId:'case01',expected:{prompt:JSON.stringify(request.prompt),context:developer,physicalInstructions:CODEX_DEFAULT_INSTRUCTIONS,policyDigest:digest(policy),bindingDigest:digest(binding),packetDigest:packet.packetDigest,scopeDigest:digest(evidence.scope)},policy,binding,packetDigest:packet.packetDigest,scope:evidence.scope,requests:observation.requests,decisions:evidence.decisions,receipts:evidence.receipts,pendingReservations:evidence.reservations,durableDecisionTimes:evidence.decisionTimes,physicalRequests:physical.physicalRequests,scopeOperations:physical.scopeOperations,events:observation.events,exitCode:observation.exitCode,signal:observation.signal,localProcessExited:observation.localProcessExited});
+    const verified=verifyBaselineTranscript({schema:1,origin:'synthetic',caseId:'case01',expected:{prompt:wirePrompt(request.prompt),context:developer,physicalInstructions:CODEX_DEFAULT_INSTRUCTIONS,policyDigest:digest(policy),bindingDigest:digest(binding),packetDigest:packet.packetDigest,scopeDigest:digest(evidence.scope)},policy,binding,packetDigest:packet.packetDigest,scope:evidence.scope,requests:observation.requests,decisions:evidence.decisions,receipts:evidence.receipts,pendingReservations:evidence.reservations,durableDecisionTimes:evidence.decisionTimes,physicalRequests:physical.physicalRequests,scopeOperations:physical.scopeOperations,events:observation.events,exitCode:observation.exitCode,signal:observation.signal,localProcessExited:observation.localProcessExited});
     report.transcript=await retainEvidence(store,'verified-transcript',verified);assert.equal(verified.physicalAttempts,scenario==='two-requests'?2:3);
     const bundle=await readEvidence(store,candidate);await readSnapshot(store,captured);await readSnapshot(store,preparedCase.base);
+    assert(Date.now()<grantDeadline,'baseline_acknowledgement_deadline');
     report.acknowledgement=await retainEvidence(store,'baseline-ack',{schema:1,kind:'synthetic-baseline-acknowledgement',registration:registrationRef,registrationCommit,packet:report.packet,bindingDigest:digest(binding),scopeDigest:digest(evidence.scope),candidate,bundleDigest:digest(bundle),transcript:report.transcript,checks:checks.map(x=>x.check.observation),independentlyAccepted:false,published:false});
+    assert(Date.now()<grantDeadline,'baseline_acknowledgement_deadline');
     await control({command:'stop'});assert.equal(Number(await docker(['wait',gateway])),0);assert.equal((await owned(gateway)).State.Pid,0);
     await remove(worker);await childDone;
     const repositoryState=JSON.parse(await docker(['volume','inspect',repositoryVolume]))[0];assert.equal(repositoryState.Labels[LABEL],run);await docker(['volume','rm',repositoryVolume]);volumes.splice(volumes.indexOf(repositoryVolume),1);

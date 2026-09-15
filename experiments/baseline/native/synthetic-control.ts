@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { digest, validateNativeProfile } from '../../router-authority-extension/overlay/native-profile.mjs';
 import { events } from '../../native-evaluation/fixtures.mjs';
+import { settingsDigest } from '../../harness/native/client.ts';
 import { validateRegistration } from '../registration.ts';
 import { validateDescriptor, executionProjection, PINS, WRITE_PATHS } from '../case01.ts';
 
@@ -16,6 +17,8 @@ export function baselineManifest(input: unknown, profiles: any[]) {
   assert.equal(profile.evidence, 'synthetic'); assert.equal(profile.schema, 1); assert.equal(profile.scope.phase, 'baseline');
   assert.equal(profile.scope.caseRef, 'case01'); assert.equal(profile.scope.elapsedMs, 900000); assert.equal(profile.scope.maxInferenceAttempts, 32);
   assert.deepEqual(profile.toolPaths, WRITE_PATHS);
+  assert.equal(profile.harness.settings, settingsDigest('allow'));
+  assert.deepEqual(profile.local, {requestBytes:65536,responseBytes:1048576,concurrency:1,requestCount:32,totalMs:120000,firstOutputMs:90000,idleMs:45000,attemptMs:900000});
   return descriptor;
 }
 export function baselineStart(registration: unknown, descriptor: any, packetDigest: string, policy: any) {

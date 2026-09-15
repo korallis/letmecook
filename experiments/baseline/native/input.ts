@@ -11,6 +11,8 @@ export type WorkerInput = {
   files: SnapshotFile[]; token: string; deadline: number; outputBytes: number;
 };
 export const bytesDigest = (text: string) => createHash('sha256').update(text).digest('hex');
+// OpenCode 1.18.30 run.ts quotes spaced arguments and escapes only double quotes.
+export const wirePrompt = (prompt: string) => prompt.includes(' ') ? '"' + prompt.replaceAll('"', '\\"') + '"' : prompt;
 export function validateWorkerInput(input: WorkerInput, now = Date.now()) {
   const names = ['schema','kind','caseId','registrationDigest','packetDigest','profileDigest','bindingDigest','settingsDigest','baseTreeDigest','context','contextDigest','prompt','promptDigest','files','token','deadline','outputBytes'];
   keys(input, names, names);
