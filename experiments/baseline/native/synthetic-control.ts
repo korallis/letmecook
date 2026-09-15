@@ -5,7 +5,7 @@ import { events } from '../../native-evaluation/fixtures.mjs';
 import { validateRegistration } from '../registration.ts';
 import { validateDescriptor, executionProjection, PINS, WRITE_PATHS } from '../case01.ts';
 
-export const baselineTrace: { physicalRequests: any[]; scopeOperations: any[]; registrationDigest: string | null } = { physicalRequests: [], scopeOperations: [], registrationDigest: null };
+export const baselineTrace: { physicalRequests: any[]; registrationDigest: string | null } = { physicalRequests: [], registrationDigest: null };
 export function tracePhysical(request_id: string, ordinal: number, scope_id: string, serialized: string) {
   assert(baselineTrace.physicalRequests.length < 32);
   baselineTrace.physicalRequests.push({ request_id, ordinal, scope_id, body: JSON.parse(serialized) });

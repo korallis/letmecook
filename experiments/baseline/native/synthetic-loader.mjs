@@ -20,12 +20,11 @@ for(const [path,hash] of Object.entries(baselineSources))if(createHash('sha256')
 const {baselineManifest,baselineStart,caseEvents,baselineTrace}=await import('/gaffer/experiments/baseline/native/synthetic-control.ts');
 const baselineCase=baselineManifest(JSON.parse(readFileSync('/config/baseline.json','utf8')),profiles);
 const {handleChat}=await import`);
-  source = once(source, 'await getAdapter();const a=authority();', 'const baselineDb=await getAdapter();const a=authority();');
   source = once(source, 'const observed={sends:[],decisions:[],artifacts:[]};', 'const observed={sends:[],decisions:[],artifacts:[],baseline:baselineTrace};');
   const response = "res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(continuityModule?.syntheticContinuityEvents(continuityFixture,n,body,events)??(n.protocol===PLANNER_PROTOCOL?plannerEvents(body,n,plannerScenario):events(!body.input.some(x=>x.type==='function_call_output')))));for(let i=0;i<bytes.length;i+=17)res.write(bytes.subarray(i,i+17));res.end();";
   source = once(source, response, "res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(caseEvents(body)));for(let i=0;i<bytes.length;i+=17)res.write(bytes.subarray(i,i+17));res.end();");
   source = once(source, "scopeStatusAtPreparation:'not_started',", "scopeStatusAtPreparation:'not_started',baselineCase,");
   source = once(source, "else if(message.command==='start'&&Object.keys(message).length===2&&message.packetDigest===packetDigest){result=a.startEvaluation();}", "else if(message.command==='start'&&Object.keys(message).length===3&&message.packetDigest===packetDigest){const start=baselineStart(message.registration,baselineCase,packetDigest,policy);persistImmutable('/state','baseline-start',start);result=a.startEvaluation();}");
-  source = once(source, "else if(message.command==='evidence'", "else if(message.command==='baseline-proof'&&Object.keys(message).length===1){baselineTrace.scopeOperations=baselineDb.all('SELECT * FROM gaffer_scope_operations ORDER BY rowid');result=baselineTrace;}\n  else if(message.command==='evidence'");
+  source = once(source, "else if(message.command==='evidence'", "else if(message.command==='baseline-proof'&&Object.keys(message).length===1){result=baselineTrace;}\n  else if(message.command==='evidence'");
   return { ...result, source };
 }

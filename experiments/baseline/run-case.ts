@@ -132,10 +132,14 @@ export async function runCase(directory: string, scenario: 'two-requests' | 'thr
     for(const id of ['pins','audit'])checks.push({revision:'candidate',check:await runCheck(await checkJob(store,registrationRef,captured,preparedCase.executables,id,'candidate',candidateDeadline),store,abort.signal)});
     report.checks=checks;assert(checks.every(x=>x.check.cleanup));assert.equal(checks[2].check.status,'passed');assert.equal(checks[3].check.status,'failed');
     const evidence=await control({command:'evidence',attemptId:binding.attemptId}),physical=await control({command:'baseline-proof'});
+    assert.equal(physical.registrationDigest,digest(registration));
+    // Receipts already join the router's durable scope-operation rows. Use that
+    // public authority projection; repository adapters intentionally deny raw queries.
+    physical.scopeOperations=evidence.receipts.flatMap((receipt:any)=>receipt.operations.map(({request_id,ordinal,scope_id,body_digest,output_digest}:any)=>({request_id,ordinal,scope_id,kind:'inference',body_digest,output_digest})));
     const raw=await retainEvidence(store,'router-evidence',{evidence,physical});report.routerEvidence=raw;
     const promptSource=(await execute('git',['show',pins.sourceCommit+':packages/opencode/src/session/prompt/gpt-astra.txt'],{cwd:opencodeSource!})).stdout;
     const day=new Date(observation.startedAt).toLocaleDateString('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'2-digit',year:'numeric'}).replaceAll(',','').replace(/(\w+ \w+) (\d+) (\d+)/,'$1 $2 $3');
-    const developer=promptSource+'\n\nYou are powered by the model named gpt-6-astra. The exact model ID is openai/gpt-6-astra\nHere is some useful information about the environment you are running in:\n<env>\n  Working directory: /work/repo\n  Workspace root folder: /\n  Is directory a git repo: no\n  Platform: linux\n  Today\'s date: '+day+'\n</env>';
+    const developer=promptSource.trimEnd()+'\n\nYou are powered by the model named gpt-6-astra. The exact model ID is openai/gpt-6-astra\nHere is some useful information about the environment you are running in:\n<env>\n  Working directory: /work/repo\n  Workspace root folder: /\n  Is directory a git repo: no\n  Platform: linux\n  Today\'s date: '+day+'\n</env>';
     const sourceLock=JSON.parse(await readFile(join(root,'experiments/router-authority-extension/source-lock.json'),'utf8'));
     const instructionsPath='open-sse/config/codexInstructions.js';assert.equal(hash(await readFile(join(source!,instructionsPath))),sourceLock.files[instructionsPath]);
     const {CODEX_DEFAULT_INSTRUCTIONS}=await import(pathToFileURL(join(source!,instructionsPath)).href);
