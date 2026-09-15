@@ -56,7 +56,7 @@ export async function prepareCase(store: EvidenceStore, sourceCommit: string, so
   const sources = await retainEvidence(store, 'case-sources', { schema: 1, sourceCommit, files: sourceManifest });
   registration.execution.harness = sources; registration.execution.router = sources;
   registration.execution.namedRoute = 'gpt-6-astra';
-  registration.execution.isolation = await retainEvidence(store, 'case-isolation', { schema: 1, image: IMAGE, workerMemoryMiB: 768, checkMemoryMiB: 128, network: 'none' });
+  registration.execution.isolation = await retainEvidence(store, 'case-isolation', { schema: 1, image: IMAGE, workerMemoryMiB: 768, checkMemoryMiB: 128, network: 'none', repository: 'owned-volume' });
   registration.execution.preflight = sources;
   registration.execution.stopPlan = await retainEvidence(store, 'case-stop', { schema: 1, independentContainerStop: true, preserveUnknownState: true, elapsedMs: 900000 });
   registration.execution.packetDigest = registration.execution.nativeProfileDigest = '0'.repeat(64);

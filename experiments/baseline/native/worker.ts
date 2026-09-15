@@ -1,6 +1,6 @@
 // Isolated consumer only. The supervisor freezes and captures the complete tree.
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync, existsSync, readSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, readSync, readdirSync, lstatSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -14,8 +14,8 @@ const chunk = Buffer.alloc(16384);
 let count: number; while ((count = readSync(0, chunk)) > 0) { size += count; assert(size <= 262144, 'worker_input_limit'); chunks.push(Buffer.from(chunk.subarray(0, count))); }
 const input: WorkerInput = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks)));
 const invocationDigest = validateWorkerInput(input); assertExecutionEnvironment(); probe('/fixture/opencode');
-for (const path of ['/work/repo','/state','/control','/private','/egress','/router-source','/var/run/docker.sock','/root/.codex/auth.json','/Users']) assert(!existsSync(path), 'ambient_worker_state');
-mkdirSync('/work/repo');
+for (const path of ['/state','/control','/private','/egress','/router-source','/var/run/docker.sock','/root/.codex/auth.json','/Users']) assert(!existsSync(path), 'ambient_worker_state');
+assert(lstatSync('/work/repo').isDirectory() && !lstatSync('/work/repo').isSymbolicLink() && readdirSync('/work/repo').length === 0, 'empty_repository_volume_required');
 for (const file of input.files) { const path = '/work/repo/' + file.path; mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, Buffer.from(file.contentBase64, 'base64'), { flag: 'wx', mode: file.mode }); }
 writeFileSync('/work/config.json', JSON.stringify(config(input.token, 'allow')), { mode: 0o600, flag: 'wx' });
 const transport = await relay(input.token, 65536), parsed = new NativeEvents(input.outputBytes), startedAt = Date.now();
