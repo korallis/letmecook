@@ -39,13 +39,10 @@ When a prerequisite lands, review its evidence and update dependent readiness la
 
 ## Foundation path reconciliation
 
-The #9 record reconciles merged code at `13744086e37e32fc37c827cd9e0cb9455481a15c`.
-`cmd/gafferd/`, `internal/store/`, `internal/httpapi/`, `schemas/execution/` and
-`schemas/readapi/` contain #93/#94 fixtures and merged #10 v2 contract additions;
-`web/` contains the merged #95 read-only shell. These remain provisional, not
-product acceptance. Retain/reconcile/port/discard decisions
-and the bounded M1 plan live in the [decision](decisions/0001-execution-foundation.md#bounded-m1-ownership-and-path-plan).
-No existing package supplies grants, runner execution, artifact custody or sessions.
+The #9 record owns the [merged-code snapshot](decisions/0001-execution-foundation.md#evidence-cutoff-and-authority),
+[provisional-slice disposition](decisions/0001-execution-foundation.md#provisional-slice-reconciliation)
+and [bounded M1 package plan](decisions/0001-execution-foundation.md#bounded-m1-ownership-and-path-plan).
+Use those boundaries when applying the navigation hints below.
 
 Affected GitHub issue-body navigation hints were updated and read back on
 15 September 2026 as follows; outcomes, dependencies, acceptance criteria and
@@ -65,8 +62,8 @@ packages merely to reproduce the old path list.
 | [#32](https://github.com/korallis/letmecook/issues/32) | `web/src/tasks/`, `internal/httpapi/`; replace `internal/http/events/` hint; product SSE remains unimplemented |
 | [#34](https://github.com/korallis/letmecook/issues/34) | `web/src/review/`, `internal/httpapi/`, `internal/review/`; replace `internal/http/review/` hint |
 
-Other issue hints retain their intended owners. The merged [#10 v2 contract](contracts/execution.md)
-owns wire semantics; O1–O8 remain open before #10 acceptance/#11 promotion.
+Other issue hints retain their intended owners. The [execution contract](contracts/execution.md#8-9-reconciliation-obligations)
+owns reconciliation obligations before #10 acceptance/#11 promotion.
 #89 must newly qualify worker **and verifier**
 confinement before supported execution. Publication remains #35/#36, separate
 from local acceptance; no model/account router package is introduced.

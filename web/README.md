@@ -6,8 +6,9 @@ React / TypeScript / StyleX page compiled by Vite with the official
 It renders one bounded snapshot from the #94 fixture-only daemon on load and
 each refresh; the [read contract](../cmd/gafferd/README.md#read-contract-for-95)
 owns the snapshot bounds. Not M1/M2 acceptance, not the #26 shell,
-not authentication, not a supported UI runtime; retain, port or discard it with
-the #9 foundation decision.
+not authentication, not a supported UI runtime. The
+[#9 reconciliation record](../docs/decisions/0001-execution-foundation.md#provisional-slice-reconciliation)
+owns the shell's provisional disposition.
 
 ## Build and serve
 

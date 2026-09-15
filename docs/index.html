@@ -2291,9 +2291,10 @@ missing measurements and bounds M1 ownership. Existing <code>cmd/gafferd/</code>
 <code>internal/store/</code>, <code>internal/httpapi/</code> and <code>schemas/</code> stay provisional until
 #9/#10/#11 reconciliation; do not create parallel <code>internal/http/</code> or <code>internal/api/</code>
 owners. Future <code>cmd/gaffer-runner/</code> owns one qualified runner and <code>cmd/gaffer/</code> the
-local CLI. <code>web/</code> now contains the merged #95 read-only fixture shell, not the
-M2 authenticated workflow. The merged <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md">#10 v2 contract</a>
-owns execution semantics; its O1–O8 obligations remain open before acceptance.</p>
+local CLI. The <a href="https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md#provisional-slice-reconciliation">provisional-slice reconciliation</a>
+owns the disposition and acceptance limits of the <code>web/</code> shell and merged protocol.
+The <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md">execution contract</a>
+owns message semantics and reconciliation obligations.</p>
 <p><a href="#roadmap">M0</a> is not passed: the first live trial
 failed with unknown remote work, #89 has no newly measured Docker-free profile,
 and real baseline/candidate workflow measurements and fresh Opus review remain
@@ -2328,10 +2329,10 @@ M6  External usability and v1       offline drafts, install, restore, honest lim
 Later: automatic curation, learned idioms, auto-merge, desktop runners
 </code></pre>
 <p>Exit checkboxes are milestone acceptance gates, not an implementation-status
-tracker. All three reversible slices (#93 protocol, #94 fixture daemon, #95 embedded
-shell) have merged, as has #10&#39;s v2 contract. These merges do not pass a milestone:
-<a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md#8-9-reconciliation-obligations">O1–O8</a>
-remain open before contract acceptance. The recorded build choice leaves #9 open
+tracker. The <a href="https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md#provisional-slice-reconciliation">foundation reconciliation</a>
+owns provisional-slice disposition; the <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md#8-9-reconciliation-obligations">execution contract</a>
+owns contract acceptance obligations. Merged provisional work does not pass a
+milestone. The recorded build choice leaves #9 open
 pending required measurements and fresh Opus review. Failing a gate can narrow
 scope or favour reuse; it need not produce another subsystem.</p>
 <h2 id="roadmap-m0-evidence-and-feasibility">M0 — Evidence and feasibility</h2>

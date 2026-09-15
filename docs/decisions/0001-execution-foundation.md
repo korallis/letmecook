@@ -292,13 +292,8 @@ records changed issue navigation hints without changing dependencies or outcomes
   v2 adds `accept`, `refuse`, `cancel`, `terminated` and exact session-version checks.
   Do not relabel v1 journals or treat decoding/negotiation as authority. No transport,
   runner, lease persistence or custody implementation follows from the merge.
-  [O1–O8](../contracts/execution.md#8-9-reconciliation-obligations) all remain **OPEN**:
-  O1 foundation/paths; O2 transport/compatibility; O3 durable identity/fencing;
-  O4 isolation/stop evidence; O5 time/replacement; O6 manifest/custody;
-  O7 authority/recovery; O8 independent review/acceptance. Record closure and exact
-  evidence in that owner document, including disposition of every message, refusal,
-  state edge, fixture, size/version rule and example. The contract is merged but
-  explicitly provisional, not accepted or locked; this record closes no obligation.
+  The contract owns [O1–O8 and their closure evidence](../contracts/execution.md#8-9-reconciliation-obligations).
+  All remain **OPEN**; this record closes no obligation or contract acceptance gate.
 - **#94 — retain bounded storage/API mechanics, not product state.** Keep driver,
   notices, private directory/lock/transaction and adverse SQLite/read API tests.
   Reconcile schema/migrations under #11 after #10; extend or replace rows as required.
