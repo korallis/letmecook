@@ -36,7 +36,7 @@ that all three provisional slices had merged:
 | Continuity #8 | [Merged suite/evidence change](https://github.com/korallis/letmecook/pull/85), head `a58b1a52a4d07c538aabf8cd01dea2b246acb88f` | Synthetic continuity plus retained failed live attempt, not two proved subscriptions |
 | Protocol #93 | [Merged protocol change](https://github.com/korallis/letmecook/pull/96), head `c698c1c65337bac8c4e46cbe1a06c2029ba8b2db` | Matching provisional Go/TypeScript types and synthetic traces |
 | Store #94 | [Merged fixture daemon](https://github.com/korallis/letmecook/pull/97), head `01603f9ab646688384157ed14b99e062b88cb6e6` | Real fixture-only SQLite/read API; no execution authority |
-| Shell #95 | [Issue open](https://github.com/korallis/letmecook/issues/95); no `web/` or merged shell on this base | Approved scope only; no UI implementation or rendered evidence available to retain |
+| Shell #95 | [In-flight, pending merge](https://github.com/korallis/letmecook/issues/95); no `web/` or merged shell on this base | Approved scope only; no UI implementation or rendered evidence available to retain |
 
 Earlier evidence documents saying these changes are drafts retain their observation
 time and scope. Their merge does not retroactively pass their live criteria.
@@ -290,8 +290,8 @@ records changed issue navigation hints without changing dependencies or outcomes
   Discard fixture seeding/fresh-store-only startup from the future product entry;
   there is no real user state to migrate and no import path from fixture stores.
   Do not enable execution behind a hidden flag or equate event durability with blobs.
-- **#95 — retain approved UI direction, no nonexistent implementation.** No shell
-  exists on the cutoff base. When its separate slice lands, inspect actual `web/`
+- **#95 — tracked-pending: in-flight, pending merge.** Retain approved UI direction;
+  no shell exists on the cutoff base. After its separate slice merges, inspect actual `web/`
   assets, StyleX tokens, same-origin embedding, decoders and visual/React Doctor
   evidence before choosing what to retain. Port only components matching the
   reconciled read API; discard fixture-only assumptions before authenticated #26.
