@@ -46,7 +46,7 @@ Installation configuration is **flags only**:
 | Flag | Required meaning |
 | --- | --- |
 | `--state-dir` | Absolute clean path on local disk. Creates final directory only, under an existing parent; private owned mode 0700. Holds `state.db`, WAL/SHM and directory-inode ownership lock. |
-| `--artifacts-dir` | Explicit private local directory, validated on each startup. May change on reopen or share/nest with other configured directories; no artifact lock or persisted path binding. Reserved location only: no uploads, artifact writes, custody or acknowledgements. |
+| `--artifacts-dir` | Same path, ownership and creation requirements as `--state-dir`, validated on each startup. May change on reopen or share/nest with other configured directories; no artifact lock or persisted path binding. Reserved location only: no uploads, artifact writes, custody or acknowledgements. |
 | `--listen` | Exact `127.0.0.1:<port>`, 0..65535; 0 requests an ephemeral port. All three install flags required. No DNS lookup, wildcard, remote binding or proxy exception. |
 | `--fixture` | Exclusive alternative to install flags: creates/seeds fresh disposable public #94 data and serves the existing shell. Graceful exit removes only this owned fixture directory. |
 
