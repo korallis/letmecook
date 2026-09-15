@@ -1,0 +1,614 @@
+{
+  "schema": 1,
+  "issue": 86,
+  "evidence": "isolated-pinned-router-original-response-diagnostics",
+  "live": false,
+  "historicalLiveStateAccessed": false,
+  "baseCommit": "2749a99080335a887e96ac94049fca1870d69b9d",
+  "sourceCommit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+  "sourceFiles": {
+    "experiments/inference-boundary/router-gate.test.ts": "62f02bf5fd084f3d12986f1117ca437a1db014b51d5b0b84b07f52b6585a8734",
+    "experiments/inference-boundary/router-policy.ts": "ea5c4254d351c7e329c72bb9a5de053f8acf5c7f499d49e5151e8da8de9ed9e0",
+    "experiments/native-evaluation/cases.mjs": "cf919cd31b1fbc65d262c853ae270aa9a9de43779beae6b238f0fe4ef228fec8",
+    "experiments/native-evaluation/fault-loader.mjs": "65a9efc2dabf402468cd430b5a1000d2bdbb7d5da85edc86d666428ac2d3297c",
+    "experiments/native-evaluation/faults.mjs": "0d6464ed46abcd0304ccdc414a9c9e8cfb33dc902076d4d2810c3559db3316e4",
+    "experiments/router-authority-extension/native-local-integration.mjs": "13dbc5665a95b3794df97c6f0c1e42ca4014d82d679710df208f13b69c9dbe92",
+    "experiments/router-authority-extension/overlay/authority.mjs": "e76f457f19e36410f022be9aadb5c21d6d429d15e1743fcbd27eb7e91df51bd2",
+    "experiments/router-authority-extension/overlay/response-observation.mjs": "fc6b1aaf8be9fd280ed3a4db0596af71057e9dcab3ce59f2b6c64034fd517a59",
+    "experiments/router-authority-extension/package.json": "0b92c9e691cc262230abf0aee2a298a625ffb70c0316cc683fcbf32871e61cce",
+    "experiments/router-authority-extension/response-diagnostic-fixtures.mjs": "7b4d45c2b942a31320c12952f709cb12028f6dd4b9ca61c19b688cde92a43334",
+    "experiments/router-authority-extension/response-observation.test.mjs": "e3b331bd0849fe82b8a01ff5444f179c2339d7c6a125cf9617499c52eb61391e",
+    "experiments/router-authority-extension/response-restart.mjs": "7aa0aa43908d656fd4db33d9435bccf92bd881dbfeb0f0026bdb2dd2060590c7"
+  },
+  "runtime": {
+    "hostNode": "v24.19.0",
+    "containerNode": "v24.21.0",
+    "imageId": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a",
+    "server": {
+      "Platform": {
+        "Name": "Docker Desktop 4.86.0 (236216)"
+      },
+      "Version": "29.7.2",
+      "ApiVersion": "1.55",
+      "MinAPIVersion": "1.40",
+      "Os": "linux",
+      "Arch": "arm64",
+      "Components": [
+        {
+          "Name": "Engine",
+          "Version": "29.7.2",
+          "Details": {
+            "ApiVersion": "1.55",
+            "Arch": "arm64",
+            "BuildTime": "Wed Aug  5 18:28:35 2026",
+            "Experimental": "false",
+            "GitCommit": "6a43e3d",
+            "GoVersion": "go1.26.5",
+            "KernelVersion": "6.12.76-linuxkit",
+            "MinAPIVersion": "1.40",
+            "Module": "github.com/moby/moby/v2",
+            "ModuleVersion": "v2.0.0+unknown",
+            "Os": "linux"
+          }
+        },
+        {
+          "Name": "containerd",
+          "Version": "v2.2.5",
+          "Details": {
+            "GitCommit": "e53c7c1516c3b2bff98eb76f1f4117477e6f4e66"
+          }
+        },
+        {
+          "Name": "runc",
+          "Version": "1.3.6",
+          "Details": {
+            "GitCommit": "v1.3.6-0-g491b69ba"
+          }
+        },
+        {
+          "Name": "docker-init",
+          "Version": "0.19.0",
+          "Details": {
+            "GitCommit": "de40ad0"
+          }
+        }
+      ],
+      "GitCommit": "6a43e3d",
+      "GoVersion": "go1.26.5",
+      "KernelVersion": "6.12.76-linuxkit",
+      "BuildTime": "2026-08-05T18:28:35.000000000+00:00"
+    },
+    "network": "none"
+  },
+  "nativeMatrix": {
+    "runId": "native-matrix-cc8395e18d",
+    "startedAt": "2026-09-15T06:18:44.972Z",
+    "finishedAt": "2026-09-15T06:20:28.851Z",
+    "casesPassed": 51,
+    "diagnosticCasesPassed": 13,
+    "cleanupVerified": true,
+    "allExitZeroNoOom": true
+  },
+  "deploymentSourceClosure": {
+    "check": "same recursive directory and extension selection as deployment.ts; node_modules excluded; no symlinks",
+    "fileCount": 91,
+    "observationModuleIncluded": true,
+    "observationModuleSha256": "fc6b1aaf8be9fd280ed3a4db0596af71057e9dcab3ce59f2b6c64034fd517a59"
+  },
+  "checks": {
+    "inferenceBoundary": {
+      "typecheck": "passed",
+      "testsPassed": 56
+    },
+    "nativeEvaluation": {
+      "typecheck": "passed",
+      "testsPassed": 20
+    },
+    "routerBoundaryBridge": {
+      "typecheck": "passed",
+      "testsPassed": 3
+    },
+    "originalObserversAndDiagnostics": {
+      "testsPassed": 52
+    },
+    "extensionSyntax": "passed",
+    "docsBuild": "passed",
+    "docsCheck": "passed"
+  },
+  "cases": [
+    {
+      "scenario": "response-json",
+      "result": "passed",
+      "requestId": "f912c295f3aa4691a95179f426578d38",
+      "ordinal": 1,
+      "observationFieldPresent": true,
+      "responseObservation": {
+        "status": 202,
+        "mediaType": "json",
+        "bodyPresent": true
+      },
+      "terminal": "unknown",
+      "localStop": "transport_error",
+      "quiescent": false,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": false,
+      "replacementDenied": true,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 0,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "f912c295f3aa4691a95179f426578d38",
+        "ordinal": 1,
+        "responseObservation": {
+          "status": 202,
+          "mediaType": "json",
+          "bodyPresent": true
+        },
+        "terminal": "unknown",
+        "localStop": "crash_unknown"
+      }
+    },
+    {
+      "scenario": "response-legacy",
+      "result": "passed",
+      "requestId": "8f9d62e72a4048d49afbd74e5f40f3fa",
+      "ordinal": 1,
+      "observationFieldPresent": false,
+      "responseObservation": null,
+      "terminal": "unknown",
+      "localStop": "transport_error",
+      "quiescent": false,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": false,
+      "replacementDenied": true,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 0,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "8f9d62e72a4048d49afbd74e5f40f3fa",
+        "ordinal": 1,
+        "responseObservation": null,
+        "terminal": "unknown",
+        "localStop": "crash_unknown"
+      }
+    },
+    {
+      "scenario": "response-html",
+      "result": "passed",
+      "requestId": "fec3ef7926134a1394187627fb09e3c6",
+      "ordinal": 1,
+      "observationFieldPresent": true,
+      "responseObservation": {
+        "status": 200,
+        "mediaType": "html",
+        "bodyPresent": true
+      },
+      "terminal": "unknown",
+      "localStop": "transport_error",
+      "quiescent": false,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": false,
+      "replacementDenied": true,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 0,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "fec3ef7926134a1394187627fb09e3c6",
+        "ordinal": 1,
+        "responseObservation": {
+          "status": 200,
+          "mediaType": "html",
+          "bodyPresent": true
+        },
+        "terminal": "unknown",
+        "localStop": "crash_unknown"
+      }
+    },
+    {
+      "scenario": "response-missing-mime",
+      "result": "passed",
+      "requestId": "ec194ea28bfb46f88ee89774f8201c99",
+      "ordinal": 1,
+      "observationFieldPresent": true,
+      "responseObservation": {
+        "status": 200,
+        "mediaType": "missing",
+        "bodyPresent": true
+      },
+      "terminal": "unknown",
+      "localStop": "transport_error",
+      "quiescent": false,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": false,
+      "replacementDenied": true,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 0,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "ec194ea28bfb46f88ee89774f8201c99",
+        "ordinal": 1,
+        "responseObservation": {
+          "status": 200,
+          "mediaType": "missing",
+          "bodyPresent": true
+        },
+        "terminal": "unknown",
+        "localStop": "crash_unknown"
+      }
+    },
+    {
+      "scenario": "response-bodyless",
+      "result": "passed",
+      "requestId": "09dfd4e1a5904f8eb8b00481605eef39",
+      "ordinal": 1,
+      "observationFieldPresent": true,
+      "responseObservation": {
+        "status": 204,
+        "mediaType": "sse",
+        "bodyPresent": false
+      },
+      "terminal": "unknown",
+      "localStop": "transport_error",
+      "quiescent": false,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": false,
+      "replacementDenied": true,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 0,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "09dfd4e1a5904f8eb8b00481605eef39",
+        "ordinal": 1,
+        "responseObservation": {
+          "status": 204,
+          "mediaType": "sse",
+          "bodyPresent": false
+        },
+        "terminal": "unknown",
+        "localStop": "crash_unknown"
+      }
+    },
+    {
+      "scenario": "response-empty-sse",
+      "result": "passed",
+      "requestId": "2f1d5991dd964badb368087e6dff001f",
+      "ordinal": 1,
+      "observationFieldPresent": true,
+      "responseObservation": {
+        "status": 200,
+        "mediaType": "sse",
+        "bodyPresent": true
+      },
+      "terminal": "unknown",
+      "localStop": "original_eof",
+      "quiescent": false,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": false,
+      "replacementDenied": true,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 0,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "2f1d5991dd964badb368087e6dff001f",
+        "ordinal": 1,
+        "responseObservation": {
+          "status": 200,
+          "mediaType": "sse",
+          "bodyPresent": true
+        },
+        "terminal": "unknown",
+        "localStop": "crash_unknown"
+      }
+    },
+    {
+      "scenario": "response-invalid-rejection",
+      "result": "passed",
+      "requestId": "e1895b6535134c1db318dc9d7e269757",
+      "ordinal": 1,
+      "observationFieldPresent": true,
+      "responseObservation": {
+        "status": 418,
+        "mediaType": "json",
+        "bodyPresent": true
+      },
+      "terminal": "unknown",
+      "localStop": "transport_error",
+      "quiescent": false,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": false,
+      "replacementDenied": true,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 0,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "e1895b6535134c1db318dc9d7e269757",
+        "ordinal": 1,
+        "responseObservation": {
+          "status": 418,
+          "mediaType": "json",
+          "bodyPresent": true
+        },
+        "terminal": "unknown",
+        "localStop": "crash_unknown"
+      }
+    },
+    {
+      "scenario": "response-invalid-rejection-schema",
+      "result": "passed",
+      "requestId": "8733e39cbd3a4421b32a7b4496d2b3c1",
+      "ordinal": 1,
+      "observationFieldPresent": true,
+      "responseObservation": {
+        "status": 422,
+        "mediaType": "json",
+        "bodyPresent": true
+      },
+      "terminal": "unknown",
+      "localStop": "transport_error",
+      "quiescent": false,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": false,
+      "replacementDenied": true,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 0,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "8733e39cbd3a4421b32a7b4496d2b3c1",
+        "ordinal": 1,
+        "responseObservation": {
+          "status": 422,
+          "mediaType": "json",
+          "bodyPresent": true
+        },
+        "terminal": "unknown",
+        "localStop": "crash_unknown"
+      }
+    },
+    {
+      "scenario": "response-empty-rejection",
+      "result": "passed",
+      "requestId": "dad76c83576649a9bb682fbb920197ad",
+      "ordinal": 1,
+      "observationFieldPresent": true,
+      "responseObservation": {
+        "status": 503,
+        "mediaType": "json",
+        "bodyPresent": true
+      },
+      "terminal": "unknown",
+      "localStop": "transport_error",
+      "quiescent": false,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": false,
+      "replacementDenied": true,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 0,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "dad76c83576649a9bb682fbb920197ad",
+        "ordinal": 1,
+        "responseObservation": {
+          "status": 503,
+          "mediaType": "json",
+          "bodyPresent": true
+        },
+        "terminal": "unknown",
+        "localStop": "crash_unknown"
+      }
+    },
+    {
+      "scenario": "response-sse",
+      "result": "passed",
+      "requestId": "ecb4f1e4f53940148cd2145e412f7f81",
+      "ordinal": 1,
+      "observationFieldPresent": true,
+      "responseObservation": {
+        "status": 200,
+        "mediaType": "sse",
+        "bodyPresent": true
+      },
+      "terminal": "provider_completed",
+      "localStop": "original_eof",
+      "quiescent": true,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": true,
+      "replacementDenied": false,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 0,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "ecb4f1e4f53940148cd2145e412f7f81",
+        "ordinal": 1,
+        "responseObservation": {
+          "status": 200,
+          "mediaType": "sse",
+          "bodyPresent": true
+        },
+        "terminal": "provider_completed",
+        "localStop": "original_eof"
+      }
+    },
+    {
+      "scenario": "response-write",
+      "result": "passed",
+      "requestId": "8dee67a2b3184f918c024cf7c73157de",
+      "ordinal": 1,
+      "observationFieldPresent": true,
+      "responseObservation": null,
+      "terminal": "unknown",
+      "localStop": "transport_error",
+      "quiescent": false,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": false,
+      "replacementDenied": true,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 1,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "8dee67a2b3184f918c024cf7c73157de",
+        "ordinal": 1,
+        "responseObservation": null,
+        "terminal": "unknown",
+        "localStop": "crash_unknown"
+      }
+    },
+    {
+      "scenario": "response-rollback",
+      "result": "passed",
+      "requestId": "de26f14bb704414a9986bea8371c68ed",
+      "ordinal": 1,
+      "observationFieldPresent": true,
+      "responseObservation": null,
+      "terminal": "unknown",
+      "localStop": "transport_error",
+      "quiescent": false,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": false,
+      "replacementDenied": true,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 1,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "de26f14bb704414a9986bea8371c68ed",
+        "ordinal": 1,
+        "responseObservation": null,
+        "terminal": "unknown",
+        "localStop": "crash_unknown"
+      }
+    },
+    {
+      "scenario": "response-write-stop",
+      "result": "passed",
+      "requestId": "c894af0526284a6298ff4fb5a5a88989",
+      "ordinal": 1,
+      "observationFieldPresent": true,
+      "responseObservation": null,
+      "terminal": "unknown",
+      "localStop": "running",
+      "quiescent": false,
+      "physicalSends": 1,
+      "scopeSpent": 1,
+      "outputReleased": false,
+      "replacementDenied": true,
+      "physicalResponseClosed": true,
+      "storageFaultsTriggered": 2,
+      "restart": {
+        "result": "passed",
+        "newBoot": true,
+        "phase": "closed",
+        "scopeState": "closed",
+        "scopeSpent": 1,
+        "physicalSends": 0,
+        "requestId": "c894af0526284a6298ff4fb5a5a88989",
+        "ordinal": 1,
+        "responseObservation": null,
+        "terminal": "unknown",
+        "localStop": "crash_unknown"
+      }
+    }
+  ],
+  "aggregateFallback": {
+    "requestId": "2a1852b6b6724fb689e4b1b6ecd28fae",
+    "operations": [
+      {
+        "ordinal": 1,
+        "terminal": "provider_rejected",
+        "responseObservation": {
+          "status": 429,
+          "mediaType": "json",
+          "bodyPresent": true
+        }
+      },
+      {
+        "ordinal": 2,
+        "terminal": "provider_completed",
+        "responseObservation": {
+          "status": 200,
+          "mediaType": "sse",
+          "bodyPresent": true
+        }
+      }
+    ]
+  },
+  "legacyRouterMatrix": {
+    "runId": "native-matrix-d777b1df3e",
+    "startedAt": "2026-09-15T06:20:54.630Z",
+    "finishedAt": "2026-09-15T06:22:20.154Z",
+    "casesPassed": 41,
+    "cleanupVerified": true,
+    "allExitZeroNoOom": true
+  },
+  "sourceFilesVerifiedByLoader": 1252
+}

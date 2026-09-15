@@ -7,6 +7,13 @@ export async function load(url, context, next) {
  const result=await originalLoad(url,context,next);
  if(url.endsWith('/overlay/authority.mjs')){
   let source=String(result.source);
+  // Build a synthetic pre-observation authority/schema, then restart it with
+  // the unmodified current overlay. No historical live database is accessed.
+  if(process.env.GAFFER_TEST_FAULT==='response-legacy'){
+   for(const needle of ['  const observations = responseObservations(db);','      o = {...o, response_observation: observations.read(id, o.ordinal)};','        observations.record(ctx.id, ordinal, response);']){
+    if(source.split(needle).length!==2)throw Error('legacy_response_patch_anchor_changed');source=source.replace(needle,'');
+   }
+  }
   if(process.env.GAFFER_TEST_FAULT?.startsWith('override-')){const [key,value]=process.env.GAFFER_TEST_FAULT.slice(9).split(':');if(!['rejectUnauthorized','dispatcher','agent','ca','key','cert'].includes(key))throw Error('unknown_fault_override');source=source.replace('async fetch(call, url, options, proxyOptions) {','async fetch(call, url, options, proxyOptions) { options={...options,'+JSON.stringify(key)+':'+JSON.stringify(JSON.parse(value))+'};');}
   const needle='export function installAuthority(db) {';
   if(source.split(needle).length!==2)throw Error('fault_patch_anchor_changed');

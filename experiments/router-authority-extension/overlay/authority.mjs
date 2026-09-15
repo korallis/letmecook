@@ -12,6 +12,7 @@ import { validateNativeProfile,validateNativeRegistry,nativeConsumerRole } from 
 import { validateNativeRequest, expectedPhysicalRequest, NativeResponsesStream } from './native-responses.mjs';
 import { deploymentOwner } from './deployment-owner.mjs';
 import { nativeDispatcher } from './native-transport.mjs';
+import { responseObservations } from './response-observation.mjs';
 
 const context = new AsyncLocalStorage();
 let instance;
@@ -220,6 +221,7 @@ export function installAuthority(db) {
     CREATE TABLE IF NOT EXISTS gaffer_receipts (id TEXT PRIMARY KEY, boot TEXT NOT NULL, generation INTEGER NOT NULL, revision TEXT NOT NULL, route TEXT NOT NULL, local_stop TEXT NOT NULL, handler_done INTEGER NOT NULL DEFAULT 0);
     CREATE TABLE IF NOT EXISTS gaffer_missing (id TEXT PRIMARY KEY, boot TEXT NOT NULL, generation INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS gaffer_operations (request_id TEXT NOT NULL, ordinal INTEGER NOT NULL, boot TEXT NOT NULL, generation INTEGER NOT NULL, revision TEXT NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL, connection_id TEXT NOT NULL, terminal TEXT NOT NULL, local_stop TEXT NOT NULL, PRIMARY KEY(request_id, ordinal));`);
+  const observations = responseObservations(db);
   const boot = randomUUID();
   const scopes=evaluationScopes(db,boot);
   db.exec(`CREATE TABLE IF NOT EXISTS gaffer_native_registry(authorization_id TEXT PRIMARY KEY, digest TEXT NOT NULL, profiles TEXT NOT NULL);
@@ -242,6 +244,7 @@ export function installAuthority(db) {
     if (!r) return { id, known: false, quiescent: false };
     const n=db.get('SELECT * FROM gaffer_native_admissions WHERE id=?',[id]);
     const operations = db.all('SELECT * FROM gaffer_operations WHERE request_id=? ORDER BY ordinal', [id]).map(o=>{
+      o = {...o, response_observation: observations.read(id, o.ordinal)};
       if(!n)return o;const debit=db.get('SELECT scope_id,body_digest,output_digest FROM gaffer_scope_operations WHERE request_id=? AND ordinal=?',[id,o.ordinal]);return {...o,...debit};
     });
     return { ...r, known: true, operations, quiescent: r.handler_done === 1 && operations.every(o => o.terminal !== 'unknown'),...(n?{native:{profileDigest:n.profile_digest,scopeId:n.scope_id,authorizationDigest:n.authorization_digest,bindingDigest:digest(JSON.parse(n.binding)),requestDigest:n.request_digest}}:{}) };
@@ -541,6 +544,9 @@ export function installAuthority(db) {
         // recheck immediately before handing bytes to the transport.
         assertContext(ctx);
         response = await call(url, {...options,...(dispatcher?{dispatcher}:{}),signal: AbortSignal.any([ctx.cancel.signal,transportAbort.signal,...(options.signal ? [options.signal] : [])]), redirect:'error'}, proxyOptions);
+        // Retain the physical HTTP response before fencing/interpretation can
+        // reject it, and before any reader, executor peek or translator sees it.
+        observations.record(ctx.id, ordinal, response);
         assertContext(ctx);
         if (!response.ok || ctx.executor.kind==='refresh') {
           reader = response.body?.getReader(); let bytes = 0; const chunks = [];
@@ -582,7 +588,12 @@ export function installAuthority(db) {
           start(controller){cancelObservation=()=>{if(transportClosed)return;transportClosed=true;try{finalize('cancel');}catch{/* Durable operation remains unknown. */}controller.error(ctx.cancel.signal.reason||new Error('original_transport_cancelled'));};},
           async cancel(reason){cancelObservation();await dispose(reason);}
         }),{status:response.status,headers:response.headers});
-      } catch (error) { stop('unknown','transport_error');ctx.cancel.abort(error);await dispose(error);throw error; }
+      } catch (error) {
+        try { stop('unknown','transport_error'); } catch { /* The pre-send operation is already durably unknown. */ }
+        // Observation persistence failure must still cancel physical ownership,
+        // even if the same storage failure also prevents local-stop persistence.
+        ctx.cancel.abort(error);await dispose(error);throw error;
+      }
     },
     // Deliberately private-process API; the HTTP service never exposes writer callbacks.
     close: () => { instance.fence();void dispatcher?.destroy();db.close(); }
