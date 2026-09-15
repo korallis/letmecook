@@ -62,10 +62,10 @@ outage, replay, lifecycle and transition-fault evidence remains in the
 [continuity record](router-continuity-run.json).
 
 See the [fixture commands](../../experiments/router-continuity/README.md) for the
-preparation and single-start path. Fresh independent review of this final source,
-private proof of two distinct existing Codex subscriptions and access expiry,
-concrete isolation/egress controls, and actual bounded live receipts remain before
-live acceptance. Two synthetic rows and injected health state prove neither real
-subscription identity nor natural quota exhaustion. Usage/headroom and live passive
-readiness remain unknown; refresh and paid fallback remain denied. No live attempt
-has been consumed. Issue #9 still gates the durable application core.
+preparation and single-start path. The captures above remain synthetic. A separately
+reviewed live deployment subsequently consumed one physical attempt and failed;
+the [15 September live record](router-initial-live.md) preserves that result.
+Live worker, planner and continuity acceptance remain pending. Two configured rows
+and injected health state prove neither separate billing nor natural quota
+exhaustion. Usage/headroom remain unknown; refresh and paid fallback remain denied.
+Issue #9 still gates the durable application core.
