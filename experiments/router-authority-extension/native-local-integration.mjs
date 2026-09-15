@@ -3,6 +3,9 @@ import { createServer, request as httpRequest } from 'node:http';
 import { Readable } from 'node:stream';
 import { readFileSync,writeFileSync,mkdirSync } from 'node:fs';
 import { once } from 'node:events';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { responseCases, expectedObservation, syntheticResponse } from './response-diagnostic-fixtures.mjs';
 import { profile,request,events,frames } from '/gaffer/experiments/native-evaluation/fixtures.mjs';
 import { Boundary } from '/gaffer/experiments/inference-boundary/boundary.ts';
 import { PolicyGate } from '/gaffer/experiments/inference-boundary/policy.ts';
@@ -11,6 +14,7 @@ import { continuationOutput } from './overlay/native-responses.mjs';
 import { failed,created } from './native-fixtures.mjs';
 import { digest } from './overlay/native-profile.mjs';
 const scenario=process.argv[2]??'roundtrip';
+const responseCase=responseCases[scenario];let responseTransportClosed=false;
 const caseRoot='/tmp/native-case-'+scenario.replace(/[^a-z0-9-]/gi,'-');mkdirSync(caseRoot,{mode:0o700});
 const journalPath=caseRoot+'/journal',routerSocket=caseRoot+'/router.sock',boundarySocket=caseRoot+'/boundary.sock';
 const fault=await import('/gaffer/experiments/native-evaluation/faults.mjs');
@@ -37,6 +41,7 @@ const sends=[],decisions=[],translated=[];const finalize=gate.finalize.bind(gate
 const backend=createServer(async(req,res)=>{
  let text='';for await(const c of req)text+=c;const body=JSON.parse(text);sends.push({path:req.url,body});
  assert.equal(req.url,'/responses');assert.equal(body.model,'gpt-6-astra');assert.deepEqual(body.reasoning,{effort:'xhigh',summary:'auto'});assert.equal(body.store,false);assert(['max_tokens','max_output_tokens','max_completion_tokens'].every(k=>!Object.hasOwn(body,k)));
+ if(responseCase){res.once('close',()=>{responseTransportClosed=true;});syntheticResponse(res,responseCase,frames(events(false)));return;}
  if(scenario==='aggregate10'&&sends.length===1){res.writeHead(429,{'content-type':'application/json'}).end(JSON.stringify({error:{message:'synthetic account exhausted'}}));return;}
  if(['unauthorized401','unauthorized403'].includes(scenario)){res.writeHead(Number(scenario.slice(-3)),{'content-type':'application/json'});res.end(JSON.stringify({error:{message:'synthetic denied token'}}));return;}
  if(scenario==='redirect'){res.writeHead(307,{location:'http://127.0.0.1:47772/unapproved'}).end();return;}
@@ -59,6 +64,28 @@ const assertPrivate=bridge.assertCurrent.bind(bridge);bridge.assertCurrent=(...a
 if(scenario==='release-frame'){const release=gate.assertRelease.bind(gate);gate.assertRelease=id=>{Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,800);return release(id);};}
 if(scenario.startsWith('release-')){const sync=gate.syncDirectory.bind(gate);let delayed=false;gate.syncDirectory=async()=>{await sync();if(!delayed&&gate.state.decisions.some(d=>d.verdict==='validated_success')){delayed=true;if(scenario==='release-frame'){}else if(['release-scope','release-token'].includes(scenario))await new Promise(r=>setTimeout(r,800));else Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,800);durabilityEnded=Date.now();if(['release-request','release-lease'].includes(scenario)){assert.throws(()=>bridge.assertCurrent(gate.state.reservations[0]));privateReleaseDenied=true;}}};}
 const r1=await send(first);
+if(responseCase){
+ const until=Date.now()+1500;while(!boundary.audit.length||!responseTransportClosed){assert(Date.now()<until,'physical response not disposed');await new Promise(r=>setTimeout(r,5));}
+ const journal=gate.snapshot(),records=[...journal.reservations,...journal.decisions];assert.equal(records.length,1);
+ const receipt=a.receipt(records[0].requestId),scope=a.evaluationScope(n.scope.id);
+ assert.equal(sends.length,1);assert.equal(scope.spent,1);assert.equal(receipt.operations.length,1);
+ const operation=receipt.operations[0];assert.equal(operation.request_id,receipt.id);assert.equal(operation.ordinal,1);
+ assert.deepEqual(operation.response_observation,expectedObservation(responseCase));
+ assert(!JSON.stringify(operation.response_observation??null).includes('synthetic_private'));
+ if(responseCase.legacy)assert.equal(Object.hasOwn(operation,'response_observation'),false);
+ if(responseCase.storageFailure){assert(fault.proof.triggered>0);if(scenario==='response-write-stop')assert(fault.proof.triggered>=2);}
+ if(responseCase.valid){assert.equal(receipt.quiescent,true);assert.equal(operation.terminal,'provider_completed');assert.equal(r1.status,200);assert.match(r1.text,/response.completed/);assert.equal(journal.decisions[0].verdict,'validated_success');assert(r1.firstAt>=decisions[0].at);}
+ else {
+  assert.equal(receipt.quiescent,false);assert.equal(operation.terminal,'unknown');assert.equal(operation.output_digest,null);assert.equal(journal.decisions.length,0);assert.equal(journal.reservations.length,1);assert(!r1.text.includes('event: response.'));
+  token=boundary.issue({...binding,attemptId:'response_replacement',grantId:'response_replacement'});const replacement=await send(first);assert(!replacement.text.includes('event: response.'));assert.equal(sends.length,1);assert.equal(a.evaluationScope(n.scope.id).spent,1);
+  let writerCalled=false;assert.equal(a.quiescent([receipt.id]),false);assert.equal(await a.replace(a.state().generation,'response_forbidden',a.snapshot(),()=>{writerCalled=true;}),false);assert.equal(writerCalled,false);
+ }
+ await boundary.close();upstream.closeAllConnections();backend.closeAllConnections();await new Promise(r=>upstream.close(r));await new Promise(r=>backend.close(r));
+ const before={state:a.state(),scope:a.evaluationScope(n.scope.id),receipt:a.receipt(receipt.id)};writeFileSync(caseRoot+'/before-restart.json',JSON.stringify(before));a.close();
+ const {stdout}=await promisify(execFile)(process.execPath,['--experimental-loader','/gaffer/experiments/native-evaluation/fault-loader.mjs','/probe/response-restart.mjs',caseRoot+'/before-restart.json'],{env:{...process.env,GAFFER_TEST_FAULT:''},timeout:10000,maxBuffer:1024*1024});
+ const restart=stdout.split('\n').filter(l=>l.startsWith('{')).map(l=>JSON.parse(l)).at(-1);assert.equal(restart.result,'passed');
+ console.log(JSON.stringify({scenario,result:'passed',live:false,evidence:'isolated-pinned-router-original-response-diagnostics',physicalSendCount:sends.length,responseTransportClosed,scope,receipt,journal,fault:fault.proof,released:responseCase.valid===true,replacementDenied:responseCase.valid!==true,restart}));process.exit(0);
+}
 if(scenario.startsWith('release-')){assert.equal(sends.length,1);assert(durabilityEnded);assert.equal(privateReleaseDenied,true);assert(!r1.text.includes('event: response.'),'expired output released');const until=Date.now()+1000;while(!boundary.audit.length){assert(Date.now()<until);await new Promise(r=>setTimeout(r,5));}const journal=gate.snapshot(),scope=a.evaluationScope(n.scope.id);assert.equal(scope.spent,1);assert.equal(journal.decisions.length,1);assert.equal(journal.decisions[0].verdict,'validated_success');assert.notEqual(journal.decisions[0].delivery,'completed');if(['release-scope','release-token','release-frame'].includes(scenario))assert.equal(scope.state,'closed');const receipts=journal.decisions.map(d=>a.receipt(d.requestId));assert.equal(receipts[0].operations[0].terminal,'provider_completed');console.log(JSON.stringify({scenario,result:'passed',live:false,physicalSends:sends,scope,receipts,journal,durabilityEnded,privateReleaseDenied,firstAt:r1.firstAt,released:false,audit:boundary.audit}));await boundary.close();upstream.closeAllConnections();backend.closeAllConnections();process.exit(0);}
 if(scenario==='role-reload'){
  assert.match(r1.text,/response.completed/);const until=Date.now()+1500;while(!boundary.audit.length){assert(Date.now()<until);await new Promise(r=>setTimeout(r,5));}await boundary.close();const path=journalPath+'/state.json',saved=readFileSync(path,'utf8'),journal=JSON.parse(saved);journal.decisions[0].router.binding.role='planner';writeFileSync(path,JSON.stringify(journal));await assert.rejects(PolicyGate.open(journalPath,bridge,1000));writeFileSync(path,saved);const reopened=await PolicyGate.open(journalPath,bridge,1000);await reopened.close();assert.equal(sends.length,1);console.log(JSON.stringify({scenario,result:'passed',live:false,physicalSends:sends,roleReloadDenied:true}));upstream.closeAllConnections();backend.closeAllConnections();process.exit(0);

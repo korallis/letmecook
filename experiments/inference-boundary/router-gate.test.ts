@@ -53,6 +53,31 @@ test('durable send and receipt decision precede release, delay never queries unk
     f.receipts.set(r.requestId,{...matchingReceipt(f.p,r.requestId),local_stop:'cancelled_unknown'});await f.gate.finish(r.requestId,'cancelled_unknown');assert.deepEqual(f.gate.snapshot().decisions![0].evidence,evidence);assert.equal(f.gate.snapshot().decisions![0].delivery,'cancelled_unknown');
   }finally{await f.close();}
 });
+test('closed response diagnostics preserve legacy classification and never qualify unknown work',()=>{
+ const p=routerPolicyFixture(true),id='a'.repeat(32),saved={policy:p,binding:routerBinding(p),requestDigest:hashDocument('req'),send:'send_possible' as const};
+ for(const terminal of ['provider_completed','provider_rejected','unknown']){
+  const legacy=matchingReceipt(p,id,terminal),expected=classifyReceipt(legacy,id,saved).disposition;
+  for(const observation of [null,{status:200,mediaType:'sse',bodyPresent:true},{status:204,mediaType:'html',bodyPresent:false}]){
+   const current=structuredClone(legacy);(current.operations[0] as any).response_observation=observation;
+   assert.equal(classifyReceipt(current,id,saved).disposition,expected);
+  }
+ }
+ for(const observation of [{status:0,mediaType:'sse',bodyPresent:true},{status:600,mediaType:'sse',bodyPresent:true},{status:200.1,mediaType:'sse',bodyPresent:true},{status:200,mediaType:'reflected_private_value',bodyPresent:true},{status:200,mediaType:'sse',bodyPresent:1},{status:200,mediaType:'sse',bodyPresent:true,headers:'private'},{status:200,mediaType:'sse'},'private']){
+  const receipt=matchingReceipt(p,id);(receipt.operations[0] as any).response_observation=observation;
+  assert.equal(classifyReceipt(receipt,id,saved).disposition,'pending_or_unknown');
+ }
+});
+test('new and legacy completed decisions reopen with their original diagnostic bytes',async()=>{
+ for(const observation of [undefined,null,{status:200,mediaType:'sse',bodyPresent:true}]){
+  const f=await setup();try{
+   const {reservation:r}=await f.admit();await f.gate.markSend(r.requestId);const receipt=matchingReceipt(f.p,r.requestId);
+   if(observation!==undefined)(receipt.operations[0] as any).response_observation=observation;
+   f.receipts.set(r.requestId,receipt);await f.gate.finalize(r.requestId,hashDocument('out'),()=>true,AbortSignal.timeout(500));
+   const evidence=f.gate.snapshot().decisions![0].evidence;await f.gate.close();
+   const reopened=await PolicyGate.open(f.dir,f.a);try{assert.deepEqual(reopened.snapshot().decisions![0].evidence,evidence);}finally{await reopened.close();}
+  }finally{await rm(f.dir,{recursive:true,force:true});}
+ }
+});
 test('ordinary drain preserves current completion but denies new admission; fencing prevents release',async()=>{
  const f=await setup();try{const {reservation:r}=await f.admit();await f.gate.markSend(r.requestId);f.receipts.set(r.requestId,matchingReceipt(f.p,r.requestId));f.phase('draining');await assert.rejects(f.admit());await f.gate.finalize(r.requestId,hashDocument('out'),()=>true,AbortSignal.timeout(500));f.gate.assertRelease(r.requestId);f.generation();assert.throws(()=>f.gate.assertRelease(r.requestId));}finally{await f.close();}
 });
