@@ -2,27 +2,35 @@ import assert from 'node:assert/strict';
 import { constants, type Stats } from 'node:fs';
 import { open, lstat, link, unlink } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
-import { isAbsolute, join, normalize } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
 import { canonical, parseJSON } from '../../inference-boundary/json.ts';
 import { CASE01_LIMITS, type EvidenceRef, type EvidenceStore } from '../execution-contract.ts';
 
 export const hashBytes = (bytes: Uint8Array | string) => createHash('sha256').update(bytes).digest('hex');
 export function canonicalJSON(value: unknown): string {
-  let nodes = 0;
+  let nodes = 0, bytes = 0;
+  const charge = (n: number) => assert((bytes += n) <= CASE01_LIMITS.artifactBytes, 'evidence_bytes_limit');
+  const stringBytes = (v: string) => {
+    assert(v.length <= CASE01_LIMITS.artifactBytes, 'evidence_bytes_limit'); return Buffer.byteLength(JSON.stringify(v));
+  };
   function validate(v: unknown, depth: number): void {
     assert(depth <= 32 && ++nodes <= 100000, 'evidence_structure_limit');
-    if (v === null || typeof v === 'string' || typeof v === 'boolean') return;
-    if (typeof v === 'number') { assert(Number.isFinite(v), 'evidence_json_number'); return; }
+    if (typeof v === 'string') { charge(stringBytes(v)); return; }
+    if (v === null || typeof v === 'boolean') { charge(JSON.stringify(v).length); return; }
+    if (typeof v === 'number') { assert(Number.isFinite(v), 'evidence_json_number'); charge(JSON.stringify(v).length); return; }
     assert(v && typeof v === 'object', 'evidence_json_value');
     assert(Array.isArray(v) || [Object.prototype, null].includes(Object.getPrototypeOf(v)), 'evidence_json_object');
     const descriptors = Object.getOwnPropertyDescriptors(v);
     assert(Object.getOwnPropertySymbols(v).length === 0, 'evidence_symbol');
     if (Array.isArray(v)) assert(Object.keys(v).length === v.length, 'evidence_sparse_array');
+    charge(2); let count = 0;
     for (const key of Object.getOwnPropertyNames(v)) {
       if (Array.isArray(v) && key === 'length') continue;
       assert(descriptors[key].enumerable && Object.hasOwn(descriptors[key], 'value'), 'evidence_accessor_or_hidden_property');
       if (Array.isArray(v)) assert(/^(0|[1-9][0-9]*)$/.test(key) && Number(key) < v.length, 'evidence_array_property');
+      if (count++) charge(1);
+      if (!Array.isArray(v)) charge(stringBytes(key) + 1);
       validate(descriptors[key].value, depth + 1);
     }
   }
@@ -33,6 +41,8 @@ export function canonicalJSON(value: unknown): string {
 }
 export function exact(value: unknown, names: string): asserts value is Record<string, any> {
   assert(value && typeof value === 'object' && !Array.isArray(value), 'evidence_record_required');
+  assert([Object.prototype, null].includes(Object.getPrototypeOf(value)) && Object.getOwnPropertySymbols(value).length === 0
+    && Object.values(Object.getOwnPropertyDescriptors(value)).every(d => d.enumerable && Object.hasOwn(d, 'value')), 'evidence_record_data');
   assert.deepEqual(Object.keys(value).sort(), names.split(' ').sort(), 'evidence_closed_fields');
 }
 export function validateEvidenceRef(ref: unknown): asserts ref is EvidenceRef {
@@ -47,7 +57,7 @@ const privateFile = (s: Stats) => assert(s.isFile() && s.uid === process.getuid?
 const same = (a: Stats, b: Stats) => assert(a.dev === b.dev && a.ino === b.ino, 'evidence_identity_changed');
 async function openDirectory(store: EvidenceStore) {
   exact(store, 'directory');
-  assert(typeof store.directory === 'string' && isAbsolute(store.directory) && normalize(store.directory) === store.directory, 'evidence_directory_path');
+  assert(typeof store.directory === 'string' && isAbsolute(store.directory) && resolve(store.directory) === store.directory, 'evidence_directory_path');
   const fd = await open(store.directory, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
   try { const identity = await fd.stat(); privateDir(identity); same(identity, await lstat(store.directory)); return { fd, identity }; }
   catch (error) { await fd.close(); throw error; }
@@ -75,6 +85,7 @@ async function checkFile(path: string, fd: FileHandle, expected: Uint8Array) {
 // Internal fault-test seam. The normal public API supplies no callback.
 export async function writeRecord(store: EvidenceStore, kind: string, value: unknown,
   checkpoint: (phase: 'file-synced'|'linked'|'directory-synced', path: string) => Promise<void> = async () => {}) : Promise<EvidenceRef> {
+  exact(store, 'directory'); store = { ...store };
   assert(typeof kind === 'string' && /^[a-z][a-z0-9-]{0,47}$/.test(kind), 'evidence_kind');
   const bytes = Buffer.from(canonicalJSON(value)), sha256 = hashBytes(bytes), ref = kind + '-' + sha256 + '.json';
   const directory = await openDirectory(store), target = join(store.directory, ref);
@@ -103,7 +114,8 @@ export async function writeRecord(store: EvidenceStore, kind: string, value: unk
 export const retainEvidence = (store: EvidenceStore, kind: string, value: unknown) => writeRecord(store, kind, value);
 
 export async function readEvidence(store: EvidenceStore, ref: EvidenceRef): Promise<unknown> {
-  validateEvidenceRef(ref); const directory = await openDirectory(store); let file: FileHandle | undefined;
+  exact(store, 'directory'); store = { ...store }; validateEvidenceRef(ref); ref = { ...ref };
+  const directory = await openDirectory(store); let file: FileHandle | undefined;
   try {
     const path = join(store.directory, ref.ref);
     file = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);

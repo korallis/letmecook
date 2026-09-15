@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import type { CandidateBundle, CaseRules, EvidenceStore, Revision, SnapshotBytes, SnapshotManifest, SnapshotRef } from '../execution-contract.ts';
-import { exact, readEvidence, retainEvidence, validateEvidenceRef } from './store.ts';
+import { canonicalJSON, exact, readEvidence, retainEvidence, validateEvidenceRef } from './store.ts';
 import { changedPaths, makeManifest, validateManifest, validateRules, validateSnapshotBytes } from './manifest.ts';
 import { parseArchive, type FrozenArchive } from './archive.ts';
 
@@ -8,9 +8,14 @@ export { retainEvidence, readEvidence } from './store.ts';
 export { makeManifest } from './manifest.ts';
 export type { FrozenArchive } from './archive.ts';
 
+function copyRef(ref: SnapshotRef): SnapshotRef {
+  exact(ref, 'manifest bytes treeDigest'); validateEvidenceRef(ref.manifest); validateEvidenceRef(ref.bytes);
+  assert(typeof ref.treeDigest === 'string' && /^[a-f0-9]{64}$/.test(ref.treeDigest), 'snapshot_reference_tree_digest');
+  return structuredClone(ref);
+}
 /** Verify both content-addressed records, including every file's bytes and mode. */
 export async function readSnapshot(store: EvidenceStore, ref: SnapshotRef): Promise<{ manifest: SnapshotManifest; bytes: SnapshotBytes }> {
-  exact(ref, 'manifest bytes treeDigest'); validateEvidenceRef(ref.manifest); validateEvidenceRef(ref.bytes);
+  exact(store, 'directory'); store = { ...store }; ref = copyRef(ref);
   const manifest = await readEvidence(store, ref.manifest), bytes = await readEvidence(store, ref.bytes);
   validateManifest(manifest); validateSnapshotBytes(bytes);
   assert.deepEqual(makeManifest(bytes.files), manifest, 'snapshot_bytes_manifest_mismatch');
@@ -31,6 +36,8 @@ export async function captureSnapshot(archive: FrozenArchive, baseManifest: Snap
   rules: CaseRules, store: EvidenceStore, revision: Revision): Promise<SnapshotRef> {
   validateManifest(baseManifest); validateRules(rules, baseManifest);
   assert(revision === 'base' || revision === 'candidate', 'snapshot_revision');
+  baseManifest = structuredClone(baseManifest); rules = structuredClone(rules);
+  exact(store, 'directory'); store = { ...store };
   const bytes: SnapshotBytes = { schema: 1, kind: 'baseline-snapshot-bytes', files: await parseArchive(archive) };
   validateSnapshotBytes(bytes); textWrites(bytes, rules);
   const manifest = makeManifest(bytes.files);
@@ -47,6 +54,8 @@ export async function captureSnapshot(archive: FrozenArchive, baseManifest: Snap
 
 /** Complete two-file candidate bundle. This is evidence, never an execution/acceptance grant. */
 export async function retainCandidate(base: SnapshotRef, candidate: SnapshotRef, rules: CaseRules, store: EvidenceStore) {
+  base = copyRef(base); candidate = copyRef(candidate); rules = JSON.parse(canonicalJSON(rules));
+  exact(store, 'directory'); store = { ...store };
   const b = await readSnapshot(store, base), c = await readSnapshot(store, candidate);
   const changed = changedPaths(b.manifest, c.manifest, rules);
   assert.deepEqual([...changed].sort(), [...rules.writePaths].sort(), 'case01_incomplete_two_file_candidate');

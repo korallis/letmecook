@@ -6,7 +6,7 @@ import { makeManifest, sourcePath } from './manifest.ts';
 export type FrozenArchive = Uint8Array | AsyncIterable<Uint8Array>;
 // Git controls are never source artifacts. These independent limits also bound a normal
 // freshly initialized synthetic Git repository without admitting unlimited ignored bytes.
-export const CONTROL_LIMITS = Object.freeze({ bytes: 524288, entries: 256, directories: 256, metadataBytes: 16384, metadataEntries: 64 });
+export const CONTROL_LIMITS = Object.freeze({ bytes: 524288, entries: 256, directories: 256, metadataBytes: 16384, metadataEntries: 64, chunks: 65536 });
 const decoder = new TextDecoder('utf-8', { fatal: true });
 const zero = (b: Uint8Array) => b.every(v => v === 0);
 async function collect(archive: FrozenArchive) {
@@ -14,12 +14,13 @@ async function collect(archive: FrozenArchive) {
     assert(archive.byteLength <= CASE01_LIMITS.archiveBytes, 'archive_bytes_limit'); return Buffer.from(archive);
   }
   assert(archive && typeof archive[Symbol.asyncIterator] === 'function', 'archive_input');
-  const chunks: Buffer[] = []; let size = 0;
+  // ponytail: case01 fits in 1 MiB; use incremental parsing if its registered ceiling grows.
+  const bytes = Buffer.alloc(CASE01_LIMITS.archiveBytes); let size = 0, chunks = 0;
   for await (const chunk of archive) {
-    assert(chunk instanceof Uint8Array, 'archive_chunk'); size += chunk.byteLength;
-    assert(size <= CASE01_LIMITS.archiveBytes, 'archive_bytes_limit'); chunks.push(Buffer.from(chunk));
+    assert(++chunks <= CONTROL_LIMITS.chunks, 'archive_chunk_limit'); assert(chunk instanceof Uint8Array, 'archive_chunk');
+    assert(size + chunk.byteLength <= CASE01_LIMITS.archiveBytes, 'archive_bytes_limit'); bytes.set(chunk, size); size += chunk.byteLength;
   }
-  return Buffer.concat(chunks, size);
+  return bytes.subarray(0, size);
 }
 function field(bytes: Buffer) {
   const end = bytes.indexOf(0);
@@ -42,7 +43,7 @@ function pax(bytes: Buffer) {
   while (offset < bytes.length) {
     assert(++count <= CONTROL_LIMITS.metadataEntries, 'archive_metadata_count');
     const space = bytes.indexOf(32, offset); assert(space > offset && space - offset < 10, 'archive_pax_length');
-    const length = decimal(bytes.subarray(offset, space).toString('ascii'));
+    const length = decimal(bytes.subarray(offset, space).toString('latin1'));
     assert(length > space - offset + 3 && offset + length <= bytes.length && bytes[offset + length - 1] === 10, 'archive_pax_record');
     const record = decoder.decode(bytes.subarray(space + 1, offset + length - 1));
     const eq = record.indexOf('='); assert(eq > 0, 'archive_pax_record');
@@ -55,7 +56,7 @@ function pax(bytes: Buffer) {
 }
 function archivePath(path: string) {
   assert(path.length > 0 && path.length <= 256 && path.split('/').every(s => /^[A-Za-z0-9_@+.-]+$/.test(s) && s !== '.' && s !== '..'), 'archive_path');
-  assert(!path.split('/').slice(1).includes('.git'), 'archive_nested_git');
+  assert(path.split('/').every((part, i) => part.toLowerCase() !== '.git' || i === 0 && part === '.git'), 'archive_nested_git');
 }
 
 /** Parse uncompressed USTAR/PAX (and GNU long-name) Docker cp exports in memory.
@@ -78,8 +79,8 @@ export async function parseArchive(archive: FrozenArchive): Promise<SnapshotFile
     const checksum = octal(header.subarray(148, 156));
     const actual = header.reduce((sum, b, i) => sum + (i >= 148 && i < 156 ? 32 : b), 0);
     assert.equal(actual, checksum, 'archive_checksum');
-    const magic = header.subarray(257, 263).toString('ascii');
-    assert(magic === 'ustar\0' || magic === 'ustar ', 'archive_format');
+    const magic = header.subarray(257, 263).toString('latin1'), version = header.subarray(263, 265).toString('latin1');
+    assert(magic === 'ustar\0' && version === '00' || magic === 'ustar ' && version === ' \0', 'archive_format');
     let name = field(header.subarray(0, 100));
     if (magic === 'ustar\0') { const prefix = field(header.subarray(345, 500)); if (prefix) name = prefix + '/' + name; }
     const type = String.fromCharCode(header[156] || 48), mode = octal(header.subarray(100, 108));

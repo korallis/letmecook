@@ -4,7 +4,7 @@ import { canonicalJSON, exact, hashBytes } from './store.ts';
 
 export function sourcePath(path: unknown): asserts path is string {
   assert(typeof path === 'string' && path.length > 0 && path.length <= 256 && path.split('/').every(s =>
-    /^[A-Za-z0-9_@+.-]+$/.test(s) && !['.', '..', '.git'].includes(s)), 'snapshot_path');
+    /^[A-Za-z0-9_@+.-]+$/.test(s) && !['.', '..', '.git'].includes(s.toLowerCase())), 'snapshot_path');
 }
 export function validateFile(value: unknown, content: boolean): asserts value is SnapshotFile {
   exact(value, 'path mode size sha256' + (content ? ' contentBase64' : ''));
@@ -22,11 +22,17 @@ function inventory(files: unknown, content: boolean): asserts files is SnapshotF
   files.forEach(f => validateFile(f, content));
   const paths = files.map(f => f.path); assert(new Set(paths.map(p => p.toLowerCase())).size === paths.length, 'snapshot_duplicate_path');
   assert(files.reduce((n, f) => n + f.size, 0) <= CASE01_LIMITS.sourceBytes, 'snapshot_source_bytes');
-  assert(!paths.some(p => paths.some(other => other.startsWith(p + '/'))), 'snapshot_file_directory_collision');
+  const folded = paths.map(p => p.toLowerCase());
+  assert(!folded.some(p => folded.some(other => other.startsWith(p + '/'))), 'snapshot_file_directory_collision');
+  const spellings = new Map<string, string>();
+  for (const path of paths) for (let i = 1; i <= path.split('/').length; i++) {
+    const prefix = path.split('/').slice(0, i).join('/'), previous = spellings.get(prefix.toLowerCase());
+    assert(previous === undefined || previous === prefix, 'snapshot_case_alias'); spellings.set(prefix.toLowerCase(), prefix);
+  }
 }
 const sortFiles = <T extends ManifestFile>(files: T[]) => [...files].sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
 export function makeManifest(files: readonly (ManifestFile | SnapshotFile)[]): SnapshotManifest {
-  assert(Array.isArray(files), 'snapshot_files');
+  assert(Array.isArray(files) && files.length <= CASE01_LIMITS.files, 'snapshot_file_count');
   files.forEach(f => validateFile(f, Object.hasOwn(f, 'contentBase64')));
   const manifestFiles = sortFiles(files.map(({ path, mode, size, sha256 }) => ({ path, mode, size, sha256 })));
   inventory(manifestFiles, false);
