@@ -1,11 +1,11 @@
-# Offline baseline registration and collection
+# Baseline registration, collection and synthetic execution
 
 Issue [#1](https://github.com/korallis/letmecook/issues/1) preparation. This isolated
 TypeScript experiment validates frozen declarations and supplied actual-run
 observations, retains the input records privately, and exports restrictive JSON
-and CSV summaries. It has no inference, grant, scope-start, repository staging,
-check execution or live coordinator implementation. Its development and tests use
-public synthetic fixtures only.
+and CSV summaries. The separate `run-case.ts` command executes one public synthetic
+case with the pinned native worker, shared 9Router authority, isolated checks and
+complete retained candidate bytes. Development and tests use public synthetic fixtures.
 
 The original approved intake, historical proposal, development examples and
 unstarted template in `tests/fixtures/tasks/` remain unchanged. A frozen declaration
@@ -36,8 +36,63 @@ npm --prefix experiments/baseline run demo -- /tmp/gaffer-baseline-record-demo/e
 Use a new private parent and output path on repeated runs. `fixture.ts` constructs
 only invented synthetic records: a failed original, a charged router fallback,
 failed audits, measured planning, estimated correction and unknown recovery.
-No commands declared in a fixture are executed. The demo's public real cohort is
+The record demo executes no declared check commands. Its public real cohort is
 empty; synthetic records never enter real completion or effort denominators.
+
+## Execute the public synthetic case
+
+The operator selects an installed Docker context and supplies absolute paths to
+the public pinned router checkout, OpenCode source and Linux ARM64 binary. The
+already-loaded image and native protocol are the measured ARM64 profile in
+`../harness/pins.json` and `../router-authority-extension/runtime-identity.json`.
+The launcher refuses incompatible identities and never pulls an image. Matilda
+is optional infrastructure; this command has no machine name or credential path.
+
+```sh
+export GAFFER_DOCKER_CONTEXT=your-selected-context
+export GAFFER_ROUTER_SOURCE=/path/to/pinned-9router
+export GAFFER_OPENCODE_SOURCE=/path/to/pinned-opencode-source
+export GAFFER_OPENCODE_BINARY=/path/to/pinned-opencode-linux-arm64
+npm --prefix experiments/baseline run test:checks
+npm --prefix experiments/baseline run case01 -- /tmp/new-case01-run two-requests
+# A separate deterministic fixture uses two tool rounds and a final response:
+npm --prefix experiments/baseline run case01 -- /tmp/new-case01-three three-requests
+```
+
+The shared router runs its actual subscription selection, request validation,
+physical debits and durable receipts against a network-isolated fake original HTTP
+server. This command accepts only its two named synthetic scenarios. It preserves
+the 32-attempt/900-second baseline envelope and freezes the complete declaration
+in an isolated local Git repository before starting the scope. An execution
+projection breaks the registration/packet digest cycle; the start binds both final
+digests and rejects changed declarations, tool paths, settings or phase limits.
+
+OpenCode receives the frozen context and can apply patches only to the two declared
+workflow files. The worker uses a 768-MiB container and an owned repository volume.
+After native execution and transport end, the supervisor pauses it and obtains a
+bounded Docker archive. Full inventory, modes and bytes are verified against the
+base; undeclared changes, links and special files refuse retention. Isolated
+128-MiB check containers use exact registered commands and immutable inputs.
+The expected result is a failing base pin check, passing candidate pin check,
+and the same inherited synthetic audit failure at both revisions.
+
+The supervisor joins exact wire prompts, ordered encrypted continuations, every
+tool result, native events, physical sends, durable receipt debit fields and scope
+spending. Tool execution timestamps bind continuation order; CLI event emission
+may arrive after the next request begins. A local acknowledgement binds the frozen
+registration, packet, candidate, transcript and checks after retained-byte readback.
+The original repository volume is destroyed before the candidate is reconstructed
+again from the evidence store. Worker and gateway termination are checked.
+
+The output directory contains content-addressed evidence, a frozen registration
+commit, immutable run journals and the collector's private/public JSON and CSV.
+The measurement remains `failed` because the inherited audit fails and no operator
+label exists, even when the mechanics proof reports `passed`. Human effort, usage,
+cost and acceptance remain unknown; the real cohort stays empty. Failed runs and
+state volumes are retained. An existing output directory refuses another start.
+This synthetic command does not authorize a live replacement or a private case.
+
+See [artifact limits](artifacts/README.md) and [isolated check evidence](checks/README.md).
 
 ## Frozen declaration
 

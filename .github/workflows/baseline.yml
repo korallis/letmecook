@@ -2,9 +2,9 @@ name: Baseline records
 on:
   push:
     branches: [main]
-    paths: ['experiments/baseline/**', 'experiments/inference-boundary/json.ts', 'tests/fixtures/tasks/**', '.github/workflows/baseline.yml']
+    paths: ['experiments/**', 'tests/fixtures/tasks/**', 'tests/fixtures/harness/**', '.github/workflows/baseline.yml']
   pull_request:
-    paths: ['experiments/baseline/**', 'experiments/inference-boundary/json.ts', 'tests/fixtures/tasks/**', '.github/workflows/baseline.yml']
+    paths: ['experiments/**', 'tests/fixtures/tasks/**', 'tests/fixtures/harness/**', '.github/workflows/baseline.yml']
 permissions:
   contents: read
 jobs:
