@@ -15,9 +15,9 @@ The six existing message payloads retain their meanings. No runner, transport,
 store, artifact custody, UI or publication implementation is supplied here.
 
 [Spec §3](../spec.md#3-durable-execution-model) supplies the safety requirements;
-[§9.2](../spec.md#92-protocols) is a semantic sketch, not a deployed wire schema.
-Here `lease_request`/`lease_reply` make its `renew`/`lease` precise; `assign` carries
-no embedded lease, and immutable input/authority resolve through `input_digest`.
+[§9.2](../spec.md#92-protocols) supplies the surrounding transport design.
+This contract owns execution message semantics: `assign` carries no embedded lease,
+and immutable input/authority resolve through `input_digest`.
 Streams, upload and bootstrap remain separate bounded interfaces under O2/O6,
 not unknown fields that an execution decoder may ignore.
 

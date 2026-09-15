@@ -264,16 +264,11 @@ merged requires an observed GitHub merge for the corresponding PR/head.
 6. If termination/isolation cannot be trusted, quarantine the runner and require
    reconciliation; do not use a timeout as proof that an uncontrolled process died.
 
-Initial test configuration: renew every five seconds, 30-second lease, five-second
-termination grace. Record the precise monotonic-deadline protocol and maximum
-clock/scheduling assumptions in the implementation. A renewal is bound to a fresh runner nonce and its monotonic request-send time.
-The runner computes its deadline from that send time, never from delayed response
-receipt, and rejects responses received after expiry. The daemon persists each
-issued lease before sending it and waits beyond the latest potentially valid
-deadline plus bounded clock-drift and termination margins before replacement.
-Initial leases use the same runner-initiated request/nonce exchange. If the required
-timing assumptions cannot be established, quarantine instead of redispatching.
-Publish the measured stop bound rather than treating these defaults as proven.
+The provisional [execution contract §4](https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md#4-initial-lease-renewal-and-replacement-barrier)
+owns the initial handshake, request-send monotonic cutoffs, renewal/restart barriers
+and timing examples. Publish measured clock, scheduling and stop bounds for the
+selected runtime; examples are not qualification evidence. Unknown bounds quarantine
+instead of permitting redispatch.
 
 At-least-once message delivery is expected. Exactly-once arbitrary shell side
 effects are not promised. Isolate retriable local work and mediate external effects
@@ -829,25 +824,15 @@ Use TLS with revocable runner identities. A short-lived single-use bootstrap tok
 is exchanged for a runner credential; it is not reused as a perpetual password.
 Do not log join/session tokens. Protocol messages carry version and message ID.
 
-```text
-hello {runner_id, protocol_version, known_generation, policy_hash, capabilities, journal_summary}
-welcome {generation_id, reconciliation_required}
-assign {generation_id, assignment_id, attempt_id, epoch, lease, input_manifest, grant, policy_hash}
-accept/refuse {generation_id, assignment_id, reason?}
-renew {generation_id, attempt_id, epoch, nonce} → lease {generation_id, nonce, validity}
-stream {generation_id, attempt_id, epoch, sequence, chunk}
-result {generation_id, attempt_id, epoch, manifest_digest, usage}
-result_ack {generation_id, attempt_id, epoch, manifest_digest}
-cancel {generation_id, attempt_id, epoch, reason}
-terminated {generation_id, attempt_id, epoch, status, recovery_manifest?}
-```
+The provisional [execution contract](https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md#2-version-and-wire-contract)
+owns execution message semantics, version negotiation and acknowledgements, using
+the shared Go/TypeScript schema. Bootstrap, journal/state sync, stream and upload
+encodings remain named reconciliation obligations there; this design does not
+define a competing wire schema.
 
-Every generation is unique across restores. Runners persist the accepted generation,
-reject older-generation commands, and terminate/reconcile surviving attempts on a
-generation change. The daemon rejects prior-generation renewals/results/delivery
-requests; it can retain their artifacts as recovery evidence. Resume after restore
-requires acknowledged generation change or conservative lease expiry for every
-possibly active old runner.
+Restore admission follows the contract's
+[fencing and replacement barrier](https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md#4-initial-lease-renewal-and-replacement-barrier),
+including original-daemon ownership and every possibly active old runner.
 
 All commands use the existing runner-initiated connection. Artifacts upload through
 an authenticated bounded endpoint. Streams are backpressured; spool locally within

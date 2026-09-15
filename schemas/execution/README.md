@@ -60,16 +60,11 @@ outputs. It is not a process simulator or proof of distributed safety.
   identities return `stale_attempt`. A future consumer preserves stale evidence
   separately and never promotes it into current acceptance.
 
-Messages: `assign` (assignment ID, input digest, route), `lease_request` (nonce,
-runner/daemon boot IDs, request-send monotonic milliseconds), `lease_reply` (same
-nonce/boots, validity), `transition` (expected revision, from/to attempt state),
-`result` (manifest identity), `result_ack` (same manifest plus durable receipt ID).
-V2 additionally defines `accept` (assignment ID and boots), `refuse` (request
-message ID and named reason), `cancel` (stop ID and boots) and `terminated`
-(stop ID, boots, local/remote observations and evidence digest). V1 rejects these
-kinds. All fields not belonging to that kind reject. See the M1-01 wire table for
-direction, correlation and owner-evidence preconditions; decoding is not evidence
-of durable assignment acceptance or verified stop.
+The closed message union and kind-specific fields live in
+[`protocol.go`](protocol.go) / [`protocol.ts`](protocol.ts). See the
+[M1-01 wire contract](../../docs/contracts/execution.md#2-version-and-wire-contract)
+for direction, correlation and owner-evidence preconditions; decoding is not
+evidence of durable assignment acceptance or verified stop.
 
 Route records contain only `route_ref`, `decision_digest`, `policy_digest` and
 `limits_profile`. References match `[a-z][a-z0-9_-]{0,63}`: no endpoint, URL, account,
@@ -86,18 +81,9 @@ These protocol records do not implement grants or either limits profile.
 Attempt state changes require matching current identity and `expected_revision`;
 revision mismatch or exhaustion of the safe-integer range returns
 `revision_conflict`. The future state owner must increment revision on accepted
-changes, not replays; the pure check mutates no state. Allowed edges (all other
-edges return `invalid_transition`):
-
-| From | To |
-| --- | --- |
-| assigned | starting, stopping, unknown |
-| starting | running, stopping, unknown |
-| running | result_pending, stopping, unknown |
-| result_pending | succeeded, failed, stopping, unknown |
-| stopping | cancelled, expired, unknown |
-| unknown | stopping, cancelled, expired, result_pending |
-| succeeded, failed, cancelled, expired | none |
+changes, not replays; the pure check mutates no state. Disallowed edges return
+`invalid_transition`. The [M1-01 state contract](../../docs/contracts/execution.md#3-state-and-evidence-rules)
+owns transition evidence requirements over the shared schema's allowed edges.
 
 Task state is a separate read model: `draft`, `ready`, `active`, `verifying`,
 `awaiting_review`, `accepted`, `reconciling`, `blocked`, `failed`, `cancelled`.
@@ -135,14 +121,10 @@ check. The trace supplies these inputs explicitly; no pending-request tracker is
 implemented here. Network partition requires stop, invalidates outstanding nonces
 and marks process and remote state unknown; no timeout proves termination.
 
-The future daemon must durably record each issuance **before sending**, retain the
-latest potentially valid lease even after lost replies, and fence new admission on
-restart. Its replacement barrier must use its own conservative latest issuance
-bound plus drift and termination margin; runner timestamps are not daemon expiry
-proof. Boot change cancels pending requests and old local deadlines. Restore also
-changes generation. Unknown clock/scheduling/isolation/process or remote-work
-assumptions quarantine instead of permitting replacement. This slice supplies no
-measured bounds, timer, watchdog, persistence or retry permission.
+The [M1-01 lease contract](../../docs/contracts/execution.md#4-initial-lease-renewal-and-replacement-barrier)
+owns durable issuance, daemon restart and restore barriers, including disconnected
+runners' installed cutoffs. This slice supplies no measured bounds, timer, watchdog,
+persistence or retry permission.
 
 ## Result identity and acknowledgement
 
@@ -172,28 +154,8 @@ owner and therefore cannot issue real result acknowledgements.
 ## Reconciliation checklist — required before #9/#10 acceptance
 
 The [M1-01 named obligations](../../docs/contracts/execution.md#8-9-reconciliation-obligations)
-map these requirements to O1–O8, including every v2 addition. All remain open.
-
-- [ ] #9 independently compares measured foundations; retain, port or discard these
-  types without treating sunk effort as selection evidence. Confirm module paths.
-- [ ] Reconcile every message, refusal, state edge, fixture and size/version limit
-  with selected foundation; define migration/compatibility or change version.
-- [ ] Prove durable generation/epoch/revision allocation, assignment/message
-  deduplication, transaction/outbox ordering, restore and one-daemon ownership.
-- [ ] Measure Docker-free isolation and complete process-tree stop on exact selected
-  runtime; retain #89 and all original live/installation gates independently.
-- [ ] Establish clock drift, scheduling, watchdog, renewal cancellation, daemon
-  issuance/replacement bounds and restart recovery using real adverse processes.
-- [ ] Bind route decisions to actual authority and current full-graph evidence;
-  preserve native/strict limits and unknown remote-work reservations.
-- [ ] Select manifest/custody format; prove sync/crash/disk-full/lost-ack behaviour
-  against real blobs and store. Never substitute event durability for custody.
-- [ ] Define evidence-authorized recovery and task acceptance transitions separately
-  from desired state, result ack, execution, publication and merge.
-- [ ] Satisfy the contract-review requirement in #93 before lock and obtain
-  independent exact-final-head code review plus actual applicable CI. Head changes
-  require renewed review; a different validation reviewer does not satisfy the
-  issue's required contract review.
+own this checklist, including every v2 addition. Record evidence and closure there;
+the fixture guide does not establish foundation or runtime acceptance.
 
 ## Checks
 

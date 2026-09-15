@@ -4,7 +4,7 @@ Actual Go/SQLite application code, **not M1 acceptance**, a selected foundation,
 a supported execution runtime, or authority to start original #11–#24. #9/#89/#10
 and measured reconciliation remain open. Retain, port or discard this reversible
 slice based on those outcomes, never sunk effort. Uses merged #93 protocol types
-and embeds its unchanged public corpus from `tests/fixtures/protocol/data/`.
+and embeds the [shared public corpus](../../tests/fixtures/protocol/README.md).
 
 ## Bounded local startup
 
@@ -41,8 +41,9 @@ external fixtures or account state. There is no execution/authority enable switc
 `schemas/readapi/types.go` and `types.ts` own version `read-provisional-v1`.
 Go validates store projections before writing JSON; TypeScript `decode(bytes,
 'status' | 'snapshot')` validates untrusted bounded responses at runtime, not a
-static type assertion. The existing execution types/messages remain
-`execution-provisional-v1`. No extra schema library or UI dependency.
+static type assertion. This daemon projects historical v1 fixture messages; the
+[execution schema guide](../../schemas/execution/README.md) owns shared decoder
+compatibility. No extra schema library or UI dependency.
 
 Only these routes exist:
 
