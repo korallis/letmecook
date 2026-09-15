@@ -17,8 +17,12 @@ not `Closes #9`, until its mandatory comparison/runtime/review gates are satisfi
 
 ## Evidence cutoff and authority
 
-Repository base: `27aa5b367e4ae6a017931e6882fd58598a9efab6` (current `main` at
-inspection). The complete issue body and all four comments were refreshed. The
+Original evidence/effort cutoff: `27aa5b367e4ae6a017931e6882fd58598a9efab6`.
+Merged-code reconciliation on 15 September uses
+`13744086e37e32fc37c827cd9e0cb9455481a15c`, after the
+[decision merge](https://github.com/korallis/letmecook/pull/99). The complete issue
+body and all four comments were refreshed again; original measurements below are
+not relabelled as new runs. The
 [approval comment](https://github.com/korallis/letmecook/issues/9#issuecomment-5669265822)
 resolves the optional native limits profile and three intended baseline outcomes;
 the [latest live checkpoint](https://github.com/korallis/letmecook/issues/9#issuecomment-5675624345)
@@ -26,17 +30,19 @@ records the failed first trial. Later body amendments require Docker-free execut
 and allow only reversible #93–#95 work ahead of the original dependencies. None
 waives #71/#1/#8, measured confinement, or fresh Opus review.
 
-Forge observations override stale historical prose and the assignment's assumption
-that all three provisional slices had merged:
+The original cutoff lacked #95 and #10's v2 additions. Both have since merged;
+current delivery and disposition below supersede their earlier pending status.
+Merge establishes available code, not foundation or runtime acceptance.
 
-| Work | Observed delivery at cutoff | What that establishes |
+| Work | Observed merged delivery | What that establishes |
 | --- | --- | --- |
 | Worker #6 | [Merged worker change](https://github.com/korallis/letmecook/pull/75), head `c4e2f1d580f3a48cdf8ea0676943cffd90fd7579` | Synthetic adapter evidence, not live task acceptance |
 | Planner #7 | [Merged planner change](https://github.com/korallis/letmecook/pull/73), head `1a27346fc744b473dea866adb18ea405915f0581` | Restricted synthetic planning and durable proposal evidence, not live acceptance |
 | Continuity #8 | [Merged suite/evidence change](https://github.com/korallis/letmecook/pull/85), head `a58b1a52a4d07c538aabf8cd01dea2b246acb88f` | Synthetic continuity plus retained failed live attempt, not two proved subscriptions |
 | Protocol #93 | [Merged protocol change](https://github.com/korallis/letmecook/pull/96), head `c698c1c65337bac8c4e46cbe1a06c2029ba8b2db` | Matching provisional Go/TypeScript types and synthetic traces |
 | Store #94 | [Merged fixture daemon](https://github.com/korallis/letmecook/pull/97), head `01603f9ab646688384157ed14b99e062b88cb6e6` | Real fixture-only SQLite/read API; no execution authority |
-| Shell #95 | [In-flight, pending merge](https://github.com/korallis/letmecook/issues/95); no `web/` or merged shell on this base | Approved scope only; no UI implementation or rendered evidence available to retain |
+| Contract #10 | [Merged v2 contract](https://github.com/korallis/letmecook/pull/98), head `1baec48aa5f10082eb1f1c5e1731d167803ab8e7` | `docs/contracts/execution.md`, v2 Go/TypeScript controls and shared traces; O1–O8 remain open, not accepted/locked |
+| Shell #95 | [Merged embedded shell](https://github.com/korallis/letmecook/pull/100), head `d3b1261232a2e3f549388917b502589dcdc1f652` | Real `web/` React/TypeScript/StyleX assets, embedding and bounded fixture snapshot UI; rendered/React Doctor/CI evidence, not authenticated M2 workflow |
 
 Earlier evidence documents saying these changes are drafts retain their observation
 time and scope. Their merge does not retroactively pass their live criteria.
@@ -145,7 +151,7 @@ conformance, and a missing README paragraph is never evidence of absence.
 | Required property | intentic | Claudexor | Narrow Go build |
 | --- | --- | --- | --- |
 | Local state ownership/export | Partial (I1): local sandbox files/transcripts/history; complete consistent export unknown | Partial (C1): local journal/artifacts; complete backup/restore fit unknown | Partial: #94 local SQLite fixtures only; #23 backup remains work |
-| Phone capture, correction, approval | Partial (I1): browser/editor/approval surfaces; exact revision and phone fixture unknown | Partial (C1): control API/native UI; Gaffer phone flow unknown | Unknown: #95 absent; authenticated M2 flow not built |
+| Phone capture, correction, approval | Partial (I1): browser/editor/approval surfaces; exact revision and phone fixture unknown | Partial (C1): control API/native UI; Gaffer phone flow unknown | Partial: merged #95 read-only responsive shell; capture/correction/approval and authenticated M2 flow not built |
 | All inference through scoped 9Router | Partial: replace provider/translator/account machinery (I1/I3); integration unknown | Partial: endpoint seam exists, but native protocol and all-role integration unknown (C2) | Partial: real harness/router synthetic evidence; live path failed |
 | #71 assessment, eligible overrides, fresh review | Partial: role/persona pins and resume routing (I3); full-graph requirements/overrides/fresh packet unknown | Partial: intent routing/quality tiers and review (C1/C2); replace account/quota ownership, prove full graph and fresh packet | Contract accepted; M1 deterministic enforcement and M2 semantic selector not built |
 | Revision/scope-bound execution, acceptance, publication, merge | Partial: approvals/control-token rungs (I1); exact artifact/revision binding unknown | Partial: typed policy and exact-target verification (C1/C4); complete Gaffer authority separation unknown | Unknown in product; #93 types explicitly grant no authority |
@@ -237,7 +243,8 @@ failed. No resource limit can be omitted to make a new profile pass.
 | [Continuity](../evidence/router-continuity.md), [combined suite](../evidence/router-initial-suite.md) | Synthetic A/B selection by stock router; six-send normal suite, unchanged shared scope, failures retained | Not two distinct billing subscriptions, natural exhaustion or live readiness |
 | [First live attempt](../evidence/router-initial-live.md), [raw record](../evidence/router-initial-live-run.json) | `initial_20260915` failed after **one physical send**; `unsupported_provider_response`, HTTP-success gate passed but SSE MIME/body gate failed; exact status/media/body unavailable. Logged 502 is local. No acknowledged candidate; planner/continuity not started; original unknown and non-quiescent | Preserve spent count 1, one-use marker/state/evidence and reservations. No retry, new scope, baseline or inferred authentication diagnosis |
 | [Response diagnostics](../evidence/router-response-diagnostics.md) | Thirteen synthetic original-response cases retain bounded status/media/body-presence and restart evidence without changing qualification | Diagnosability fixed; historical unknown response cannot be reconstructed or reconciled by this change |
-| [Protocol](../../schemas/execution/README.md), [fixture daemon](../../cmd/gafferd/README.md) | Pure contract traces; real WAL/FULL SQLite commit/rollback/SIGKILL/SQLITE_FULL/read API tests described with limits | Reversible starting material, not lease safety, artifact custody, auth, power-loss or M1 acceptance |
+| [Protocol](../../schemas/execution/README.md), [merged v2 contract](../contracts/execution.md), [fixture daemon](../../cmd/gafferd/README.md) | Historical v1 plus v2 control/session traces; real WAL/FULL SQLite commit/rollback/SIGKILL/SQLITE_FULL/read API tests described with limits | Merged contract/code, not measured lease safety, artifact custody, auth, power-loss or M1 acceptance; O1–O8 open |
+| [Embedded shell](../../web/README.md), [merged evidence](https://github.com/korallis/letmecook/pull/100) | Recorded build/typecheck, React Doctor, browser/API and 360/1280 light/dark rendered evidence; final-head CI passed. Live empty-store scenario remains untested; empty rendering uses response injection | Retain real read-only UI and its tests; no capture, sessions, stop, acceptance or execution support. Historical build/patch reports keep their own identities; not rerun here |
 
 Every linked family retains its raw JSON, source pins, constructed cases and failed
 development/review observations. Counts above describe those packets, not checks
@@ -255,7 +262,7 @@ second harness, semantic planner, fleet, publication or browser auth in M1.
 
 | Issues | Selected owner/path | Boundary and acceptance still required |
 | --- | --- | --- |
-| #10 | `docs/contracts/execution.md`, `schemas/execution/`, `tests/fixtures/protocol/` | Reconcile provisional messages/states/limits with actual lease clocks, generations, grants and custody; fresh contract review |
+| #10 | `docs/contracts/execution.md`, `schemas/execution/`, `tests/fixtures/protocol/` | Merged v2 contract and controls are the starting point; close O1–O8 with evidence before acceptance, not a second protocol |
 | #11 | `cmd/gafferd/`, `internal/store/`, `schemas/readapi/`, `internal/httpapi/` | Promote only after #10; one schema owner, durable task/attempt/event/outbox transactions. Keep migrations in store until separate files are useful |
 | #12/#15 | `internal/authority/`, `internal/workflow/`, `internal/scheduler/`; outbox SQL in `internal/store/` | Immutable grants/revisions, #71 deterministic eligible route decision and atomic reservation/assignment; no new account ledger or duplicate outbox store |
 | #13/#14 | `internal/identity/`, `internal/repositories/`, `internal/httpapi/` | Disabled enrollment, revocable identities and runner-local repository policy; no unauthenticated product use |
@@ -279,23 +286,31 @@ records changed issue navigation hints without changing dependencies or outcomes
 
 ### Provisional slice reconciliation
 
-- **#93 — retain as provisional, reconcile before port/promotion.** Keep Go/TypeScript
-  types and public cross-language fixtures at their current paths. #10 must review
-  every message/refusal/state/size limit, measured lease assumptions and manifest
-  format. Change the version for incompatible semantics; never silently promote
-  `execution-provisional-v1` to execution authority. No promise of wire compatibility.
+- **#93/#10 — retain merged v1/v2 contracts and shared fixtures, reconcile before use.**
+  The merged-but-provisional [M1-01 contract](../contracts/execution.md) owns semantics at the existing
+  Go/TypeScript paths. Preserve historical `execution-provisional-v1` fixture records;
+  v2 adds `accept`, `refuse`, `cancel`, `terminated` and exact session-version checks.
+  Do not relabel v1 journals or treat decoding/negotiation as authority. No transport,
+  runner, lease persistence or custody implementation follows from the merge.
+  The contract owns [O1–O8 and their closure evidence](../contracts/execution.md#8-9-reconciliation-obligations).
+  All remain **OPEN** pending foundation lock and their required evidence; lock itself
+  still waits on live evidence and fresh Opus review. This record completes no
+  contract reconciliation, obligation or acceptance gate.
 - **#94 — retain bounded storage/API mechanics, not product state.** Keep driver,
   notices, private directory/lock/transaction and adverse SQLite/read API tests.
   Reconcile schema/migrations under #11 after #10; extend or replace rows as required.
   Discard fixture seeding/fresh-store-only startup from the future product entry;
   there is no real user state to migrate and no import path from fixture stores.
   Do not enable execution behind a hidden flag or equate event durability with blobs.
-- **#95 — tracked-pending: in-flight, pending merge.** Retain approved UI direction;
-  no shell exists on the cutoff base. After its separate slice merges, inspect actual `web/`
-  assets, StyleX tokens, same-origin embedding, decoders and visual/React Doctor
-  evidence before choosing what to retain. Port only components matching the
-  reconciled read API; discard fixture-only assumptions before authenticated #26.
-  No login/stop/acceptance claim follows from a rendered fixture shell.
+- **#95 — retain merged read-only shell and bounded evidence.** Keep `web/src/` React/
+  TypeScript components, `tokens.stylex.ts`, shared read-schema decoding and
+  `web/embed.go` same-origin asset embedding; [web/README.md](../../web/README.md)
+  owns build order, checks and limits. Retain browser/API, accessibility and
+  reproducible-build tests plus recorded rendered/React Doctor evidence. Port only
+  components matching the reconciled product read API; discard disposable-fixture
+  assumptions before authenticated #26. Merge/asset inspection is complete for
+  this disposition, not M2 acceptance or a new rendered qualification. No login,
+  stop, acceptance or execution claim follows from the fixture shell.
 
 If reuse later wins, port only contracts/fixtures worth keeping and discard the
 Go scaffold and shell as needed. No original downstream acceptance is unlocked by
@@ -303,7 +318,7 @@ any provisional slice or by this unaccepted decision record.
 
 ## Effort record and estimates
 
-**Observed M0 effort is incomplete.** Git history at the cutoff spans
+**Observed M0 effort is incomplete.** Git history at the original cutoff spans
 14 September 2026 10:52:52 UTC through 15 September 17:04:29 UTC: **30 h 11 m 37 s
 of calendar span**, not focused engineering time. It contains 22 first-parent
 commits (including planning and provisional changes), 108 non-merge commits across
@@ -325,8 +340,9 @@ by these failure classes, not by an invented hours figure.
 Planning ranges below are **estimates**, in focused solo-maintainer engineering
 days including implementation, offline tests and independent-review fixes. They are
 not extrapolated agent throughput, commitments or evidence that build beats reuse.
-No credit is subtracted for provisional code. Re-estimate after #10 and the first
-qualified adapter fault run; record actual focused effort from then on.
+No credit is subtracted for provisional code, including the now-merged #10/#95
+work. Re-estimate after #10 acceptance (O1–O8 closure) and the first qualified
+adapter fault run; record actual focused effort from then on.
 
 | Remaining delivery group | Estimate | Evidence/risk basis |
 | --- | --- | --- |
@@ -359,10 +375,11 @@ invalidates the estimates rather than silently enlarging M1.
 | Docker-free entire operating path | Each candidate's daemon, worker/verifier, router and recovery assessed separately | No measured passing complete path; Docker optional for tests only |
 | Architecture and affected issue path hints | Specification, roadmap, evaluation and implementation index reconciled | Hints are planning only; original dependencies/authority unchanged |
 | M0 effort, M1/M2 estimate or blockers | Observed activity and missing timers separated from estimates; blockers named | No claimed measured person-days, live throughput or release date |
-| Provisional #93–#95 disposition | Retain/reconcile/port/discard plan per slice; #95 absence disclosed | #10/#11 production promotion and actual #95 review remain later gates |
+| Provisional #93–#95 disposition | All three slices merged; actual #95 assets/evidence retained; #10 v2 merged as a provisional contract, with #93/#10 reconciliation still open | O1–O8 closure, #10 acceptance, #11 product promotion and authenticated #26 remain blocked; no supported execution |
 | Independent decision lock | Fresh independent pipeline review is planned on **GPT-5.6 Sol-review, not Opus** | Fresh **Opus** review remains pending operator-side before lock; pipeline review cannot substitute |
 
-Documentation verification for this change: `npm --prefix docs ci`,
+Original decision-change verification (before this merged-code reconciliation):
+`npm --prefix docs ci`,
 `npm --prefix docs run build`, `npm --prefix docs run check` and `git diff --check`
 passed. The generated reader has five documents and 127 valid unique anchors;
 63 local Markdown targets in the changed navigation/decision files were checked.

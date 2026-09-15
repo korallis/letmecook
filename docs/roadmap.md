@@ -32,8 +32,10 @@ Later: automatic curation, learned idioms, auto-merge, desktop runners
 ```
 
 Exit checkboxes are milestone acceptance gates, not an implementation-status
-tracker. Component experiments and reversible #93/#94 code do not pass a milestone;
-#95 remains open at the decision's base. The recorded build choice leaves #9 open
+tracker. The [foundation reconciliation](https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md#provisional-slice-reconciliation)
+owns provisional-slice disposition; the [execution contract](https://github.com/korallis/letmecook/blob/main/docs/contracts/execution.md#8-9-reconciliation-obligations)
+owns contract acceptance obligations. Merged provisional work does not pass a
+milestone. The recorded build choice leaves #9 open
 pending required measurements and fresh Opus review. Failing a gate can narrow
 scope or favour reuse; it need not produce another subsystem.
 
