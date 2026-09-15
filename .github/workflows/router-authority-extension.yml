@@ -66,6 +66,13 @@ jobs:
             --env HOME=/nonexistent --env NODE_OPTIONS= --pull never \
             gaffer-router-authority-proof timeout --signal=TERM --kill-after=1s 180s \
             node /gaffer/experiments/native-evaluation/portable-run.mjs > "$RUNNER_TEMP/native-source-regressions.json"
+      - name: Retain portable native output including incomplete records
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-source-regressions
+          path: ${{ runner.temp }}/native-source-regressions.json
+          if-no-files-found: ignore
       - name: Original terminal observer regressions
         run: |
           docker run --rm --network none --user 1000:1000 --cap-drop ALL \

@@ -1,0 +1,3608 @@
+{
+  "schema": 1,
+  "observedAt": "2026-09-14T22:51:01.998Z",
+  "result": "offline_native_planner_integration_passed",
+  "issueComplete": false,
+  "liveInferenceAttempts": 0,
+  "liveEligible": false,
+  "independentReview": "required",
+  "sourceDigests": {
+    "experiments/planner-probe/capabilities.ts": "d2e5ee897888ba8cd9cf6e59602f55e1c124af9a290573a30f017efcfb28aad8",
+    "experiments/planner-probe/demo.ts": "25d1927331fb70f0f0552bc19006bee7bbb36b63fdd315e06d6ae236538680a6",
+    "experiments/planner-probe/fixture.ts": "45aa35907e1c8c4c6b4d16e6d83ff54c841fc32bb62cdf89c1034812509d0860",
+    "experiments/planner-probe/native-boundary-port.ts": "6f151e6ea79ef42c8995e202441181c38f41293d59cc58109c2b0012765a3933",
+    "experiments/planner-probe/native-collect.ts": "8dd08410d6d2982f1dd2f67562d2481cb1c5fcb0f69e4249442910997f2fd902",
+    "experiments/planner-probe/native-consumer.ts": "fa7ac36685794c4d0fb3007b651387235f02f9888d274eef4894e57a2c52be2f",
+    "experiments/planner-probe/native-evidence.ts": "4e4adc7523e6fe8c5f5014cf5008ae25ba55199211d4a462578c6f95b80c6b4a",
+    "experiments/planner-probe/native-fixture.ts": "5d5b04df0a4e9c98c7bbe2fd239f820931194c71dada14a3c8274e415efcc3a2",
+    "experiments/planner-probe/native-gateway-prove.ts": "9288a5cefa341a9b76f3343e05183c27637917dbd97ac89b0fa244a18945d88e",
+    "experiments/planner-probe/native-planner.test.ts": "d285a65a3570820cbe42ce28af27e6d87214a5f0c0c788e6e98d8d38c9fb1907",
+    "experiments/planner-probe/native-profile.ts": "ce4a2256e2ff58136c6f9cf419e4f59254a00930e0c7a93972d7196ef9dd4a1a",
+    "experiments/planner-probe/native-prove.ts": "2ba02175c380ceba556b4fe3b5c81e0a13c19fe0413d32dc1042f8ea969aae97",
+    "experiments/planner-probe/native-router-integration.mjs": "0141e7e64f007f7553b59f52fec4004a4162f06b3f72fb0c7aba4d812e4c1c1a",
+    "experiments/planner-probe/native-router-prove.ts": "ea34d6cd1496e881fa8ceb5e0b083bd0e3a5684288a4f6416743890417f2a3f2",
+    "experiments/planner-probe/native-shared.test.ts": "dda7ce0e73d1910c7496f0e742621a2e7abe2dbd5dbf5e0681a23dbe6442fada",
+    "experiments/planner-probe/native-staging.ts": "d81d39689a9855466eb21b07089714084eba9600beccf5291fd2803f185fb685",
+    "experiments/planner-probe/native-transport.ts": "88e4bc9c65d497f0dca4cf3ef3e4580160835eaa350cca70f47015ba6c98c118",
+    "experiments/planner-probe/package-lock.json": "8a9a9881e0d48b3e98a52ffc56a81344b15a004c9827efc387edf733126e7237",
+    "experiments/planner-probe/package.json": "1986909d3de242b5964d4bbf2f658b2d738547ddadd51da6755177d57d59f067",
+    "experiments/planner-probe/planner.test.ts": "8f89bc2d05ae217b9d9f1bce21ce1085cec131d6373056221e18289be242fb2d",
+    "experiments/planner-probe/planner.ts": "27b323bd3492d29a3b88f544a0569a50f6b8f4d62d616ec10c9ea1c4959869c9",
+    "experiments/planner-probe/prove.ts": "756086a5101c958434e57685323bbd009db469fa9458b48b659584a13d531902",
+    "experiments/planner-probe/public-fixture.ts": "017a70154c329347744e3303c5d55d9d669d751647b5f5d2d87d2c1329e8b85c",
+    "experiments/planner-probe/reader.ts": "de2930b80a6c0dd9336910dad74b4668019a4629540a6f91677f0ee8bff370dc",
+    "experiments/planner-probe/router-consumer.ts": "7cbd5988228a004a37c9deb1b6d6c20a7b739d272a86b3eab0fc37eb1b0427d3",
+    "experiments/planner-probe/router-gateway.ts": "cafd9013af6d297bf504ad2f9d5b0ce69cb757c71ce0d6731023f5334cbc0a05",
+    "experiments/planner-probe/router-prove.ts": "7eb37a04959a1fcc297350f38df836f772ee22fdfe2dfa9162c81feec84831a7",
+    "experiments/planner-probe/router-supervise.ts": "2b9c2f56338a08d4c704bcb1b28c5fa0a974d4482bb63afbf17a8fe881aa70d7",
+    "experiments/planner-probe/transport.ts": "ca79a9a5586c90e25f05d24c8eb2baefcec55ebe7113f8aecb3f4e2b669d1f28",
+    "experiments/planner-probe/tsconfig.json": "9656dff150d8ce8e649ab7932a8e9148a20a55ffbaf87cf63cc1a7f7e52d52cf",
+    "experiments/planner-probe/tsconfig.native.json": "7d644f6008b3276431aa3fe90dfab554230c1365953876cd460e626f8eff337a",
+    "experiments/native-evaluation/bootstrap-proof.mjs": "e9bf96668e4a6dcd3d3f8bdc5de8c84b4f743426ff86b4579635565bb29b84f2",
+    "experiments/native-evaluation/bootstrap.mjs": "104fe7fba089b2e23ebf929b30c6947cf41b4ddd48ae2057455bf42ee1aa98b8",
+    "experiments/native-evaluation/cases.mjs": "d425f6f61c34bec45077e04227581b0ee0896d64b8b2b2949d9d934092de25fa",
+    "experiments/native-evaluation/deployment.test.mjs": "4585a581d4efea0ecba395f55d2fcc0ef128c17c4930a77b2160fabdefb464b8",
+    "experiments/native-evaluation/deployment.ts": "5f2c3378e326fab2da1923709f9a5ff5165b0ddaaad068f1d068e305933c7b7f",
+    "experiments/native-evaluation/durable-records.mjs": "dde22f109d005364bf007c9b04300c67ae15072dbdf4687ba86c5e13f66076ac",
+    "experiments/native-evaluation/egress-helper/extract-payloads.ts": "8b425c75508b686b919271b13d69eb1015d1ca87ba14f5bd9c444091affc8b8d",
+    "experiments/native-evaluation/egress-helper/fetch-inputs.ts": "f66e00c1d86a244dd07e31a161fd344e471d2e0a3617db67f9260ed92c11012c",
+    "experiments/native-evaluation/egress-helper/manifest.json": "47fde9cb1a7919fb0d21b0b08d20745444249bf964418b8b3f2a3c9fbe4e4e64",
+    "experiments/native-evaluation/egress-helper/verify-dependencies.ts": "29b08bb141e6b821e7f9131785e3e1041a8a3994653a9c4c2467c5aa12fbe011",
+    "experiments/native-evaluation/egress.mjs": "f21ba7e8f052e3199e3bbd6b7093a70beb5cd916a566c87d53d3aac0ebe228bd",
+    "experiments/native-evaluation/evidence-control.mjs": "f27155317fd2c80eab5f50eb4eab7bff8fd7fc5ca2f0eec3c9f5aa4b2f98bed6",
+    "experiments/native-evaluation/evidence-control.test.mjs": "95e3b2151f43ebd5ac1d0e51e4a58a2d55c669845bc9f065de980e84ba059d4a",
+    "experiments/native-evaluation/fault-loader.mjs": "109d6f2166e9e73817e622cdf7bcede4803453f70a8b5999fefcd558c049f91e",
+    "experiments/native-evaluation/faults.mjs": "b4758bf9306a34c741ee72d4b4a3673681917a9b0e28d78df1f54b1b93aa61c6",
+    "experiments/native-evaluation/fixtures.mjs": "29770cf1b73f2f511dfec990397d92ac399b1b9a53f2e082babbc3fe35526928",
+    "experiments/native-evaluation/gateway.mjs": "6119c5eecb2fa123f3bdaa0bb95b9ac92f213cfe391498aba345935635456039",
+    "experiments/native-evaluation/host-faults.mjs": "fb1a0b9772461bfb7c30bd176787b4ac25f8e5cae03287724a24991113ae96ff",
+    "experiments/native-evaluation/kernel-probes.mjs": "f7277541b763b4ad975dd9c8e7ebd67e06b89d2b87f5c3fc2123f561737f8acd",
+    "experiments/native-evaluation/legacy-proof.mjs": "8af97657dcdfa59bc3e15bde1ba1909e34c5b3f886141dc417117c9de64dfebc",
+    "experiments/native-evaluation/native.test.mjs": "492c8036cbf8f214a9d9fd302c605c6f9886cfaef09dda4cd1e9f0d1d6ef16bd",
+    "experiments/native-evaluation/opencode-apply-patch.json": "f032f3b268ad95c8c2b541fb36d37378245e678389355fea64daf5e2aaa505b5",
+    "experiments/native-evaluation/opencode-settings.mjs": "e5aa410873e60f6b4d9376ce3fd9839c40ba9e3c95cc3019ea91966a2b2bf42f",
+    "experiments/native-evaluation/package-lock.json": "ac58ea481aba2983ceccdc51c12d86cac25198935031cd697bdcbb05a39b3b94",
+    "experiments/native-evaluation/package.json": "d54adf29eecd2333417b9631a3fa2babdfd130281455fa074d6f41d4469b9d45",
+    "experiments/native-evaluation/planner-fixtures.mjs": "1dc010a5d25a61e6adac12d6bab457898484e252b368d698b7b2f4b1a0fc4ae5",
+    "experiments/native-evaluation/portable-output.test.mjs": "ae11b192721500f9092acaf61eebebf62d13f6ada6a2eba3e9016b8d7036a4a5",
+    "experiments/native-evaluation/portable-run.mjs": "6b1fcf9830740914bea45acbb6aeb4c515081584ad540266f4cbd93c10663a8f",
+    "experiments/native-evaluation/relay.mjs": "472c19e53713fe39f354f9d92822a18b6979d66da73e0fab63cde2d7cf6bca0b",
+    "experiments/native-evaluation/run-binary.ts": "33ac6373f8845cedc0f47c30b2b0893885d3d5befd1910a6c0375e2837645e4b",
+    "experiments/native-evaluation/run-deployment.ts": "530315ab0547f29bd53d0b6fa609c2943b826a5a9366a6c533759273fb235165",
+    "experiments/native-evaluation/run-egress.ts": "1bbdaf3cfc09d547e5f40acb1b54a2cde771c497796be87ab8395d04f00d65cd",
+    "experiments/native-evaluation/run-router.ts": "4ec04b340ef1b998b064a406d262abd933488883815d631594fc49e4515e27fb",
+    "experiments/native-evaluation/transport-proof.mjs": "cd66862ee26ee4feb00a26cea572ed8b658949d8cc4afb5c523729f4d47fae05",
+    "experiments/native-evaluation/tsconfig.json": "26a6394e4e87ef833f615637014e66d655020eca8258ed34c1ad3b48bf7e1ec7",
+    "experiments/native-evaluation/worker.mjs": "499420558e62c0660e9baffdb3fd0e4e18b6c7836251c94753df6196d7b77b7c",
+    "experiments/router-authority-extension/chat-fixtures.mjs": "120115421a09892e1288a7e0de643e3d260f49245d546dc5e94364c858f3bbab",
+    "experiments/router-authority-extension/chat-terminal.test.mjs": "8ac6b6b98cf3b2ca6b80615a3d3c8b77d99b52195a17b329fe7c2820134e4d2a",
+    "experiments/router-authority-extension/evaluation-scope.test.mjs": "a29387a0fbbaea3e33c74b3c49d099b9fe8d4dbae779835f0f05fa7a5e2662a3",
+    "experiments/router-authority-extension/integration.mjs": "69e8508d32c991f12a14f1f305d3975581012a6d4915e58ce0ae8a6cc7c69c76",
+    "experiments/router-authority-extension/loader.mjs": "98e15a52182833efe85cbe475bc7701f02cc48f861b4a1848e3a6a4e513ec35a",
+    "experiments/router-authority-extension/native-fixtures.mjs": "f2cf11a973d0a8035830d8670ef1bed9dc9e8b6d577c3f4ba8df2aaccb68464d",
+    "experiments/router-authority-extension/native-integration.mjs": "c56a040002fadceec597efddf86397339af960f2c08864fa6c34a50f49122057",
+    "experiments/router-authority-extension/native-local-integration.mjs": "8f0dbd9c907d41ff22b959fdaf9950f6c83eca8e8099fd79fd722535d0617bcc",
+    "experiments/router-authority-extension/overlay/authority.mjs": "7d6f3e460169d99b6b8af2e4935d26f3ff36678e66f80f5f70f4f64fb38b7e86",
+    "experiments/router-authority-extension/overlay/chat-terminal.mjs": "07e06cde6caeb1f0fd5bcbac0be9d6a7486afb3c34de7d77f8b414a8335009c0",
+    "experiments/router-authority-extension/overlay/deployment-owner.mjs": "a3ef177075816bc6c4de14b943864e72a56a4bde12b8021b48032a7b4ed8e6d2",
+    "experiments/router-authority-extension/overlay/evaluation-scope.mjs": "816fc21ffec05e223bb1fc3970f90746c720db83f1d2d9d8413807c20fcb7702",
+    "experiments/router-authority-extension/overlay/native-planner.mjs": "af00647debdb1595b4a385cee47efddac10d21c8e0f9583e65814d656601038a",
+    "experiments/router-authority-extension/overlay/native-profile.mjs": "307134694b3c5a70ea1582b4c933bacd14236cb23518edd62ba768ac685851bc",
+    "experiments/router-authority-extension/overlay/native-responses.mjs": "79927f64a911da1b4ee1427a7ff3f7de225c303deefdc5d84188d2b4a70c0642",
+    "experiments/router-authority-extension/overlay/native-transport.mjs": "f151b6363016e5edff5273b9a16aea4eb6f1b8cc86c7dbff4e7ea562f76d8f6c",
+    "experiments/router-authority-extension/overlay/opencode-profile.mjs": "2ff535ca043db2fa0269b0b430daa2e3786a4daec9f143420e7b0c2181eb55ca",
+    "experiments/router-authority-extension/overlay/planner-plan-schema.mjs": "1af55197a0f44d69867be5987c116d4e7066950fb9a951cab6da689c6aa75f1d",
+    "experiments/router-authority-extension/overlay/responses-terminal.mjs": "d4e2e792b631f4101db6dc7c0d679f3ace4aee428a2c70d386a34cf56bc415f1",
+    "experiments/router-authority-extension/overlay/scope-profile.mjs": "c71f6caaf4f5dce1c00a2ced23b369be7ea6681ae725c366bbba08b8570ea689",
+    "experiments/router-authority-extension/package.json": "1b028cc34bbf05e89d4a3b9842da17d384e5997a1736f863ef8ca70d57c92a7a",
+    "experiments/router-authority-extension/patches.mjs": "0eeb206a3b22ffaf921e04277a8aeec271d21eb860a6f70c9dfcf9be7a69e168",
+    "experiments/router-authority-extension/policy-regressions.mjs": "cf72e099290577f244f597ad84280a2598fd2452855e4169ff87d4bb551712b7",
+    "experiments/router-authority-extension/process-output.mjs": "218c1355947067927ffbf0391c268b52dbd1ff38069c82db7fa62d3128f2b104",
+    "experiments/router-authority-extension/request-regressions.mjs": "b9c0427ece24d2febba8132d65793e50da4cc4bc152832dc9f797f6e8742081d",
+    "experiments/router-authority-extension/responses-terminal.test.mjs": "a83e1ba8edce55efa2cbf67eb9bbf42b9798210c95a4db9c0b604b7b555a268c",
+    "experiments/router-authority-extension/run-in-container.mjs": "65d7b62d619030333ac92f5cbd820bc4fb2e1d74966c135b18a15f63f2856203",
+    "experiments/router-authority-extension/runtime-identity.json": "ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f",
+    "experiments/router-authority-extension/source-lock.json": "681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c",
+    "experiments/router-authority-extension/transport-failures.mjs": "e4c99a65df8dcb7ef18ec1e34378c3a0b27797e5551b900b83cbc9f1b834dc8e",
+    "experiments/router-authority-extension/upstream-dependencies.lock.json": "87551d12f5d946cc1c98cf8e01cb4ec7d632f67dff0fb3554d0f556881843d05",
+    "experiments/router-authority-extension/upstream-package.json": "670515d6f190581be53f98f7e4a8764ab0a1ac3bc60858466ebfaea59fc77de7",
+    "experiments/inference-boundary/boundary.test.ts": "184fd24601e8c08d47007cd69e4d4d51b9458ee3ffb29a43ce439f2c7f386553",
+    "experiments/inference-boundary/boundary.ts": "3832d864948d053d11491860b3b2809c6d251a37dc856edf76fb21f11d60a8b5",
+    "experiments/inference-boundary/demo.ts": "448bef33591c5408942adb0ea4a44c6473bac90831962dcabbd339b102b91fa3",
+    "experiments/inference-boundary/fixture.ts": "acc2080543fe4bd228900bab5b0b57ccfb13aca690c1d0da27cf221bc1bd412b",
+    "experiments/inference-boundary/json.ts": "7f26eb4cf1d4544f55a7b5a7c69cb8dc41de8aaa0c8db13596f59e981944c180",
+    "experiments/inference-boundary/native-policy.ts": "25406955d223131d95f71a60d4911f0d6d25b166e86381fd173adfcff2d661d8",
+    "experiments/inference-boundary/opencode-tools.json": "b6ff6fcd423b5ac7e41656efb4694bcd2c9be9c49de9a49242b868235c699ece",
+    "experiments/inference-boundary/package-lock.json": "10a402c72fae1b535ebbe43a8cbb6ddae3e706b9a41346c2da6416a66be361ba",
+    "experiments/inference-boundary/package.json": "d7fbd0eb5deda9d574787e57b1018baef704edec2c1c0a8b0bf4843a5cb7ea6c",
+    "experiments/inference-boundary/policy.ts": "5f8a47cdca1fd40be20798d5dabac6903eeea9115442bc984e2b78db96957f16",
+    "experiments/inference-boundary/profile-ids.ts": "8aa9ed93f6d3adbe3a0ccafd54133aaf5707d4626d06844bd64515381aaeb696",
+    "experiments/inference-boundary/profiles.ts": "39f0188220f0ed280e364be883563097599701147d9670372e5c86d440d781e8",
+    "experiments/inference-boundary/protocol.ts": "1aaf1e88190f2e1eff8afad7c4dfad2d51ba9ef69c0d79a728294d45afce3310",
+    "experiments/inference-boundary/prove.ts": "14cac8933113c90d5748599540195df07a8557ea057322a7596c611d26de93a9",
+    "experiments/inference-boundary/router-fixture.ts": "4efee902e2fe6646871074fe6b5b2e4d9b92988147280f3b83216026b4c2ce42",
+    "experiments/inference-boundary/router-gate.test.ts": "e2b65d7ccdad99c73f0cd34959558e499efed07eb6ee9d33938fc249b493b14c",
+    "experiments/inference-boundary/router-policy.ts": "49d12ebf5643c5809bb6d534a88ac33722fa4fe41c890bd245be4fe471c0675f",
+    "experiments/inference-boundary/tsconfig.json": "e7fdc78d6c95f978eb355c76d005733baf15e891719f85e9a001e67fb65d435d",
+    "experiments/inference-boundary/types.ts": "19bcd334cb4423ac4032ea28572e69f29ec95569edd37161a780902c49fcf1ef",
+    "experiments/inference-boundary/wait.ts": "c56f31eb6d68762bf4d083156a69d98ea01bc4942a5a05400a0de80f2d317e1d",
+    "experiments/router-boundary-bridge/authority.ts": "26a442c018ebe94f0d367daa1f40378d204798073990e481be93cfbecc580e57",
+    "experiments/router-boundary-bridge/gateway.ts": "2f41bc5cf3451f0f64990adfcecbd09e9db0ffb991f5b0e1d144558f26ba0a75",
+    "experiments/router-boundary-bridge/isolation.ts": "b246a46a4fc01c0edf744d68203f714ed51e6f7e9cbe221343bff9ab69c6f7da",
+    "experiments/router-boundary-bridge/lifecycle.test.ts": "47de28ab6881b2e3083fcdc8bd7e7ebdba3db638672492fcb338ab3b217bfd8f",
+    "experiments/router-boundary-bridge/lifecycle.ts": "c41639f35f240affbe4778af3e88464bda6f94d4b3b979d5bb766c9bd57d74e4",
+    "experiments/router-boundary-bridge/package-lock.json": "339f74d15342bdb7229b56031a415487222fa4dd27cbd505ee6157951b088d5e",
+    "experiments/router-boundary-bridge/package.json": "a0f80f8a760c8722abdbc0c5091a96f97ff93e26eb92c942906d237cecfeadef",
+    "experiments/router-boundary-bridge/run.ts": "051c823d28b545c50655bcbb3ddec97d7c98f32cbe12aa8ac4e48619a1fa7d62",
+    "experiments/router-boundary-bridge/supervise.ts": "fac191039364b7f197cc8ff1738919c62e58339ab610c0d1b8014793d403e4b2",
+    "experiments/router-boundary-bridge/tsconfig.json": "894336a6d0953d006061e64ac4ae1cf7606eca0cedc1ac78df576e6bbbcf7a4e",
+    "experiments/router-boundary-bridge/worker.ts": "8e5574feabab1ee2775526c373a89c48a2475235fb7666709dcfb1038b19941a",
+    "tests/fixtures/planner/fixture.txt": "cfbd4f521e876bf7c58582c01f8e6d79b81f8203ba2d98f8fd2258853bffe4e5",
+    "tests/fixtures/planner/plan.schema.json": "487ff8ab83fb394a68e97127c34ecfecfb8e4c304f76bea115c346f1e08d57e3"
+  },
+  "runtime": {
+    "matrix": {
+      "server": {
+        "Platform": {
+          "Name": "Docker Desktop 4.86.0 (236216)"
+        },
+        "Version": "29.7.2",
+        "ApiVersion": "1.55",
+        "MinAPIVersion": "1.40",
+        "Os": "linux",
+        "Arch": "arm64",
+        "Components": [
+          {
+            "Name": "Engine",
+            "Version": "29.7.2",
+            "Details": {
+              "ApiVersion": "1.55",
+              "Arch": "arm64",
+              "BuildTime": "Wed Aug  5 18:28:35 2026",
+              "Experimental": "false",
+              "GitCommit": "6a43e3d",
+              "GoVersion": "go1.26.5",
+              "KernelVersion": "6.12.76-linuxkit",
+              "MinAPIVersion": "1.40",
+              "Module": "github.com/moby/moby/v2",
+              "ModuleVersion": "v2.0.0+unknown",
+              "Os": "linux"
+            }
+          },
+          {
+            "Name": "containerd",
+            "Version": "v2.2.5",
+            "Details": {
+              "GitCommit": "e53c7c1516c3b2bff98eb76f1f4117477e6f4e66"
+            }
+          },
+          {
+            "Name": "runc",
+            "Version": "1.3.6",
+            "Details": {
+              "GitCommit": "v1.3.6-0-g491b69ba"
+            }
+          },
+          {
+            "Name": "docker-init",
+            "Version": "0.19.0",
+            "Details": {
+              "GitCommit": "de40ad0"
+            }
+          }
+        ],
+        "GitCommit": "6a43e3d",
+        "GoVersion": "go1.26.5",
+        "KernelVersion": "6.12.76-linuxkit",
+        "BuildTime": "2026-08-05T18:28:35.000000000+00:00"
+      },
+      "imageId": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a",
+      "profile": {
+        "id": "m0-linuxkit-arm64-docker29-uds-v1",
+        "engineVersion": "29.7.2",
+        "kernelVersion": "6.12.76-linuxkit",
+        "architecture": "arm64",
+        "image": "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0"
+      },
+      "cgroupVersion": "2"
+    },
+    "consumer": {
+      "node": "v24.21.0"
+    }
+  },
+  "rawReports": [
+    {
+      "name": "gaffer-planner-clarification-matrix-20260914/run.json",
+      "sha256": "fe6397455274475020e457a73e5002b20a9b5630459ac337990a2557cd8b77c4"
+    },
+    {
+      "name": "gaffer-planner-clarification-plan-gateway-20260914/run.json",
+      "sha256": "e2fa0edf8fdd63aea6d81863cb6c4b3a4df3e7290f978e319452be04eb80e511"
+    },
+    {
+      "name": "gaffer-planner-legacy-scope43-20260914.json",
+      "sha256": "5e56a405a58a059183f4b2a2f8b9e497d3154b7f3831164b077d3d12505cfdb8"
+    },
+    {
+      "name": "gaffer-planner-clarification-gateway-20260914/run.json",
+      "sha256": "874aea0c579c2457e4edddb6ac964a18e301eafcbbaebd160998792e57646c1b"
+    }
+  ],
+  "nativeCases": [
+    {
+      "scenario": "read",
+      "result": "passed",
+      "plannerOutcome": "plan_proposed",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 2,
+        "files": 1,
+        "readBytes": 484
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": true,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "9fce11e3a938ba88c9ef13401e7b281d71ffe74cbde536f7654969e966088232",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        },
+        {
+          "path": "/responses",
+          "bodyDigest": "5ef9b57c28f80e51772505b46642277cf5a390ed2274e67ed9e96033c5cce30b",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "none",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 5
+        }
+      ],
+      "completions": [
+        {
+          "requestId": "de4a3bdd49f9464c8ed38617fd1ebd17",
+          "acceptedAt": 1789426142193,
+          "calls": [
+            "call_synthetic"
+          ]
+        },
+        {
+          "requestId": "c7c09564638f4c509f296288d1eef5f1",
+          "acceptedAt": 1789426142256,
+          "calls": []
+        }
+      ],
+      "decisions": [
+        {
+          "requestId": "de4a3bdd49f9464c8ed38617fd1ebd17",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "b82624b83686bcf9757301c55470457159b090840d678ef8d654c402729db7f6",
+          "decisionDigest": "5d3d83159b2a09477607c63233a068efdd8e6ed9e5fce3b254f811d426eb3d40",
+          "receiptDigest": "5b1556a49523414a13bb790b9b509d1c8e17913e2f412fe6d7b908d9aa58e37a",
+          "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+        },
+        {
+          "requestId": "c7c09564638f4c509f296288d1eef5f1",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "e441e45336850160b3e36825998530d045fbfde3f3511d56c2211b7dfa138c0a",
+          "decisionDigest": "8aff76c9dc3967c5e1f1db9e77a211643f02f567e85e699e5072779677b3678a",
+          "receiptDigest": "fd6308f745671a480b58772183e26cb7c2a7bfc8c0f4c130eb7294925c1c738f",
+          "nativeOutputDigest": "728d68578aa72abccb46346df9d951ff2942ed899fc7f1c6c399b96d9fb286ff"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "de4a3bdd49f9464c8ed38617fd1ebd17",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "9fce11e3a938ba88c9ef13401e7b281d71ffe74cbde536f7654969e966088232",
+              "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+            }
+          ]
+        },
+        {
+          "requestId": "c7c09564638f4c509f296288d1eef5f1",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "5ef9b57c28f80e51772505b46642277cf5a390ed2274e67ed9e96033c5cce30b",
+              "outputDigest": "728d68578aa72abccb46346df9d951ff2942ed899fc7f1c6c399b96d9fb286ff"
+            }
+          ]
+        }
+      ],
+      "reservations": 0,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426142115,
+        "deadline": 1789426742115,
+        "spent": 2,
+        "state": "active"
+      },
+      "decisionTimes": [
+        {
+          "requestId": "de4a3bdd49f9464c8ed38617fd1ebd17",
+          "at": 1789426142191
+        },
+        {
+          "requestId": "c7c09564638f4c509f296288d1eef5f1",
+          "at": 1789426142255
+        }
+      ],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "read",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "direct",
+      "result": "passed",
+      "plannerOutcome": "plan_proposed",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 1,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": true,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "3726fa642b70286b1e91fe98267280c957465b941fbf78dadfc316d6772c7d8b",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        }
+      ],
+      "completions": [
+        {
+          "requestId": "9474fd30b37c4af89372aac0db6e8ae8",
+          "acceptedAt": 1789426143222,
+          "calls": []
+        }
+      ],
+      "decisions": [
+        {
+          "requestId": "9474fd30b37c4af89372aac0db6e8ae8",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "c56812a996ba0046f471fa7e881de253c82f7fab52d6139912331238ed80c2bd",
+          "decisionDigest": "41d1736481a0ce793b50d98360dd594867471b2c542d74372c5e8bef6f844d95",
+          "receiptDigest": "112510c949ea4ae35155de46219994265cb78cf5ca410e2574c8c26514a40556",
+          "nativeOutputDigest": "a1923b5fa364ae22f1898466fdc95108451fa7c3ef35be7679557d5f4a9ad6e6"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "9474fd30b37c4af89372aac0db6e8ae8",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "3726fa642b70286b1e91fe98267280c957465b941fbf78dadfc316d6772c7d8b",
+              "outputDigest": "a1923b5fa364ae22f1898466fdc95108451fa7c3ef35be7679557d5f4a9ad6e6"
+            }
+          ]
+        }
+      ],
+      "reservations": 0,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426143117,
+        "deadline": 1789426743117,
+        "spent": 1,
+        "state": "active"
+      },
+      "decisionTimes": [
+        {
+          "requestId": "9474fd30b37c4af89372aac0db6e8ae8",
+          "at": 1789426143219
+        }
+      ],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "direct",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "clarification",
+      "result": "passed",
+      "plannerOutcome": "clarification_proposed",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 1,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": true,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "a3c1a7138915e7a09e75c24e486ca971388862fd67fd5e984ee3a42b151932a5",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        }
+      ],
+      "completions": [
+        {
+          "requestId": "44971527fdfa430a9c836f12d98f254b",
+          "acceptedAt": 1789426144309,
+          "calls": []
+        }
+      ],
+      "decisions": [
+        {
+          "requestId": "44971527fdfa430a9c836f12d98f254b",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "b2402e2c4e0068cff9a3221a917d2dbd1dc63ee296431d59b5f97e2c3919c20d",
+          "decisionDigest": "2110aa0459d2b5fc44bfd280c36b9324862161e70ee380449a273649bff07b90",
+          "receiptDigest": "17b948b30964ce60e0cf49f45ea481ccbd39a431f3de679bfb8218cd94cc06c1",
+          "nativeOutputDigest": "a469aa4661c981d2caea7f0261ef94a8f865a34b1216decb39c725dda67048b6"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "44971527fdfa430a9c836f12d98f254b",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "a3c1a7138915e7a09e75c24e486ca971388862fd67fd5e984ee3a42b151932a5",
+              "outputDigest": "a469aa4661c981d2caea7f0261ef94a8f865a34b1216decb39c725dda67048b6"
+            }
+          ]
+        }
+      ],
+      "reservations": 0,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426144169,
+        "deadline": 1789426744169,
+        "spent": 1,
+        "state": "active"
+      },
+      "decisionTimes": [
+        {
+          "requestId": "44971527fdfa430a9c836f12d98f254b",
+          "at": 1789426144306
+        }
+      ],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "clarification",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "read-repair",
+      "result": "passed",
+      "plannerOutcome": "plan_proposed",
+      "usage": {
+        "assessments": 1,
+        "repairs": 1,
+        "requests": 3,
+        "files": 1,
+        "readBytes": 484
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": true,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "8793694b968e15101502edcaf38424df27d14eaf66d93f7870ce7f1c5421dba9",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        },
+        {
+          "path": "/responses",
+          "bodyDigest": "d316600b536a9f0fa327387deaf6beb8e9de1aeefad40b22b6fd4c0bd3ca02f1",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "none",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 5
+        },
+        {
+          "path": "/responses",
+          "bodyDigest": "b289133f5ea448e312d71227975498197b9fe57e06a536f7b7de9fe6337df091",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "none",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 7
+        }
+      ],
+      "completions": [
+        {
+          "requestId": "56d5ba10ff104f79a419f12139fd271e",
+          "acceptedAt": 1789426145505,
+          "calls": [
+            "call_synthetic"
+          ]
+        },
+        {
+          "requestId": "600f2e637dbc4792933978772ca98764",
+          "acceptedAt": 1789426145580,
+          "calls": []
+        },
+        {
+          "requestId": "5eaa4c0cef744935b4cbe29bcb248456",
+          "acceptedAt": 1789426145609,
+          "calls": []
+        }
+      ],
+      "decisions": [
+        {
+          "requestId": "56d5ba10ff104f79a419f12139fd271e",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "5675d3efec3f2116a1985d97f40c7a73b4331fbfe033ac1818060b6045492964",
+          "decisionDigest": "e2dccb8726b24aa0cfdf4e1160ec348efdf76718fb53787aafab0aa9ddd27300",
+          "receiptDigest": "491a355ff3a7023923ed5a7b9a71603588c81f4bdfb77e0a06c56a870bc77bf5",
+          "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+        },
+        {
+          "requestId": "600f2e637dbc4792933978772ca98764",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "6f0239e26c95ea88afddd40159bbe604bf44226ad3fa8ef1284dc3b0d2d1ce27",
+          "decisionDigest": "7f1c5b2932161a3109d104aa4c23215e58e10bbc8eb777ec8f8bb8861b94d2b2",
+          "receiptDigest": "4c7742744cb2f5a90b1ac2f43ccd44a225eaa3cab058716a1f2dae1664bedd96",
+          "nativeOutputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
+        },
+        {
+          "requestId": "5eaa4c0cef744935b4cbe29bcb248456",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "ca156afbebee418ae059a12d42f3b4404a21b3ab4537589150d2b8df7a4b9afc",
+          "decisionDigest": "a7cfad0b3c4d2ee795d8abffe9e0048a24c2aadc7621a6d3b0adfcadd2256c1e",
+          "receiptDigest": "871955cad26e7fa9a645328877c2d43e6591f4e51ddd2148b74d40b7d5cb8f04",
+          "nativeOutputDigest": "7c6b802d33f37bccf6c9499559033963e53de1f4102d27c573e2417d54105d9b"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "56d5ba10ff104f79a419f12139fd271e",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "8793694b968e15101502edcaf38424df27d14eaf66d93f7870ce7f1c5421dba9",
+              "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+            }
+          ]
+        },
+        {
+          "requestId": "600f2e637dbc4792933978772ca98764",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "d316600b536a9f0fa327387deaf6beb8e9de1aeefad40b22b6fd4c0bd3ca02f1",
+              "outputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
+            }
+          ]
+        },
+        {
+          "requestId": "5eaa4c0cef744935b4cbe29bcb248456",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "b289133f5ea448e312d71227975498197b9fe57e06a536f7b7de9fe6337df091",
+              "outputDigest": "7c6b802d33f37bccf6c9499559033963e53de1f4102d27c573e2417d54105d9b"
+            }
+          ]
+        }
+      ],
+      "reservations": 0,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426145401,
+        "deadline": 1789426745401,
+        "spent": 3,
+        "state": "active"
+      },
+      "decisionTimes": [
+        {
+          "requestId": "56d5ba10ff104f79a419f12139fd271e",
+          "at": 1789426145502
+        },
+        {
+          "requestId": "600f2e637dbc4792933978772ca98764",
+          "at": 1789426145579
+        },
+        {
+          "requestId": "5eaa4c0cef744935b4cbe29bcb248456",
+          "at": 1789426145608
+        }
+      ],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "read-repair",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "repair",
+      "result": "passed",
+      "plannerOutcome": "plan_proposed",
+      "usage": {
+        "assessments": 1,
+        "repairs": 1,
+        "requests": 2,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": true,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "84e01f3d31157657e6e19b1061f09cc02a545fb86c661f40c2f5e788a6663ae3",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        },
+        {
+          "path": "/responses",
+          "bodyDigest": "c961f38dc5abf9eaa6910d6f59bcb42e3e8dfc1e93a75de8a32df53e888f0867",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "none",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 4
+        }
+      ],
+      "completions": [
+        {
+          "requestId": "cb0f6d1d0dae4c2caef69694b1c9c78e",
+          "acceptedAt": 1789426146840,
+          "calls": []
+        },
+        {
+          "requestId": "1e5895f2a6a0481d981ec34ab770e278",
+          "acceptedAt": 1789426146924,
+          "calls": []
+        }
+      ],
+      "decisions": [
+        {
+          "requestId": "cb0f6d1d0dae4c2caef69694b1c9c78e",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "8913489aeb298e364b45464e0c675d2a8b8ae12d7bfca26db091f0fc2c5cae88",
+          "decisionDigest": "63e38ab83bccaecb1dcc91782e4099c0f93f6b0fa99a2231f587d40913c37968",
+          "receiptDigest": "7eebc1dcac243273602f6e4da5422d0f1e86be223d316edfce45e84430484a7c",
+          "nativeOutputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
+        },
+        {
+          "requestId": "1e5895f2a6a0481d981ec34ab770e278",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "79c4afd3cb79151334ee621637425901e4983e672ec815a43d810d62a7e40289",
+          "decisionDigest": "a9ed9c11de13be92890a3de00c8c2debe1eec0d832dcfe548f2eaa7cfe6ada57",
+          "receiptDigest": "20157ff3a3e01c9417fd1e9fe35d49c0e6b5c607b477525fe714bd0aa9726b83",
+          "nativeOutputDigest": "05fe7092b68ca32fb5df71206520880a38839b6baf5169da3f6ebd71f342fdf9"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "cb0f6d1d0dae4c2caef69694b1c9c78e",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "84e01f3d31157657e6e19b1061f09cc02a545fb86c661f40c2f5e788a6663ae3",
+              "outputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
+            }
+          ]
+        },
+        {
+          "requestId": "1e5895f2a6a0481d981ec34ab770e278",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "c961f38dc5abf9eaa6910d6f59bcb42e3e8dfc1e93a75de8a32df53e888f0867",
+              "outputDigest": "05fe7092b68ca32fb5df71206520880a38839b6baf5169da3f6ebd71f342fdf9"
+            }
+          ]
+        }
+      ],
+      "reservations": 0,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426146735,
+        "deadline": 1789426746735,
+        "spent": 2,
+        "state": "active"
+      },
+      "decisionTimes": [
+        {
+          "requestId": "cb0f6d1d0dae4c2caef69694b1c9c78e",
+          "at": 1789426146837
+        },
+        {
+          "requestId": "1e5895f2a6a0481d981ec34ab770e278",
+          "at": 1789426146923
+        }
+      ],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "repair",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "empty",
+      "result": "passed",
+      "plannerOutcome": "plan_proposed",
+      "usage": {
+        "assessments": 1,
+        "repairs": 1,
+        "requests": 2,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": true,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "7e0434eb81781ea82f067f2a1ff7391bb2eee0eee03576b69df27740a7c127fa",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        },
+        {
+          "path": "/responses",
+          "bodyDigest": "74aa726114e71aa71f0caaa66c109e97aca90a8ce08565fcf921862ccb080271",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "none",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 4
+        }
+      ],
+      "completions": [
+        {
+          "requestId": "1efc09a48dfc4b68919d808faf14196b",
+          "acceptedAt": 1789426147847,
+          "calls": []
+        },
+        {
+          "requestId": "99ddb020a53b46008ca79651dbdf0685",
+          "acceptedAt": 1789426147919,
+          "calls": []
+        }
+      ],
+      "decisions": [
+        {
+          "requestId": "1efc09a48dfc4b68919d808faf14196b",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "41150c4e54d853d424f7a96b9a8293d879df281355dca9fd87b13c0b55165c12",
+          "decisionDigest": "ad9fcfcca4f734f6da3f5ab6a2e34611fd8d731f05047d96ae38c94f2defd22f",
+          "receiptDigest": "5abfedda919ecedb202aef7f5e7647fc980d0993921067dfc83477cd3f1340e2",
+          "nativeOutputDigest": "ca7a26181afee3d71490cf61ddac3b4effce93090b78d11cb95c6c37d44e1895"
+        },
+        {
+          "requestId": "99ddb020a53b46008ca79651dbdf0685",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "590ff1adfffc194e281bb9fc3996690da72d3b968ba4cc1fdb2f5be33c860bfb",
+          "decisionDigest": "8674bb332d6af55fd515c27db1a16b5c45f72aee32994b459eaa1504530f9f77",
+          "receiptDigest": "a561786d102d95db7a85b0cabaafa8a9413b5905fc011588411f29d356f09a23",
+          "nativeOutputDigest": "35dc2632b9882c2762168683f89a0068b07b56807e8c355ad1dd25480b728f01"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "1efc09a48dfc4b68919d808faf14196b",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "7e0434eb81781ea82f067f2a1ff7391bb2eee0eee03576b69df27740a7c127fa",
+              "outputDigest": "ca7a26181afee3d71490cf61ddac3b4effce93090b78d11cb95c6c37d44e1895"
+            }
+          ]
+        },
+        {
+          "requestId": "99ddb020a53b46008ca79651dbdf0685",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "74aa726114e71aa71f0caaa66c109e97aca90a8ce08565fcf921862ccb080271",
+              "outputDigest": "35dc2632b9882c2762168683f89a0068b07b56807e8c355ad1dd25480b728f01"
+            }
+          ]
+        }
+      ],
+      "reservations": 0,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426147788,
+        "deadline": 1789426747788,
+        "spent": 2,
+        "state": "active"
+      },
+      "decisionTimes": [
+        {
+          "requestId": "1efc09a48dfc4b68919d808faf14196b",
+          "at": 1789426147845
+        },
+        {
+          "requestId": "99ddb020a53b46008ca79651dbdf0685",
+          "at": 1789426147918
+        }
+      ],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "empty",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "invalid-repair",
+      "result": "passed",
+      "plannerOutcome": "invalid_plan",
+      "usage": {
+        "assessments": 1,
+        "repairs": 1,
+        "requests": 2,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": false,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "8db2e949ebcedd28b43761f908aa146f0e2d516f9cad68d114ec13c0c936fa0d",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        },
+        {
+          "path": "/responses",
+          "bodyDigest": "ce1821f5a4ef49e5ef1d213fd0070722c31c06a03f7d0afbac1cb1c6bf664ee0",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "none",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 4
+        }
+      ],
+      "completions": [
+        {
+          "requestId": "e6814d57ecc0418bbe3f7c7e82652313",
+          "acceptedAt": 1789426148639,
+          "calls": []
+        },
+        {
+          "requestId": "986a5e1501b44fb6b9af92cbf466225f",
+          "acceptedAt": 1789426148716,
+          "calls": []
+        }
+      ],
+      "decisions": [
+        {
+          "requestId": "e6814d57ecc0418bbe3f7c7e82652313",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "9a2a12b8c152624846a2aa221c5d8b8c70731b1e448dd0f2bd44b80b8bb7bcf4",
+          "decisionDigest": "7bb4928461ee16d28297ebb818414c1af050bbe20ec2e09c0f1ee6ab7a354083",
+          "receiptDigest": "d3b3c7cb53c2e9e4e9feeeedbbb0681df533878610c6e88eb882d889e05ce67c",
+          "nativeOutputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
+        },
+        {
+          "requestId": "986a5e1501b44fb6b9af92cbf466225f",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "e5ec1a4e84ca144c65038c33cf210a2b5f038dc17f4ae2af34edea890a04a31a",
+          "decisionDigest": "6586024e3a0a87fd34ff5008e7b1cf3eeec919932923d080ee4d58c9a545fcf9",
+          "receiptDigest": "e88f40a8d616795359c8364573fc8a16dd2fd8ba77066b0421702726df6169ea",
+          "nativeOutputDigest": "a3ba86ce9dc2c9f4aa8f02aaa3725daefb92bd48840fa7f5101af09cac784227"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "e6814d57ecc0418bbe3f7c7e82652313",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "8db2e949ebcedd28b43761f908aa146f0e2d516f9cad68d114ec13c0c936fa0d",
+              "outputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
+            }
+          ]
+        },
+        {
+          "requestId": "986a5e1501b44fb6b9af92cbf466225f",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "ce1821f5a4ef49e5ef1d213fd0070722c31c06a03f7d0afbac1cb1c6bf664ee0",
+              "outputDigest": "a3ba86ce9dc2c9f4aa8f02aaa3725daefb92bd48840fa7f5101af09cac784227"
+            }
+          ]
+        }
+      ],
+      "reservations": 0,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426148571,
+        "deadline": 1789426748571,
+        "spent": 2,
+        "state": "active"
+      },
+      "decisionTimes": [
+        {
+          "requestId": "e6814d57ecc0418bbe3f7c7e82652313",
+          "at": 1789426148637
+        },
+        {
+          "requestId": "986a5e1501b44fb6b9af92cbf466225f",
+          "at": 1789426148715
+        }
+      ],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "invalid-repair",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "worker-tool",
+      "result": "passed",
+      "plannerOutcome": "invalid_stream",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 1,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": false,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "86969d99936b0365c1f5f37a79972fcdf51f25fd012f804ebc073b4e9056e85d",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        }
+      ],
+      "completions": [],
+      "decisions": [],
+      "receipts": [
+        {
+          "requestId": "3f716f74444a4724a8762c4cc335e088",
+          "known": true,
+          "quiescent": false,
+          "handlerDone": 1,
+          "localStop": "cancelled_unknown",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "unknown",
+              "localStop": "original_eof",
+              "bodyDigest": "86969d99936b0365c1f5f37a79972fcdf51f25fd012f804ebc073b4e9056e85d",
+              "outputDigest": null
+            }
+          ]
+        }
+      ],
+      "reservations": 1,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426149368,
+        "deadline": 1789426749368,
+        "spent": 1,
+        "state": "active"
+      },
+      "decisionTimes": [],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "worker-tool",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "disabled-call",
+      "result": "passed",
+      "plannerOutcome": "invalid_stream",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 2,
+        "files": 1,
+        "readBytes": 484
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": false,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "53d06a657fc9f007ad4b4d67f7ff2f66217e056eb0f2260fec7b93e7d7c746f1",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        },
+        {
+          "path": "/responses",
+          "bodyDigest": "d4cc2b1b993db3c11dc620498203cf7b422e6ced86d4f61dd2a07463fcdfb50a",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "none",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 5
+        }
+      ],
+      "completions": [
+        {
+          "requestId": "11ea9366319742029f98cd524fdac588",
+          "acceptedAt": 1789426150209,
+          "calls": [
+            "call_synthetic"
+          ]
+        }
+      ],
+      "decisions": [
+        {
+          "requestId": "11ea9366319742029f98cd524fdac588",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "2f6d4d9fa4b310f93290fe8fa30e5d89b924784b8fc529ad496085f7618c2de7",
+          "decisionDigest": "9a91e90fa316fbeae0acc281f200fde7e5b8bad3673d649b15f24977d30594ed",
+          "receiptDigest": "d1f6aa0c994fa10b880894046f08160b18f332da06f8307e4f9692cccf05b5e0",
+          "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "11ea9366319742029f98cd524fdac588",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "53d06a657fc9f007ad4b4d67f7ff2f66217e056eb0f2260fec7b93e7d7c746f1",
+              "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+            }
+          ]
+        },
+        {
+          "requestId": "36857d894a274be3874af6b6f540d944",
+          "known": true,
+          "quiescent": false,
+          "handlerDone": 1,
+          "localStop": "cancelled_unknown",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "unknown",
+              "localStop": "original_eof",
+              "bodyDigest": "d4cc2b1b993db3c11dc620498203cf7b422e6ced86d4f61dd2a07463fcdfb50a",
+              "outputDigest": null
+            }
+          ]
+        }
+      ],
+      "reservations": 1,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426150117,
+        "deadline": 1789426750117,
+        "spent": 2,
+        "state": "active"
+      },
+      "decisionTimes": [
+        {
+          "requestId": "11ea9366319742029f98cd524fdac588",
+          "at": 1789426150207
+        }
+      ],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "disabled-call",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "repair-tool",
+      "result": "passed",
+      "plannerOutcome": "invalid_stream",
+      "usage": {
+        "assessments": 1,
+        "repairs": 1,
+        "requests": 2,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": false,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "8fa2e4b364c6a4746432dc104e13049d435ca3f6cd5f4ae2f92b9cd8c5489594",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        },
+        {
+          "path": "/responses",
+          "bodyDigest": "8a866e075969525588ef5918ae0a32733424d161344a5ce7d82477dc07a743cc",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "none",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 4
+        }
+      ],
+      "completions": [
+        {
+          "requestId": "823a29c80e2d4f04ba866a683ab25b65",
+          "acceptedAt": 1789426150968,
+          "calls": []
+        }
+      ],
+      "decisions": [
+        {
+          "requestId": "823a29c80e2d4f04ba866a683ab25b65",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "b2f93b274f3ea0180555027e6ad496aa142a0aa5ad37f4f999585de22682422f",
+          "decisionDigest": "6493d3a5ca2267db7919eb9ccae3da680ff57dfe1bc237a04891b4af4c6527c3",
+          "receiptDigest": "daa1f3d605c7b9d21e2c8e832654a9a9724108063014b86b4e763d60913c3bcc",
+          "nativeOutputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "823a29c80e2d4f04ba866a683ab25b65",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "8fa2e4b364c6a4746432dc104e13049d435ca3f6cd5f4ae2f92b9cd8c5489594",
+              "outputDigest": "f7903f4f9ebec76ae4c009961d0a0e1efd94f01eeb0020289c4563a480d43d88"
+            }
+          ]
+        },
+        {
+          "requestId": "b8cffa51910a438cafa50f506d14efad",
+          "known": true,
+          "quiescent": false,
+          "handlerDone": 1,
+          "localStop": "cancelled_unknown",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "unknown",
+              "localStop": "original_eof",
+              "bodyDigest": "8a866e075969525588ef5918ae0a32733424d161344a5ce7d82477dc07a743cc",
+              "outputDigest": null
+            }
+          ]
+        }
+      ],
+      "reservations": 1,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426150904,
+        "deadline": 1789426750904,
+        "spent": 2,
+        "state": "active"
+      },
+      "decisionTimes": [
+        {
+          "requestId": "823a29c80e2d4f04ba866a683ab25b65",
+          "at": 1789426150967
+        }
+      ],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "repair-tool",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "role-reload",
+      "result": "passed",
+      "plannerOutcome": "plan_proposed",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 2,
+        "files": 1,
+        "readBytes": 484
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": true,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "b251fb0cdee20d3ac99cd8fc8d9abc65a063ab6ebe369abdbccffe1fcfac1a1c",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        },
+        {
+          "path": "/responses",
+          "bodyDigest": "e119c8d410fd712e8b3524f22f2f45442a6c03432edfca321cf9eedbd9d0becf",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "none",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 5
+        }
+      ],
+      "completions": [
+        {
+          "requestId": "dbad12497c50404584132e216b94b400",
+          "acceptedAt": 1789426151753,
+          "calls": [
+            "call_synthetic"
+          ]
+        },
+        {
+          "requestId": "d969d59cc2e04e2d8d50953485f24100",
+          "acceptedAt": 1789426151777,
+          "calls": []
+        }
+      ],
+      "decisions": [
+        {
+          "requestId": "dbad12497c50404584132e216b94b400",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "3274b08cbf2b8952f10619e7d8cad47e75fffdde0ba44a6d66de47133960a037",
+          "decisionDigest": "b1712fa8f89123b437d4c5b5305d633a162cd89c2b3c8b880fd71d171b51f372",
+          "receiptDigest": "46e54688bf2cdab1d12114814a215e172124de9fe054801ea2135cfa92140fe1",
+          "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+        },
+        {
+          "requestId": "d969d59cc2e04e2d8d50953485f24100",
+          "verdict": "validated_success",
+          "delivery": "completed",
+          "requestDigest": "292b84445969229c4aed8bac48cba0e02735f4c6e7c57e48d42886c5e5bf3edf",
+          "decisionDigest": "7a97504abf683e6a146fadcba43f2d0ea50c82202fb7e64ca84a701c7e2ac13f",
+          "receiptDigest": "435377e878e9879c028778a0f0b84ac9a213c00fb5d69d9e2befde54537c85f9",
+          "nativeOutputDigest": "c69b8c0acd54e949ebd3af36fbe8d08b3c88f8ca1941a39fc901d375707abc91"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "dbad12497c50404584132e216b94b400",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "b251fb0cdee20d3ac99cd8fc8d9abc65a063ab6ebe369abdbccffe1fcfac1a1c",
+              "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+            }
+          ]
+        },
+        {
+          "requestId": "d969d59cc2e04e2d8d50953485f24100",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "local_eof",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "e119c8d410fd712e8b3524f22f2f45442a6c03432edfca321cf9eedbd9d0becf",
+              "outputDigest": "c69b8c0acd54e949ebd3af36fbe8d08b3c88f8ca1941a39fc901d375707abc91"
+            }
+          ]
+        }
+      ],
+      "reservations": 0,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426151676,
+        "deadline": 1789426751676,
+        "spent": 2,
+        "state": "active"
+      },
+      "decisionTimes": [
+        {
+          "requestId": "dbad12497c50404584132e216b94b400",
+          "at": 1789426151751
+        },
+        {
+          "requestId": "d969d59cc2e04e2d8d50953485f24100",
+          "at": 1789426151776
+        }
+      ],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "role-reload",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "receipt-write",
+      "result": "passed",
+      "plannerOutcome": "invalid_stream",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 1,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": false,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "8d1b2dd2e713d9e63c6fddd7ba596bf2791e499ff0ade62d363d4a180b5388cd",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        }
+      ],
+      "completions": [],
+      "decisions": [],
+      "receipts": [
+        {
+          "requestId": "d3d0ea01fe184f94814fa526ddc3be0d",
+          "known": true,
+          "quiescent": false,
+          "handlerDone": 1,
+          "localStop": "cancelled_unknown",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "unknown",
+              "localStop": "original_error",
+              "bodyDigest": "8d1b2dd2e713d9e63c6fddd7ba596bf2791e499ff0ade62d363d4a180b5388cd",
+              "outputDigest": null
+            }
+          ]
+        }
+      ],
+      "reservations": 1,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426152529,
+        "deadline": 1789426752529,
+        "spent": 1,
+        "state": "active"
+      },
+      "decisionTimes": [],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "receipt-write",
+        "triggered": 1,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "decision-write",
+      "result": "passed",
+      "plannerOutcome": "invalid_stream",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 1,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": false,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "a212a7ecdac3c6066cd2171548fccefe461f16146c7209a412328ddfe2321666",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        }
+      ],
+      "completions": [],
+      "decisions": [],
+      "receipts": [
+        {
+          "requestId": "0eec6e4eabfb46eb8772ee2472fa492e",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "cancelled_unknown",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "a212a7ecdac3c6066cd2171548fccefe461f16146c7209a412328ddfe2321666",
+              "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+            }
+          ]
+        }
+      ],
+      "reservations": 1,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426153248,
+        "deadline": 1789426753248,
+        "spent": 1,
+        "state": "active"
+      },
+      "decisionTimes": [],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "decision-write",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "release-scope",
+      "result": "passed",
+      "plannerOutcome": "invalid_stream",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 1,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": false,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "a94de9fdc8af2dbe9d97cd87e4d8ddb2bec9f2905c9f9a3f5db1904d92665805",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        }
+      ],
+      "completions": [],
+      "decisions": [
+        {
+          "requestId": "770e91cb888446fab9045702925aedbc",
+          "verdict": "validated_success",
+          "delivery": "cancelled_unknown",
+          "requestDigest": "0c9028ade274038c879c2e63b966de03a27b565c3b6a9cef49f08d71baee9291",
+          "decisionDigest": "a09a04349233bf30dba74267eb2ca845261aaa34ba0c6af609bdfccb2097beac",
+          "receiptDigest": "3b3a8e39dc3005808c98ad9d677823a74e584c134dc831ffe015145c15b212a4",
+          "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "770e91cb888446fab9045702925aedbc",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "cancelled_unknown",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "a94de9fdc8af2dbe9d97cd87e4d8ddb2bec9f2905c9f9a3f5db1904d92665805",
+              "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+            }
+          ]
+        }
+      ],
+      "reservations": 0,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426153954,
+        "deadline": 1789426155454,
+        "spent": 1,
+        "state": "active"
+      },
+      "decisionTimes": [],
+      "durabilityEnded": 1789426155703,
+      "fault": {
+        "mode": "release-scope",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "release-request",
+      "result": "passed",
+      "plannerOutcome": "invalid_stream",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 1,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": false,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "7bf0a1776b9a7ee9fc1a1ace7fe619be014034d638247d466396a7a4b375b587",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        }
+      ],
+      "completions": [],
+      "decisions": [
+        {
+          "requestId": "c27d57eb582b44f4805bcae53b182dd4",
+          "verdict": "validated_success",
+          "delivery": "cancelled_unknown",
+          "requestDigest": "bed41b0dc690915c38b2920634be58c0555a2a36bd16554b89f6751c7c0a1fd2",
+          "decisionDigest": "e71af192052bccfa8f09cc05810f1b8a230f074cbd1ce6af99afbf477c745126",
+          "receiptDigest": "631af2253f24360240a057860747da403a67fc94b51e3a73f5258ca93a67f533",
+          "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "c27d57eb582b44f4805bcae53b182dd4",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "cancelled_unknown",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "7bf0a1776b9a7ee9fc1a1ace7fe619be014034d638247d466396a7a4b375b587",
+              "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+            }
+          ]
+        }
+      ],
+      "reservations": 0,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426156382,
+        "deadline": 1789426756382,
+        "spent": 1,
+        "state": "active"
+      },
+      "decisionTimes": [],
+      "durabilityEnded": 1789426157358,
+      "fault": {
+        "mode": "release-request",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "release-lease",
+      "result": "passed",
+      "plannerOutcome": "invalid_stream",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 1,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": false,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "548d844113b60eae8b5519aa9428b4782a82255a70637b4115ca82237ab680a6",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        }
+      ],
+      "completions": [],
+      "decisions": [
+        {
+          "requestId": "7a5424affda14f0bb3403b4228ab65b3",
+          "verdict": "validated_success",
+          "delivery": "cancelled_unknown",
+          "requestDigest": "4d4cd2a9e0d24318ed2b55cce85a4e63fc36c25ebdcee1c53107c3e939f4c143",
+          "decisionDigest": "cf126a45da749ab98d8f5fe8c15104ee1c6fdc742cf8fc7005055a4c8812d89e",
+          "receiptDigest": "cf67368dba51b0f3cada4bd059f56a9c0243b6ad378fbe9135a93936dd0af55b",
+          "nativeOutputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+        }
+      ],
+      "receipts": [
+        {
+          "requestId": "7a5424affda14f0bb3403b4228ab65b3",
+          "known": true,
+          "quiescent": true,
+          "handlerDone": 1,
+          "localStop": "cancelled_unknown",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "provider_completed",
+              "localStop": "original_eof",
+              "bodyDigest": "548d844113b60eae8b5519aa9428b4782a82255a70637b4115ca82237ab680a6",
+              "outputDigest": "9babc565b3e4921df4c6af63589e488d757c608702943e927b1c89ffa74caa5e"
+            }
+          ]
+        }
+      ],
+      "reservations": 0,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426158098,
+        "deadline": 1789426758098,
+        "spent": 1,
+        "state": "active"
+      },
+      "decisionTimes": [],
+      "durabilityEnded": 1789426159080,
+      "fault": {
+        "mode": "release-lease",
+        "triggered": 0,
+        "committed": false
+      }
+    },
+    {
+      "scenario": "unknown",
+      "result": "passed",
+      "plannerOutcome": "route_unavailable",
+      "usage": {
+        "assessments": 1,
+        "repairs": 0,
+        "requests": 1,
+        "files": 0,
+        "readBytes": 0
+      },
+      "settings": {
+        "profile": "router-native-responses-local-v1",
+        "protocol": "planner-probe-responses-read-file-v1",
+        "model": "gpt-6-astra",
+        "reasoning": {
+          "effort": "xhigh",
+          "summary": "auto"
+        },
+        "store": false,
+        "stream": true,
+        "providerOutputTokens": null,
+        "providerMonetaryCap": null
+      },
+      "proposalPresent": false,
+      "physicalRequests": [
+        {
+          "path": "/responses",
+          "bodyDigest": "494017199f5103f75f7cfbf6a1ef2252fbe7786ae36462db59ca1fdfffa4d9a0",
+          "model": "gpt-6-astra",
+          "reasoning": {
+            "effort": "xhigh",
+            "summary": "auto"
+          },
+          "store": false,
+          "stream": true,
+          "include": [
+            "reasoning.encrypted_content"
+          ],
+          "toolChoice": "auto",
+          "tools": [
+            {
+              "name": "read_file",
+              "parameters": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "enum": [
+                      "fixture.txt"
+                    ]
+                  }
+                },
+                "required": [
+                  "path"
+                ],
+                "additionalProperties": false
+              },
+              "strictPresent": false
+            }
+          ],
+          "providerCapFields": [],
+          "inputItems": 2
+        }
+      ],
+      "completions": [],
+      "decisions": [],
+      "receipts": [
+        {
+          "requestId": "d07cc4b354fb4fbdac2498530a560dee",
+          "known": true,
+          "quiescent": false,
+          "handlerDone": 1,
+          "localStop": "cancelled_unknown",
+          "operations": [
+            {
+              "ordinal": 1,
+              "model": "gpt-6-astra",
+              "terminal": "unknown",
+              "localStop": "original_cancel",
+              "bodyDigest": "494017199f5103f75f7cfbf6a1ef2252fbe7786ae36462db59ca1fdfffa4d9a0",
+              "outputDigest": null
+            }
+          ]
+        }
+      ],
+      "reservations": 1,
+      "scope": {
+        "phase": "initial",
+        "started": 1789426159773,
+        "deadline": 1789426759773,
+        "spent": 1,
+        "state": "active"
+      },
+      "decisionTimes": [],
+      "durabilityEnded": null,
+      "fault": {
+        "mode": "unknown",
+        "triggered": 0,
+        "committed": false
+      }
+    }
+  ],
+  "gateway": {
+    "scenario": "read",
+    "result": "passed",
+    "plannerOutcome": "plan_proposed",
+    "stagedFiles": [
+      "experiments/planner-probe/planner.ts",
+      "experiments/planner-probe/native-consumer.ts",
+      "experiments/planner-probe/native-boundary-port.ts",
+      "experiments/planner-probe/native-transport.ts",
+      "experiments/planner-probe/transport.ts",
+      "experiments/planner-probe/reader.ts",
+      "experiments/planner-probe/public-fixture.ts",
+      "experiments/planner-probe/package.json",
+      "experiments/planner-probe/package-lock.json",
+      "experiments/inference-boundary/json.ts",
+      "experiments/inference-boundary/types.ts",
+      "experiments/inference-boundary/protocol.ts",
+      "experiments/inference-boundary/router-policy.ts",
+      "experiments/inference-boundary/native-policy.ts",
+      "experiments/inference-boundary/profiles.ts",
+      "experiments/inference-boundary/profile-ids.ts",
+      "experiments/router-authority-extension/overlay/native-profile.mjs",
+      "experiments/router-authority-extension/overlay/native-planner.mjs",
+      "experiments/router-authority-extension/overlay/planner-plan-schema.mjs",
+      "experiments/router-authority-extension/overlay/native-responses.mjs",
+      "experiments/router-authority-extension/overlay/responses-terminal.mjs",
+      "experiments/router-authority-extension/overlay/scope-profile.mjs",
+      "tests/fixtures/planner/fixture.txt",
+      "tests/fixtures/planner/plan.schema.json"
+    ],
+    "consumerProfile": {
+      "variant": "m0-router-boundary-gateway-768m-uds-v1",
+      "image": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a",
+      "user": "1000:1000",
+      "network": "none",
+      "readOnlyRoot": true,
+      "capDrop": [
+        "ALL"
+      ],
+      "securityOpt": [
+        "no-new-privileges=true"
+      ],
+      "namespaces": {
+        "pid": "",
+        "ipc": "private",
+        "cgroup": "private"
+      },
+      "memory": 134217728,
+      "memorySwap": 134217728,
+      "nanoCpus": 500000000,
+      "pidsLimit": 64,
+      "ulimits": [
+        {
+          "Name": "core",
+          "Hard": 0,
+          "Soft": 0
+        },
+        {
+          "Name": "nofile",
+          "Hard": 256,
+          "Soft": 256
+        }
+      ],
+      "tmpfs": {
+        "/tmp": "rw,noexec,nosuid,nodev,size=8m,uid=1000,gid=1000,mode=0700",
+        "/work": "rw,exec,nosuid,nodev,size=32m,uid=1000,gid=1000,mode=0700"
+      },
+      "log": {
+        "Type": "local",
+        "Config": {
+          "compress": "false",
+          "max-file": "1",
+          "max-size": "2m"
+        }
+      },
+      "mounts": [
+        {
+          "type": "bind",
+          "destination": "/consumer",
+          "writable": false
+        },
+        {
+          "type": "volume",
+          "destination": "/router",
+          "writable": false
+        }
+      ]
+    },
+    "containment": {
+      "inaccessible": [
+        "/state",
+        "/control",
+        "/private",
+        "/config",
+        "/egress",
+        "/router-source",
+        "/probe",
+        "/gaffer",
+        "/consumer/experiments/router-authority-extension/overlay/evaluation-scope.mjs",
+        "/var/run/docker.sock",
+        "/Users",
+        "/consumer/experiments/native-evaluation",
+        "/consumer/experiments/inference-boundary/boundary.ts",
+        "/consumer/experiments/inference-boundary/policy.ts",
+        "/consumer/experiments/router-authority-extension/overlay/authority.mjs"
+      ],
+      "directTcp": "blocked",
+      "management": 404,
+      "readOnlyFixture": true
+    },
+    "usage": {
+      "assessments": 1,
+      "repairs": 0,
+      "requests": 2,
+      "files": 1,
+      "readBytes": 484
+    },
+    "settings": {
+      "profile": "router-native-responses-local-v1",
+      "protocol": "planner-probe-responses-read-file-v1",
+      "model": "gpt-6-astra",
+      "reasoning": {
+        "effort": "xhigh",
+        "summary": "auto"
+      },
+      "store": false,
+      "stream": true,
+      "providerOutputTokens": null,
+      "providerMonetaryCap": null
+    },
+    "supervisorRejections": [
+      "missingReceipt",
+      "receiptDigest",
+      "missingDecision",
+      "pendingReservation",
+      "outputDrift",
+      "role",
+      "policy",
+      "earlyRead",
+      "count",
+      "proposal",
+      "settings",
+      "outcome",
+      "unsupportedOutcome",
+      "questions"
+    ],
+    "invalidCandidateSubmissions": 8,
+    "acknowledgement": {
+      "acknowledged": true,
+      "digest": "8156d72b98ed75da606cf33957fcb7fff89cb873f072206ccae2a1f012106b83",
+      "file": "candidate-8156d72b98ed75da606cf33957fcb7fff89cb873f072206ccae2a1f012106b83.json"
+    },
+    "accepted": {
+      "outcome": "acknowledged_plan_proposal",
+      "artifactDigest": "8156d72b98ed75da606cf33957fcb7fff89cb873f072206ccae2a1f012106b83",
+      "requestIds": [
+        "5760b3f5ca5a4e5cb870acc7ebbdd005",
+        "8d00c9dcbac54b10be349d446dd2d2f5"
+      ],
+      "authority": "proposal_only",
+      "independentlyAccepted": false,
+      "published": false
+    },
+    "durableCandidateDigest": "8156d72b98ed75da606cf33957fcb7fff89cb873f072206ccae2a1f012106b83",
+    "immutableAfterGatewayStop": true,
+    "scopeBefore": {
+      "id": "initial_checks",
+      "phase": "initial",
+      "spec": "{\"authorizationDigest\":\"8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3\",\"caseRef\":\"initial_checks\",\"elapsedMs\":600000,\"id\":\"initial_checks\",\"maxInferenceAttempts\":10,\"maxRefreshOperations\":0,\"phase\":\"initial\"}",
+      "boot": "35059a49-c5d3-406f-9a06-ded686b25584",
+      "started": 1789426176334,
+      "deadline": 1789426776334,
+      "spent": 2,
+      "state": "active"
+    },
+    "scopeAfterSelection": {
+      "id": "initial_checks",
+      "phase": "initial",
+      "spec": "{\"authorizationDigest\":\"8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3\",\"caseRef\":\"initial_checks\",\"elapsedMs\":600000,\"id\":\"initial_checks\",\"maxInferenceAttempts\":10,\"maxRefreshOperations\":0,\"phase\":\"initial\"}",
+      "boot": "35059a49-c5d3-406f-9a06-ded686b25584",
+      "started": 1789426176334,
+      "deadline": 1789426776334,
+      "spent": 2,
+      "state": "active"
+    },
+    "generationBefore": 2,
+    "generationAfter": 3,
+    "cleanup": true
+  },
+  "clarificationGateway": {
+    "scenario": "clarification",
+    "result": "passed",
+    "plannerOutcome": "clarification_proposed",
+    "stagedFiles": [
+      "experiments/planner-probe/planner.ts",
+      "experiments/planner-probe/native-consumer.ts",
+      "experiments/planner-probe/native-boundary-port.ts",
+      "experiments/planner-probe/native-transport.ts",
+      "experiments/planner-probe/transport.ts",
+      "experiments/planner-probe/reader.ts",
+      "experiments/planner-probe/public-fixture.ts",
+      "experiments/planner-probe/package.json",
+      "experiments/planner-probe/package-lock.json",
+      "experiments/inference-boundary/json.ts",
+      "experiments/inference-boundary/types.ts",
+      "experiments/inference-boundary/protocol.ts",
+      "experiments/inference-boundary/router-policy.ts",
+      "experiments/inference-boundary/native-policy.ts",
+      "experiments/inference-boundary/profiles.ts",
+      "experiments/inference-boundary/profile-ids.ts",
+      "experiments/router-authority-extension/overlay/native-profile.mjs",
+      "experiments/router-authority-extension/overlay/native-planner.mjs",
+      "experiments/router-authority-extension/overlay/planner-plan-schema.mjs",
+      "experiments/router-authority-extension/overlay/native-responses.mjs",
+      "experiments/router-authority-extension/overlay/responses-terminal.mjs",
+      "experiments/router-authority-extension/overlay/scope-profile.mjs",
+      "tests/fixtures/planner/fixture.txt",
+      "tests/fixtures/planner/plan.schema.json"
+    ],
+    "consumerProfile": {
+      "variant": "m0-router-boundary-gateway-768m-uds-v1",
+      "image": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a",
+      "user": "1000:1000",
+      "network": "none",
+      "readOnlyRoot": true,
+      "capDrop": [
+        "ALL"
+      ],
+      "securityOpt": [
+        "no-new-privileges=true"
+      ],
+      "namespaces": {
+        "pid": "",
+        "ipc": "private",
+        "cgroup": "private"
+      },
+      "memory": 134217728,
+      "memorySwap": 134217728,
+      "nanoCpus": 500000000,
+      "pidsLimit": 64,
+      "ulimits": [
+        {
+          "Name": "core",
+          "Hard": 0,
+          "Soft": 0
+        },
+        {
+          "Name": "nofile",
+          "Hard": 256,
+          "Soft": 256
+        }
+      ],
+      "tmpfs": {
+        "/tmp": "rw,noexec,nosuid,nodev,size=8m,uid=1000,gid=1000,mode=0700",
+        "/work": "rw,exec,nosuid,nodev,size=32m,uid=1000,gid=1000,mode=0700"
+      },
+      "log": {
+        "Type": "local",
+        "Config": {
+          "compress": "false",
+          "max-file": "1",
+          "max-size": "2m"
+        }
+      },
+      "mounts": [
+        {
+          "type": "bind",
+          "destination": "/consumer",
+          "writable": false
+        },
+        {
+          "type": "volume",
+          "destination": "/router",
+          "writable": false
+        }
+      ]
+    },
+    "containment": {
+      "inaccessible": [
+        "/state",
+        "/control",
+        "/private",
+        "/config",
+        "/egress",
+        "/router-source",
+        "/probe",
+        "/gaffer",
+        "/consumer/experiments/router-authority-extension/overlay/evaluation-scope.mjs",
+        "/var/run/docker.sock",
+        "/Users",
+        "/consumer/experiments/native-evaluation",
+        "/consumer/experiments/inference-boundary/boundary.ts",
+        "/consumer/experiments/inference-boundary/policy.ts",
+        "/consumer/experiments/router-authority-extension/overlay/authority.mjs"
+      ],
+      "directTcp": "blocked",
+      "management": 404,
+      "readOnlyFixture": true
+    },
+    "usage": {
+      "assessments": 1,
+      "repairs": 0,
+      "requests": 1,
+      "files": 0,
+      "readBytes": 0
+    },
+    "settings": {
+      "profile": "router-native-responses-local-v1",
+      "protocol": "planner-probe-responses-read-file-v1",
+      "model": "gpt-6-astra",
+      "reasoning": {
+        "effort": "xhigh",
+        "summary": "auto"
+      },
+      "store": false,
+      "stream": true,
+      "providerOutputTokens": null,
+      "providerMonetaryCap": null
+    },
+    "supervisorRejections": [
+      "missingReceipt",
+      "receiptDigest",
+      "missingDecision",
+      "pendingReservation",
+      "outputDrift",
+      "role",
+      "policy",
+      "earlyRead",
+      "count",
+      "proposal",
+      "settings",
+      "outcome",
+      "unsupportedOutcome",
+      "questions"
+    ],
+    "invalidCandidateSubmissions": 8,
+    "acknowledgement": {
+      "acknowledged": true,
+      "digest": "993812fe73f90028caef08868df2d8b3e604403a822a52b49d5a5733fe651cca",
+      "file": "candidate-993812fe73f90028caef08868df2d8b3e604403a822a52b49d5a5733fe651cca.json"
+    },
+    "accepted": {
+      "outcome": "acknowledged_clarification_proposal",
+      "artifactDigest": "993812fe73f90028caef08868df2d8b3e604403a822a52b49d5a5733fe651cca",
+      "requestIds": [
+        "e8bc7c9ca68b4d288ff34805e6f41f6d"
+      ],
+      "authority": "proposal_only",
+      "independentlyAccepted": false,
+      "published": false
+    },
+    "durableCandidateDigest": "993812fe73f90028caef08868df2d8b3e604403a822a52b49d5a5733fe651cca",
+    "immutableAfterGatewayStop": true,
+    "scopeBefore": {
+      "id": "initial_checks",
+      "phase": "initial",
+      "spec": "{\"authorizationDigest\":\"8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3\",\"caseRef\":\"initial_checks\",\"elapsedMs\":600000,\"id\":\"initial_checks\",\"maxInferenceAttempts\":10,\"maxRefreshOperations\":0,\"phase\":\"initial\"}",
+      "boot": "6b6c86e6-31c8-4af4-b6ac-91f76376799b",
+      "started": 1789426142643,
+      "deadline": 1789426742643,
+      "spent": 1,
+      "state": "active"
+    },
+    "scopeAfterSelection": {
+      "id": "initial_checks",
+      "phase": "initial",
+      "spec": "{\"authorizationDigest\":\"8f9f5c5940450fdea34b1fa12b637acd07f7d4271bfd8363ee08a6af677fc5d3\",\"caseRef\":\"initial_checks\",\"elapsedMs\":600000,\"id\":\"initial_checks\",\"maxInferenceAttempts\":10,\"maxRefreshOperations\":0,\"phase\":\"initial\"}",
+      "boot": "6b6c86e6-31c8-4af4-b6ac-91f76376799b",
+      "started": 1789426142643,
+      "deadline": 1789426742643,
+      "spent": 1,
+      "state": "active"
+    },
+    "generationBefore": 2,
+    "generationAfter": 3,
+    "cleanup": true
+  },
+  "legacy": {
+    "cases": [
+      {
+        "profile": "compatible",
+        "scenario": "read",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "read-repair",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "unknown-fallback",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "direct",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "repair",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "empty",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "whitespace",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "stale",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "duplicate",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "invalid-repair",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "repair-tool",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "injection",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "delay-read",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "delay-proposal",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "delay-repair",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "delay-eof",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "missing-receipt",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "mismatched-receipt",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "zero-auth",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "partial",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "unavailable",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "cancel",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "hold",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "receipt-cancel",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "scope-expiry",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "lease-expiry",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "changed-graph",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "graph-at-receipt",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "graph-after-decision",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "post-decision-cancel",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "persist-failure",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "read-budget",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "file-budget",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "request-budget",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "request-bytes",
+        "result": "passed"
+      },
+      {
+        "profile": "compatible",
+        "scenario": "response-bytes",
+        "result": "passed"
+      },
+      {
+        "profile": "native",
+        "scenario": "read",
+        "result": "passed"
+      },
+      {
+        "profile": "native",
+        "scenario": "repair",
+        "result": "passed"
+      },
+      {
+        "profile": "native",
+        "scenario": "terminal-text-only",
+        "result": "passed"
+      },
+      {
+        "profile": "native",
+        "scenario": "failed",
+        "result": "passed"
+      },
+      {
+        "profile": "native",
+        "scenario": "incomplete",
+        "result": "passed"
+      },
+      {
+        "profile": "native",
+        "scenario": "partial",
+        "result": "passed"
+      },
+      {
+        "profile": "native",
+        "scenario": "receipt-cancel",
+        "result": "passed"
+      }
+    ],
+    "runtime": {
+      "hostNode": "v24.19.0",
+      "server": {
+        "Platform": {
+          "Name": "Docker Desktop 4.86.0 (236216)"
+        },
+        "Version": "29.7.2",
+        "ApiVersion": "1.55",
+        "MinAPIVersion": "1.40",
+        "Os": "linux",
+        "Arch": "arm64",
+        "Components": [
+          {
+            "Name": "Engine",
+            "Version": "29.7.2",
+            "Details": {
+              "ApiVersion": "1.55",
+              "Arch": "arm64",
+              "BuildTime": "Wed Aug  5 18:28:35 2026",
+              "Experimental": "false",
+              "GitCommit": "6a43e3d",
+              "GoVersion": "go1.26.5",
+              "KernelVersion": "6.12.76-linuxkit",
+              "MinAPIVersion": "1.40",
+              "Module": "github.com/moby/moby/v2",
+              "ModuleVersion": "v2.0.0+unknown",
+              "Os": "linux"
+            }
+          },
+          {
+            "Name": "containerd",
+            "Version": "v2.2.5",
+            "Details": {
+              "GitCommit": "e53c7c1516c3b2bff98eb76f1f4117477e6f4e66"
+            }
+          },
+          {
+            "Name": "runc",
+            "Version": "1.3.6",
+            "Details": {
+              "GitCommit": "v1.3.6-0-g491b69ba"
+            }
+          },
+          {
+            "Name": "docker-init",
+            "Version": "0.19.0",
+            "Details": {
+              "GitCommit": "de40ad0"
+            }
+          }
+        ],
+        "GitCommit": "6a43e3d",
+        "GoVersion": "go1.26.5",
+        "KernelVersion": "6.12.76-linuxkit",
+        "BuildTime": "2026-08-05T18:28:35.000000000+00:00"
+      },
+      "cgroupVersion": "2",
+      "securityOptions": [
+        "name=seccomp,profile=builtin",
+        "name=cgroupns"
+      ],
+      "image": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a"
+    },
+    "cleanup": {
+      "verified": true,
+      "containersRemaining": 0,
+      "volumesRemaining": 0,
+      "errors": []
+    },
+    "sourceDigests": {
+      "experiments/inference-boundary/boundary.test.ts": "184fd24601e8c08d47007cd69e4d4d51b9458ee3ffb29a43ce439f2c7f386553",
+      "experiments/inference-boundary/boundary.ts": "3832d864948d053d11491860b3b2809c6d251a37dc856edf76fb21f11d60a8b5",
+      "experiments/inference-boundary/demo.ts": "448bef33591c5408942adb0ea4a44c6473bac90831962dcabbd339b102b91fa3",
+      "experiments/inference-boundary/fixture.ts": "acc2080543fe4bd228900bab5b0b57ccfb13aca690c1d0da27cf221bc1bd412b",
+      "experiments/inference-boundary/json.ts": "7f26eb4cf1d4544f55a7b5a7c69cb8dc41de8aaa0c8db13596f59e981944c180",
+      "experiments/inference-boundary/native-policy.ts": "25406955d223131d95f71a60d4911f0d6d25b166e86381fd173adfcff2d661d8",
+      "experiments/inference-boundary/opencode-tools.json": "b6ff6fcd423b5ac7e41656efb4694bcd2c9be9c49de9a49242b868235c699ece",
+      "experiments/inference-boundary/package-lock.json": "10a402c72fae1b535ebbe43a8cbb6ddae3e706b9a41346c2da6416a66be361ba",
+      "experiments/inference-boundary/package.json": "d7fbd0eb5deda9d574787e57b1018baef704edec2c1c0a8b0bf4843a5cb7ea6c",
+      "experiments/inference-boundary/policy.ts": "5f8a47cdca1fd40be20798d5dabac6903eeea9115442bc984e2b78db96957f16",
+      "experiments/inference-boundary/profile-ids.ts": "8aa9ed93f6d3adbe3a0ccafd54133aaf5707d4626d06844bd64515381aaeb696",
+      "experiments/inference-boundary/profiles.ts": "39f0188220f0ed280e364be883563097599701147d9670372e5c86d440d781e8",
+      "experiments/inference-boundary/protocol.ts": "1aaf1e88190f2e1eff8afad7c4dfad2d51ba9ef69c0d79a728294d45afce3310",
+      "experiments/inference-boundary/prove.ts": "14cac8933113c90d5748599540195df07a8557ea057322a7596c611d26de93a9",
+      "experiments/inference-boundary/router-fixture.ts": "4efee902e2fe6646871074fe6b5b2e4d9b92988147280f3b83216026b4c2ce42",
+      "experiments/inference-boundary/router-gate.test.ts": "e2b65d7ccdad99c73f0cd34959558e499efed07eb6ee9d33938fc249b493b14c",
+      "experiments/inference-boundary/router-policy.ts": "49d12ebf5643c5809bb6d534a88ac33722fa4fe41c890bd245be4fe471c0675f",
+      "experiments/inference-boundary/tsconfig.json": "e7fdc78d6c95f978eb355c76d005733baf15e891719f85e9a001e67fb65d435d",
+      "experiments/inference-boundary/types.ts": "19bcd334cb4423ac4032ea28572e69f29ec95569edd37161a780902c49fcf1ef",
+      "experiments/inference-boundary/wait.ts": "c56f31eb6d68762bf4d083156a69d98ea01bc4942a5a05400a0de80f2d317e1d",
+      "experiments/router-boundary-bridge/authority.ts": "26a442c018ebe94f0d367daa1f40378d204798073990e481be93cfbecc580e57",
+      "experiments/router-boundary-bridge/gateway.ts": "2f41bc5cf3451f0f64990adfcecbd09e9db0ffb991f5b0e1d144558f26ba0a75",
+      "experiments/router-boundary-bridge/isolation.ts": "b246a46a4fc01c0edf744d68203f714ed51e6f7e9cbe221343bff9ab69c6f7da",
+      "experiments/router-boundary-bridge/lifecycle.test.ts": "47de28ab6881b2e3083fcdc8bd7e7ebdba3db638672492fcb338ab3b217bfd8f",
+      "experiments/router-boundary-bridge/lifecycle.ts": "c41639f35f240affbe4778af3e88464bda6f94d4b3b979d5bb766c9bd57d74e4",
+      "experiments/router-boundary-bridge/package-lock.json": "339f74d15342bdb7229b56031a415487222fa4dd27cbd505ee6157951b088d5e",
+      "experiments/router-boundary-bridge/package.json": "a0f80f8a760c8722abdbc0c5091a96f97ff93e26eb92c942906d237cecfeadef",
+      "experiments/router-boundary-bridge/run.ts": "051c823d28b545c50655bcbb3ddec97d7c98f32cbe12aa8ac4e48619a1fa7d62",
+      "experiments/router-boundary-bridge/supervise.ts": "fac191039364b7f197cc8ff1738919c62e58339ab610c0d1b8014793d403e4b2",
+      "experiments/router-boundary-bridge/tsconfig.json": "894336a6d0953d006061e64ac4ae1cf7606eca0cedc1ac78df576e6bbbcf7a4e",
+      "experiments/router-boundary-bridge/worker.ts": "8e5574feabab1ee2775526c373a89c48a2475235fb7666709dcfb1038b19941a",
+      "experiments/router-authority-extension/chat-fixtures.mjs": "120115421a09892e1288a7e0de643e3d260f49245d546dc5e94364c858f3bbab",
+      "experiments/router-authority-extension/chat-terminal.test.mjs": "8ac6b6b98cf3b2ca6b80615a3d3c8b77d99b52195a17b329fe7c2820134e4d2a",
+      "experiments/router-authority-extension/Dockerfile": "234b427b682cbcc0fea30c05e24fdc9c1b1b0028a674a9b26730d97dd25512fa",
+      "experiments/router-authority-extension/evaluation-scope.test.mjs": "a29387a0fbbaea3e33c74b3c49d099b9fe8d4dbae779835f0f05fa7a5e2662a3",
+      "experiments/router-authority-extension/integration.mjs": "69e8508d32c991f12a14f1f305d3975581012a6d4915e58ce0ae8a6cc7c69c76",
+      "experiments/router-authority-extension/loader.mjs": "98e15a52182833efe85cbe475bc7701f02cc48f861b4a1848e3a6a4e513ec35a",
+      "experiments/router-authority-extension/native-fixtures.mjs": "f2cf11a973d0a8035830d8670ef1bed9dc9e8b6d577c3f4ba8df2aaccb68464d",
+      "experiments/router-authority-extension/native-integration.mjs": "c56a040002fadceec597efddf86397339af960f2c08864fa6c34a50f49122057",
+      "experiments/router-authority-extension/native-local-integration.mjs": "b3fa45de9760a34ca219cfa58050092edae878039a53c436ad3e2555f09465f8",
+      "experiments/router-authority-extension/overlay/authority.mjs": "7d6f3e460169d99b6b8af2e4935d26f3ff36678e66f80f5f70f4f64fb38b7e86",
+      "experiments/router-authority-extension/overlay/chat-terminal.mjs": "07e06cde6caeb1f0fd5bcbac0be9d6a7486afb3c34de7d77f8b414a8335009c0",
+      "experiments/router-authority-extension/overlay/deployment-owner.mjs": "a3ef177075816bc6c4de14b943864e72a56a4bde12b8021b48032a7b4ed8e6d2",
+      "experiments/router-authority-extension/overlay/evaluation-scope.mjs": "816fc21ffec05e223bb1fc3970f90746c720db83f1d2d9d8413807c20fcb7702",
+      "experiments/router-authority-extension/overlay/native-planner.mjs": "2aaa3a5a50f03ad612abfcef36722705f49ed92c973c13988027a84cd9a94ef2",
+      "experiments/router-authority-extension/overlay/native-profile.mjs": "307134694b3c5a70ea1582b4c933bacd14236cb23518edd62ba768ac685851bc",
+      "experiments/router-authority-extension/overlay/native-responses.mjs": "79927f64a911da1b4ee1427a7ff3f7de225c303deefdc5d84188d2b4a70c0642",
+      "experiments/router-authority-extension/overlay/native-transport.mjs": "f151b6363016e5edff5273b9a16aea4eb6f1b8cc86c7dbff4e7ea562f76d8f6c",
+      "experiments/router-authority-extension/overlay/opencode-profile.mjs": "2ff535ca043db2fa0269b0b430daa2e3786a4daec9f143420e7b0c2181eb55ca",
+      "experiments/router-authority-extension/overlay/planner-plan-schema.mjs": "1af55197a0f44d69867be5987c116d4e7066950fb9a951cab6da689c6aa75f1d",
+      "experiments/router-authority-extension/overlay/responses-terminal.mjs": "d4e2e792b631f4101db6dc7c0d679f3ace4aee428a2c70d386a34cf56bc415f1",
+      "experiments/router-authority-extension/overlay/scope-profile.mjs": "c71f6caaf4f5dce1c00a2ced23b369be7ea6681ae725c366bbba08b8570ea689",
+      "experiments/router-authority-extension/package.json": "1b028cc34bbf05e89d4a3b9842da17d384e5997a1736f863ef8ca70d57c92a7a",
+      "experiments/router-authority-extension/patches.mjs": "0eeb206a3b22ffaf921e04277a8aeec271d21eb860a6f70c9dfcf9be7a69e168",
+      "experiments/router-authority-extension/policy-regressions.mjs": "cf72e099290577f244f597ad84280a2598fd2452855e4169ff87d4bb551712b7",
+      "experiments/router-authority-extension/request-regressions.mjs": "b9c0427ece24d2febba8132d65793e50da4cc4bc152832dc9f797f6e8742081d",
+      "experiments/router-authority-extension/responses-terminal.test.mjs": "a83e1ba8edce55efa2cbf67eb9bbf42b9798210c95a4db9c0b604b7b555a268c",
+      "experiments/router-authority-extension/run-in-container.mjs": "65d7b62d619030333ac92f5cbd820bc4fb2e1d74966c135b18a15f63f2856203",
+      "experiments/router-authority-extension/runtime-identity.json": "ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f",
+      "experiments/router-authority-extension/source-lock.json": "681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c",
+      "experiments/router-authority-extension/transport-failures.mjs": "e4c99a65df8dcb7ef18ec1e34378c3a0b27797e5551b900b83cbc9f1b834dc8e",
+      "experiments/router-authority-extension/upstream-dependencies.lock.json": "87551d12f5d946cc1c98cf8e01cb4ec7d632f67dff0fb3554d0f556881843d05",
+      "experiments/router-authority-extension/upstream-package.json": "670515d6f190581be53f98f7e4a8764ab0a1ac3bc60858466ebfaea59fc77de7",
+      "experiments/planner-probe/capabilities.ts": "d2e5ee897888ba8cd9cf6e59602f55e1c124af9a290573a30f017efcfb28aad8",
+      "experiments/planner-probe/demo.ts": "25d1927331fb70f0f0552bc19006bee7bbb36b63fdd315e06d6ae236538680a6",
+      "experiments/planner-probe/evidence/legacy-regression-run.json": "92cd7c32d8620e435ba680c12f5d86e6a1d8c8cba30244b5dba625a745766537",
+      "experiments/planner-probe/evidence/native-integration-run.json": "7688ceb9231cc9336073bbb0fe1e137b2acc9a27985c95eb18e1fbf2b412eef4",
+      "experiments/planner-probe/evidence/native-preparation-run.json": "c7f7f1f39a53f1dd077c93b734dcc1a92d32a66765eb66d46cf4e2146687e089",
+      "experiments/planner-probe/fixture.ts": "45aa35907e1c8c4c6b4d16e6d83ff54c841fc32bb62cdf89c1034812509d0860",
+      "experiments/planner-probe/native-boundary-port.ts": "6f151e6ea79ef42c8995e202441181c38f41293d59cc58109c2b0012765a3933",
+      "experiments/planner-probe/native-collect.ts": "f5cc55b0823d061fbb24bd6418849b3884d45bed1dd5ce92a89e6260bab13403",
+      "experiments/planner-probe/native-consumer.ts": "fa7ac36685794c4d0fb3007b651387235f02f9888d274eef4894e57a2c52be2f",
+      "experiments/planner-probe/native-evidence.ts": "930ae551140337a2164d26151161e385dcfc085401fa168004bc8b59bfe8ee1b",
+      "experiments/planner-probe/native-fixture.ts": "5d5b04df0a4e9c98c7bbe2fd239f820931194c71dada14a3c8274e415efcc3a2",
+      "experiments/planner-probe/native-gateway-prove.ts": "0ab4c7ce3e708766cbf96c8826dd1f2fd188d8eb8ff165fb64e5aa3b30c39ab2",
+      "experiments/planner-probe/native-planner.test.ts": "d285a65a3570820cbe42ce28af27e6d87214a5f0c0c788e6e98d8d38c9fb1907",
+      "experiments/planner-probe/native-profile.ts": "ce4a2256e2ff58136c6f9cf419e4f59254a00930e0c7a93972d7196ef9dd4a1a",
+      "experiments/planner-probe/native-prove.ts": "2ba02175c380ceba556b4fe3b5c81e0a13c19fe0413d32dc1042f8ea969aae97",
+      "experiments/planner-probe/native-router-integration.mjs": "2af5e28d46e845c6cab92d753f89346316d6fe1f8f483cc816c60a79d61e085c",
+      "experiments/planner-probe/native-router-prove.ts": "0f88e847036d0487945af719f54c6b5d2a42e79d4823bdd04d370b09f2a65917",
+      "experiments/planner-probe/native-shared.test.ts": "df8778ebb060445e7213a3e564e6c147c357fc7e1ab1c52c0a6db44b510f8134",
+      "experiments/planner-probe/native-staging.ts": "d81d39689a9855466eb21b07089714084eba9600beccf5291fd2803f185fb685",
+      "experiments/planner-probe/native-transport.ts": "88e4bc9c65d497f0dca4cf3ef3e4580160835eaa350cca70f47015ba6c98c118",
+      "experiments/planner-probe/package-lock.json": "8a9a9881e0d48b3e98a52ffc56a81344b15a004c9827efc387edf733126e7237",
+      "experiments/planner-probe/package.json": "1986909d3de242b5964d4bbf2f658b2d738547ddadd51da6755177d57d59f067",
+      "experiments/planner-probe/planner.test.ts": "8f89bc2d05ae217b9d9f1bce21ce1085cec131d6373056221e18289be242fb2d",
+      "experiments/planner-probe/planner.ts": "27b323bd3492d29a3b88f544a0569a50f6b8f4d62d616ec10c9ea1c4959869c9",
+      "experiments/planner-probe/prove.ts": "756086a5101c958434e57685323bbd009db469fa9458b48b659584a13d531902",
+      "experiments/planner-probe/public-fixture.ts": "017a70154c329347744e3303c5d55d9d669d751647b5f5d2d87d2c1329e8b85c",
+      "experiments/planner-probe/reader.ts": "de2930b80a6c0dd9336910dad74b4668019a4629540a6f91677f0ee8bff370dc",
+      "experiments/planner-probe/router-consumer.ts": "7cbd5988228a004a37c9deb1b6d6c20a7b739d272a86b3eab0fc37eb1b0427d3",
+      "experiments/planner-probe/router-gateway.ts": "cafd9013af6d297bf504ad2f9d5b0ce69cb757c71ce0d6731023f5334cbc0a05",
+      "experiments/planner-probe/router-prove.ts": "7eb37a04959a1fcc297350f38df836f772ee22fdfe2dfa9162c81feec84831a7",
+      "experiments/planner-probe/router-supervise.ts": "2b9c2f56338a08d4c704bcb1b28c5fa0a974d4482bb63afbf17a8fe881aa70d7",
+      "experiments/planner-probe/transport.ts": "ca79a9a5586c90e25f05d24c8eb2baefcec55ebe7113f8aecb3f4e2b669d1f28",
+      "experiments/planner-probe/tsconfig.json": "9656dff150d8ce8e649ab7932a8e9148a20a55ffbaf87cf63cc1a7f7e52d52cf",
+      "experiments/planner-probe/tsconfig.native.json": "7d644f6008b3276431aa3fe90dfab554230c1365953876cd460e626f8eff337a",
+      "tests/fixtures/planner/fixture.txt": "cfbd4f521e876bf7c58582c01f8e6d79b81f8203ba2d98f8fd2258853bffe4e5",
+      "tests/fixtures/planner/plan.schema.json": "487ff8ab83fb394a68e97127c34ecfecfb8e4c304f76bea115c346f1e08d57e3"
+    }
+  },
+  "limitations": [
+    "Synthetic HTTP only; no model or deployed subscription conformance.",
+    "Standalone matrix uses a trusted combined gateway/consumer fixture; staged containment and acknowledgement have a separate production gateway proof.",
+    "Planner-to-worker registry proof verifies selection and scope continuity; worker binary execution is covered by its own adapter suite.",
+    "Initial live suite requires all consumer and concrete deployment reviews before one shared 10-attempt/600000ms clock."
+  ]
+}

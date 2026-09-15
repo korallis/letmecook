@@ -1,0 +1,1470 @@
+{
+  "schema": 1,
+  "evidenceKind": "actual_synthetic_legacy_regression_after_transport_refactor",
+  "baseCommit": "793bd19e14f36da02c6836f7d52dd56f30f4b53b",
+  "issueComplete": false,
+  "realProviderCalled": false,
+  "fixture": {
+    "observedAt": "2026-09-14T20:38:05.043Z",
+    "command": "npm --prefix experiments/planner-probe run prove",
+    "result": "synthetic_planner_passed_live_blocked",
+    "runtime": {
+      "node": "v24.19.0",
+      "platform": "darwin",
+      "architecture": "arm64"
+    },
+    "tests": [
+      {
+        "name": "failed fixture setup closes listeners and removes owned state; cleanup failures retain both errors",
+        "result": "passed"
+      },
+      {
+        "name": "actual synthetic HTTP tool continuation returns a schema-valid proposal without authority",
+        "result": "passed"
+      },
+      {
+        "name": "malformed output gets one charged repair; repeated invocation cannot replenish allowance",
+        "result": "passed"
+      },
+      {
+        "name": "one valid repair and no tools can complete the original assessment",
+        "result": "passed"
+      },
+      {
+        "name": "schema rejects duplicate keys, extra authority, stale revision, invalid references and too many questions",
+        "result": "passed"
+      },
+      {
+        "name": "a model echoing repository authority demands cannot mutate policy or dispatch work",
+        "result": "passed"
+      },
+      {
+        "name": "request_budget_exhausted",
+        "result": "passed"
+      },
+      {
+        "name": "response_budget_exhausted",
+        "result": "passed"
+      },
+      {
+        "name": "request and response byte bounds terminate without repair",
+        "result": "passed"
+      },
+      {
+        "name": "assessments=0",
+        "result": "passed"
+      },
+      {
+        "name": "requests=0",
+        "result": "passed"
+      },
+      {
+        "name": "files=0",
+        "result": "passed"
+      },
+      {
+        "name": "readBytes=1",
+        "result": "passed"
+      },
+      {
+        "name": "requests=1",
+        "result": "passed"
+      },
+      {
+        "name": "disabled assessment, repair, request and read budgets are distinct and never silently widened",
+        "result": "passed"
+      },
+      {
+        "name": "multiple reads consume one aggregate file budget",
+        "result": "passed"
+      },
+      {
+        "name": "route_unavailable",
+        "result": "passed"
+      },
+      {
+        "name": "partial_failure",
+        "result": "passed"
+      },
+      {
+        "name": "route outage and partial stream are terminal, without repair or fallback",
+        "result": "passed"
+      },
+      {
+        "name": "before dispatch",
+        "result": "passed"
+      },
+      {
+        "name": "active transport cancellation",
+        "result": "passed"
+      },
+      {
+        "name": "total time before dispatch",
+        "result": "passed"
+      },
+      {
+        "name": "total time after observed dispatch",
+        "result": "passed"
+      },
+      {
+        "name": "cancel before dispatch and during inference; total time expires without retry",
+        "result": "passed"
+      },
+      {
+        "name": "denied stream",
+        "result": "passed"
+      },
+      {
+        "name": "denied stream",
+        "result": "passed"
+      },
+      {
+        "name": "denied stream",
+        "result": "passed"
+      },
+      {
+        "name": "unregistered tools, path escape and partial tool calls never dispatch reads",
+        "result": "passed"
+      },
+      {
+        "name": "strict schema, Responses fields and reasoning effort remain unsupported by the accepted profile",
+        "result": "passed"
+      },
+      {
+        "name": "trusted reader allows only pinned regular-file bytes and rejects filesystem boundaries",
+        "result": "passed"
+      },
+      {
+        "name": "full schema-2 policy identity, graph and envelope are revision inputs; transport takes an immutable copy",
+        "result": "passed"
+      },
+      {
+        "name": "undefined",
+        "result": "passed"
+      },
+      {
+        "name": "malformed",
+        "result": "passed"
+      },
+      {
+        "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "result": "passed"
+      },
+      {
+        "name": "transport validates safe request identity and independently refuses tools when locally disabled",
+        "result": "passed"
+      }
+    ],
+    "sourceArtifact": {
+      "sha256": "d86256566a8aaed5dd92b69e8afbda8896688bae2eec35d3aa49f02d94ce3b40",
+      "bytes": 18786
+    }
+  },
+  "router": {
+    "observedAt": "2026-09-14T20:33:54.949Z",
+    "command": "GAFFER_BRIDGE_ROUTER_SOURCE=<pinned-public-router-source> GAFFER_BRIDGE_DOCKER_CONTEXT=desktop-linux node experiments/planner-probe/router-prove.ts <output.json>",
+    "result": "synthetic-planner-router-passed",
+    "image": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a",
+    "sourceArtifact": {
+      "sha256": "189be30bcf539c49c164bcf0ff78fbbac64fc54fdb16a6a679a326b3a2df5523",
+      "bytes": 2760029
+    },
+    "consumerStagedFiles": [
+      "experiments/planner-probe/planner.ts",
+      "experiments/planner-probe/transport.ts",
+      "experiments/planner-probe/reader.ts",
+      "experiments/planner-probe/public-fixture.ts",
+      "experiments/planner-probe/router-consumer.ts",
+      "experiments/planner-probe/package.json",
+      "experiments/inference-boundary/json.ts",
+      "experiments/inference-boundary/types.ts",
+      "experiments/inference-boundary/protocol.ts",
+      "experiments/inference-boundary/router-policy.ts",
+      "tests/fixtures/planner/fixture.txt",
+      "tests/fixtures/planner/plan.schema.json"
+    ],
+    "consumerPackages": [
+      "ajv@8.20.0",
+      "fast-deep-equal",
+      "fast-uri",
+      "json-schema-traverse",
+      "require-from-string"
+    ],
+    "unchangedRuntimeSourceDigests": {
+      "experiments/inference-boundary/boundary.test.ts": "184fd24601e8c08d47007cd69e4d4d51b9458ee3ffb29a43ce439f2c7f386553",
+      "experiments/inference-boundary/boundary.ts": "cd488103292816d2eebca671d2ebc1b2858fcd861e89a3fc8c1f462c703816bc",
+      "experiments/inference-boundary/demo.ts": "448bef33591c5408942adb0ea4a44c6473bac90831962dcabbd339b102b91fa3",
+      "experiments/inference-boundary/fixture.ts": "acc2080543fe4bd228900bab5b0b57ccfb13aca690c1d0da27cf221bc1bd412b",
+      "experiments/inference-boundary/json.ts": "7f26eb4cf1d4544f55a7b5a7c69cb8dc41de8aaa0c8db13596f59e981944c180",
+      "experiments/inference-boundary/package-lock.json": "10a402c72fae1b535ebbe43a8cbb6ddae3e706b9a41346c2da6416a66be361ba",
+      "experiments/inference-boundary/package.json": "d7fbd0eb5deda9d574787e57b1018baef704edec2c1c0a8b0bf4843a5cb7ea6c",
+      "experiments/inference-boundary/policy.ts": "dc08d21d54f1e4f4f97f00acbd5a75ac7a6d432e2468e8d2b166c660d31d5793",
+      "experiments/inference-boundary/protocol.ts": "e9d6385b21170f96af4268c27b4b7af589d96db1de84e9abf5f651ed1691bd74",
+      "experiments/inference-boundary/prove.ts": "76bf6a73c17523e749d5389c10fcb4616708463e19e19fdba8f07a9168a7d750",
+      "experiments/inference-boundary/router-fixture.ts": "4efee902e2fe6646871074fe6b5b2e4d9b92988147280f3b83216026b4c2ce42",
+      "experiments/inference-boundary/router-gate.test.ts": "e2b65d7ccdad99c73f0cd34959558e499efed07eb6ee9d33938fc249b493b14c",
+      "experiments/inference-boundary/router-policy.ts": "f96d412045572b935d73722e1fca3f8b5d9910a051eb504d8021af9f05bf324a",
+      "experiments/inference-boundary/tsconfig.json": "e7fdc78d6c95f978eb355c76d005733baf15e891719f85e9a001e67fb65d435d",
+      "experiments/inference-boundary/types.ts": "055ef07825d4e9ac5699db6bc205fe83d24dadc979c2c6af05bb3715f683769c",
+      "experiments/inference-boundary/wait.ts": "c56f31eb6d68762bf4d083156a69d98ea01bc4942a5a05400a0de80f2d317e1d",
+      "experiments/planner-probe/planner.ts": "27b323bd3492d29a3b88f544a0569a50f6b8f4d62d616ec10c9ea1c4959869c9",
+      "experiments/planner-probe/public-fixture.ts": "017a70154c329347744e3303c5d55d9d669d751647b5f5d2d87d2c1329e8b85c",
+      "experiments/planner-probe/reader.ts": "de2930b80a6c0dd9336910dad74b4668019a4629540a6f91677f0ee8bff370dc",
+      "experiments/planner-probe/router-consumer.ts": "b5cdb384760b1e8c0b15c22ebc2acc95dec640d89aa29f5bcb19dcccc2d6a78e",
+      "experiments/planner-probe/router-gateway.ts": "cafd9013af6d297bf504ad2f9d5b0ce69cb757c71ce0d6731023f5334cbc0a05",
+      "experiments/planner-probe/router-prove.ts": "093d39337ad5b4b97e00315857165e0c008b9384fd15673c6fc0d54fc3d66e63",
+      "experiments/planner-probe/router-supervise.ts": "2b9c2f56338a08d4c704bcb1b28c5fa0a974d4482bb63afbf17a8fe881aa70d7",
+      "experiments/planner-probe/transport.ts": "ca79a9a5586c90e25f05d24c8eb2baefcec55ebe7113f8aecb3f4e2b669d1f28",
+      "experiments/router-authority-extension/Dockerfile": "234b427b682cbcc0fea30c05e24fdc9c1b1b0028a674a9b26730d97dd25512fa",
+      "experiments/router-authority-extension/chat-fixtures.mjs": "120115421a09892e1288a7e0de643e3d260f49245d546dc5e94364c858f3bbab",
+      "experiments/router-authority-extension/chat-terminal.test.mjs": "8ac6b6b98cf3b2ca6b80615a3d3c8b77d99b52195a17b329fe7c2820134e4d2a",
+      "experiments/router-authority-extension/integration.mjs": "69e8508d32c991f12a14f1f305d3975581012a6d4915e58ce0ae8a6cc7c69c76",
+      "experiments/router-authority-extension/loader.mjs": "98e15a52182833efe85cbe475bc7701f02cc48f861b4a1848e3a6a4e513ec35a",
+      "experiments/router-authority-extension/native-fixtures.mjs": "f2cf11a973d0a8035830d8670ef1bed9dc9e8b6d577c3f4ba8df2aaccb68464d",
+      "experiments/router-authority-extension/native-integration.mjs": "a1bdda8cf3f4ca5936d53b221e29563e83b214484911310bac6ff5e37fe0a0f4",
+      "experiments/router-authority-extension/overlay/authority.mjs": "8e3d7e468ae5615ae11a1174f873cdb830df973b0bd2e96588b6c08da3969522",
+      "experiments/router-authority-extension/overlay/chat-terminal.mjs": "06200729149fa8930feedde594b595d4edfa5c65c9d70681ca0149fbec3b62ea",
+      "experiments/router-authority-extension/overlay/responses-terminal.mjs": "bf55c9d71cceb34825f7dec7e6160f446c79aa936c74edfa00396e824dd65ab2",
+      "experiments/router-authority-extension/package.json": "24a811a3da06a4ea3afdbcf246aa5d81095e00ce59d5ace368f4f6ea8f499b18",
+      "experiments/router-authority-extension/patches.mjs": "b88aad69c8b0b25d686f2b7c33fd535082f6049091757489419ec18dd3f3ab58",
+      "experiments/router-authority-extension/policy-regressions.mjs": "cf72e099290577f244f597ad84280a2598fd2452855e4169ff87d4bb551712b7",
+      "experiments/router-authority-extension/request-regressions.mjs": "b9c0427ece24d2febba8132d65793e50da4cc4bc152832dc9f797f6e8742081d",
+      "experiments/router-authority-extension/responses-terminal.test.mjs": "a83e1ba8edce55efa2cbf67eb9bbf42b9798210c95a4db9c0b604b7b555a268c",
+      "experiments/router-authority-extension/run-in-container.mjs": "b7238dd6dd68724b698c92c617835c429da55ebed53e7f5f57d575716f3cd295",
+      "experiments/router-authority-extension/runtime-identity.json": "ea24c26b3e6046bf8a2da9910873f119c6f179ebdd2fbe6c0a114d98a5e5801f",
+      "experiments/router-authority-extension/source-lock.json": "681c0bb278724a70fa5f36c337683008b1c0ef89d3c1d42f8fa888fc4a84e46c",
+      "experiments/router-authority-extension/transport-failures.mjs": "e4c99a65df8dcb7ef18ec1e34378c3a0b27797e5551b900b83cbc9f1b834dc8e",
+      "experiments/router-authority-extension/upstream-dependencies.lock.json": "87551d12f5d946cc1c98cf8e01cb4ec7d632f67dff0fb3554d0f556881843d05",
+      "experiments/router-authority-extension/upstream-package.json": "670515d6f190581be53f98f7e4a8764ab0a1ac3bc60858466ebfaea59fc77de7",
+      "experiments/router-boundary-bridge/authority.ts": "7729937330a972b03c5e149eb349c1a220c19af4fd289657af00a3a9bd77a1a0",
+      "experiments/router-boundary-bridge/gateway.ts": "2f41bc5cf3451f0f64990adfcecbd09e9db0ffb991f5b0e1d144558f26ba0a75",
+      "experiments/router-boundary-bridge/isolation.ts": "b246a46a4fc01c0edf744d68203f714ed51e6f7e9cbe221343bff9ab69c6f7da",
+      "experiments/router-boundary-bridge/lifecycle.test.ts": "b82d6e1efb971a7cb95a8f2f7529a4445eda99d13313c5806cba0209583a2a0f",
+      "experiments/router-boundary-bridge/lifecycle.ts": "fdf049ca8e7c7822ea5fcedbbd5b9aa1169160808224a837b4ddf5f77157942c",
+      "experiments/router-boundary-bridge/package-lock.json": "339f74d15342bdb7229b56031a415487222fa4dd27cbd505ee6157951b088d5e",
+      "experiments/router-boundary-bridge/package.json": "a0f80f8a760c8722abdbc0c5091a96f97ff93e26eb92c942906d237cecfeadef",
+      "experiments/router-boundary-bridge/run.ts": "051c823d28b545c50655bcbb3ddec97d7c98f32cbe12aa8ac4e48619a1fa7d62",
+      "experiments/router-boundary-bridge/supervise.ts": "fac191039364b7f197cc8ff1738919c62e58339ab610c0d1b8014793d403e4b2",
+      "experiments/router-boundary-bridge/tsconfig.json": "894336a6d0953d006061e64ac4ae1cf7606eca0cedc1ac78df576e6bbbcf7a4e",
+      "experiments/router-boundary-bridge/worker.ts": "8e5574feabab1ee2775526c373a89c48a2475235fb7666709dcfb1038b19941a",
+      "tests/fixtures/planner/fixture.txt": "cfbd4f521e876bf7c58582c01f8e6d79b81f8203ba2d98f8fd2258853bffe4e5",
+      "tests/fixtures/planner/plan.schema.json": "487ff8ab83fb394a68e97127c34ecfecfb8e4c304f76bea115c346f1e08d57e3"
+    },
+    "cases": [
+      {
+        "profile": "compatible",
+        "scenario": "read",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 2,
+          "files": 1,
+          "readBytes": 484
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "read-repair",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 1,
+          "requests": 3,
+          "files": 1,
+          "readBytes": 484
+        },
+        "consumerRequests": 3,
+        "syntheticOriginalSends": 3,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "unknown-fallback",
+        "result": "passed",
+        "outcome": "route_unavailable",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [],
+        "retainedReservations": 1,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "direct",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "repair",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 1,
+          "requests": 2,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "empty",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 1,
+          "requests": 2,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "whitespace",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 1,
+          "requests": 2,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "stale",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 1,
+          "requests": 2,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "duplicate",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 1,
+          "requests": 2,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "invalid-repair",
+        "result": "passed",
+        "outcome": "invalid_plan",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 1,
+          "requests": 2,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "repair-tool",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 1,
+          "requests": 2,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "quiescent_failure"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "injection",
+        "result": "passed",
+        "outcome": "invalid_plan",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 2,
+          "files": 1,
+          "readBytes": 484
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "delay-read",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 2,
+          "files": 1,
+          "readBytes": 484
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "delay-proposal",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "delay-repair",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 1,
+          "requests": 2,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "delay-eof",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 2,
+          "files": 1,
+          "readBytes": 484
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "missing-receipt",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [],
+        "retainedReservations": 1,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "mismatched-receipt",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [],
+        "retainedReservations": 1,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "zero-auth",
+        "result": "passed",
+        "outcome": "route_unavailable",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 0,
+        "decisionVerdicts": [
+          "quiescent_failure"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "partial",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [],
+        "retainedReservations": 1,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "unavailable",
+        "result": "passed",
+        "outcome": "route_unavailable",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "quiescent_failure"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "cancel",
+        "result": "passed",
+        "outcome": "route_unavailable",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [],
+        "retainedReservations": 1,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "hold",
+        "result": "passed",
+        "outcome": "time_budget_exhausted_unknown",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [],
+        "retainedReservations": 1,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "receipt-cancel",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "quiescent_failure"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "scope-expiry",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "quiescent_failure"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "lease-expiry",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "quiescent_failure"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "changed-graph",
+        "result": "passed",
+        "outcome": "route_unavailable",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 0,
+        "decisionVerdicts": [],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "graph-at-receipt",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "quiescent_failure"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "graph-after-decision",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "post-decision-cancel",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "persist-failure",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [],
+        "retainedReservations": 1,
+        "closeFailed": true,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "read-budget",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "quiescent_failure"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "file-budget",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "quiescent_failure"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "request-budget",
+        "result": "passed",
+        "outcome": "request_budget_exhausted",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 1,
+          "readBytes": 484
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "request-bytes",
+        "result": "passed",
+        "outcome": "request_budget_exhausted",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 0,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 0,
+        "syntheticOriginalSends": 0,
+        "decisionVerdicts": [],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "compatible",
+        "scenario": "response-bytes",
+        "result": "passed",
+        "outcome": "response_budget_exhausted",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "native",
+        "scenario": "read",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 2,
+          "files": 1,
+          "readBytes": 484
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "native",
+        "scenario": "repair",
+        "result": "passed",
+        "outcome": "plan_proposed",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 1,
+          "requests": 2,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "native",
+        "scenario": "terminal-text-only",
+        "result": "passed",
+        "outcome": "invalid_plan",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 1,
+          "requests": 2,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 2,
+        "syntheticOriginalSends": 2,
+        "decisionVerdicts": [
+          "validated_success",
+          "validated_success"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "native",
+        "scenario": "failed",
+        "result": "passed",
+        "outcome": "partial_failure",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "quiescent_failure"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "native",
+        "scenario": "incomplete",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "quiescent_failure"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "native",
+        "scenario": "partial",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [],
+        "retainedReservations": 1,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      },
+      {
+        "profile": "native",
+        "scenario": "receipt-cancel",
+        "result": "passed",
+        "outcome": "invalid_stream",
+        "authority": "proposal_only",
+        "usage": {
+          "assessments": 1,
+          "repairs": 0,
+          "requests": 1,
+          "files": 0,
+          "readBytes": 0
+        },
+        "consumerRequests": 1,
+        "syntheticOriginalSends": 1,
+        "decisionVerdicts": [
+          "quiescent_failure"
+        ],
+        "retainedReservations": 0,
+        "closeFailed": false,
+        "stopped": {
+          "gatewayPid": 0,
+          "workerPid": 0,
+          "gatewayExit": 0,
+          "workerExit": 0,
+          "execAfterStopDenied": true
+        }
+      }
+    ],
+    "cleanup": {
+      "verified": true,
+      "containersRemaining": 0,
+      "volumesRemaining": 0,
+      "errors": []
+    },
+    "filesOutsideLegacyRuntimeChangedAfterRouterRun": [
+      "experiments/planner-probe/capabilities.ts",
+      "experiments/planner-probe/native-planner.test.ts",
+      "experiments/planner-probe/native-transport.ts",
+      "experiments/planner-probe/package.json",
+      "experiments/planner-probe/tsconfig.json"
+    ]
+  }
+}

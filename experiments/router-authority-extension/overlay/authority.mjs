@@ -561,7 +561,7 @@ export function installAuthority(db) {
         requireThat(response.headers.get('content-type')?.includes('text/event-stream') && response.body, 'unsupported_provider_response');
         const native=ctx.executor.provider==='codex';
         const observer=native ? createResponsesTerminalObserver({maxBytes:1048576}) : createChatTerminalObserver({maxBytes:1048576,expectedModel:ctx.executor.model});
-        const nativeCodec=nativeProfile?new NativeResponsesStream(nativeProfile):null;
+        const nativeCodec=nativeProfile?new NativeResponsesStream(nativeProfile,JSON.parse(ctx.native.request)):null;
         reader=response.body.getReader();
         let transportClosed=false;let responseBytes=0;
         const finalize=reason=>{

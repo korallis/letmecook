@@ -1,0 +1,189 @@
+{
+  "schema": 1,
+  "evidence": "offline-planner-integration-ci-reconciliation",
+  "live": false,
+  "runtimeCommit": "466eda5238ae12f46d97344633cedd06a42b02be",
+  "sourceDigests": {
+    "experiments/harness/staging.ts": "285ffe965c5d9faa9cdac9932c5419e8576e5147d915cee72e3728deb9d9c66a",
+    "experiments/harness/staging.test.ts": "fb238035b183a95f9b68bdccd35ff4ecb08dfd2f528a66ab84d4072a01036c16",
+    "experiments/router-authority-extension/process-output.mjs": "218c1355947067927ffbf0391c268b52dbd1ff38069c82db7fa62d3128f2b104",
+    "experiments/router-authority-extension/native-local-integration.mjs": "8f0dbd9c907d41ff22b959fdaf9950f6c83eca8e8099fd79fd722535d0617bcc",
+    "experiments/native-evaluation/portable-output.test.mjs": "ae11b192721500f9092acaf61eebebf62d13f6ada6a2eba3e9016b8d7036a4a5",
+    "experiments/native-evaluation/portable-run.mjs": "6b1fcf9830740914bea45acbb6aeb4c515081584ad540266f4cbd93c10663a8f",
+    "experiments/native-evaluation/package.json": "d54adf29eecd2333417b9631a3fa2babdfd130281455fa074d6f41d4469b9d45",
+    ".github/workflows/router-authority-extension.yml": "abf0f9303716dee5bc6f2cd879a3c50a3d4eddcde59a29c866787182be1d0122"
+  },
+  "initialCI": {
+    "head": "3ce8c0f10bad22a5969f9fbe7d7a2d297146a84c",
+    "harness": "https://github.com/korallis/letmecook/actions/runs/34903689306",
+    "authority": "https://github.com/korallis/letmecook/actions/runs/34903687203",
+    "failures": [
+      "two isolated harness import closures lacked the pure planner dependency",
+      "portable baseline32 evidence JSON was truncated before parsing"
+    ],
+    "rawLog": {
+      "name": "gaffer-pr73-authority-ci-failure-20260914.log",
+      "sha256": "5cb023f332725151fa969996391ff9d2898f42d566c8588fc552c51262063b2c",
+      "bytes": 103435
+    }
+  },
+  "pipeBackpressure": {
+    "before": {
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "bytes": 190988,
+      "sha256": "40ac4adc7ad1cfa4cdbd7ba13f9a902029012aa1ef4fd727529824622cc8249d",
+      "valid": false
+    },
+    "after": {
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "bytes": 838347,
+      "sha256": "697282688d09498e7b0dc9a035efb2062eeb91d0b14eedb0dd470eacf7257170",
+      "valid": true
+    },
+    "beforeRaw": {
+      "name": "gaffer-pr73-ci-backpressure-20260914.out.json",
+      "sha256": "40ac4adc7ad1cfa4cdbd7ba13f9a902029012aa1ef4fd727529824622cc8249d",
+      "bytes": 190988
+    },
+    "afterRaw": {
+      "name": "gaffer-pr73-ci-backpressure-after-20260914.out.json",
+      "sha256": "697282688d09498e7b0dc9a035efb2062eeb91d0b14eedb0dd470eacf7257170",
+      "bytes": 838347
+    },
+    "physicalAttemptsInSeparateSyntheticBaselineFixture": 32
+  },
+  "portable": {
+    "runtime": {
+      "node": "v24.21.0",
+      "platform": "linux",
+      "arch": "arm64"
+    },
+    "cases": [
+      "roundtrip",
+      "aggregate10",
+      "baseline32",
+      "registry",
+      "registry-unknown",
+      "role-reload",
+      "release-scope",
+      "release-token",
+      "release-request",
+      "release-lease",
+      "release-frame",
+      "slow-request",
+      "slow-scope",
+      "slow-token",
+      "slow-grant",
+      "admission-write",
+      "debit-write",
+      "receipt-write",
+      "decision-write",
+      "altered-translation",
+      "unknown-retry",
+      "terminal-no-eof",
+      "redirect",
+      "retry-deadline",
+      "retry-cancel",
+      "unauthorized401",
+      "unauthorized403",
+      "charged-unreleased-retry",
+      "override-rejectUnauthorized:false",
+      "override-dispatcher:null",
+      "override-agent:false",
+      "override-ca:null",
+      "override-key:\"\"",
+      "override-cert:null",
+      "transport",
+      "bootstrap-source",
+      "bootstrap-runtime",
+      "bootstrap-lock"
+    ],
+    "raw": {
+      "name": "gaffer-pr73-ci-after-20260914.out.json",
+      "sha256": "c66e33e5d5b11e470aaae7ace174bfbb537841ce03356b82f957872bd81fbe1f",
+      "bytes": 1939144
+    }
+  },
+  "actualChat": {
+    "cases": [
+      "edit",
+      "write",
+      "ask",
+      "unknown",
+      "receipt-stop",
+      "changed-graph",
+      "containment"
+    ],
+    "result": "selected-cases-passed",
+    "cleanup": {
+      "verified": true,
+      "containersRemaining": 0,
+      "volumesRemaining": 0,
+      "errors": []
+    },
+    "raw": {
+      "name": "gaffer-pr73-ci-harness-router7-20260914.json",
+      "sha256": "cf179fc0133829e084bbe470e1b24eca648418f89ac0989a008784f000b63093",
+      "bytes": 694791
+    }
+  },
+  "historicalFixture": {
+    "memoryMiB": 512,
+    "first": {
+      "result": "blocked",
+      "completedCases": 3,
+      "failedMode": "edit",
+      "workerOOMKilled": true,
+      "observedRequests": 0,
+      "cleanup": {
+        "verified": true,
+        "containersRemaining": 0,
+        "volumesRemaining": 0
+      },
+      "raw": {
+        "name": "gaffer-pr73-ci-harness-fixture13-20260914.json",
+        "sha256": "3e91140a11cb3eeda9eeaa62102e3516996b9a8c313229a503d86d243d4d88fa",
+        "bytes": 80920
+      }
+    },
+    "serialReplay": {
+      "result": "synthetic-harness-and-containment-passed",
+      "caseCount": 13,
+      "cleanup": {
+        "verified": true,
+        "containersRemaining": 0,
+        "volumesRemaining": 0
+      },
+      "raw": {
+        "name": "gaffer-pr73-ci-harness-fixture13-serial-20260914.json",
+        "sha256": "8097f9fcd3b3fa9fb391a127a3bc991495d58d585e3be9463584ee4a602f52ae",
+        "bytes": 502837
+      }
+    },
+    "limitation": "The historical512MiB worker OOMed before inference in the first concurrent run and passed its serial replay with identical source and limits; this memory profile showed intermittent behavior. The original failure is retained and no limit was widened."
+  },
+  "checks": {
+    "plannerTests": 147,
+    "harnessTests": 16,
+    "nativeEvaluationScopeAndOutputTests": 23,
+    "newOutputTests": 3,
+    "types": [
+      "planner",
+      "planner-native",
+      "harness",
+      "native-evaluation"
+    ],
+    "reader": "build and check passed"
+  },
+  "limitations": [
+    "Synthetic checks only; no live provider call or live evaluation scope started.",
+    "The portable source regression is not an amd64/CI containment conformance claim.",
+    "A separate fresh review and passing GitHub checks are required for the final published head."
+  ]
+}

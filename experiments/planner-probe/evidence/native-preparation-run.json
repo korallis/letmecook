@@ -1,0 +1,415 @@
+{
+  "schema": 1,
+  "observedAt": "2026-09-14T20:38:49.195Z",
+  "result": "native_consumer_preparation_passed_shared_admission_blocked",
+  "evidenceKind": "in_memory_consumer_contract_only",
+  "nativeProtocol": "planner-probe-responses-read-file-v1",
+  "issueComplete": false,
+  "liveRouterCalled": false,
+  "syntheticRouterCalled": false,
+  "physicalInferenceAttempts": 0,
+  "sharedNativeAdmission": "blocked_missing_accepted_planner_profile_and_codec",
+  "sharedReceiptConformance": "not_exercised",
+  "deploymentConformance": "not_exercised",
+  "command": "npm --prefix experiments/planner-probe run prove:native",
+  "runtime": {
+    "node": "v26.8.2",
+    "platform": "darwin",
+    "architecture": "arm64"
+  },
+  "budget": {
+    "assessments": 1,
+    "repairs": 1,
+    "requests": 3,
+    "files": 1,
+    "readBytes": 4096,
+    "requestBytes": 32768,
+    "responseBytes": 32768,
+    "outputTokens": null,
+    "totalMs": 5000
+  },
+  "sourceDigests": {
+    "experiments/planner-probe/planner.ts": "27b323bd3492d29a3b88f544a0569a50f6b8f4d62d616ec10c9ea1c4959869c9",
+    "experiments/planner-probe/transport.ts": "ca79a9a5586c90e25f05d24c8eb2baefcec55ebe7113f8aecb3f4e2b669d1f28",
+    "experiments/planner-probe/native-transport.ts": "88e4bc9c65d497f0dca4cf3ef3e4580160835eaa350cca70f47015ba6c98c118",
+    "experiments/planner-probe/native-fixture.ts": "5d5b04df0a4e9c98c7bbe2fd239f820931194c71dada14a3c8274e415efcc3a2",
+    "experiments/planner-probe/native-planner.test.ts": "d285a65a3570820cbe42ce28af27e6d87214a5f0c0c788e6e98d8d38c9fb1907",
+    "experiments/planner-probe/native-prove.ts": "3aeeda4c193d6dfcd1cab3fb95f00ebc2e8c8013964b466b5366ebfb77807d24",
+    "experiments/planner-probe/reader.ts": "de2930b80a6c0dd9336910dad74b4668019a4629540a6f91677f0ee8bff370dc",
+    "experiments/planner-probe/public-fixture.ts": "017a70154c329347744e3303c5d55d9d669d751647b5f5d2d87d2c1329e8b85c",
+    "experiments/planner-probe/capabilities.ts": "6d9f7315fd1c2a28f561071c13ae4c621832260b5e587e18e69169535362dc71",
+    "experiments/planner-probe/package.json": "3c8e1b36622d6b0d199747babfea4b1d9409b47611ea3d9a01b86cf379b8dd9d",
+    "experiments/planner-probe/package-lock.json": "8a9a9881e0d48b3e98a52ffc56a81344b15a004c9827efc387edf733126e7237",
+    "experiments/planner-probe/tsconfig.json": "9656dff150d8ce8e649ab7932a8e9148a20a55ffbaf87cf63cc1a7f7e52d52cf",
+    "experiments/planner-probe/tsconfig.native.json": "7d644f6008b3276431aa3fe90dfab554230c1365953876cd460e626f8eff337a",
+    "experiments/inference-boundary/json.ts": "7f26eb4cf1d4544f55a7b5a7c69cb8dc41de8aaa0c8db13596f59e981944c180",
+    "experiments/inference-boundary/types.ts": "055ef07825d4e9ac5699db6bc205fe83d24dadc979c2c6af05bb3715f683769c",
+    "experiments/inference-boundary/protocol.ts": "e9d6385b21170f96af4268c27b4b7af589d96db1de84e9abf5f651ed1691bd74",
+    "experiments/inference-boundary/router-policy.ts": "f96d412045572b935d73722e1fca3f8b5d9910a051eb504d8021af9f05bf324a",
+    "tests/fixtures/planner/fixture.txt": "cfbd4f521e876bf7c58582c01f8e6d79b81f8203ba2d98f8fd2258853bffe4e5",
+    "tests/fixtures/planner/plan.schema.json": "487ff8ab83fb394a68e97127c34ecfecfb8e4c304f76bea115c346f1e08d57e3"
+  },
+  "tests": [
+    {
+      "name": "native direct final keeps exact settings and a schema-3 redacted projection",
+      "result": "passed"
+    },
+    {
+      "name": "native read/final preserves ordered encrypted state and original call pairing",
+      "result": "passed"
+    },
+    {
+      "name": "a new session cannot reuse one native transport to reset its allowance",
+      "result": "passed"
+    },
+    {
+      "name": "a native plan cannot cite snapshot evidence before it has been read",
+      "result": "passed"
+    },
+    {
+      "name": "read/final/repair charges all three requests and preserves blank terminal output",
+      "result": "passed"
+    },
+    {
+      "name": "malformed",
+      "result": "passed"
+    },
+    {
+      "name": "empty-output",
+      "result": "passed"
+    },
+    {
+      "name": "whitespace",
+      "result": "passed"
+    },
+    {
+      "name": "stale",
+      "result": "passed"
+    },
+    {
+      "name": "duplicate-key",
+      "result": "passed"
+    },
+    {
+      "name": "only one repair is allowed for invalid, blank, stale and duplicate-key plans",
+      "result": "passed"
+    },
+    {
+      "name": "disabled-file",
+      "result": "passed"
+    },
+    {
+      "name": "disabled-bytes",
+      "result": "passed"
+    },
+    {
+      "name": "duplicate",
+      "result": "passed"
+    },
+    {
+      "name": "escape",
+      "result": "passed"
+    },
+    {
+      "name": "extra-property",
+      "result": "passed"
+    },
+    {
+      "name": "duplicate-key",
+      "result": "passed"
+    },
+    {
+      "name": "worker-tool",
+      "result": "passed"
+    },
+    {
+      "name": "native discovery rejects disabled, duplicate, escaped, extra-property and worker tool calls before a read",
+      "result": "passed"
+    },
+    {
+      "name": "after read",
+      "result": "passed"
+    },
+    {
+      "name": "repair",
+      "result": "passed"
+    },
+    {
+      "name": "native final and repair independently reject further discovery",
+      "result": "passed"
+    },
+    {
+      "name": "failed",
+      "result": "passed"
+    },
+    {
+      "name": "incomplete",
+      "result": "passed"
+    },
+    {
+      "name": "refusal",
+      "result": "passed"
+    },
+    {
+      "name": "mixed",
+      "result": "passed"
+    },
+    {
+      "name": "brokenReasoning",
+      "result": "passed"
+    },
+    {
+      "name": "duplicateIds",
+      "result": "passed"
+    },
+    {
+      "name": "badCall",
+      "result": "passed"
+    },
+    {
+      "name": "activeCall",
+      "result": "passed"
+    },
+    {
+      "name": "wrongModel",
+      "result": "passed"
+    },
+    {
+      "name": "invalid or provisional native output is terminal without repair",
+      "result": "passed"
+    },
+    {
+      "name": "read",
+      "result": "passed"
+    },
+    {
+      "name": "repair",
+      "result": "passed"
+    },
+    {
+      "name": "proposal",
+      "result": "passed"
+    },
+    {
+      "name": "consumer releases neither evidence nor repair until its boundary port releases completion",
+      "result": "passed"
+    },
+    {
+      "name": "route_unavailable",
+      "result": "passed"
+    },
+    {
+      "name": "invalid_stream",
+      "result": "passed"
+    },
+    {
+      "name": "partial_failure",
+      "result": "passed"
+    },
+    {
+      "name": "receipt_unverified",
+      "result": "passed"
+    },
+    {
+      "name": "receipt_mismatched",
+      "result": "passed"
+    },
+    {
+      "name": "persistence_failed",
+      "result": "passed"
+    },
+    {
+      "name": "lease_expired",
+      "result": "passed"
+    },
+    {
+      "name": "unknown_original_work",
+      "result": "passed"
+    },
+    {
+      "name": "boundary refusal, unknown work, original receipt and persistence failures never trigger repair or replacement",
+      "result": "passed"
+    },
+    {
+      "name": "before dispatch",
+      "result": "passed"
+    },
+    {
+      "name": "after request before release",
+      "result": "passed"
+    },
+    {
+      "name": "native cancellation before request and at delayed release is terminal",
+      "result": "passed"
+    },
+    {
+      "name": "native deadline is fixed and cannot be reset by invocation or boundary release",
+      "result": "passed"
+    },
+    {
+      "name": "full native private policy identity participates in revision while settings and policy are immutable copies",
+      "result": "passed"
+    },
+    {
+      "name": "workerProtocol",
+      "result": "passed"
+    },
+    {
+      "name": "workerRole",
+      "result": "passed"
+    },
+    {
+      "name": "tool",
+      "result": "passed"
+    },
+    {
+      "name": "path",
+      "result": "passed"
+    },
+    {
+      "name": "effort",
+      "result": "passed"
+    },
+    {
+      "name": "model",
+      "result": "passed"
+    },
+    {
+      "name": "cap",
+      "result": "passed"
+    },
+    {
+      "name": "schema",
+      "result": "passed"
+    },
+    {
+      "name": "impersonation",
+      "result": "passed"
+    },
+    {
+      "name": "worker profile, role, schema, path and cap substitution are rejected at native consumer selection",
+      "result": "passed"
+    },
+    {
+      "name": "settings",
+      "result": "passed"
+    },
+    {
+      "name": "tools",
+      "result": "passed"
+    },
+    {
+      "name": "encrypted",
+      "result": "passed"
+    },
+    {
+      "name": "call",
+      "result": "passed"
+    },
+    {
+      "name": "result",
+      "result": "passed"
+    },
+    {
+      "name": "session",
+      "result": "passed"
+    },
+    {
+      "name": "settings, tool, encrypted continuation and call/result drift are rejected before another port call",
+      "result": "passed"
+    },
+    {
+      "name": "assessments=0",
+      "result": "passed"
+    },
+    {
+      "name": "requests=0",
+      "result": "passed"
+    },
+    {
+      "name": "requestBytes=1",
+      "result": "passed"
+    },
+    {
+      "name": "responseBytes=1",
+      "result": "passed"
+    },
+    {
+      "name": "requests=1",
+      "result": "passed"
+    },
+    {
+      "name": "repairs=0",
+      "result": "passed"
+    },
+    {
+      "name": "native budgets remain finite, explicit and distinct from unavailable provider caps",
+      "result": "passed"
+    },
+    {
+      "name": "untrusted repository demands cannot change the native contract or dispatch authority",
+      "result": "passed"
+    },
+    {
+      "name": "identity",
+      "result": "passed"
+    },
+    {
+      "name": "acceptedAt",
+      "result": "passed"
+    },
+    {
+      "name": "drift",
+      "result": "passed"
+    },
+    {
+      "name": "exception",
+      "result": "passed"
+    },
+    {
+      "name": "unsafe-code",
+      "result": "passed"
+    },
+    {
+      "name": "release metadata is checked and policy drift at release prevents read or repair",
+      "result": "passed"
+    }
+  ],
+  "observation": {
+    "outcome": "plan_proposed",
+    "authority": "proposal_only",
+    "usage": {
+      "assessments": 1,
+      "repairs": 1,
+      "requests": 3,
+      "files": 1,
+      "readBytes": 484
+    },
+    "settings": {
+      "profile": "router-native-responses-local-v1",
+      "protocol": "planner-probe-responses-read-file-v1",
+      "model": "gpt-6-astra",
+      "reasoning": {
+        "effort": "xhigh",
+        "summary": "auto"
+      },
+      "store": false,
+      "stream": true,
+      "providerOutputTokens": null,
+      "providerMonetaryCap": null
+    },
+    "nativeCallIdentityPreserved": true,
+    "repeatedRunCached": true,
+    "toolChoices": [
+      "auto",
+      "none",
+      "none"
+    ],
+    "providerCapFields": []
+  },
+  "cleanup": {
+    "kernelResourcesCreated": false,
+    "providerResourcesCreated": false,
+    "fixture": "in_memory_only"
+  }
+}
