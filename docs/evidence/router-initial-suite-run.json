@@ -1,0 +1,353 @@
+{
+  "schema": 1,
+  "evidence": "actual-default-consumers-production-deployment-synthetic",
+  "live": false,
+  "issueComplete": false,
+  "implementationSource": "28822245f6a3d6d7ed25003295d8b5e1927ec013",
+  "parentSource": "8a465af16cb34c108e6c563925acc738c0e4da41",
+  "routerSource": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+  "binary": "01edb5839aa10d5b09133fedcb335a062ecad6e82552933bb14f71756f2b296b",
+  "runtime": {
+    "node": "v24.21.0",
+    "arch": "arm64",
+    "image": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a"
+  },
+  "checks": {
+    "defaultControlClientSuiteTests": 31,
+    "typeScript": "passed",
+    "ordinaryProductionSuite": "passed",
+    "liveCalls": 0
+  },
+  "source": {
+    "manifestDigest": "53afb9bb16a283d0fb6a8309d7f4fa56fb0adf73b2dc7b4d5b04e8ef4350910a",
+    "gitBlobFilesVerified": 190,
+    "lockedRuntimeDependencyFilesVerified": 537,
+    "allFileBytesVerified": true,
+    "generatedEvidenceExcluded": true,
+    "dependencies": {
+      "ajv": "8.20.0",
+      "fast-deep-equal": "3.1.3",
+      "fast-uri": "3.1.7",
+      "json-schema-traverse": "1.0.0",
+      "require-from-string": "2.0.2"
+    },
+    "stages": {
+      "continuity": {
+        "files": 15,
+        "digest": "3716427c3b083dbb31eea6fe12ce2ebccdd9673e23c4bdf237f2577f3b47bc4e"
+      },
+      "planner": {
+        "files": 562,
+        "digest": "1e1c604fe4e74efb836dc5742e2151dbcd285ea453d3aae35e8397304a366994"
+      },
+      "worker": {
+        "files": 12,
+        "digest": "78cee8dea4813cd8cb0f411ea4cbbe1088ecdbd7b855169488b8019b7c38ab64"
+      }
+    }
+  },
+  "timing": {
+    "variant": "initial-suite-v1",
+    "sessions": {
+      "continuity": {
+        "firstOutputMs": 60000,
+        "idleMs": 30000,
+        "totalMs": 75000,
+        "wallMs": 90000
+      },
+      "planner": {
+        "firstOutputMs": 90000,
+        "idleMs": 45000,
+        "totalMs": 120000,
+        "wallMs": 150000
+      },
+      "worker": {
+        "firstOutputMs": 90000,
+        "idleMs": 45000,
+        "totalMs": 120000,
+        "wallMs": 180000
+      }
+    },
+    "acknowledgementMarginPerPhaseMs": 15000,
+    "stopMarginMs": 15000,
+    "requiredBeforeWorkerMs": 585000,
+    "notMeasuredLiveLatency": true
+  },
+  "ordinary": {
+    "case": "normal",
+    "evidence": "production-initial-suite-synthetic",
+    "faultLoader": false,
+    "proofResult": "passed",
+    "suiteResult": "passed",
+    "retainedDigest": "07b85405fa422d940266481c9584c6fe3f5cd8ae22863ffd2b1a4192918f68bf",
+    "sourceManifestDigest": "53afb9bb16a283d0fb6a8309d7f4fa56fb0adf73b2dc7b4d5b04e8ef4350910a",
+    "physicalSyntheticSends": 6,
+    "physicalEvidenceBasis": "retained_gateway_result",
+    "scopeSpent": 6,
+    "scopeStarted": true,
+    "phaseCount": 4,
+    "qualifiedPhases": 4,
+    "testCleanup": true,
+    "consumerCleanup": true,
+    "packetDigest": "362824fe9eb702c5530d262b50127e446af09b1af0aa10ae4a11f941e15551e1",
+    "clockStartedAtPrepare": false,
+    "originalScopeIdUnchanged": true,
+    "originalScopeStartUnchanged": true,
+    "originalScopeDeadlineUnchanged": true,
+    "scopeCeilings": {
+      "physicalAttempts": 10,
+      "elapsedMs": 600000,
+      "refreshAttempts": 0
+    },
+    "phases": [
+      {
+        "phase": "worker",
+        "sessionWallMs": 180000,
+        "grantDeadline": 1789427000327,
+        "sessionDeadline": 1789426985327,
+        "requiredRemainingMs": 585000,
+        "outcome": "completed_candidate",
+        "physicalOriginalOperations": 2,
+        "artifactDigest": "c72dd075606f034ed7fdc9ac585642b5808837038a69b692333a41d5ad14d7a2",
+        "durableCandidateAcknowledged": true,
+        "independentArtifactObserved": true
+      },
+      {
+        "phase": "planner",
+        "sessionWallMs": 150000,
+        "grantDeadline": 1789426977743,
+        "sessionDeadline": 1789426962743,
+        "requiredRemainingMs": 390000,
+        "outcome": "acknowledged_plan_proposal",
+        "physicalOriginalOperations": 2,
+        "artifactDigest": "cf96f4fa98c776590a56d14c967596ebfa7f77af86d887bc2a5a551e88a256ac",
+        "durableCandidateAcknowledged": true
+      },
+      {
+        "phase": "continuity_a",
+        "sessionWallMs": 90000,
+        "grantDeadline": 1789426933150,
+        "sessionDeadline": 1789426918150,
+        "requiredRemainingMs": 225000,
+        "outcome": "continuity_transport_completed",
+        "physicalOriginalOperations": 1,
+        "independentArtifactObserved": true
+      },
+      {
+        "phase": "continuity_b",
+        "sessionWallMs": 90000,
+        "grantDeadline": 1789426939725,
+        "sessionDeadline": 1789426924725,
+        "requiredRemainingMs": 120000,
+        "outcome": "continuity_transport_completed",
+        "physicalOriginalOperations": 1,
+        "independentArtifactObserved": true
+      }
+    ],
+    "continuity": {
+      "distinctLiveSubscriptions": "pending",
+      "headroom": "unknown",
+      "issueComplete": false,
+      "packetDigest": "362824fe9eb702c5530d262b50127e446af09b1af0aa10ae4a11f941e15551e1",
+      "paidFallback": "denied",
+      "profileDigest": "873e6756b65521e35ec86c37dd3777b49d523565eb5bbd4700d6746cdac2a7b7",
+      "refresh": "denied",
+      "requests": [
+        {
+          "caseRef": "continuity_a",
+          "connectionRef": "connection_a",
+          "decisionDigest": "289e43be26852b8948339fde4d9c08b05dfefce38df0dabb09d14d6d904858fa",
+          "outcome": "continuity_transport_completed",
+          "receiptDigest": "0cd3fd607beba0492021b89451b827822f68ef8dddee1dc3a9b32c7de97687e1"
+        },
+        {
+          "caseRef": "continuity_b",
+          "connectionRef": "connection_b",
+          "decisionDigest": "f3936e943b01c3a8fc1484502ce897364eb6658fd626851d7b55f448fc8ffff7",
+          "outcome": "continuity_transport_completed",
+          "receiptDigest": "199b6ce04ae35fbc2239e845ce71184410fd758a94422ee355ed3c31d73b8c59"
+        }
+      ],
+      "result": "passed",
+      "schema": 1,
+      "scope": {
+        "deadline": 1789427404721,
+        "elapsedMs": 600000,
+        "maxInferenceAttempts": 10,
+        "ref": "initial_checks",
+        "spentAfter": 6,
+        "spentBefore": 4,
+        "started": 1789426804721
+      },
+      "selection": [
+        "connection_a",
+        "connection_b"
+      ],
+      "transition": {
+        "digest": "6c6316da5c34b6306b0d50c8cb5285e495652c59dd567ad127be1d0ed981005f",
+        "kind": "controlled_health_state",
+        "naturalQuotaEvidence": false
+      },
+      "usage": "unknown"
+    }
+  },
+  "cases": [
+    {
+      "case": "stale",
+      "evidence": "production-initial-suite-synthetic",
+      "faultLoader": false,
+      "proofResult": "passed",
+      "suiteResult": "failed",
+      "retainedDigest": "009a809bb023896459b31089897e1a1eb19e1235ca9034eb54ddd4e4d9f24ea7",
+      "sourceManifestDigest": "8268cc473c37cb6818000a71d62c1da7316de623903c0e874fdc54a859c51d1b",
+      "physicalSyntheticSends": 0,
+      "physicalEvidenceBasis": "retained_gateway_result",
+      "scopeSpent": 0,
+      "scopeStarted": false,
+      "phaseCount": 0,
+      "qualifiedPhases": 0,
+      "testCleanup": true,
+      "consumerCleanup": true
+    },
+    {
+      "case": "dependency",
+      "evidence": "production-initial-suite-synthetic",
+      "faultLoader": false,
+      "proofResult": "passed",
+      "suiteResult": "failed",
+      "retainedDigest": "fca4567f0a035fcc9d2bd96d01e50840fab35be83df21db98f9a4ad79d777c95",
+      "sourceManifestDigest": "8268cc473c37cb6818000a71d62c1da7316de623903c0e874fdc54a859c51d1b",
+      "physicalSyntheticSends": 0,
+      "physicalEvidenceBasis": "retained_gateway_result",
+      "scopeSpent": 0,
+      "scopeStarted": false,
+      "phaseCount": 0,
+      "qualifiedPhases": 0,
+      "testCleanup": true,
+      "consumerCleanup": true
+    },
+    {
+      "case": "storage",
+      "evidence": "production-initial-suite-synthetic",
+      "faultLoader": true,
+      "proofResult": "passed",
+      "suiteResult": "failed",
+      "retainedDigest": "4628fbd2c3a59ab838f1f97530fa64f751364974c2f41ee3de1a29a822175934",
+      "sourceManifestDigest": "518c955f41aa819954d99b51ece534457786816121a877412222a3b90083f338",
+      "physicalSyntheticSends": 2,
+      "physicalEvidenceBasis": "retained_gateway_result",
+      "scopeSpent": 2,
+      "scopeStarted": true,
+      "phaseCount": 1,
+      "qualifiedPhases": 0,
+      "testCleanup": true,
+      "consumerCleanup": false,
+      "consumerStopped": true,
+      "logsRetained": true,
+      "independentArtifactDurability": "unavailable_after_storage_failure_and_stop"
+    },
+    {
+      "case": "stop",
+      "evidence": "production-initial-suite-synthetic",
+      "faultLoader": true,
+      "proofResult": "passed",
+      "suiteResult": "failed",
+      "retainedDigest": "e2037d51418e05ac59e53fae572985d1bd31dc252107ddc846705640a93ea08f",
+      "sourceManifestDigest": "100797f5b5b088c7c8339c698476a229a4ebfdada42492369238c10eacbbf179",
+      "physicalSyntheticSends": 6,
+      "physicalEvidenceBasis": "qualified_phase_receipts",
+      "scopeSpent": 6,
+      "scopeStarted": true,
+      "phaseCount": 4,
+      "qualifiedPhases": 4,
+      "testCleanup": true,
+      "consumerCleanup": true,
+      "fencing": [
+        "fulfilled",
+        "fulfilled"
+      ],
+      "stopFailed": true
+    },
+    {
+      "case": "direct",
+      "evidence": "production-initial-suite-synthetic",
+      "faultLoader": true,
+      "proofResult": "passed",
+      "suiteResult": "passed",
+      "retainedDigest": "7368fa6ec7a9ad3142a1efa84e7aa5b28f939a6aec1739336571eaef2a3cce64",
+      "sourceManifestDigest": "21c17c4a60a8e00b94ba586d1bff86306a9fe4d0c1e95840577534bb55e07575",
+      "physicalSyntheticSends": 5,
+      "physicalEvidenceBasis": "retained_gateway_result",
+      "scopeSpent": 5,
+      "scopeStarted": true,
+      "phaseCount": 4,
+      "qualifiedPhases": 4,
+      "testCleanup": true,
+      "consumerCleanup": true
+    },
+    {
+      "case": "repair",
+      "evidence": "production-initial-suite-synthetic",
+      "faultLoader": true,
+      "proofResult": "passed",
+      "suiteResult": "passed",
+      "retainedDigest": "8cdaddbf50eb3c2e2fb1c98aee45319d4417ce798b5ef7d80c6c2612b903e082",
+      "sourceManifestDigest": "dacbebfa665cd3d5869cb8f9cf67fdbfdb5d163f8dd033043a76e337c77f550f",
+      "physicalSyntheticSends": 7,
+      "physicalEvidenceBasis": "retained_gateway_result",
+      "scopeSpent": 7,
+      "scopeStarted": true,
+      "phaseCount": 4,
+      "qualifiedPhases": 4,
+      "testCleanup": true,
+      "consumerCleanup": true
+    },
+    {
+      "case": "unknown",
+      "evidence": "production-initial-suite-synthetic",
+      "faultLoader": true,
+      "proofResult": "passed",
+      "suiteResult": "failed",
+      "retainedDigest": "4a2e133c13bc58d34875aa8062fc6cb7e1c37e575f20cc489ddb856f96ae2d86",
+      "sourceManifestDigest": "dacbebfa665cd3d5869cb8f9cf67fdbfdb5d163f8dd033043a76e337c77f550f",
+      "physicalSyntheticSends": 1,
+      "physicalEvidenceBasis": "retained_gateway_result",
+      "scopeSpent": 1,
+      "scopeStarted": true,
+      "phaseCount": 1,
+      "qualifiedPhases": 0,
+      "testCleanup": true,
+      "consumerCleanup": true,
+      "unknownOriginal": true,
+      "laterPhasesStarted": false,
+      "acknowledgedArtifacts": 0
+    }
+  ],
+  "oldAttachConsumerStorageRegression": {
+    "proofResult": "passed",
+    "injectedProducerResult": "failed",
+    "retainedDigest": "a9b097bc19bfc58ce7cbed50a20437389f4efe447e1a326dcaf10c81b1a7fc79",
+    "sourceManifestDigest": "a01a063c0276cb7267f9789f683131926af86aee40526a14dea89d4089a65873",
+    "physicalSyntheticSends": 1,
+    "acknowledgedArtifacts": 0,
+    "lastDurableSnapshotPredatesObservation": true,
+    "consumerStopped": true,
+    "logsRetained": true,
+    "independentArtifactDurability": "unavailable_after_storage_failure_and_stop",
+    "testCleanup": true
+  },
+  "historicalCapture": {
+    "implementationSource": "cb277212d125acd8ec486fec3b9a45fd40ea8991",
+    "ordinaryRetainedDigest": "f47e2a871a36a3e5902c8901b78b02319a2aad2e416de993d890b123b07f51de",
+    "ordinarySourceManifestDigest": "8268cc473c37cb6818000a71d62c1da7316de623903c0e874fdc54a859c51d1b",
+    "newRuntimeDelta": "Default31-test/CI wiring and removal of hardcoded evidence labels; prior captures retained."
+  },
+  "limitations": [
+    "All provider calls and credentials here are synthetic; two fixture rows do not prove two real subscriptions.",
+    "Controlled health-state injection is not natural quota exhaustion or provider429 evidence.",
+    "Usage/headroom and live passive readiness remain unknown; alias and paid-overflow paths retain native-profile deny behavior.",
+    "Independent source review, private distinct-subscription/access-expiry proof and concrete deployment controls review precede one bounded live scope.",
+    "No live worker, planner or continuity acceptance; no foundation decision or durable application core.",
+    "Stopped containers preserve logs, not tmpfs worktrees; failed independent artifact storage is unaccepted."
+  ]
+}

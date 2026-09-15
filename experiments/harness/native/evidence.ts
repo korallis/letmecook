@@ -13,6 +13,8 @@ export interface CandidateEvidence { policy: NativeRouterPolicy; packetDigest: s
 export function candidateArtifact(e: CandidateEvidence) {
   validateRunRequest(e.request);
   const p = validateRouterPolicy(e.policy); requireValue(p.schema === 3, 'native_policy_required');
+  if(e.request.schema===2)requireValue(e.policy.native.schema===2&&e.policy.native.timing?.consumer==='worker'&&e.request.profileDigest===digest(e.policy.native)&&e.request.packetDigest===e.packetDigest&&e.request.sessionDeadline!<=Math.min(e.binding.expiresAt,e.binding.leaseExpiresAt),'suite_candidate_binding');
+  else requireValue(e.policy.native.schema===1,'suite_candidate_tag');
   validateBinding(e.binding); assertNativeBinding(e.binding, e.policy);
   requireValue(e.binding.role === 'worker' && e.binding.routerId === p.routerId && e.binding.routeId === p.routeId && e.binding.revision === p.revision && e.binding.epoch === p.epoch && e.request.bindingDigest === digest(e.binding) && e.result.bindingDigest === digest(e.binding) && e.request.settingsDigest === e.policy.native.harness?.settings && e.result.settingsDigest === e.request.settingsDigest, 'candidate_binding_mismatch');
   const parsed = new NativeEvents(e.request.limits.outputBytes);

@@ -5,6 +5,8 @@ on:
       - 'experiments/inference-boundary/**'
       - 'experiments/router-boundary-bridge/**'
       - 'experiments/native-evaluation/**'
+      - 'experiments/router-continuity/**'
+      - 'experiments/planner-probe/**'
       - 'experiments/router-authority-extension/overlay/**'
       - 'tests/fixtures/9router/**'
       - '.github/workflows/inference-boundary.yml'
@@ -14,6 +16,8 @@ on:
       - 'experiments/inference-boundary/**'
       - 'experiments/router-boundary-bridge/**'
       - 'experiments/native-evaluation/**'
+      - 'experiments/router-continuity/**'
+      - 'experiments/planner-probe/**'
       - 'experiments/router-authority-extension/overlay/**'
       - 'tests/fixtures/9router/**'
       - '.github/workflows/inference-boundary.yml'
@@ -37,5 +41,6 @@ jobs:
       - run: npm --prefix experiments/router-boundary-bridge test
 
       - run: npm ci --prefix experiments/native-evaluation --ignore-scripts
+      - run: npm ci --prefix experiments/planner-probe --ignore-scripts
       - run: npm --prefix experiments/native-evaluation run check
       - run: npm --prefix experiments/native-evaluation test

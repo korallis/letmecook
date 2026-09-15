@@ -1,3 +1,4 @@
+import { suiteTiming } from './initial-suite.mjs';
 import { createHash } from 'node:crypto';
 import { validateScope } from './scope-profile.mjs';
 import { PLANNER_PROTOCOL, validatePlannerDescriptor } from './native-planner.mjs';
@@ -13,8 +14,8 @@ const exact = (v,names) => check(v && typeof v === 'object' && !Array.isArray(v)
 export const safePath = x => typeof x === 'string' && x.length <= 256 && !x.startsWith('/') && !x.includes('\\') && !/[\u0000-\u0020]/.test(x) && x.split('/').every(s=>s && s!=='.' && s!=='..' && s!=='.git');
 export function validateNativeProfile(p) {
  const planner=p?.protocol===PLANNER_PROTOCOL;
- exact(p,['schema','limitsProfile','protocol','evidence','deployment','authorization','scope','connections','local','tools','toolPaths',planner?'planner':'harness']);
- check(p.schema===1 && p.limitsProfile===NATIVE_LIMITS && (planner||p.protocol===NATIVE_PROTOCOL) && ['synthetic','reviewed-deployment'].includes(p.evidence));
+ exact(p,['schema','limitsProfile','protocol','evidence','deployment','authorization','scope','connections','local','tools','toolPaths',planner?'planner':'harness',...(p.schema===2?['timing']:[])]);
+ check([1,2].includes(p.schema) && p.limitsProfile===NATIVE_LIMITS && (planner||p.protocol===NATIVE_PROTOCOL) && ['synthetic','reviewed-deployment'].includes(p.evidence));
  exact(p.deployment,['id','sourceCommit','sourceLock','overlay','runtime','isolation','writerFence','credentialOwnershipRef','endpoint']);
  check(ref(p.deployment.id) && p.deployment.sourceCommit==='17c4cc76877bd1755030a8414f8d0083f48dcccf');
  check(['sourceLock','overlay','runtime','isolation','writerFence'].every(k=>sha(p.deployment[k])) && ref(p.deployment.credentialOwnershipRef));
@@ -28,6 +29,7 @@ export function validateNativeProfile(p) {
  const maxima={requestBytes:262144,responseBytes:1048576,concurrency:1,requestCount:32,totalMs:300000,firstOutputMs:300000,idleMs:120000,attemptMs:p.scope.phase==='initial'?600000:900000};
  exact(p.local,Object.keys(maxima));for(const [k,max] of Object.entries(maxima))check(Number.isSafeInteger(p.local[k])&&p.local[k]>0&&p.local[k]<=max);
  check(p.local.totalMs<=p.scope.elapsedMs&&p.local.attemptMs<=p.scope.elapsedMs&&p.local.firstOutputMs<=p.local.totalMs&&p.local.idleMs<=p.local.totalMs);
+ suiteTiming(p);
  if(planner){validatePlannerDescriptor(p);return structuredClone(p);}
  exact(p.harness,['binary','source','settings','builtins','nativeLLM','oauth','websockets']);
  check(p.harness.binary==='01edb5839aa10d5b09133fedcb335a062ecad6e82552933bb14f71756f2b296b'&&p.harness.source==='3104c1428ec91f809e5ab86631300de41eb6952e'&&sha(p.harness.settings)&&p.harness.builtins==='enabled'&&p.harness.nativeLLM===false&&p.harness.oauth===false&&p.harness.websockets===false,'incompatible_native_consumer');

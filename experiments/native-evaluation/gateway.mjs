@@ -3,8 +3,8 @@
 import { createServer } from 'node:http';
 import { Readable } from 'node:stream';
 import { once } from 'node:events';
-import { readFileSync,existsSync,writeFileSync,openSync,fsyncSync,closeSync,mkdirSync,chmodSync } from 'node:fs';
-import { randomBytes } from 'node:crypto';
+import { readFileSync,existsSync,writeFileSync,openSync,fsyncSync,closeSync,mkdirSync,chmodSync,readdirSync } from 'node:fs';
+import { randomBytes,createHash } from 'node:crypto';
 import { Boundary } from '../inference-boundary/boundary.ts';
 import { PolicyGate } from '../inference-boundary/policy.ts';
 import { RouterAuthority } from '../router-boundary-bridge/authority.ts';
@@ -17,6 +17,14 @@ import { persistImmutable } from './durable-records.mjs';
 const {acquireDeploymentOwner}=await import('/router-source/gaffer-extension/deployment-owner.mjs');
 const owner=acquireDeploymentOwner('/state');process.env.GAFFER_NATIVE_DEPLOYMENT='1';
 const profiles=existsSync('/config/profiles.json')?JSON.parse(readFileSync('/config/profiles.json','utf8')):[JSON.parse(readFileSync('/config/profile.json','utf8'))];for(const p of profiles){p.deployment.writerFence=owner.digest;validateNativeProfile(p);}let n=profiles[0];
+// Optional fixture code is evaluated only after its exact source packet is checked.
+let continuityModule=null,continuityFixture=null;
+if(existsSync('/config/continuity.json')){
+ const sources=JSON.parse(readFileSync('/config/source-manifest.json','utf8')).files;
+ for(const path of ['experiments/router-continuity/control.mjs','experiments/router-continuity/constants.ts'])if(sources[path]!==createHash('sha256').update(readFileSync('/gaffer/'+path)).digest('hex'))throw Error('continuity_source_unreviewed');
+ continuityModule=await import('../router-continuity/control.mjs');continuityFixture=continuityModule.continuityManifest(JSON.parse(readFileSync('/config/continuity.json','utf8')),profiles);
+}
+let initialSuite=null;if(existsSync('/config/suite.json')){const {suiteManifest}=await import('../router-continuity/suite-profile.ts');initialSuite=suiteManifest(JSON.parse(readFileSync('/config/suite.json','utf8')),profiles);}if(profiles.some(p=>p.schema===2)&&!initialSuite)throw Error('suite_declaration_required');
 const {handleChat}=await import('/router-source/src/sse/handlers/chat.js');
 const {getAdapter}=await import('/router-source/src/lib/db/driver.js');
 const repository=await import('/router-source/src/lib/db/index.js');
@@ -37,15 +45,23 @@ if(n.evidence==='synthetic'){
  const plannerScenario=process.env.GAFFER_SYNTHETIC_PLANNER_CASE??'read';if(!['read','clarification'].includes(plannerScenario))throw Error('unknown_synthetic_planner_case');
  synthetic=createServer(async(req,res)=>{let text='';for await(const c of req){text+=c;if(text.length>n.local.requestBytes){res.writeHead(413).end();return;}}const body=JSON.parse(text);observed.sends.push({path:req.url,body});
   if(req.url!=='/responses')throw Error('unexpected_refresh_egress');
-  res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(n.protocol===PLANNER_PROTOCOL?plannerEvents(body,n,plannerScenario):events(!body.input.some(x=>x.type==='function_call_output'))));for(let i=0;i<bytes.length;i+=17)res.write(bytes.subarray(i,i+17));res.end();
+  // This synthetic-only delay exercises the explicit suite timing past old 5s defaults.
+  if(initialSuite&&n.timing?.consumer==='planner')await new Promise(resolve=>setTimeout(resolve,6000));
+  res.writeHead(200,{'content-type':'text/event-stream'});const bytes=Buffer.from(frames(continuityModule?.syntheticContinuityEvents(continuityFixture,n,body,events)??(n.protocol===PLANNER_PROTOCOL?plannerEvents(body,n,plannerScenario):events(!body.input.some(x=>x.type==='function_call_output')))));for(let i=0;i<bytes.length;i+=17)res.write(bytes.subarray(i,i+17));res.end();
+
  });synthetic.listen(47771,'127.0.0.1');await once(synthetic,'listening');
 }
 const router=createServer(async(req,res)=>{const abort=new AbortController();res.on('close',()=>{if(!res.writableEnded)abort.abort();});try{const result=await handleChat(new Request('http://127.0.0.1'+req.url,{method:req.method,headers:req.headers,body:Readable.toWeb(req),duplex:'half',signal:abort.signal}));res.writeHead(result.status,Object.fromEntries(result.headers));if(result.body)for await(const c of result.body)res.write(c);res.end();}catch{res.destroy();}});
 router.listen('/state/router.sock');await once(router,'listening');chmodSync('/state/router.sock',0o600);
 let boundary=new Boundary(gate,'/state/router.sock',key);await boundary.listen('/router/inference.sock');
-const packet={schema:1,policy,profiles:a.nativeProfiles(),registryDigest:digest(a.nativeProfiles()),capabilities:{providerOutputTokens:'unavailable',providerMonetaryCap:'unavailable',refresh:'denied'},scopeStatusAtPreparation:'not_started'};
+const packet={schema:1,policy,profiles:a.nativeProfiles(),registryDigest:digest(a.nativeProfiles()),capabilities:{providerOutputTokens:'unavailable',providerMonetaryCap:'unavailable',refresh:'denied'},scopeStatusAtPreparation:'not_started',...(continuityFixture?{continuityFixture}:{}),...(initialSuite?{initialSuite}:{})};
 const packetRecord=persistImmutable('/state','deployment-packet',packet),packetDigest=packetRecord.digest;
 const evidenceApi=evidenceControls({policy:()=>policy,gate:()=>gate,authority:a,packetDigest,observed,persistCandidate:value=>persistImmutable('/state','candidate',value),validateProposal:validatePlannerCandidate});
+const continuity=continuityModule?.continuityControl({manifest:continuityFixture,packetDigest,policy:()=>policy,gate:()=>gate,authority:a,evidence:attempt=>evidenceApi.evidence(attempt),persist:(kind,value)=>persistImmutable('/state',kind,value),recovered:readdirSync('/state').some(name=>name.startsWith('continuity-intent-')),
+ health:async id=>{const c=(await repository.getProviderConnections()).find(c=>c.id===id);if(!c)throw Error('continuity_connection_missing');return {active:c.isActive===true,status:c.testStatus,lockUntil:Date.parse(c['modelLock_gpt-6-astra'])||null,credentialsDigest:digest(Object.fromEntries(Object.entries(c).filter(([k])=>['accessToken','refreshToken','idToken','expiresAt','providerSpecificData'].includes(k))))};},
+ markUnavailable:async(id,deadline)=>{const {markAccountUnavailable}=await import('/router-source/src/sse/services/auth.js');await markAccountUnavailable(id,503,'controlled_fixture_unavailability','codex','gpt-6-astra',deadline);},fence:()=>{void stop();}});
+continuity?.wrapGate(gate);
+
 let stopping=false,selecting=false;
 async function stop(){
  if(stopping)return;stopping=true;
@@ -58,15 +74,16 @@ async function stop(){
 }
 const control=createServer(async(req,res)=>{
  try{
-  if(req.method!=='POST'||req.url!=='/control')throw Error('unsupported_control');let text='';for await(const c of req){text+=c;if(Buffer.byteLength(text)>2097152)throw Error('control_bytes');}const message=JSON.parse(text);let result;if(selecting&&!['inspect','stop'].includes(message.command))throw Error('selection_in_progress');
+  if(req.method!=='POST'||req.url!=='/control')throw Error('unsupported_control');let text='';for await(const c of req){text+=c;if(Buffer.byteLength(text)>2097152)throw Error('control_bytes');}const message=JSON.parse(text);let result;if(selecting&&!['inspect','stop'].includes(message.command))throw Error('selection_in_progress');continuity?.controlAllowed(message.command);
   if(message.command==='inspect'&&Object.keys(message).length===1)result={packet,packetDigest,selectedPolicy:policy,current:{boot:a.state().boot,generation:a.state().generation,revision:a.state().revision,scope:a.evaluationScope(n.scope.id)??null,journal:gate.snapshot()}};
   else if(message.command==='start'&&Object.keys(message).length===2&&message.packetDigest===packetDigest){result=a.startEvaluation();}
   else if(message.command==='select'&&Object.keys(message).length===3&&message.packetDigest===packetDigest){
    if(gate.snapshot().reservations.length||!a.quiescent([]))throw Error('selection_not_quiescent');selecting=true;
-   try{const generation=a.state().generation;await boundary.close();const selected=a.selectNativeProfile(message.profileDigest,generation);n=selected.profile;policy={...policy,native:n,revision:selected.state.revision,epoch:policy.epoch+1,graph:selected.graph,limits:{...n.local,outputTokens:null},authority:{...policy.authority,generation:selected.state.generation,revision:selected.state.revision,graphDigest:digest(selected.graph)}};gate=await PolicyGate.open('/state/boundary',new RouterAuthority(a,policy),1000);await gate.activate();observeDecisions();boundary=new Boundary(gate,'/state/router.sock',key);await boundary.listen('/router/inference.sock');result={policy,scope:a.evaluationScope(n.scope.id)??null};selecting=false;}catch(error){void stop();throw error;}
+   try{const generation=a.state().generation;await boundary.close();const selected=a.selectNativeProfile(message.profileDigest,generation);n=selected.profile;policy={...policy,native:n,revision:selected.state.revision,epoch:policy.epoch+1,graph:selected.graph,limits:{...n.local,outputTokens:null},authority:{...policy.authority,generation:selected.state.generation,revision:selected.state.revision,graphDigest:digest(selected.graph)}};gate=await PolicyGate.open('/state/boundary',new RouterAuthority(a,policy),1000);await gate.activate();observeDecisions();continuity?.wrapGate(gate);boundary=new Boundary(gate,'/state/router.sock',key);await boundary.listen('/router/inference.sock');result={policy,scope:a.evaluationScope(n.scope.id)??null};selecting=false;}catch(error){void stop();throw error;}
   }
   else if(message.command==='grant'&&Object.keys(message).length===2){const binding=message.binding;if(!a.evaluationScope(n.scope.id))throw Error('evaluation_not_started');result={token:boundary.issue(binding),model:policy.routerModel};}
   else if(message.command==='evidence'&&Object.keys(message).length===2)result=evidenceApi.evidence(message.attemptId);
+  else if(message.command==='continuity-transition'&&continuity)result=await continuity.transition(message);
   else if(message.command==='candidate'&&Object.keys(message).length===2)result=evidenceApi.candidate(message.value);
   else if(message.command==='artifact'&&Object.keys(message).length===2){const value=message.value;if(!value||typeof value.path!=='string'||!n.toolPaths.includes(value.path)||typeof value.content!=='string'||Buffer.byteLength(value.content)>1048576)throw Error('unsupported_artifact');const scope=a.evaluationScope(n.scope.id);if(!scope)throw Error('evaluation_not_started');
    const saved=persistImmutable('/state','artifact',value);

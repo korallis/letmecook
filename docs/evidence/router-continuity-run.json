@@ -1,0 +1,268 @@
+{
+  "schema": 1,
+  "evidence": "offline-native-continuity",
+  "live": false,
+  "issueComplete": false,
+  "parentSource": "7315bcaf7dd25bc9fd2121f5b4e63db219a0d775",
+  "routerSource": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+  "binary": "01edb5839aa10d5b09133fedcb335a062ecad6e82552933bb14f71756f2b296b",
+  "runtime": {
+    "node": "v24.21.0",
+    "arch": "arm64",
+    "image": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a"
+  },
+  "checks": {
+    "typeScript": "passed",
+    "pureTests": 24,
+    "actualPair": "passed",
+    "actualNegativeCases": 5,
+    "cleanup": "passed",
+    "actualLifecycleCases": 2,
+    "productionDeploymentControls": "passed",
+    "sharedNativeTests": 20,
+    "sharedNativeTypeScript": "passed",
+    "docsBuild": "passed",
+    "docsCheck": "passed"
+  },
+  "pair": {
+    "schema": 1,
+    "evidence": "actual-native-harness-router-synthetic",
+    "live": false,
+    "issueComplete": false,
+    "result": "passed",
+    "profileDigest": "926482407135e26b3290939c4307c8ec2feaaa02d7f68c5fe919e9b8fc8c12e1",
+    "packetDigest": "54c9144f4ccda1b7d83787017977e6ad25c9976ff3cd4bfbfe7efd93b95d3c02",
+    "selection": [
+      "connection_a",
+      "connection_b"
+    ],
+    "requests": [
+      {
+        "caseRef": "continuity_a",
+        "connectionRef": "connection_a",
+        "receiptDigest": "4ad327d898a0000c060746bcd256366a5b962eed971282c76cc500aef1db235b",
+        "decisionDigest": "51fb07eee2beb3a8d903ca9402f6745603fd38deb39fb5489972c7f9530a0419",
+        "outcome": "continuity_transport_completed"
+      },
+      {
+        "caseRef": "continuity_b",
+        "connectionRef": "connection_b",
+        "receiptDigest": "e83b987b605dfb9c9672d6595df183c45e9ef75fef59797a44d0e74abca98744",
+        "decisionDigest": "79440cd2a682f11bbaf8fe64fd0cd6e57daeb91424bfa84fbe45f36fd44df324",
+        "outcome": "continuity_transport_completed"
+      }
+    ],
+    "scope": {
+      "ref": "initial_checks",
+      "started": 1789423262207,
+      "deadline": 1789423862207,
+      "spentBefore": 0,
+      "spentAfter": 2,
+      "maxInferenceAttempts": 10,
+      "elapsedMs": 600000
+    },
+    "transition": {
+      "digest": "6a47fe85f47ad530d1db4e844fc51af19e7ec5c83cc00c8f21837eb4bff9a548",
+      "kind": "controlled_health_state",
+      "naturalQuotaEvidence": false
+    },
+    "distinctLiveSubscriptions": "pending",
+    "usage": "unknown",
+    "headroom": "unknown",
+    "paidFallback": "denied",
+    "refresh": "denied"
+  },
+  "negativeCases": [
+    {
+      "case": "partial",
+      "result": "passed",
+      "physicalSyntheticSends": 1,
+      "scopeSpent": 1,
+      "terminals": [
+        "unknown"
+      ],
+      "transitionDenied": true,
+      "replacementDenied": true,
+      "workerOutcomes": [
+        "harness_failed"
+      ],
+      "intentRecords": 0,
+      "resultRecords": 0
+    },
+    {
+      "case": "outage",
+      "result": "passed",
+      "physicalSyntheticSends": 0,
+      "scopeSpent": 0,
+      "terminals": [],
+      "transitionDenied": true,
+      "replacementDenied": null,
+      "workerOutcomes": [
+        "cancelled_unknown"
+      ],
+      "intentRecords": 0,
+      "resultRecords": 0
+    },
+    {
+      "case": "tool",
+      "result": "passed",
+      "physicalSyntheticSends": 1,
+      "scopeSpent": 1,
+      "terminals": [
+        "provider_completed"
+      ],
+      "transitionDenied": true,
+      "replacementDenied": null,
+      "workerOutcomes": [
+        "continuity_tool_refused"
+      ],
+      "intentRecords": 0,
+      "resultRecords": 0
+    },
+    {
+      "case": "intent-write",
+      "result": "passed",
+      "physicalSyntheticSends": 1,
+      "scopeSpent": 1,
+      "terminals": [
+        "provider_completed"
+      ],
+      "transitionDenied": true,
+      "replacementDenied": null,
+      "workerOutcomes": [
+        "continuity_transport_completed"
+      ],
+      "intentRecords": 0,
+      "resultRecords": 0
+    },
+    {
+      "case": "result-write",
+      "result": "passed",
+      "physicalSyntheticSends": 1,
+      "scopeSpent": 1,
+      "terminals": [
+        "provider_completed"
+      ],
+      "transitionDenied": true,
+      "replacementDenied": null,
+      "workerOutcomes": [
+        "continuity_transport_completed"
+      ],
+      "intentRecords": 1,
+      "resultRecords": 0
+    }
+  ],
+  "retainedInputDigests": {
+    "pair": "ba6682f4d90497985ae7eb387544d5b36c6577721c1ba8543bc95936e754b0b0",
+    "negative": "c10d41b3df28ee174acc5021dadc5282bd095af3d4555f2892605f5776399565",
+    "lifecycle": "0d9d7c7dea377c117639fdda15dd44bf551643bf6692dd620e28060543ec5771",
+    "productionDeployment": "d706a5b8e968b09d11dd262381696023dd3f6c6642e9d1d2512832af5b67be3a"
+  },
+  "limitations": [
+    "Constructed control-test receipts and fake providers are not live subscription evidence.",
+    "Two distinct real subscriptions and current credentials remain unproved.",
+    "Final parent integration, one-scope suite sequencing, concrete live timers and fresh controls review remain before live use.",
+    "Synthetic 6/4/2-second request timers do not prove live Astra timing readiness.",
+    "Consumer staging and finite request/control/artifact overhead count against the existing initial deadline."
+  ],
+  "originalFailure": {
+    "reason": "Pinned CLI emits JSON-quoted fixed prompt; exact qualification initially refused it.",
+    "fixtureOutcome": "failed",
+    "cleanup": true
+  },
+  "implementationSource": "13759cd5da3ee92f0f7ab5fd90c1d18d5f61ea82",
+  "lifecycleCases": [
+    {
+      "case": "active-stop",
+      "result": "passed",
+      "physicalSyntheticSends": 1,
+      "scopeSpent": 1,
+      "workerOutcomes": [
+        "cancelled_unknown"
+      ],
+      "terminals": [
+        "unknown"
+      ],
+      "exitAfterSignalMs": 288,
+      "upstreamQuiescence": "unknown"
+    },
+    {
+      "case": "start-delay",
+      "result": "passed",
+      "physicalSyntheticSends": 2,
+      "scopeSpent": 2,
+      "workerOutcomes": [
+        "continuity_transport_completed",
+        "continuity_transport_completed"
+      ],
+      "terminals": [
+        "provider_completed",
+        "provider_completed"
+      ],
+      "selection": [
+        "connection_a",
+        "connection_b"
+      ]
+    }
+  ],
+  "productionDeployment": {
+    "evidence": "production-deployment-controls-synthetic",
+    "live": false,
+    "result": "passed",
+    "faultLoader": false,
+    "scopeCreatedByConsumer": false,
+    "sourceManifestVerified": true,
+    "initialClockStartedAtPrepare": false,
+    "scopeStartedUnchanged": true,
+    "scopeDeadlineUnchanged": true,
+    "retention": "passed",
+    "cleanup": true,
+    "physicalSyntheticSends": 2,
+    "pair": {
+      "distinctLiveSubscriptions": "pending",
+      "headroom": "unknown",
+      "issueComplete": false,
+      "packetDigest": "bd16c0853a3aca0d07496c25e55f864652adccc41f7b30a7e52dba7de1546b7d",
+      "paidFallback": "denied",
+      "profileDigest": "c7e353f1be4513542768214805162848f528ebff124a1bb1fecd2eafcd5ee920",
+      "refresh": "denied",
+      "requests": [
+        {
+          "caseRef": "continuity_a",
+          "connectionRef": "connection_a",
+          "decisionDigest": "bb55a6af1bdd05b3deb604800693d136d00b5d3bc1dfff463a61b4cccfe0e464",
+          "outcome": "continuity_transport_completed",
+          "receiptDigest": "a5037b0418a2b84c561e76b2219a66d7126c11e1f089286a0904d0a3a7f866d6"
+        },
+        {
+          "caseRef": "continuity_b",
+          "connectionRef": "connection_b",
+          "decisionDigest": "786dc650957ce9244c0b6500ba3400a847de084a64f178383e8a8b8c0a11d536",
+          "outcome": "continuity_transport_completed",
+          "receiptDigest": "8c17eb03fd0bf880b3a01943343c6791d86466302c3cd040895230471ba3062a"
+        }
+      ],
+      "result": "passed",
+      "schema": 1,
+      "scope": {
+        "deadline": 1789424583790,
+        "elapsedMs": 600000,
+        "maxInferenceAttempts": 10,
+        "ref": "initial_checks",
+        "spentAfter": 2,
+        "spentBefore": 0,
+        "started": 1789423983790
+      },
+      "selection": [
+        "connection_a",
+        "connection_b"
+      ],
+      "transition": {
+        "digest": "2189d745b1863fd717af83c46293a72efb44580c1907d07c5d2c2ce0a20c32e6",
+        "kind": "controlled_health_state",
+        "naturalQuotaEvidence": false
+      },
+      "usage": "unknown"
+    }
+  }
+}

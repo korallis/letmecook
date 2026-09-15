@@ -1,3 +1,4 @@
+import { suiteTiming } from './initial-suite.mjs';
 // Closed read-only planner protocol; no router state, filesystem tools or authority.
 import { createHash } from 'node:crypto';
 import { parseUnambiguousJSON } from './responses-terminal.mjs';
@@ -16,11 +17,13 @@ export const PLANNER_SYSTEM = 'You are a restricted planner. Produce only a JSON
 export const PLANNER_BUDGET = {assessments:1,repairs:1,requests:3,files:1,readBytes:4096,requestBytes:32768,responseBytes:32768,outputTokens:null,totalMs:5000};
 export const PLANNER_SCHEMA_DIGEST = digest(PLANNER_PLAN_SCHEMA);
 export const PLANNER_SETTINGS_DIGEST = digest({protocol:PLANNER_PROTOCOL,model:'gpt-6-astra',reasoning:{effort:'xhigh',summary:'auto'},stream:true,store:false,include:['reasoning.encrypted_content'],tools:[PLANNER_TOOL],budget:PLANNER_BUDGET,system:PLANNER_SYSTEM,repair:PLANNER_REPAIR});
+export function plannerBudget(profile){check(profile?.protocol===PLANNER_PROTOCOL,'planner_identity_mismatch');const t=suiteTiming(profile);return t?{...PLANNER_BUDGET,totalMs:t.wallMs}:PLANNER_BUDGET;}
+export function plannerSettingsDigest(profile){return suiteTiming(profile)?digest({base:PLANNER_SETTINGS_DIGEST,timing:profile.timing,budget:plannerBudget(profile)}):PLANNER_SETTINGS_DIGEST;}
 export function validatePlannerDescriptor(profile) {
  exact(profile.planner,['source','settings','schema']);
- check(sha(profile.planner.source)&&profile.planner.settings===PLANNER_SETTINGS_DIGEST&&profile.planner.schema===PLANNER_SCHEMA_DIGEST,'planner_identity_mismatch');
+ check(sha(profile.planner.source)&&profile.planner.settings===plannerSettingsDigest(profile)&&profile.planner.schema===PLANNER_SCHEMA_DIGEST,'planner_identity_mismatch');
  check(canonical(profile.tools)===canonical([PLANNER_TOOL])&&canonical(profile.toolPaths)===canonical(['fixture.txt']),'planner_tools_mismatch');
- check(profile.local.requestBytes<=32768&&profile.local.responseBytes<=32768&&profile.local.requestCount<=3&&profile.local.totalMs<=5000,'planner_local_limits');
+ check(profile.local.requestBytes<=32768&&profile.local.responseBytes<=32768&&profile.local.requestCount<=3&&profile.local.totalMs<=(suiteTiming(profile)?.totalMs??5000),'planner_local_limits');
 }
 // Supports only the pinned schema's keyword subset, never a model-supplied schema.
 function schemaValid(value, schema) {
@@ -70,7 +73,7 @@ function packet(body,profile){
  const p=value.trusted_packet;exact(p,['schema','capture','repository','evidence','policy','budget','schemaSha256','selector']);
  check(p.schema===1&&typeof p.capture==='string'&&p.capture.length<=2048&&p.repository==='public_toy'&&p.schemaSha256===PLANNER_SCHEMA_DIGEST&&p.selector==='m0-fixed-bootstrap-v1');
  exact(p.evidence,['path','sha256','bytes']);check(p.evidence.path==='fixture.txt'&&sha(p.evidence.sha256)&&Number.isSafeInteger(p.evidence.bytes)&&p.evidence.bytes>=0&&p.evidence.bytes<=4096);
- exact(p.budget,Object.keys(PLANNER_BUDGET));for(const [k,max] of Object.entries(PLANNER_BUDGET)){const n=p.budget[k];check(k==='outputTokens'?n===null:Number.isSafeInteger(n)&&n>=(['assessments','repairs','requests','files','readBytes'].includes(k)?0:1)&&n<=max);}
+ exact(p.budget,Object.keys(PLANNER_BUDGET));for(const [k,max] of Object.entries(plannerBudget(profile))){const n=p.budget[k];check(k==='outputTokens'?n===null:Number.isSafeInteger(n)&&n>=(['assessments','repairs','requests','files','readBytes'].includes(k)?0:1)&&n<=max);}
  check(canonical(p.policy)===canonical({schema:3,profile:'router-native-responses-local-v1',protocol:PLANNER_PROTOCOL,evidence:profile.evidence,liveAdmission:profile.evidence==='reviewed-deployment',authority:'proposal_only',providerOutputTokens:null,providerMonetaryCap:null}));return value;
 }
 // Derive phase from the exact closed history; never accept a phase/repair counter

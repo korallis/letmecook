@@ -6,7 +6,7 @@ const canonical=value=>JSON.stringify(value,(_,x)=>x&&typeof x==='object'&&!Arra
 const manifest=JSON.parse(readFileSync('/config/source-manifest.json','utf8')),profile=JSON.parse(readFileSync('/config/profile.json','utf8'));
 if(hash(canonical(manifest.files))!==profile.deployment.overlay||hash(canonical(manifest.runtime))!==profile.deployment.runtime||process.version!==manifest.runtime.node||process.platform!=='linux'||process.arch!==manifest.runtime.arch)throw Error('deployment_runtime_manifest_mismatch');
 for(const [path,digest] of Object.entries(manifest.files)){
- if(!/^experiments\/[a-z0-9_./-]+$/.test(path)||path.split('/').includes('..')||typeof digest!=='string'||hash(readFileSync('/gaffer/'+path))!==digest)throw Error('deployment_source_mismatch');
+ if(!/^(?:experiments|tests\/fixtures\/planner)\/[a-zA-Z0-9_./@-]+$/.test(path)||path.split('/').includes('..')||typeof digest!=='string'||hash(readFileSync('/gaffer/'+path))!==digest)throw Error('deployment_source_mismatch');
 }
 if(hash(readFileSync('/probe/source-lock.json'))!==profile.deployment.sourceLock)throw Error('deployment_source_lock_mismatch');
 await import('./gateway.mjs');

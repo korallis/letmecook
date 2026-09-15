@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "classification": "observed-live-failure",
+  "observedDate": "2026-09-15",
+  "sourceCommit": "ffa8dad15380b6fb9a01e370399a20ebcd8cbc69",
+  "router": {
+    "version": "0.5.75",
+    "sourceCommit": "17c4cc76877bd1755030a8414f8d0083f48dcccf",
+    "imageDigest": "sha256:f95ae5b2218838d3da613273705b7914a149593c400a33087e9c383c2e12650a"
+  },
+  "harness": {
+    "name": "OpenCode",
+    "version": "1.18.30",
+    "sourceCommit": "3104c1428ec91f809e5ab86631300de41eb6952e",
+    "binarySha256": "01edb5839aa10d5b09133fedcb335a062ecad6e82552933bb14f71756f2b296b"
+  },
+  "packetDigest": "fb116e8e0873faa78326f8674631181f3e94abe006648b77a702a1dada5baacd",
+  "requestedModel": "gpt-6-astra",
+  "requestedEffort": "xhigh",
+  "servingModelObserved": null,
+  "scope": {
+    "phase": "initial",
+    "maxPhysicalAttempts": 10,
+    "elapsedMs": 600000,
+    "startedAt": "2026-09-15T06:00:01.888Z",
+    "deadline": "2026-09-15T06:10:01.888Z",
+    "physicalAttemptsCharged": 1,
+    "refreshOperations": 0,
+    "stateAtFinalCapture": "active"
+  },
+  "phases": {
+    "worker": "failed",
+    "planner": "not-started",
+    "continuityFirst": "not-started",
+    "continuitySecond": "not-started"
+  },
+  "originalOperations": {
+    "count": 1,
+    "completed": 0,
+    "unknown": 1,
+    "localStop": "transport_error",
+    "quiescent": false,
+    "outputDigest": null
+  },
+  "diagnosis": {
+    "wrapperError": "unsupported_provider_response",
+    "httpSuccessObserved": true,
+    "originalHttpStatus": null,
+    "originalContentType": null,
+    "originalBodyRetained": false,
+    "locallyGeneratedStatus": 502,
+    "causeConfirmed": false,
+    "diagnosticsIssue": 86
+  },
+  "finalization": {
+    "suiteResult": "failed",
+    "suiteError": "suite_ended_unknown_original",
+    "boundaryJournalPhase": "closed",
+    "gatewayStopped": true,
+    "relayStopped": true,
+    "stopError": null,
+    "persistentStateRetained": true,
+    "durableCandidateArtifacts": 0,
+    "durableAcknowledgementDecisions": 0,
+    "replacementStarted": false,
+    "baselineCasesStarted": 0
+  },
+  "limitations": {
+    "liveWorkerAccepted": false,
+    "livePlannerAccepted": false,
+    "liveContinuityProved": false,
+    "distinctBillingProved": false,
+    "successfulProviderAcceptanceProved": false,
+    "operatorOutputAcceptance": null,
+    "operatorMinutes": null,
+    "providerUsage": null
+  },
+  "privateEvidenceDigests": {
+    "suiteReportSha256": "32bfe68a8af8273e63fe8ff09bb3e5bf833f11ea093b971003159c0b514e8b2e",
+    "suiteCanonicalDigest": "32bfe68a8af8273e63fe8ff09bb3e5bf833f11ea093b971003159c0b514e8b2e",
+    "retainedStateSha256": "d7f4d4789ca665f5215d22a2370607bb09d3f8330be52ea3ef51507a6d5d9375",
+    "gatewayLogSha256": "3e974078864383c7e1080a6c514f861587081a32f0649473bef79a7c0dadb1c6",
+    "relayLogSha256": "b68a43dce88fe6b63c4199c3c0d9d387eb53c22e859ad529591c9523fc9b8712"
+  }
+}
