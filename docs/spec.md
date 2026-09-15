@@ -1,6 +1,6 @@
 # Gaffer — Technical Specification
 
-**Status:** proposed baseline v0.4 · **Updated:** 14 September 2026
+**Status:** proposed baseline v0.4 · **Updated:** 15 September 2026
 
 Companions: [product requirements](PRD.md), [evaluation](evaluation.md),
 [delivery sequence](roadmap.md). This is a design to implement and test, not a

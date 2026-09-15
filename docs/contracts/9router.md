@@ -158,8 +158,9 @@ network-disabled worker. The transport must still enforce the identity above.
 Workers must not reach the router origin, management plane, public inference,
 provider URLs, host loopback/services, alternate proxy routes or credential mounts.
 Containment is an OS/network policy with negative tests, not an environment variable
-or Git worktree. The trusted boundary is outside the worker sandbox. See issue #5
-for the selected Linux profile; this contract does not claim it is implemented.
+or Git worktree. The trusted boundary is outside the worker sandbox. See the
+[execution boundary](../spec.md#42-execution-boundary) for supported profile
+requirements; this contract does not claim they are implemented.
 
 Every grant selects a versioned **limits profile** and explicitly sets enforced,
 finite request bytes, response bytes, concurrency, request count, total deadline,
