@@ -73,7 +73,7 @@ jobs:
             --memory 128m --memory-swap 128m \
             --mount "type=bind,source=$GITHUB_WORKSPACE/experiments/router-authority-extension,target=/probe,readonly" \
             --env HOME=/nonexistent --env NODE_OPTIONS= --pull never \
-            gaffer-router-authority-proof node --test --test-concurrency=1 /probe/responses-terminal.test.mjs /probe/chat-terminal.test.mjs
+            gaffer-router-authority-proof node --test --test-concurrency=1 /probe/responses-terminal.test.mjs /probe/chat-terminal.test.mjs /probe/response-observation.test.mjs
       - name: Remove only this job's container if interrupted
         if: always()
         run: |

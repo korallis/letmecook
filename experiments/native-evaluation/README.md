@@ -32,6 +32,18 @@ It checks synchronous commit expiry, admission/debit/original-receipt persistenc
 failures, altered translated output, and even false/null TLS overrides. Failed
 original or translated validation must never leave a success decision.
 
+The same runner includes issue #86's original-response diagnostic cases: unsupported
+JSON/HTML/missing MIME, HTTP 204, empty SSE, malformed/schema-invalid/empty rejection
+bodies, a valid SSE control, and observation persistence failures. Each goes through
+the real pinned router and boundary, then a fresh process reopens the same SQLite
+database. The tests check one physical debit, no output or replacement for unknown
+work, retained committed observations, and unavailable rolled-back observations.
+A test-only pre-observation overlay also creates a synthetic old-schema receipt;
+upgrading it yields `response_observation:null` without invented HTTP metadata.
+`response-write-stop` injects failures in both observation and local-stop writes
+while a synthetic body remains open, and requires physical disposal. No provider
+request or historical live-state access is part of these tests.
+
 `run-binary.ts` uses separate network-none 768 MiB worker and 768 MiB gateway
 containers, a private inference socket and separate control/state volumes. A
 second gateway must fail before changing the first gateway's database identity.

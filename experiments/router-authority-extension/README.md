@@ -83,6 +83,27 @@ recovery that discards such uncertainty.
 `quiescent(ids)` also checks the whole router. A failed/partial operation is never
 settled merely because a later fallback succeeds.
 
+Each physical operation now has `response_observation`, either `null` (unavailable)
+or `{status, mediaType, bodyPresent}`. Before any response interpretation, the
+authority commits this observation to a separate SQLite table keyed by the exact
+request ID and physical ordinal. `status` is the original numeric HTTP status,
+not a router-generated error status. `mediaType` is one of `sse`, `json`, `html`,
+`missing`, or `other`; classification compares the lowercased MIME before any
+parameters and never retains the header string. `bodyPresent` means Fetch supplied
+a body stream, not that it contained bytes: an empty HTTP 200 can be `true`, while
+HTTP 204 is `false`. No raw headers, body, status text, credential, account identity
+or reflected parameter is added to the observation.
+
+The observation is immutable and is diagnostic evidence only. It neither changes
+MIME acceptance nor establishes terminality, output qualification, remote stop,
+retry or replacement authority. Unsupported responses and invalid rejection bodies
+remain unknown. An observation write failure aborts/disposes the physical response
+and retains the already committed debit and unknown operation, even if the local
+stop write also fails. Restart preserves committed observations and never backfills
+missing ones. Old serialized receipts may omit the field; the current receipt API
+returns `null` for their absent rows. The failed historical live attempt is not
+rewritten or reclassified. See the [#86 evidence](../../docs/evidence/router-response-diagnostics.md).
+
 All KV-backed policy maps are disabled in the current profiles. Readback checks
 the raw stored row inventory and rejects every row before reconstructing maps;
 reserved keys such as `__proto__` cannot disappear through plain-object assignment.
