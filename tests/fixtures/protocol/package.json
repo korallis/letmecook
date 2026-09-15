@@ -1,0 +1,7 @@
+{
+  "name": "gaffer-provisional-protocol-fixtures",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": { "test": "node check.ts" }
+}

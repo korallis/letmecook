@@ -1,7 +1,9 @@
 # Working on letmecook
 
-Build with GPT-6 Astra. The product's working name is Gaffer. This is a pre-code
-repository: the reviewed design describes intended behaviour, not existing APIs.
+Build with GPT-6 Astra. The product's working name is Gaffer. Most reviewed design
+describes intended behaviour, not existing APIs. The reversible #93 protocol slice
+is provisional; see `schemas/execution/README.md` for boundaries and reconciliation,
+and `tests/fixtures/protocol/README.md` for checks. It does not accept #9/#10.
 
 ## Issue workflow
 
@@ -59,3 +61,10 @@ concise: outcome, evidence, remaining limitations.
 
 See [the Astra playbook](docs/astra-playbook.md) for the issue handoff format and
 the published OpenAI guidance behind this workflow.
+
+## Maintaining this file
+
+Keep this file for knowledge useful to almost every future agent session in this project.
+Do not repeat what the codebase already shows; point to the authoritative file or command instead.
+Prefer rewriting or pruning existing entries over appending new ones.
+When updating this file, preserve this bar for all agents and keep entries concise.
