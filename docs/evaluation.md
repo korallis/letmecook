@@ -350,14 +350,14 @@ a reliable measure of its remaining allowance.
 | --- | --- | --- |
 | User | One solo operator who accepts configured cloud model processing | A real second-user requirement appears |
 | Value | Intent-to-acceptance continuity and less operator effort | Pilot fails to improve the standalone-harness baseline |
-| Core language | Retain proposed Go, React/TypeScript UI | M0 packaging/reuse evidence favours another choice |
+| Core language | See the [recorded application target](https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md#first-harness-and-runtime-target-versus-support) | M0 packaging/reuse evidence favours another choice |
 | First release | Sequential durable loop plus online phone workflow | M1–M2 gates pass |
 | Code review | Gaffer evidence summary, GitHub review/check authority | Demonstrated need for an in-app editing workflow |
 | Memory | Reviewed files and explicit progress | Retrieval evaluation justifies extra automation |
 | Model routing | 9Router is required from M0; all agents share routes and multiple subscriptions per provider | Validate the pinned integration; extend only the necessary status/policy interface |
 | Fleet | Small eligible pool with single integration writer | Paired task evidence supports more concurrency |
 | Production hosts | Excluded from initial supported execution | Separate deployment/threat review and explicit user need |
-| Release timing | Estimate after feasibility; gates before dates | M0 yields observed implementation effort |
+| Release timing | See the [effort record and conditional estimates](https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md#effort-record-and-estimates); gates before dates | M0 yields observed implementation effort |
 
 Unknowns remain real: which Docker-free harness/9Router/isolation combination
 passes on your hardware, the measured cost of extending either candidate versus

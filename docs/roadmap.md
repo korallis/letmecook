@@ -12,11 +12,10 @@ rough 29-week plan, whose ordering delayed essential controls until after parall
 execution. No calendar commitment is credible while isolation, live and reuse gates remain
 unmeasured. The original M0 recommendation was roughly five focused engineering
 days, not an observed effort result. The
-[foundation decision](https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md)
-records the actual activity span, unknown person-hours, remaining M1 estimate of
-25–45 focused engineering days and M2 estimate of 23–42 days plus at least seven
-calendar days of dogfood. These are planning ranges after entry gates, excluding
-unknown M0 remediation and operator waits, not a release date.
+[foundation effort record](https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md#effort-record-and-estimates)
+owns observed M0 activity and conditional M1/M2 estimates. Those planning ranges
+apply after entry gates and exclude unknown M0 remediation and operator waits;
+they are not a release date.
 
 ## Release sequence
 
