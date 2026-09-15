@@ -29,7 +29,7 @@ jobs:
         run: |
           npm --prefix web run build
           (cd web/dist && find . -type f | sort | xargs shasum -a 256) > "$RUNNER_TEMP/dist-a"
-          rm -rf web/dist/assets web/dist/index.html
+          printf 'stale output\n' > web/dist/assets/stale.js
           npm --prefix web run build
           (cd web/dist && find . -type f | sort | xargs shasum -a 256) > "$RUNNER_TEMP/dist-b"
           cmp "$RUNNER_TEMP/dist-a" "$RUNNER_TEMP/dist-b"

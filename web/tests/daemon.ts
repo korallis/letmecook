@@ -10,26 +10,40 @@ export const root = fileURLToPath(new URL('../../', import.meta.url));
 export async function startDaemon(): Promise<{ base: string; stop: () => Promise<void> }> {
   const dir = mkdtempSync(join(tmpdir(), 'gaffer-shell-test-'));
   const binary = join(dir, 'gafferd');
-  execFileSync('go', ['build', '-trimpath', '-buildvcs=false', '-o', binary, './cmd/gafferd'], { cwd: root, stdio: 'inherit', env: { ...process.env, CGO_ENABLED: '0' } });
-  const daemon: ChildProcess = spawn(binary, [], { cwd: dir, stdio: ['ignore', 'pipe', 'inherit'] });
-  const base = await new Promise<string>((resolve, reject) => {
-    let output = '';
-    const timer = setTimeout(() => reject(new Error('daemon startup timeout')), 20000);
-    daemon.stdout!.on('data', chunk => {
-      output += chunk.toString();
-      const match = /^fixture-only (http:\/\/127\.0\.0\.1:\d+)\/api\/v1\/status\n/.exec(output);
-      if (match) { clearTimeout(timer); resolve(match[1]!); }
-      else if (output.length > 1024) { clearTimeout(timer); reject(new Error(output)); }
-    });
-    daemon.on('exit', code => { clearTimeout(timer); reject(new Error(`daemon exited ${code}`)); });
-  });
-  return {
-    base,
-    stop: async () => {
-      const exited = new Promise<void>(resolve => daemon.once('exit', () => resolve()));
-      daemon.kill('SIGTERM');
-      await exited;
+  let daemon: ChildProcess | undefined;
+  let closed: Promise<void> | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const stop = async () => {
+    const killTimer = setTimeout(() => daemon?.kill('SIGKILL'), 6000);
+    try {
+      if (daemon?.pid && daemon.exitCode === null && daemon.signalCode === null) daemon.kill('SIGTERM');
+      await closed;
+    } finally {
+      clearTimeout(killTimer);
       rmSync(dir, { recursive: true, force: true });
-    },
+    }
   };
+  try {
+    execFileSync('go', ['build', '-trimpath', '-buildvcs=false', '-o', binary, './cmd/gafferd'], { cwd: root, stdio: 'inherit', env: { ...process.env, CGO_ENABLED: '0' } });
+    daemon = spawn(binary, [], { cwd: dir, stdio: ['ignore', 'pipe', 'inherit'] });
+    closed = new Promise<void>(resolve => daemon!.once('close', () => resolve()));
+    const base = await new Promise<string>((resolve, reject) => {
+      let output = '';
+      timer = setTimeout(() => reject(new Error('daemon startup timeout')), 20000);
+      daemon!.stdout!.on('data', chunk => {
+        output += chunk.toString();
+        const match = /^fixture-only (http:\/\/127\.0\.0\.1:\d+)\/api\/v1\/status\n/.exec(output);
+        if (match) resolve(match[1]!);
+        else if (output.length > 1024) reject(new Error(output));
+      });
+      daemon!.once('error', reject);
+      daemon!.once('exit', code => reject(new Error(`daemon exited ${code}`)));
+    });
+    return { base, stop };
+  } catch (error) {
+    await stop();
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
 }

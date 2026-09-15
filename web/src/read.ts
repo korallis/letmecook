@@ -33,11 +33,11 @@ function errorCode(bytes: Uint8Array): ErrorCode | null {
 }
 
 /** One bounded same-origin GET. Never throws; every failure is a named state. */
-export async function readSnapshot(fetchImpl: typeof fetch = fetch): Promise<ReadState> {
+export async function readSnapshot(): Promise<ReadState> {
   let res: Response;
   let bytes: Uint8Array;
   try {
-    res = await fetchImpl(SNAPSHOT_PATH, { method: 'GET', credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(TIMEOUT_MS) });
+    res = await fetch(SNAPSHOT_PATH, { method: 'GET', credentials: 'omit', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(TIMEOUT_MS) });
     const length = Number(res.headers.get('content-length') ?? 0);
     if (length > MAX_BYTES) return { kind: 'malformed', status: res.status };
     bytes = new Uint8Array(await res.arrayBuffer());

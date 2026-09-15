@@ -230,13 +230,6 @@ func TestEmbeddedShell(t *testing.T) {
 		if res.StatusCode != 200 || res.Header.Get("Content-Type") != want || len(asset) == 0 || res.Header.Get("X-Content-Type-Options") != "nosniff" {
 			t.Fatalf("asset %s %d %v", m[1], res.StatusCode, res.Header)
 		}
-		if strings.HasSuffix(m[1], ".js") {
-			for _, forbidden := range []string{"EventSource", "serviceWorker", "WebSocket", "localStorage", "sessionStorage", "indexedDB", "document.cookie", "method:\"POST\"", "/api/v1/enroll", "/api/v1/grant", "/api/v1/accept"} {
-				if strings.Contains(string(asset), forbidden) {
-					t.Fatalf("shell bundle contains %q", forbidden)
-				}
-			}
-		}
 	}
 }
 

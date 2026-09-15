@@ -6,6 +6,5 @@ import stylex from '@stylexjs/unplugin';
 // web/embed.go; no dev proxy exists because the daemon refuses foreign origins.
 export default defineConfig({
   plugins: [stylex.vite({ useCSSLayers: true, dev: false, runtimeInjection: false }), react()],
-  server: { fs: { allow: ['..'] } },
-  build: { outDir: 'dist', emptyOutDir: false, sourcemap: false, modulePreload: false, target: 'es2023' },
+  build: { modulePreload: false, target: 'es2023' },
 });

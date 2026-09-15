@@ -86,6 +86,45 @@ test('refresh re-reads and every failure state is a named status word', async ({
   await expect(status(page)).toHaveText(/^Read: bounded fixture snapshot decoded$/);
 });
 
+test('load and refresh only read snapshots without push or persistent state', async ({ page, context }) => {
+  const requests: { method: string; url: string }[] = [];
+  page.on('request', request => {
+    if (!['document', 'script', 'stylesheet'].includes(request.resourceType())) {
+      requests.push({ method: request.method(), url: request.url() });
+    }
+  });
+  await page.addInitScript(() => {
+    const calls: string[] = [];
+    Object.assign(window, { forbiddenCalls: calls });
+    for (const name of ['EventSource', 'WebSocket'] as const) {
+      Object.defineProperty(window, name, { value: new Proxy(window[name], {
+        construct(target, args) { calls.push(name); return Reflect.construct(target, args); },
+      }) });
+    }
+    for (const [owner, method] of [[Storage.prototype, 'setItem'], [IDBFactory.prototype, 'open'],
+      [IDBFactory.prototype, 'deleteDatabase'], [ServiceWorkerContainer.prototype, 'register']] as const) {
+      Object.defineProperty(owner, method, { value: new Proxy(Reflect.get(owner, method), {
+        apply(target, receiver, args) { calls.push(method); return Reflect.apply(target, receiver, args); },
+      }) });
+    }
+    const cookie = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie')!;
+    Object.defineProperty(Document.prototype, 'cookie', { ...cookie,
+      set(value: string) { calls.push('cookie'); cookie.set!.call(this, value); },
+    });
+  });
+  await page.goto(base + '/');
+  await expect(status(page)).toHaveText(/^Read/);
+  await page.getByRole('button', { name: 'Refresh snapshot' }).click();
+  await expect.poll(() => requests.length).toBe(2);
+  await expect(status(page)).toHaveText(/^Read/);
+  expect(requests).toEqual(Array.from({ length: 2 }, () => ({ method: 'GET', url: base + '/api/v1/snapshot?limit=50' })));
+  expect(await page.evaluate(() => (window as typeof window & { forbiddenCalls: string[] }).forbiddenCalls)).toEqual([]);
+  expect(await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length)).toBe(0);
+  expect(await page.evaluate(async () => indexedDB.databases())).toEqual([]);
+  expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
+  expect(await context.cookies()).toEqual([]);
+});
+
 test('keyboard path, visible focus, semantics and reduced motion', async ({ page }) => {
   await page.goto(base + '/');
   await expect(status(page)).toHaveText(/^Read/);
@@ -151,7 +190,4 @@ test('direct browser requests cannot enable actions, imports or remote binding',
     expect(r.body).toContain('"error":"read_only"');
   }
   expect((await probe({ path: '/api/v1/status', headers: { 'X-Forwarded-For': '203.0.113.9' } })).status).toBe(403);
-  // Bundle carries no push/offline/storage runtime.
-  expect(await page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length)).toBe(0);
-  expect(await page.evaluate(() => localStorage.length + sessionStorage.length + document.cookie.length)).toBe(0);
 });

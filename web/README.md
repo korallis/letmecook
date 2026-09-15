@@ -17,7 +17,8 @@ CGO_ENABLED=0 go build -trimpath -buildvcs=false -o .local/gafferd ./cmd/gafferd
 ```
 
 `go:embed all:dist` includes whatever is in `web/dist` at Go build time. Build the
-shell first; a Go binary built without it answers `GET /` with the daemon's JSON
+shell first; each build removes previous output and restores the tracked
+`.gitkeep` placeholder. A Go binary built without the shell answers `GET /` with the daemon's JSON
 `ui_unavailable` refusal (503) instead of serving any fallback. There is no dev
 server, proxy or CORS path: the daemon refuses foreign `Host`/`Origin`, so the
 shell is only ever tested and served from the daemon's own loopback origin.
@@ -44,7 +45,8 @@ no forwarding headers, GET only, no query, no body, 512-byte URI) and a stricter
   closed. The single control is "Refresh snapshot".
 - No login, device, task action, approval, stop claim, router/account state,
   SSE, WebSocket, service worker, storage, cookies or offline state exist. The
-  bundle test in `internal/httpapi` fails if such runtime strings appear.
+  browser tests observe requests and runtime API calls during load and refresh,
+  and check that no persistent browser state is created.
 
 ## Checks
 
@@ -57,7 +59,8 @@ npm --prefix web exec playwright install chromium
 npm --prefix web test                # real daemon, axe, 360/1280 light/dark
 ```
 
-`npm test` builds and starts the real CGO-free daemon, opens the embedded page,
+`npm test` checks daemon cleanup on startup failures and teardown, then builds
+and starts the real CGO-free daemon, opens the embedded page,
 asserts rendered rows against the daemon's own JSON, drives the refresh button
 through malformed/server-error/empty/unavailable/loading/unknown by intercepting
 the request in the browser, walks the keyboard path, checks visible focus and
@@ -66,7 +69,8 @@ actions, imports, remote binding or non-GET methods. axe must report zero
 serious/critical findings. Outputs land in `web/reports/` (git-ignored):
 `react-doctor.json`, `playwright.json`, `screenshots/{360,1280}-{light,dark}.png`.
 CI (`.github/workflows/web-shell.yml`) uploads the same files as an artifact and
-checks the build is byte-identical twice. Doctor score does not replace behaviour
+checks that rebuilding removes stale assets and produces byte-identical output.
+Doctor score does not replace behaviour
 or rendered review.
 
 Skipped deliberately: dev-server proxy (no CORS by design), component unit tests
