@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "id": "m0-debian13-amd64-systemd-native-v1",
+  "status": "unmeasured",
+  "unattendedSupported": false,
+  "procedureSha256": "fbc0b408d2023a769a24a8b48e856b52a6744c5efc4e91869775be65a4ec6b59",
+  "identity": null,
+  "ids": null,
+  "storage": null,
+  "artifacts": null,
+  "controls": null,
+  "headroom": null
+}
