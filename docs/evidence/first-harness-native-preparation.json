@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "outcome": "offline-adapter-preparation",
+  "issueComplete": false,
+  "liveAdmission": false,
+  "newRuntimeExecution": false,
+  "physicalInferenceAttempts": 0,
+  "scopeStarted": false,
+  "baseCommit": "b5a4c6bfff62bffe6738323f1bc109bc78f76e77",
+  "sharedSnapshot": "70bacc54cce839e5d0b6e168dceee10977a4eecb",
+  "sharedTree": "de10e2e781e30e43711a60cb6f0f0220d8e9155e",
+  "sharedDependencyMerged": false,
+  "overlayDigest": "721c97794f3ee70e19126b824262c3c208ae682fc51391aa6b01536897a1e969",
+  "sourceDigests": {
+    "experiments/harness/adapter.test.ts": "bff0b03b6008ae701718d7530848d7c0f7d56a8dfd72c344e169ad5de459075d",
+    "experiments/harness/adapter.ts": "fca78d76d1aa6df869a901da16b88b46d065ff110da339caf84d3980b1990662",
+    "experiments/harness/native/admission.ts": "58f791a1ee64b3a165faa2a4636314b0e59a3b3db33628e34acfefff9ee46ecd",
+    "experiments/harness/native/client.ts": "f97bb84b0315513e88c1ca90268eea2272375a2e8a647d747601602047f54241",
+    "experiments/harness/native/evidence.ts": "bfa5bc35c941a904256cd0d17c67fa045085b68e0fcef70e4fafceb313e7463d",
+    "experiments/harness/native/fixture.ts": "c6a9ab7631bb6604e1e6b36382ff54cdf363ed371ca63b734f20f3f2308f3227",
+    "experiments/harness/native/isolation.ts": "b84e24603d6146381543ba3f7cde1163710ba428a0d9eeb88456502923cc139a",
+    "experiments/harness/native/native.test.ts": "b128a5baf3ed004e2884fa35d4f6c166fa6ae5162f10a885b5589200e4e7029a",
+    "experiments/harness/native/relay.ts": "d8220ecf03eac4a15b697c9f3ebf48e6ebcadf174da9e3c679e7ea71b4858c4f",
+    "experiments/harness/native/run.ts": "e664bce73cfa8469fa668a4ad58adf88b8f5baf851d3d417bae8f41cf4f6f144",
+    "experiments/harness/native/staging.ts": "cbc41de8ef8d2df968b801ba6d6751b040ab4a2a16746218ec58b2930dd10827",
+    "experiments/harness/native/tsconfig.json": "28b0c41bcf9bd63fce0634582273fac9056d2022b9229e0785a1791b98da8cfa",
+    "experiments/harness/native/worker.ts": "2d6a911a63d853071eb0f1ab6cf4c1f2a66d7d8fcaf7f46a85cc715d568df965",
+    "experiments/harness/package.json": "2e1ab39df0a6b008fe77f7af8806ef7d6b96431dcd4d5797d8b29e9894098812",
+    "experiments/harness/pins.json": "3fca1645e1ae767ea65d987e456166e04f6d68273e53c36af138dd57b0751163",
+    "tests/fixtures/harness/native/captured.json": "49c63a7b291bfd3bf8315c6e472cdd1a6a750518b5be3e20b032ca216bd9afe9"
+  },
+  "retainedCapture": {
+    "evidence": "retained synthetic pinned OpenCode/shared-router capture; not this adapter runtime",
+    "sourceSHA256": "307c02f9319f750fac39af5633ae6c324af1f2d0faef273fe2bb208209a29a74",
+    "sourceCommit": "70bacc54cce839e5d0b6e168dceee10977a4eecb",
+    "sourceBlobsVerified": 75,
+    "originalSyntheticSends": 2,
+    "newAdapterRuntime": false
+  },
+  "checks": [
+    {
+      "command": "npm --prefix experiments/harness run check",
+      "context": "preparation branch",
+      "exitCode": 0
+    },
+    {
+      "command": "npm --prefix experiments/harness test",
+      "context": "preparation branch",
+      "exitCode": 0,
+      "tests": 14
+    },
+    {
+      "command": "node node_modules/typescript/bin/tsc -p native/tsconfig.json",
+      "context": "shared archive plus adapter overlay",
+      "node": "v24.19.0",
+      "exitCode": 0
+    },
+    {
+      "command": "node --test native/native.test.ts",
+      "context": "shared archive plus adapter overlay",
+      "node": "v24.19.0",
+      "exitCode": 0,
+      "tests": 9
+    },
+    {
+      "command": "npm --prefix docs run build",
+      "exitCode": 0
+    },
+    {
+      "command": "npm --prefix docs run check",
+      "exitCode": 0
+    }
+  ],
+  "testLimitations": [
+    "Retained capture executed the prior shared worker, not the new adapter.",
+    "Replay clocks, Git base/diff and candidate packet acknowledgement are constructed fixtures.",
+    "New native runtime, full failure/containment matrix, builtin/ambient audit, deployment and live acceptance remain unrun.",
+    "Final accepted dependency integration, fresh independent review and CI are still required."
+  ],
+  "scopeContract": {
+    "initial": {
+      "physicalAttempts": 10,
+      "aggregateElapsedMs": 600000,
+      "allConsumersPreparedAndReviewedBeforeStart": true
+    },
+    "baseline": {
+      "physicalAttempts": 32,
+      "aggregateElapsedMs": 900000,
+      "separatelyApprovedCase": true
+    },
+    "renewalFromImplementationOrReviewDelay": false
+  }
+}

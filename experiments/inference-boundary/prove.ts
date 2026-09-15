@@ -19,7 +19,7 @@ async function write() {
   const dir = await open(dirname(output), 'r'); try { await dir.sync(); } finally { await dir.close(); }
 }
 await write();
-const files = (await readdir(directory)).filter(name => name.endsWith('.ts') || ['package.json', 'package-lock.json', 'tsconfig.json'].includes(name));
+const files = (await readdir(directory)).filter(name => name.endsWith('.ts') || ['package.json', 'package-lock.json', 'tsconfig.json', 'opencode-tools.json'].includes(name));
 for (const name of files.sort()) evidence.sourceDigests[name] = createHash('sha256').update(await readFile(join(directory, name))).digest('hex');
 const stream = run({ files: [join(directory, 'boundary.test.ts')], timeout: 30000 });
 let success = false;

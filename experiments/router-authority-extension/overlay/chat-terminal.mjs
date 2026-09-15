@@ -9,7 +9,7 @@ function keys(value, allowed, required = []) {
   assert(Object.keys(value).every(key => allowed.includes(key)) && required.every(key => own(value, key)), 'unsupported_fields');
 }
 
-function strictJSON(text, maxDepth) {
+export function strictJSON(text, maxDepth) {
   let parsed; try { parsed = JSON.parse(text); } catch { throw new Error('malformed_json'); }
   // Detect duplicates before trusting a parsed value; JSON.parse keeps the last key.
   let at = 0;

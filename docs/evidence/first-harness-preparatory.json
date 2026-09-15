@@ -1,0 +1,389 @@
+{
+  "observedAt": "2026-09-14T12:49:26.076Z",
+  "syntheticInferenceOnly": true,
+  "issue6Complete": false,
+  "acceptedIsolationProfileSupportsHarness": false,
+  "pins": {
+    "version": "1.18.30",
+    "sourceCommit": "3104c1428ec91f809e5ab86631300de41eb6952e",
+    "image": "node:24-bookworm@sha256:6dac556d980b7f0e5498d08f08cee0ca67798b4ad6c23964a9214920e67758d0"
+  },
+  "cases": [
+    {
+      "name": "version",
+      "memoryMiB": 128,
+      "container": {
+        "Status": "exited",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": false,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "2026-09-14T12:44:38.147109835Z",
+        "FinishedAt": "2026-09-14T12:44:39.251282585Z"
+      },
+      "cleanup": true,
+      "requests": [],
+      "eventTypes": [],
+      "cancellation": []
+    },
+    {
+      "name": "strict",
+      "memoryMiB": 128,
+      "base": "e5530a6214f34215d2b2be4cc5815f2edfa54753",
+      "harnessExit": null,
+      "harnessSignal": "SIGKILL",
+      "container": {
+        "Status": "exited",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": true,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "2026-09-14T12:45:55.035688926Z",
+        "FinishedAt": "2026-09-14T12:46:16.59629188Z"
+      },
+      "cleanup": true,
+      "requests": [],
+      "eventTypes": [],
+      "finalFile": "hello\n",
+      "diff": "",
+      "cancellation": []
+    },
+    {
+      "name": "strict-512",
+      "memoryMiB": 512,
+      "base": "163e20a4d7556dbc4cd83a66341a38df85acbf67",
+      "harnessExit": 1,
+      "harnessSignal": null,
+      "container": {
+        "Status": "exited",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": false,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "2026-09-14T12:47:08.483596252Z",
+        "FinishedAt": "2026-09-14T12:47:15.397327255Z"
+      },
+      "cleanup": true,
+      "requests": [
+        {
+          "number": 1,
+          "path": "/v1/chat/completions",
+          "keys": [
+            "model",
+            "max_tokens",
+            "messages",
+            "stream",
+            "stream_options"
+          ],
+          "max_tokens": 128,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      ],
+      "eventTypes": [
+        "error"
+      ],
+      "finalFile": "hello\n",
+      "diff": "",
+      "cancellation": [
+        {
+          "probe": "response-close",
+          "time": 1789390035242,
+          "count": 1,
+          "ended": true
+        }
+      ]
+    },
+    {
+      "name": "text-512",
+      "memoryMiB": 512,
+      "base": "57effc9ee3a6f8257f6b09375f822fdd867b4f3c",
+      "harnessExit": 0,
+      "harnessSignal": null,
+      "container": {
+        "Status": "exited",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": false,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "2026-09-14T12:47:34.217774416Z",
+        "FinishedAt": "2026-09-14T12:47:39.205287877Z"
+      },
+      "cleanup": true,
+      "requests": [
+        {
+          "number": 1,
+          "path": "/v1/chat/completions",
+          "keys": [
+            "model",
+            "max_tokens",
+            "messages",
+            "stream",
+            "stream_options"
+          ],
+          "max_tokens": 128,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      ],
+      "eventTypes": [
+        "step_start",
+        "text",
+        "step_finish"
+      ],
+      "finalFile": "hello\n",
+      "diff": "",
+      "cancellation": [
+        {
+          "probe": "response-close",
+          "time": 1789390058996,
+          "count": 1,
+          "ended": true
+        }
+      ]
+    },
+    {
+      "name": "edit-512",
+      "memoryMiB": 512,
+      "base": "f4752874f3dffa651cfd49ea84526b886d5be624",
+      "harnessExit": 0,
+      "harnessSignal": null,
+      "container": {
+        "Status": "exited",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": false,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "2026-09-14T12:47:33.03783493Z",
+        "FinishedAt": "2026-09-14T12:47:36.915721501Z"
+      },
+      "cleanup": true,
+      "requests": [
+        {
+          "number": 1,
+          "path": "/v1/chat/completions",
+          "keys": [
+            "model",
+            "max_tokens",
+            "messages",
+            "tools",
+            "tool_choice",
+            "stream",
+            "stream_options"
+          ],
+          "max_tokens": 128,
+          "stream_options": {
+            "include_usage": true
+          },
+          "tool_choice": "auto",
+          "tools": [
+            "edit",
+            "write"
+          ]
+        },
+        {
+          "number": 2,
+          "path": "/v1/chat/completions",
+          "keys": [
+            "model",
+            "max_tokens",
+            "messages",
+            "tools",
+            "tool_choice",
+            "stream",
+            "stream_options"
+          ],
+          "max_tokens": 128,
+          "stream_options": {
+            "include_usage": true
+          },
+          "tool_choice": "auto",
+          "tools": [
+            "edit",
+            "write"
+          ]
+        }
+      ],
+      "eventTypes": [
+        "step_start",
+        "tool_use",
+        "step_finish",
+        "step_start",
+        "text",
+        "step_finish"
+      ],
+      "finalFile": "hello from probe\n",
+      "diff": "diff --git a/greeting.txt b/greeting.txt\nindex ce01362..e1e163e 100644\n--- a/greeting.txt\n+++ b/greeting.txt\n@@ -1 +1 @@\n-hello\n+hello from probe\n",
+      "cancellation": [
+        {
+          "probe": "response-close",
+          "time": 1789390056605,
+          "count": 1,
+          "ended": true
+        },
+        {
+          "probe": "response-close",
+          "time": 1789390056803,
+          "count": 2,
+          "ended": true
+        }
+      ]
+    },
+    {
+      "name": "ask-512",
+      "memoryMiB": 512,
+      "base": "250514f42ae65034f1c5e3d454a909bcc659de1c",
+      "harnessExit": 0,
+      "harnessSignal": null,
+      "container": {
+        "Status": "exited",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": false,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "2026-09-14T12:48:19.511835674Z",
+        "FinishedAt": "2026-09-14T12:48:24.064821717Z"
+      },
+      "cleanup": true,
+      "requests": [
+        {
+          "number": 1,
+          "path": "/v1/chat/completions",
+          "keys": [
+            "model",
+            "max_tokens",
+            "messages",
+            "tools",
+            "tool_choice",
+            "stream",
+            "stream_options"
+          ],
+          "max_tokens": 128,
+          "stream_options": {
+            "include_usage": true
+          },
+          "tool_choice": "auto",
+          "tools": [
+            "edit",
+            "write"
+          ]
+        }
+      ],
+      "eventTypes": [
+        "step_start",
+        "tool_use",
+        "step_finish"
+      ],
+      "finalFile": "hello\n",
+      "diff": "",
+      "cancellation": [
+        {
+          "probe": "response-close",
+          "time": 1789390103262,
+          "count": 1,
+          "ended": true
+        },
+        {
+          "probe": "after-exit",
+          "time": 1789390104059,
+          "processes": "  PID  PPID COMMAND\n    1     0 docker-init\n    7     1 MainThread\n   49     7 ps\n"
+        }
+      ]
+    },
+    {
+      "name": "stall-512",
+      "memoryMiB": 512,
+      "base": "ad23430abcc8f8d2e625dabcebd56ddef1a187eb",
+      "harnessExit": null,
+      "harnessSignal": "SIGTERM",
+      "container": {
+        "Status": "exited",
+        "Running": false,
+        "Paused": false,
+        "Restarting": false,
+        "OOMKilled": false,
+        "Dead": false,
+        "Pid": 0,
+        "ExitCode": 0,
+        "Error": "",
+        "StartedAt": "2026-09-14T12:48:20.640368507Z",
+        "FinishedAt": "2026-09-14T12:48:25.34072551Z"
+      },
+      "cleanup": true,
+      "requests": [
+        {
+          "number": 1,
+          "path": "/v1/chat/completions",
+          "keys": [
+            "model",
+            "max_tokens",
+            "messages",
+            "stream",
+            "stream_options"
+          ],
+          "max_tokens": 128,
+          "stream_options": {
+            "include_usage": true
+          }
+        }
+      ],
+      "eventTypes": [],
+      "finalFile": "hello\n",
+      "diff": "",
+      "cancellation": [
+        {
+          "probe": "cancel-signal",
+          "time": 1789390105007,
+          "pid": 21,
+          "signal": "SIGTERM",
+          "processes": "  PID  PPID COMMAND\n    1     0 docker-init\n    7     1 MainThread\n   21     7 opencode\n   48     7 ps\n"
+        },
+        {
+          "probe": "response-close",
+          "time": 1789390105019,
+          "count": 1,
+          "ended": false
+        },
+        {
+          "probe": "after-exit",
+          "time": 1789390105330,
+          "processes": "  PID  PPID COMMAND\n    1     0 docker-init\n    7     1 MainThread\n   50     7 ps\n"
+        }
+      ]
+    }
+  ],
+  "digests": {
+    "opencode": "01edb5839aa10d5b09133fedcb335a062ecad6e82552933bb14f71756f2b296b",
+    "opencode-linux-arm64.tar.gz": "4111a55c2a02c0fac314bd51e9a2330280e6d29d2b85b9554fff6d62612566ed",
+    "probe.ts": "b6fb9e4c95a437074c3a1b4853075a815808d7203cecba87843a4b8cde80a66f",
+    "probe-roundtrip.ts": "32671babc022c99cea77bb7d3d842f3a7400258ce84fcb20a2726015a607e25f",
+    "launch.ts": "3795598c3bfe4b481ee140de4386be4b2157aa3d14df0fefebdd4315a7a4aa46",
+    "launch-roundtrip.ts": "3795598c3bfe4b481ee140de4386be4b2157aa3d14df0fefebdd4315a7a4aa46"
+  }
+}

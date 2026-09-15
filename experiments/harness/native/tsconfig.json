@@ -1,0 +1,4 @@
+{
+  "compilerOptions": { "target": "ES2023", "module": "NodeNext", "strict": true, "allowImportingTsExtensions": true, "noEmit": true, "erasableSyntaxOnly": true, "allowJs": true, "checkJs": false, "typeRoots": ["../node_modules/@types"] },
+  "include": ["*.ts"]
+}

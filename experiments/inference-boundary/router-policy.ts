@@ -1,3 +1,4 @@
+import { OPENCODE_ROUTER_PROFILE } from './profile-ids.ts';
 import { createHash } from 'node:crypto';
 import { canonical, keys, object } from './json.ts';
 import { Denial, ref, type Binding, type Limits } from './types.ts';
@@ -13,10 +14,10 @@ export interface AuthorityIdentity { deploymentId: string; boot: string; generat
 export type RouterPolicy = StrictRouterPolicy | NativeRouterPolicy;
 export interface StrictRouterPolicy {
   schema: 2; routerId: string; routeId: string; revision: string; epoch: number; routerModel: string;
-  profile: 'router-chat-text-tools-synthetic-v1' | 'router-native-chat-translation-synthetic-v1';
+  profile: typeof OPENCODE_ROUTER_PROFILE | 'router-chat-text-tools-synthetic-v1' | 'router-native-chat-translation-synthetic-v1';
   evidence: 'synthetic'; liveAdmission: false; graph: Record<string, any>; limits: Limits;
   authority: AuthorityIdentity;
-  envelope: { consumer: 'chat-read-file-v1'; cap: 'max_completion_tokens-to-max_tokens-v1'; replacement: 'read-only'; sourceCommit: string; sourceLock: string; overlay: string; runtime: string };
+  envelope: { consumer: 'chat-read-file-v1' | 'opencode-1.18.30-usage-disabled-edit-v1'; cap: 'max_completion_tokens-to-max_tokens-v1' | 'max_tokens-preserved-v1'; replacement: 'read-only'; sourceCommit: string; sourceLock: string; overlay: string; runtime: string };
 }
 export interface RouterReservation {
   policy: RouterPolicy; binding: Binding; requestDigest: string; send: 'reserved' | 'send_possible';
@@ -40,16 +41,17 @@ export function validateRouterPolicy(p: RouterPolicy): RouterPolicy {
   if(p.schema===3)return validateNativeRouterPolicy(p);
   try {
     exact(p, ['schema','routerId','routeId','revision','epoch','routerModel','profile','evidence','liveAdmission','graph','limits','authority','envelope']);
+    const opencode = p.profile === OPENCODE_ROUTER_PROFILE;
     const native = p.profile === 'router-native-chat-translation-synthetic-v1';
-    requireValue(p.schema === 2 && (native || p.profile === 'router-chat-text-tools-synthetic-v1') && p.evidence === 'synthetic' && p.liveAdmission === false);
+    requireValue(p.schema === 2 && (native || opencode || p.profile === 'router-chat-text-tools-synthetic-v1') && p.evidence === 'synthetic' && p.liveAdmission === false);
     requireValue([p.routerId,p.routeId,p.revision].every(ref) && Number.isSafeInteger(p.epoch) && p.epoch > 0 && routerRef(p.routerModel));
     validateIdentity(p.authority); requireValue(p.authority.revision === p.revision);
     exact(p.envelope, ['consumer','cap','replacement','sourceCommit','sourceLock','overlay','runtime']);
-    requireValue(p.envelope.consumer === 'chat-read-file-v1' && p.envelope.cap === 'max_completion_tokens-to-max_tokens-v1' && p.envelope.replacement === 'read-only' && p.envelope.sourceCommit === '17c4cc76877bd1755030a8414f8d0083f48dcccf' && [p.envelope.sourceLock,p.envelope.overlay,p.envelope.runtime].every(sha));
+    requireValue(p.envelope.consumer === (opencode ? 'opencode-1.18.30-usage-disabled-edit-v1' : 'chat-read-file-v1') && p.envelope.cap === (opencode ? 'max_tokens-preserved-v1' : 'max_completion_tokens-to-max_tokens-v1') && p.envelope.replacement === 'read-only' && p.envelope.sourceCommit === '17c4cc76877bd1755030a8414f8d0083f48dcccf' && [p.envelope.sourceLock,p.envelope.overlay,p.envelope.runtime].every(sha));
     const g = p.graph;
     exact(g, ['schema','profile','liveAdmission','nativeLiveAdmission','nodes','connections','routes','settings','bounds','terminals']);
     requireValue(Buffer.byteLength(canonical(g)) <= 65536 && hashDocument(g) === p.authority.graphDigest && g.schema === 1 && g.liveAdmission === false && g.nativeLiveAdmission === false);
-    requireValue(g.profile === (native ? '9router-0.5.75-synthetic-native-authority-v1' : '9router-0.5.75-synthetic-compatible-chat-v1'));
+    requireValue(g.profile === (native ? '9router-0.5.75-synthetic-native-authority-v1' : opencode ? '9router-0.5.75-synthetic-opencode-edit-v1' : '9router-0.5.75-synthetic-compatible-chat-v1'));
     requireValue(canonical(g.settings) === canonical({requireApiKey:true,comboStrategy:'fallback',accountStrategy:'fill-first',adapters:false,helpers:false,remoteResources:false,proxies:false,autoPing:false}));
     requireValue(canonical(g.bounds) === canonical({requestBytes:65536,responseBytes:1048576,requestMaxTokens:1024,providerOutputTokens:native ? null : 1024,ingressMs:3000,totalMs:30000,subattempts:16}));
     requireValue(canonical(g.terminals) === canonical(['validated-original-chat-sse','validated-original-json-error',...(native ? ['validated-original-responses-sse','validated-original-refresh-json'] : [])]));

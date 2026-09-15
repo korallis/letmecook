@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { validateScope } from './evaluation-scope.mjs';
+import { validateScope } from './scope-profile.mjs';
 export const NATIVE_LIMITS = 'native-subscription-local-v1';
 export const NATIVE_PROTOCOL = 'opencode-1.18.30-responses-apply-patch-v1';
 export function nativeConsumerRole(profile){if(profile.protocol===NATIVE_PROTOCOL)return 'worker';throw Error('unsupported_native_consumer');}
