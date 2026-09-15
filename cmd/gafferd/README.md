@@ -3,8 +3,12 @@
 Actual Go/SQLite application code, **not M1 acceptance**, a selected foundation,
 a supported execution runtime, or authority to start original #11–#24. #9/#89/#10
 and measured reconciliation remain open. Retain, port or discard this reversible
-slice based on those outcomes, never sunk effort. Uses merged #93 protocol types
-and embeds the [shared public corpus](../../tests/fixtures/protocol/README.md).
+slice based on those outcomes, never sunk effort. The
+[#9 decision record](../../docs/decisions/0001-execution-foundation.md#provisional-slice-reconciliation)
+retains the storage/API mechanics provisionally, with schema reconciliation under
+#10/#11 and no fixture-store import into product state. Its build choice is not
+locked and establishes no supported execution runtime. Uses merged #93 protocol
+types and embeds the [shared public corpus](../../tests/fixtures/protocol/README.md).
 
 ## Bounded local startup
 

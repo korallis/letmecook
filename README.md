@@ -11,8 +11,11 @@ and issue-based workflow now sit alongside isolated feasibility experiments and
 the [provisional execution protocol](schemas/execution/README.md),
 [fixture-only Go/SQLite daemon](cmd/gafferd/README.md) and
 [embedded read-only shell](web/README.md). These reversible application
-slices have no execution, inference or acceptance authority; milestone evidence
-still determines the selected foundation and supported runtime.
+slices have no execution, inference or acceptance authority. The
+[foundation decision record](docs/decisions/0001-execution-foundation.md) selects a
+narrow Go build, not yet locked: measured comparison, Docker-free confinement,
+live conformance, baseline evidence and fresh Opus review remain open. No worker
+or verifier runtime is supported yet.
 See the [inference boundary proof](docs/evidence/inference-boundary.md),
 [passive status experiment](experiments/router-status/README.md),
 [Linux isolation proof](docs/evidence/linux-profile.md), and the
@@ -38,7 +41,8 @@ See [operator-selected deployment](docs/spec.md#12-operator-selected-deployment)
 | Start here | Purpose |
 | --- | --- |
 | [Product overview](docs/README.md) | Intended workflow and scope |
-| [Evaluation](docs/evaluation.md) | Research, challenges and build-versus-reuse decision |
+| [Evaluation](docs/evaluation.md) | Research, challenges and build-versus-reuse rubric |
+| [Foundation decision](docs/decisions/0001-execution-foundation.md) | Pinned comparison, build choice, package plan and unresolved gates |
 | [PRD](docs/PRD.md) | User stories and acceptance targets |
 | [Technical specification](docs/spec.md) | System contracts and failure handling |
 | [Roadmap](docs/roadmap.md) | M0–M6, with evidence gates |
@@ -62,9 +66,10 @@ npm --prefix docs run build
 npm --prefix docs run check
 ```
 
-The initial application direction is Go for the daemon and runner, and React with
-TypeScript for the web client. M0 validates the execution foundation before the
-application foundation is selected; #93–#95 permit only reversible provisional work.
+The recorded direction is Go for daemon/runner and embedded React/TypeScript/StyleX
+for the web client, with OpenCode 1.18.30 as first adapter target. The decision does
+not complete #9 or unlock original downstream work; #93–#95 permit only reversible
+provisional investment. Required runtime and live measurements remain blocked.
 
 MIT is intended for original code and documentation; no licence has yet been
 applied. The release backlog includes the licence and dependency decision.

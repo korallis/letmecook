@@ -4,7 +4,11 @@
 
 Companions: [product requirements](PRD.md), [evaluation](evaluation.md),
 [delivery sequence](roadmap.md). This is a design to implement and test, not a
-statement that the security or durability properties already exist.
+statement that the security or durability properties already exist. The
+[foundation decision record](https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md)
+selects a narrow Go build from the available evidence, pending measured comparison,
+Docker-free confinement and fresh Opus review. It does not complete #9 or unlock
+original downstream work.
 
 ## 1. Architecture and ownership
 
@@ -66,8 +70,10 @@ nor outbound traffic from 9Router to model providers and from delivery to GitHub
 One operator, one active daemon, one repository, one runner, one harness, one shared
 9Router instance and one code-writing attempt at a time. The alpha acceptance
 fixture uses two subscriptions from the same provider to prove central account
-management; an installation with one connection still works. Go remains the proposed daemon/runner language;
-React and TypeScript implement the UI. Linux is the first intended unattended
+management; the design also permits a single-connection installation, not yet
+validated. The decision target is Go 1.26.5 with SQLite, an embedded
+React/TypeScript/StyleX UI and the pinned OpenCode 1.18.30 adapter first.
+No supported worker/verifier runtime is established yet. Linux is the first intended unattended
 execution target; an exact Docker-free OS/native or dedicated VM confinement
 profile must be proven before it is supported. A Mac may host the daemon only
 within the validated support matrix. Worker execution from that installation
@@ -916,9 +922,9 @@ team execution pool is required for the solo product.
 
 | Choice | Current decision | What can change it |
 | --- | --- | --- |
-| Core/runner | Keep Go as proposed; prove supervision and packaging | M0 comparison shows a maintained foundation or TypeScript implementation materially reduces total delivery cost |
+| Core/runner | Narrow Go 1.26.5 build selected in decision record; lock and execution remain blocked | Same-workflow reuse proof materially reduces owned correctness code; provisional effort is not a selection reason |
 | State | SQLite, local WAL, transactional outbox; no broker | Measured single-daemon limitations, not hypothetical enterprise scale |
-| UI | React + TypeScript, served by daemon, SSE | Actual offline/mobile validation |
+| UI | React + TypeScript + StyleX, embedded in daemon; product SSE in M2 | Actual authenticated/mobile validation; #95 fixture shell is not product acceptance |
 | Knowledge | Markdown under git, explicit review, derived FTS index | Held-out evidence for embeddings/curation |
 | Model interface | Harness structured events plus 9Router inference APIs; direct API planner through the same router | Need for a tested richer protocol |
 | Tool format | JSON contracts, compact summaries; optional measured TOON | Accuracy/latency/cost results for real payloads |
@@ -927,6 +933,18 @@ team execution pool is required for the solo product.
 
 The expensive architecture choice is not the programming language. It is owning
 process containment, durable distributed execution and external
-effect reconciliation. [M0](roadmap.md#m0-evidence-and-feasibility) must establish
-whether an existing project can carry those responsibilities better. Provider
-credential handling and account/request routing are delegated to 9Router.
+effect reconciliation. The
+[decision record](https://github.com/korallis/letmecook/blob/main/docs/decisions/0001-execution-foundation.md)
+compares pinned intentic and Claudexor source against the same workflow, names
+missing measurements and bounds M1 ownership. Existing `cmd/gafferd/`,
+`internal/store/`, `internal/httpapi/` and `schemas/` stay provisional until
+#9/#10/#11 reconciliation; do not create parallel `internal/http/` or `internal/api/`
+owners. Future `cmd/gaffer-runner/` owns one qualified runner and `cmd/gaffer/` the
+local CLI. `web/` remains the UI path, not present at the decision's base.
+
+[M0](roadmap.md) is not passed: the first live trial
+failed with unknown remote work, #89 has no newly measured Docker-free profile,
+and real baseline/candidate workflow measurements and fresh Opus review remain
+pending. No first supported execution runtime or retry authority follows from
+this design choice. Provider credential handling and account/request routing
+remain delegated to 9Router.
