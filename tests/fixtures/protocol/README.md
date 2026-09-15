@@ -1,7 +1,9 @@
 # Provisional protocol consistency fixtures
 
 Use Node 24+ and the Go version declared in [go.mod](../../../go.mod). Run from
-repository root, installing the existing pinned TypeScript toolchain first:
+repository root, installing the existing pinned TypeScript toolchain first.
+Repository-wide Go checks also require the
+[daemon prerequisites](../../../cmd/gafferd/README.md#bounded-local-startup).
 
 ```sh
 npm --prefix experiments/inference-boundary ci --ignore-scripts
@@ -12,15 +14,15 @@ go test -race ./...
 node tests/fixtures/protocol/check.ts
 ```
 
-Node runs TypeScript directly; Go uses only stdlib. These commands match the
+Node runs TypeScript directly; the protocol fixture command uses only Go stdlib.
+These commands match the
 [protocol workflow](../../../.github/workflows/execution-protocol.yml).
-No application dependency or test framework is added.
 `check.ts` calls the actual TypeScript validator/check interfaces, runs the Go
 fixture command with the same JSON, and asserts every output against both explicit
 expectations and its peer. `go test` independently runs the same expectations.
 `main.go` is an owned test command, not a product runner or service.
 
-`cases.json` owns synthetic wire messages, raw malformed byte cases, all 100
+`data/cases.json` owns synthetic wire messages, raw malformed byte cases, all 100
 attempt-state edge checks, and named expected adverse traces. `decode` consumes
 JSON text/hex bytes with optional space padding (including exact/over-size bounds).
 Other cases reference named wire messages, decode them, then execute public checks.

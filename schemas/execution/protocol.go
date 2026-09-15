@@ -149,6 +149,10 @@ func in[T comparable](v T, values ...T) bool {
 	return false
 }
 func integer(v int64, min, max int64) bool { return v >= min && v <= max }
+
+// ValidID checks canonical protocol UUIDv4 syntax, not identity ownership.
+func ValidID(v string) bool { return uuid.MatchString(v) }
+
 func validIdentity(v Identity) bool {
 	return uuid.MatchString(v.Generation) && uuid.MatchString(v.TaskID) && uuid.MatchString(v.AttemptID) && integer(v.Epoch, 1, MaxInteger)
 }

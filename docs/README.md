@@ -26,7 +26,10 @@ what ran, and what you accepted**. More agents and more tokens are means to that
 
 ## Status and reading order
 
-**Pre-code · revised planning baseline v0.4 · 14 September 2026.**
+**Revised planning baseline v0.4 · 14 September 2026.**
+
+For current implementation status, see the
+[project README](https://github.com/korallis/letmecook/blob/main/README.md).
 
 These documents describe intended behaviour, not implemented or verified features.
 The revisions preserve the original product intent while changing scope, execution
