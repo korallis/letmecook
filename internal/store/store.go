@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	p "github.com/korallis/letmecook/schemas/execution"
@@ -21,14 +20,12 @@ import (
 )
 
 type Store struct {
-	mu           sync.Mutex
-	db           *sql.DB
-	lock         *os.File
-	dir          string
-	meta         a.Metadata
-	fixture      bool
-	artifacts    *os.File
-	artifactsDir string
+	mu      sync.Mutex
+	db      *sql.DB
+	lock    *os.File
+	dir     string
+	meta    a.Metadata
+	fixture bool
 }
 
 func newID() string {
@@ -72,7 +69,7 @@ func New(ctx context.Context) (*Store, error) {
 
 // open retains historical fixture stores only for tests and explicit --fixture mode.
 func open(ctx context.Context, dir string) (*Store, error) {
-	return openStore(ctx, dir, "", true)
+	return openStore(ctx, dir, true)
 }
 
 // Open creates or reopens persistent, non-executing metadata. Paths are explicit;
@@ -85,29 +82,27 @@ func Open(ctx context.Context, dir, artifactsDir string) (*Store, error) {
 	if artifactsDir, err = prepareDirectory(artifactsDir); err != nil {
 		return nil, err
 	}
-	if dir == artifactsDir || strings.HasPrefix(dir, artifactsDir+string(os.PathSeparator)) || strings.HasPrefix(artifactsDir, dir+string(os.PathSeparator)) {
-		return nil, fmt.Errorf("state and artifact directories must be separate, non-nested paths")
+	artifacts, err := openDirectory(artifactsDir)
+	if err != nil {
+		return nil, err
 	}
-	return openStore(ctx, dir, artifactsDir, false)
+	if err = errors.Join(artifacts.Sync(), artifacts.Close()); err != nil {
+		return nil, err
+	}
+	return openStore(ctx, dir, false)
 }
 
-func openStore(ctx context.Context, dir, artifactsDir string, fixture bool) (_ *Store, err error) {
+func openStore(ctx context.Context, dir string, fixture bool) (_ *Store, err error) {
 	lock, err := lockDirectory(dir)
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{lock: lock, dir: dir, fixture: fixture, artifactsDir: artifactsDir}
+	s := &Store{lock: lock, dir: dir, fixture: fixture}
 	defer func() {
 		if err != nil {
 			err = errors.Join(err, s.Close())
 		}
 	}()
-	if !fixture {
-		s.artifacts, err = lockDirectory(artifactsDir)
-		if err != nil {
-			return nil, err
-		}
-	}
 	for _, name := range []string{"state.db", "state.db-wal", "state.db-shm", "state.db-journal"} {
 		st, e := os.Lstat(filepath.Join(dir, name))
 		if e != nil && !os.IsNotExist(e) {
@@ -159,11 +154,6 @@ func openStore(ctx context.Context, dir, artifactsDir string, fixture bool) (_ *
 	}
 	if err = s.lock.Sync(); err != nil {
 		return nil, err
-	}
-	if s.artifacts != nil {
-		if err = s.artifacts.Sync(); err != nil {
-			return nil, err
-		}
 	}
 	return s, nil
 }
@@ -242,17 +232,7 @@ CREATE TRIGGER events_no_delete BEFORE DELETE ON events BEGIN SELECT RAISE(ABORT
 PRAGMA user_version=2;`); err != nil {
 				return err
 			}
-			if _, err = tx.ExecContext(ctx, "UPDATE metadata SET artifacts_dir=? WHERE singleton=1", s.artifactsDir); err != nil {
-				return err
-			}
 			version = 2
-		}
-		var artifacts string
-		if err = tx.QueryRowContext(ctx, "SELECT artifacts_dir FROM metadata WHERE singleton=1").Scan(&artifacts); err != nil {
-			return err
-		}
-		if artifacts != s.artifactsDir {
-			return fmt.Errorf("artifact location differs from persisted installation")
 		}
 	}
 	boot := newID()
@@ -553,10 +533,6 @@ func (s *Store) Close() error {
 	if s.db != nil {
 		err = s.db.Close()
 		s.db = nil
-	}
-	if s.artifacts != nil {
-		err = errors.Join(err, s.artifacts.Close())
-		s.artifacts = nil
 	}
 	if s.lock != nil {
 		err = errors.Join(err, s.lock.Close())

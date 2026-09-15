@@ -15,7 +15,7 @@ func privateFile(info os.FileInfo) bool {
 	return ok && st.Uid == uint32(os.Geteuid()) && st.Nlink == 1
 }
 
-func lockDirectory(dir string) (*os.File, error) {
+func openDirectory(dir string) (*os.File, error) {
 	fd, err := unix.Open(dir, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return nil, err
@@ -28,10 +28,19 @@ func lockDirectory(dir string) (*os.File, error) {
 	if err == nil {
 		err = localFilesystem(fd)
 	}
-	if err == nil {
-		err = unix.Flock(fd, unix.LOCK_EX|unix.LOCK_NB)
-	}
 	if err != nil {
+		f.Close()
+		return nil, fmt.Errorf("store ownership: %w", err)
+	}
+	return f, nil
+}
+
+func lockDirectory(dir string) (*os.File, error) {
+	f, err := openDirectory(dir)
+	if err != nil {
+		return nil, err
+	}
+	if err = unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
 		f.Close()
 		return nil, fmt.Errorf("store ownership: %w", err)
 	}

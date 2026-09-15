@@ -9,17 +9,17 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 
 	p "github.com/korallis/letmecook/schemas/execution"
 	"modernc.org/sqlite"
 )
 
-func persistent(t *testing.T) *Store {
+func persistent(t *testing.T) (*Store, string) {
 	t.Helper()
 	dir := t.TempDir()
-	s, err := Open(ctx, filepath.Join(dir, "state"), filepath.Join(dir, "artifacts"))
+	artifacts := filepath.Join(dir, "artifacts")
+	s, err := Open(ctx, filepath.Join(dir, "state"), artifacts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func persistent(t *testing.T) *Store {
 			t.Error(err)
 		}
 	})
-	return s
+	return s, artifacts
 }
 
 func assignment(s *Store) p.Message {
@@ -38,7 +38,7 @@ func assignment(s *Store) p.Message {
 // No public write endpoint exists: trusted store transactions are exercised directly
 // with synthetic v2 inputs, without pretending they carry execution authority.
 func TestPersistentTransactionsAndRecovery(t *testing.T) {
-	s := persistent(t)
+	s, artifacts := persistent(t)
 	fresh := snapshot(t, s)
 	if fresh.Mode != "store-only" || fresh.SchemaVersion != 2 || len(fresh.Tasks) != 0 || len(fresh.Events) != 0 {
 		t.Fatal(fresh)
@@ -80,7 +80,7 @@ func TestPersistentTransactionsAndRecovery(t *testing.T) {
 	if err := s.Close(); err != nil {
 		t.Fatal(err)
 	}
-	r, err := Open(ctx, s.dir, s.artifactsDir)
+	r, err := Open(ctx, s.dir, artifacts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestPersistentTransactionsAndRecovery(t *testing.T) {
 }
 
 func TestPersistentMigrationAndFixtureRefusal(t *testing.T) {
-	s := persistent(t)
+	s, artifacts := persistent(t)
 	generation := s.meta.Generation
 	// Build a real prior persistent schema, including its distinguishing application ID.
 	if err := s.Close(); err != nil {
@@ -114,7 +114,7 @@ func TestPersistentMigrationAndFixtureRefusal(t *testing.T) {
 		t.Fatal(err)
 	}
 	db.Close()
-	r, err := Open(ctx, s.dir, s.artifactsDir)
+	r, err := Open(ctx, s.dir, artifacts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,9 +122,6 @@ func TestPersistentMigrationAndFixtureRefusal(t *testing.T) {
 		t.Fatal("migration identity")
 	}
 	r.Close()
-	if _, err := Open(ctx, s.dir, filepath.Join(t.TempDir(), "different")); err == nil {
-		t.Fatal("artifact relocation accepted")
-	}
 	fixture := owned(t)
 	fixture.Close()
 	if _, err := Open(ctx, fixture.dir, filepath.Join(t.TempDir(), "artifacts")); err == nil {
@@ -135,15 +132,53 @@ func TestPersistentMigrationAndFixtureRefusal(t *testing.T) {
 	}
 }
 
+func TestPersistentArtifactConfiguration(t *testing.T) {
+	s, artifacts := persistent(t)
+	if err := os.Chmod(filepath.Dir(s.dir), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.assign(ctx, assignment(s)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.transition(ctx, next(t, s, p.Unknown)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.Exec("UPDATE metadata SET artifacts_dir=? WHERE singleton=1", artifacts); err != nil {
+		t.Fatal(err)
+	}
+	before := snapshot(t, s)
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	for name, dir := range map[string]string{
+		"relocated":          filepath.Join(t.TempDir(), "different"),
+		"artifacts-in-state": filepath.Join(s.dir, "nested"),
+		"state-in-artifacts": filepath.Dir(s.dir),
+		"same-directory":     s.dir,
+	} {
+		t.Run(name, func(t *testing.T) {
+			r, err := Open(ctx, s.dir, dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer r.Close()
+			after := snapshot(t, r)
+			if after.Generation != before.Generation || after.DaemonBoot == before.DaemonBoot || !reflect.DeepEqual(after.Tasks, before.Tasks) || !reflect.DeepEqual(after.Events, before.Events) {
+				t.Fatal("artifact configuration changed durable state", after)
+			}
+		})
+	}
+}
+
 func TestPersistentFailedRecoveryRollsBackBootAndState(t *testing.T) {
-	s := persistent(t)
+	s, artifacts := persistent(t)
 	if err := s.assign(ctx, assignment(s)); err != nil {
 		t.Fatal(err)
 	}
 	before := snapshot(t, s)
 	sqlExec(t, s, "CREATE TRIGGER refuse_recovery BEFORE INSERT ON events BEGIN SELECT RAISE(ABORT,'recovery interrupted'); END")
 	s.Close()
-	if r, err := Open(ctx, s.dir, s.artifactsDir); err == nil {
+	if r, err := Open(ctx, s.dir, artifacts); err == nil {
 		r.Close()
 		t.Fatal("partial recovery accepted")
 	}
@@ -170,7 +205,7 @@ func TestPersistentFailedRecoveryRollsBackBootAndState(t *testing.T) {
 		t.Fatal(err)
 	}
 	db.Close()
-	r, err := Open(ctx, s.dir, s.artifactsDir)
+	r, err := Open(ctx, s.dir, artifacts)
 	if err != nil {
 		t.Fatal("failed open retained ownership", err)
 	}
@@ -181,11 +216,11 @@ func TestPersistentFailedRecoveryRollsBackBootAndState(t *testing.T) {
 }
 
 func TestPersistentFailuresAndPaths(t *testing.T) {
-	for _, kind := range []string{"relative", "symlink", "public", "nested", "hardlink", "future"} {
+	for _, kind := range []string{"relative", "symlink", "public", "hardlink", "future", "artifact-missing", "artifact-relative", "artifact-symlink", "artifact-public", "artifact-file"} {
 		t.Run(kind, func(t *testing.T) {
-			s := persistent(t)
+			s, artifacts := persistent(t)
 			s.Close()
-			state, artifacts := s.dir, s.artifactsDir
+			state := s.dir
 			switch kind {
 			case "relative":
 				state = "relative"
@@ -198,8 +233,25 @@ func TestPersistentFailuresAndPaths(t *testing.T) {
 				if err := os.Chmod(state, 0755); err != nil {
 					t.Fatal(err)
 				}
-			case "nested":
-				artifacts = filepath.Join(state, "nested")
+			case "artifact-missing":
+				artifacts = ""
+			case "artifact-relative":
+				artifacts = "relative"
+			case "artifact-symlink":
+				alias := filepath.Join(filepath.Dir(artifacts), "alias")
+				if err := os.Symlink(artifacts, alias); err != nil {
+					t.Fatal(err)
+				}
+				artifacts = alias
+			case "artifact-public":
+				if err := os.Chmod(artifacts, 0755); err != nil {
+					t.Fatal(err)
+				}
+			case "artifact-file":
+				artifacts = filepath.Join(filepath.Dir(artifacts), "file")
+				if err := os.WriteFile(artifacts, nil, 0600); err != nil {
+					t.Fatal(err)
+				}
 			case "hardlink":
 				if err := os.Link(filepath.Join(state, "state.db"), filepath.Join(filepath.Dir(state), "alias.db")); err != nil {
 					t.Fatal(err)
@@ -220,7 +272,7 @@ func TestPersistentFailuresAndPaths(t *testing.T) {
 			}
 		})
 	}
-	s := persistent(t)
+	s, _ := persistent(t)
 	m := assignment(s)
 	sqlExec(t, s, "CREATE TABLE pressure(payload BLOB) STRICT")
 	var pages int
@@ -250,21 +302,23 @@ func TestPersistentFailuresAndPaths(t *testing.T) {
 func TestPersistentProcessCrashAndOwnership(t *testing.T) {
 	for _, mode := range []string{"crash", "commit"} {
 		t.Run(mode, func(t *testing.T) {
-			s := persistent(t)
+			s, artifacts := persistent(t)
 			if err := s.assign(ctx, assignment(s)); err != nil {
 				t.Fatal(err)
 			}
-			t.Setenv("GAFFER_OWNED_TEST_ARTIFACTS", s.artifactsDir)
+			t.Setenv("GAFFER_OWNED_TEST_ARTIFACTS", filepath.Join(t.TempDir(), "different"))
 			child(t, s.dir, "compete", "locked", false)
-			if r, err := Open(ctx, filepath.Join(t.TempDir(), "state"), s.artifactsDir); err == nil {
-				r.Close()
-				t.Fatal("shared artifacts ownership")
-			} else if !errors.Is(err, syscall.EWOULDBLOCK) {
-				t.Fatal("expected artifact ownership conflict", err)
+			t.Setenv("GAFFER_OWNED_TEST_ARTIFACTS", artifacts)
+			shared, err := Open(ctx, filepath.Join(t.TempDir(), "state"), artifacts)
+			if err != nil {
+				t.Fatal("shared artifact configuration rejected", err)
+			}
+			if err := shared.Close(); err != nil {
+				t.Fatal(err)
 			}
 			s.Close()
 			// Reopen before crash to commit startup uncertainty separately.
-			r, err := Open(ctx, s.dir, s.artifactsDir)
+			r, err := Open(ctx, s.dir, artifacts)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -275,7 +329,7 @@ func TestPersistentProcessCrashAndOwnership(t *testing.T) {
 				want = "committed"
 			}
 			child(t, s.dir, mode, want, true)
-			r, err = Open(ctx, s.dir, s.artifactsDir)
+			r, err = Open(ctx, s.dir, artifacts)
 			if err != nil {
 				t.Fatal(err)
 			}

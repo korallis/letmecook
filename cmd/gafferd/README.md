@@ -46,7 +46,7 @@ Installation configuration is **flags only**:
 | Flag | Required meaning |
 | --- | --- |
 | `--state-dir` | Absolute clean path on local disk. Creates final directory only, under an existing parent; private owned mode 0700. Holds `state.db`, WAL/SHM and directory-inode ownership lock. |
-| `--artifacts-dir` | Separate, non-nested private local directory; also exclusively locked. Canonical path persists with installation and must match on reopen. Reserved location only: no uploads, artifact writes, custody or acknowledgements. Relocation requires future migration, not silently changing a flag. |
+| `--artifacts-dir` | Explicit private local directory, validated on each startup. May change on reopen or share/nest with other configured directories; no artifact lock or persisted path binding. Reserved location only: no uploads, artifact writes, custody or acknowledgements. |
 | `--listen` | Exact `127.0.0.1:<port>`, 0..65535; 0 requests an ephemeral port. All three install flags required. No DNS lookup, wildcard, remote binding or proxy exception. |
 | `--fixture` | Exclusive alternative to install flags: creates/seeds fresh disposable public #94 data and serves the existing shell. Graceful exit removes only this owned fixture directory. |
 
@@ -107,9 +107,8 @@ cross-site fetch metadata. Host equals actual listener, optional Origin equals
 - Owner: `internal/store/`, stdlib `database/sql`, pinned CGO-free
   `modernc.org/sqlite v1.59.0` / SQLite 3.53.4. Driver/notices:
   [`DEPENDENCIES.md`](../../internal/store/DEPENDENCIES.md). No new dependency.
-- Private owned directory-inode nonblocking `flock` held through DB close;
-  artifact directory also locked so two different state roots cannot share it.
-  Paths reject symlink roots, nested state/artifact roots, nonprivate directories
+- Private owned state directory-inode nonblocking `flock` held through DB close.
+  Paths reject symlink roots and nonprivate directories
   and nonregular, hard-linked, nonprivate or foreign-owned SQLite files. Parent
   aliases canonicalize (including macOS `/tmp`). Cooperating-daemon lock, not a
   security boundary against malicious same-UID processes or host administrators.
@@ -122,8 +121,9 @@ cross-site fetch metadata. Host equals actual listener, optional Origin equals
   New directory parents and DB directory entries synced before ready. Commit errors
   never become successful writes/acks. No hardware power-loss/fsync-failure claim.
 - One schema owner. Empty persistent schema migrates transactionally through base
-  metadata/tasks/attempts/events to schema 2 (artifact location, append-only event
-  triggers). Persistent application ID `0x47414646` distinguishes it from #94.
+  metadata/tasks/attempts/events to schema 2 (append-only event triggers; legacy
+  artifact-location column retained but unused). Persistent application ID
+  `0x47414646` distinguishes it from #94.
   Unknown schemas, unrecognized DBs and fixture imports fail closed. Migration,
   fresh boot and restart recovery share one commit. Generation survives ordinary
   restart; restore/new-generation/retired namespaces remain #23, not file copying.
@@ -139,7 +139,7 @@ cross-site fetch metadata. Host equals actual listener, optional Origin equals
   unknown/reconciling and appends matching events atomically with fresh boot.
   Unknown/terminal history is not replayed or resumed. Exhaustion/errors abort
   startup rather than wrapping revision or fabricating safe state.
-- Artifact directory is explicit and locked, **not artifact durability**. No blob,
+- Artifact directory is explicit configuration, **not artifact durability**. No blob,
   manifest, result receipt, lease, runner, inference, grants, repository access,
   acceptance, publication or merge exists. Store event durability proves none of
   #10's physical custody, fencing, stop or live-evidence obligations.
@@ -171,7 +171,7 @@ fresh empty install, persistent migration/reopen, retained generation/new boot,
 fixture import refusal, config/path rejection, append-only/unique/FK constraints,
 unsupported `/dev` filesystem, duplicate assignment/CAS, transaction abort,
 process SIGKILL inside transaction and after commit, restart uncertainty,
-concurrent state/artifact ownership and graceful daemon reopen. Test SQL triggers
+concurrent state ownership, artifact reconfiguration/sharing and graceful daemon reopen. Test SQL triggers
 and subprocess control exist only in `_test.go`, not the daemon.
 
 Real `SQLITE_FULL` (13) uses `max_page_count` and a blob trigger after authoritative
