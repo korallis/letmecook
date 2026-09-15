@@ -19,7 +19,9 @@ npm --prefix web ci --ignore-scripts
 npm --prefix web run build          # web/dist (deterministic; ignored by git)
 ```
 
-Then follow the [daemon build and startup](../cmd/gafferd/README.md#bounded-local-startup).
+Then follow the [daemon build and startup](../cmd/gafferd/README.md#bounded-local-startup)
+with `--fixture`. Persistent `store-only` installations expose read API only, not
+this fixture shell; no UI promotion follows from persistent storage.
 Open its printed origin at `/`, replacing `/api/v1/status` in the printed URL.
 
 `go:embed all:dist` includes whatever is in `web/dist` at Go build time. Build the

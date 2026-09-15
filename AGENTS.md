@@ -3,9 +3,10 @@
 Build with GPT-6 Astra. The product's working name is Gaffer. Most reviewed design
 describes intended behaviour, not existing APIs. See
 `docs/decisions/0001-execution-foundation.md` for the build choice, package owners
-and unresolved #9 gates. The reversible #93 protocol, #94 fixture-only daemon and
-#95 embedded shell remain provisional; `docs/contracts/execution.md` owns protocol
-reconciliation, `cmd/gafferd/README.md` owns startup, read API and checks, and
+and unresolved #9 gates. The reversible protocol, local store scaffold and
+embedded fixture shell remain provisional; `docs/contracts/execution.md` owns protocol
+reconciliation, `cmd/gafferd/README.md` owns explicit install flags, fixture separation,
+read API and checks, and
 `web/README.md` owns the shell build that must precede the Go build. None accepts
 #9/#10 or supplies execution authority. No supported execution
 runtime or original downstream acceptance follows from these slices or the decision record.

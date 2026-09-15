@@ -1,58 +1,77 @@
-# Provisional fixture-only daemon (#94)
+# Local workflow store scaffold (#11, provisional)
 
-Actual Go/SQLite application code, **not M1 acceptance**, a selected foundation,
-a supported execution runtime, or authority to start original #11–#24. #9/#89/#10
-and measured reconciliation remain open. Retain, port or discard this reversible
-slice based on those outcomes, never sunk effort. The
-[#9 decision record](../../docs/decisions/0001-execution-foundation.md#provisional-slice-reconciliation)
-retains the storage/API mechanics provisionally, with schema reconciliation under
-#10/#11 and no fixture-store import into product state. Its build choice is not
-locked and establishes no supported execution runtime. Uses merged #93 protocol
-types and embeds the [shared public corpus](../../tests/fixtures/protocol/README.md).
+Runnable Go/SQLite metadata foundation on the decided-but-unlocked narrow Go core.
+**Related to #11, not its formal acceptance.** #9 is still unlocked; #10 O1–O8,
+including execution/runtime qualification, remain open. This reversible extension
+of #94 adds persistent empty installation/reopen and fail-closed restart handling.
+It supplies no execution authority, supported worker runtime or product readiness.
+The [decision](../../docs/decisions/0001-execution-foundation.md) and
+[execution contract](../../docs/contracts/execution.md) retain their acceptance gates.
 
 ## Bounded local startup
 
-Prerequisites: Go 1.26.5, local Linux ext4/XFS/Btrfs or macOS APFS disk, writable
-`/tmp`. No Docker, router, account, repository or credentials needed. Only macOS
-APFS has local execution evidence here; Linux CI must establish its own result.
-Other OS/filesystems fail closed, including NFS, SMB, FUSE, overlay and volatile
-filesystems. An allowlisted filesystem is not qualification of every hardware or
-mount configuration: SQLite still relies on honest OS/device sync semantics.
+Toolchain: Go 1.26.5; optional embedded fixture UI build uses Node 24+ and pinned
+React/TypeScript/StyleX dependencies. Runtime: single local process on Linux
+ext4/XFS/Btrfs or macOS APFS. No Docker, router, account, repository, maintainer
+hostname, private network or Node server required for this daemon. No supported
+**execution** runtime follows from these storage platforms.
 
-For the embedded page, complete the [shell build](../../web/README.md#build-and-serve)
-before building the daemon. The read API can run without the page.
+Build the existing [fixture shell](../../web/README.md#build-and-serve) before Go
+if it is needed; the persistent read API deliberately exposes no web UI.
 
 ```sh
+npm --prefix web ci --ignore-scripts
+npm --prefix web run build
 mkdir -p .local
 CGO_ENABLED=0 go build -trimpath -buildvcs=false -o .local/gafferd ./cmd/gafferd
-.local/gafferd
+
+# Disposable example install; retain this path to reopen the same state.
+install_dir=$(mktemp -d /tmp/gaffer-install.XXXXXX)
+.local/gafferd --state-dir "$install_dir/state" \
+  --artifacts-dir "$install_dir/artifacts" --listen 127.0.0.1:0
 ```
 
-Startup prints `fixture-only http://127.0.0.1:<ephemeral-port>/api/v1/status` only
-after store creation, migration and fixture commits succeed. Fetch that exact URL
-or replace `status` with `snapshot`. Stop with Ctrl-C or SIGTERM. Graceful shutdown
-closes HTTP/SQLite and removes only its owned directory. Abrupt death can leave
-`/tmp/gaffer-fixture-*`; no daemon startup can reopen/import it. Do not bulk-delete
-stores belonging to other processes. There is no production cleanup/import command.
+Stop with Ctrl-C/SIGTERM. Re-run the same command to reopen. Shutdown never deletes
+persistent state. Startup prints `store-only http://127.0.0.1:<port>/api/v1/status`
+only after ownership, migration, boot/recovery transaction and directory sync.
+`GET` that URL or replace `status` with `snapshot`. Fresh installation is empty.
+No task creation, execution, grant, enrollment, mutation or import endpoint exists.
+Store write primitives remain private; tests exercise them with synthetic v2 inputs.
 
-**The listener is not authentication.** Public fixtures only; local programs can
-read them. No sessions, owner identity or secrets are invented. Do not expose this
-port through a proxy or use it for real data. No arguments are accepted, including
-`--bind`, `--config`, `--state`, `--fixture` and positional imports. Environment
-variables (including HOME, TMPDIR, proxy, router and Gaffer options) select no
-product behavior. The process never loads configuration, repository hooks/plugins,
-external fixtures or account state. There is no execution/authority enable switch.
+Installation configuration is **flags only**:
+
+| Flag | Required meaning |
+| --- | --- |
+| `--state-dir` | Absolute clean path on local disk. Creates final directory only, under an existing parent; private owned mode 0700. Holds `state.db`, WAL/SHM and directory-inode ownership lock. |
+| `--artifacts-dir` | Separate, non-nested private local directory; also exclusively locked. Canonical path persists with installation and must match on reopen. Reserved location only: no uploads, artifact writes, custody or acknowledgements. Relocation requires future migration, not silently changing a flag. |
+| `--listen` | Exact `127.0.0.1:<port>`, 0..65535; 0 requests an ephemeral port. All three install flags required. No DNS lookup, wildcard, remote binding or proxy exception. |
+| `--fixture` | Exclusive alternative to install flags: creates/seeds fresh disposable public #94 data and serves the existing shell. Graceful exit removes only this owned fixture directory. |
+
+Choose any operator-controlled host meeting the local storage requirements. No
+configuration discovery from HOME, environment, files, repository plugins, accounts,
+proxy/router variables or a private network. Unknown/positional flags reject.
+Runner and 9Router infrastructure configuration belongs to their future owners;
+this process has neither client and stores no provider credentials.
+
+**The listener is not authentication.** This provisional daemon has no sessions or
+owner identity. Local programs can read its metadata. Use disposable synthetic data
+only; do not expose it through a proxy or use it for private product data. Remote
+installation access remains blocked until authenticated HTTPS/session work lands.
+A private network alone will not provide authorization.
+
+For historical fixture UI/tests use `.local/gafferd --fixture`. Abrupt fixture death
+may leave `/tmp/gaffer-fixture-*`; no persistent startup imports it. Never bulk-delete
+other processes' stores. Persistent and fixture databases have different SQLite
+application identities, checked before migration; no version relabelling/import.
 
 ## Read contract for #95
 
-`schemas/readapi/types.go` and `types.ts` own version `read-provisional-v1`.
-Go validates store projections before writing JSON; TypeScript `decode(bytes,
-'status' | 'snapshot')` validates untrusted bounded responses at runtime, not a
-static type assertion. This daemon projects historical v1 fixture messages; the
-[execution schema guide](../../schemas/execution/README.md) owns shared decoder
-compatibility. The decoders require no extra schema library or UI dependency.
-
-Read API routes:
+`schemas/readapi/types.go` / `types.ts` retain `read-provisional-v1`, extending its
+closed mode/schema combinations: `fixture-only` / schema 1, `store-only` / schema 2.
+Old strict clients refuse the new mode rather than misreading it as fixture data.
+Go validates projections before JSON; TypeScript `decode(bytes, 'status' | 'snapshot')`
+validates bounded input at runtime. The fixture shell remains fixture-only and is
+not served in persistent mode; no UI work or product exposure is introduced.
 
 | Request | Response |
 | --- | --- |
@@ -60,62 +79,67 @@ Read API routes:
 | `GET /api/v1/snapshot` | Metadata, `tasks`, `events` |
 | `GET /api/v1/snapshot?task_id=<UUIDv4>&limit=1` | Filtered snapshot |
 
-Metadata: `version`, `mode: "fixture-only"`, `missing_capabilities`, `generation`,
-`daemon_boot`, `schema_version: 1`. Missing capabilities explicitly include
-execution, inference, artifact custody, result ack, acceptance, publication, merge,
-state import and sessions. Error JSON has version/mode/missing capabilities and
-fixed `error` code; no reflected request, SQL error, local path or private payload.
+Metadata includes version, mode, missing capabilities, generation, daemon boot and
+schema version. Missing capabilities: execution, inference, artifact custody,
+result ack, acceptance, publication, merge, state import and sessions. Error JSON
+returns version/mode/missing capabilities plus a fixed error code, never SQL/path
+or reflected input. Persistent observations are always desired stop, process unknown,
+remote unknown and quarantined; no process death or remote completion is inferred.
+Historical fixtures retain synthetic not_started observations and v1 events;
+persistent events require `execution-provisional-v2`.
 
-`tasks[]` has `task_id`, protocol task `state`, and `attempt` with full protocol
-identity, state, revision and observation. `events[]` has sequence, revision and
-validated protocol message (assign/transition only). Sort tasks by ID, events by
-ascending sequence. Each array independently caps at `limit` (default/max 50,
-minimum 1). No pagination, streaming, time claims or completeness flag: this is a
-bounded snapshot, not a full event export. Unknown canonical task returns 404.
-Future consumers must not assume a bounded event list proves complete history.
+Tasks sorted by ID; events by ascending sequence. Each array independently caps at
+`limit` (default/max 50, minimum 1). Unknown canonical task returns 404. Bounded
+snapshot is not full history/export, pagination, streaming or result custody.
 
-URI capped at 512 bytes, headers at 4 KiB plus Go HTTP parser overhead, responses
-at 1 MiB, 16 active database requests, 2-second query/header budget and 3-second
-read/write budget. Unknown/duplicate query keys, noncanonical bounds/IDs, bodies,
-encoded paths and unknown routes reject. Methods other than GET (including HEAD
-and OPTIONS) return 405. Missing/foreign Host, foreign/null/duplicate Origin,
-forwarding headers and cross-site fetch metadata reject. Allowed Host is exactly
-`127.0.0.1:<actual-port>`; optional Origin is exactly `http://` plus that Host.
-No permissive CORS, OPTIONS preflight support or cross-origin UI server exception.
-The embedded shell shares these boundary checks; its routes and unbuilt response
-are documented in [`web/README.md`](../../web/README.md#build-and-serve).
+Existing boundary remains: URI 512 bytes, headers 4 KiB plus Go parser overhead,
+responses 1 MiB, 16 active DB requests, 2-second query/header and 3-second read/write
+budgets. Reject unknown/duplicate query keys, noncanonical bounds/IDs, bodies,
+encoded paths, non-GET methods, foreign Host/Origin, forwarding headers and
+cross-site fetch metadata. Host equals actual listener, optional Origin equals
+`http://` plus Host. No permissive CORS, preflight or cross-origin exception.
 
 ## Store correctness and limits
 
-- `internal/store/` uses stdlib `database/sql`, CGO-free modernc SQLite 3.53.4,
-  pinned driver/dependency graph and reviewed permissive notices. See
-  `internal/store/DEPENDENCIES.md`; full licence audit/owner grant stays #59.
-- Fresh private directory mode 0700; SQLite DB created 0600. Directory-inode
-  nonblocking OS `flock` held before opening DB until close/disposal, including
-  against another test process. No stale PID-file ownership claim. This protects
-  cooperating daemons, not malicious same-UID processes or shared filesystem use.
-- Every SQL connection requires WAL, foreign keys ON, synchronous FULL,
-  fullfsync/checkpoint_fullfsync ON, trusted_schema OFF. Startup checks effective
-  settings. Parent/directory entries synced before ready. Durability means SQLite
-  committed metadata on this filesystem, not artifacts, remote work or hardware
-  power-loss qualification. Storage errors never become successful writes/acks.
-- One transactional migration from truly empty schema 0 to schema 1 creates only
-  metadata/tasks/attempts/events. Unknown versions/unrecognized state fail startup.
-  Private reopen exists only for tests of their own disposable stores: generation
-  persists, boot ID changes; product always creates a fresh random generation and
-  random task/attempt/message/assignment IDs using crypto/rand.
-- One fixture attempt per task, epoch 1; unique task/attempt/assignment/message
-  IDs and composite epoch/revision constraints. No replacement-attempt admission
-  or restore API. Transaction contains attempt CAS, task read-model update and
-  event insert; stale identity checked before replay. Exact replay returns
-  duplicate, conflicting reuse refuses. Revisions advance only on commit.
-- Seed: #93 assign followed by assigned-to-unknown synthetic transition. No
-  process was started: observation stays desired stop, not_started, remote unknown,
-  quarantined. Synthetic terminal states never grant acceptance; succeeded maps
-  only to awaiting_review. No result/receipt store or acknowledgement exists.
-- Daemon links no runner/harness/enrollment, subprocess service, model/router
-  client, scheduler, plugin loader or grant/acceptance/publication handler.
-  Test subprocess controls and test SQL triggers exist only in `_test.go`.
+- Owner: `internal/store/`, stdlib `database/sql`, pinned CGO-free
+  `modernc.org/sqlite v1.59.0` / SQLite 3.53.4. Driver/notices:
+  [`DEPENDENCIES.md`](../../internal/store/DEPENDENCIES.md). No new dependency.
+- Private owned directory-inode nonblocking `flock` held through DB close;
+  artifact directory also locked so two different state roots cannot share it.
+  Paths reject symlink roots, nested state/artifact roots, nonprivate directories
+  and nonregular, hard-linked, nonprivate or foreign-owned SQLite files. Parent
+  aliases canonicalize (including macOS `/tmp`). Cooperating-daemon lock, not a
+  security boundary against malicious same-UID processes or host administrators.
+- Fail-closed filesystem allowlist: Linux ext4/XFS/Btrfs, macOS local APFS. NFS,
+  SMB, FUSE, overlay, volatile and unknown types rejected. Honest kernel/device
+  sync and supported mount configuration still required; allowlist is not hardware
+  qualification. Shared-directory aliases cannot create another inode lock owner.
+- Every SQL connection: WAL, foreign keys ON, synchronous FULL,
+  fullfsync/checkpoint_fullfsync ON, trusted_schema OFF; effective values checked.
+  New directory parents and DB directory entries synced before ready. Commit errors
+  never become successful writes/acks. No hardware power-loss/fsync-failure claim.
+- One schema owner. Empty persistent schema migrates transactionally through base
+  metadata/tasks/attempts/events to schema 2 (artifact location, append-only event
+  triggers). Persistent application ID `0x47414646` distinguishes it from #94.
+  Unknown schemas, unrecognized DBs and fixture imports fail closed. Migration,
+  fresh boot and restart recovery share one commit. Generation survives ordinary
+  restart; restore/new-generation/retired namespaces remain #23, not file copying.
+- Identity/event writes share one transaction. Task/attempt/assignment/message IDs,
+  task epoch and event revision uniqueness plus composite foreign keys survive
+  replay. One attempt per task remains deliberate: safe replacement, increasing
+  epochs, grants, capacity/budget reservation and outbox delivery belong to #12/#15.
+  No speculative tables or dispatch are introduced. Attempt CAS + task projection
+  + event insert commit together; append-only event triggers prevent update/delete.
+- Persistent writes validate v2 and current generation before replay. No transitions
+  to starting/running/result/success/terminal states without future evidence owners;
+  only unknown/stopping edges are available. Restart changes active attempts to
+  unknown/reconciling and appends matching events atomically with fresh boot.
+  Unknown/terminal history is not replayed or resumed. Exhaustion/errors abort
+  startup rather than wrapping revision or fabricating safe state.
+- Artifact directory is explicit and locked, **not artifact durability**. No blob,
+  manifest, result receipt, lease, runner, inference, grants, repository access,
+  acceptance, publication or merge exists. Store event durability proves none of
+  #10's physical custody, fencing, stop or live-evidence obligations.
 
 ## Verification
 
@@ -134,31 +158,23 @@ npm --prefix docs run build
 npm --prefix docs run check
 ```
 
-`.github/workflows/go-foundation.yml` executes Linux/macOS checks, plus two
-CGO-free `-trimpath -buildvcs=false` builds compared byte-for-byte. Existing
-protocol and documentation workflows remain. Exact-head CI result, not workflow
-presence, establishes CI evidence.
+`.github/workflows/go-foundation.yml` runs Linux/macOS checks, embedded shell build
+and two CGO-free `-trimpath -buildvcs=false` builds compared byte-for-byte. Existing
+protocol, web and documentation workflows remain. Workflow presence is not proof
+of exact-head CI success; delivery records actual results separately.
 
-Real disposable SQLite tests cover creation/migration/reopen, connection setting
-renewal, unique/FK constraints, invalid/stale transitions, replay, interrupted
-transaction rollback, competing process ownership, SIGKILL after commit and
-SIGKILL inside transaction after attempt/task writes but before event insert.
-Owned child is identified by its `exec.Cmd`, never process-name matching.
+Tests execute real disposable SQLite files and owned daemon/test subprocesses:
+fresh empty install, persistent migration/reopen, retained generation/new boot,
+fixture import refusal, config/path rejection, append-only/unique/FK constraints,
+unsupported `/dev` filesystem, duplicate assignment/CAS, transaction abort,
+process SIGKILL inside transaction and after commit, restart uncertainty,
+concurrent state/artifact ownership and graceful daemon reopen. Test SQL triggers
+and subprocess control exist only in `_test.go`, not the daemon.
 
-Disk-full evidence uses SQLite `max_page_count` on a real file with a test-only
-trigger allocating a blob after authoritative row updates: requires real
-`SQLITE_FULL` code 13, rollback and successful reopen with prior committed state.
-This is SQLite's bounded disk-capacity failure, **not** a filled host volume,
-failed physical fsync, power cut or hardware fault experiment. Tests never fill
-operator disk or kill unrelated processes. `/dev` real filesystem probe verifies
-non-durable unsupported filesystem refusal; no mounted NFS/SMB lab is claimed.
-
-API tests use real store and loopback HTTP; TypeScript check builds/runs actual
-CGO-free daemon and validates its wire responses plus adverse schema mutations.
-Process test supplies malicious config/plugin/state/remote-binding/proxy/router
-settings and hostile requests, observes zero local HTTP trap hits and no execution
-sentinel. This is evidence for declared input cases, not OS confinement of arbitrary
-future code; no public-network probe or supported runner claim.
-
-Issue-specific review and delivery requirements live in
-[issue #94](https://github.com/korallis/letmecook/issues/94).
+Real `SQLITE_FULL` (13) uses `max_page_count` and a blob trigger after authoritative
+row updates, requiring rollback and intact prior state. This is SQLite capacity
+failure, not a filled host volume, failed physical sync, power cut or disk loss.
+No mounted NFS/SMB lab or backup/restore qualification is claimed. Tests terminate
+only their own `exec.Cmd` processes. TypeScript tests build/run real fixture and
+persistent daemons and validate strict read responses; Go tests retain hostile
+HTTP/config/plugin probes with zero outbound trap hits and no execution sentinel.

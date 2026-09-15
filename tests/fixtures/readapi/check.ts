@@ -12,7 +12,9 @@ const binary = join(dir, 'gafferd');
 const encode = (v: unknown) => new TextEncoder().encode(JSON.stringify(v));
 try {
   execFileSync('go', ['build', '-trimpath', '-buildvcs=false', '-o', binary, './cmd/gafferd'], { cwd: root, stdio: 'inherit', env: { ...process.env, CGO_ENABLED: '0' } });
-  const daemon = spawn(binary, [], { cwd: dir, stdio: ['ignore', 'pipe', 'inherit'] });
+  for (const mode of ['fixture-only', 'store-only']) {
+  const args = mode === 'fixture-only' ? ['--fixture'] : ['--state-dir', join(dir, 'state'), '--artifacts-dir', join(dir, 'artifacts'), '--listen', '127.0.0.1:0'];
+  const daemon = spawn(binary, args, { cwd: dir, stdio: ['ignore', 'pipe', 'inherit'] });
   const exited = once(daemon, 'exit');
   const timer = setTimeout(() => daemon.kill('SIGKILL'), 20000);
   try {
@@ -22,7 +24,7 @@ try {
       if (output.includes('\n')) break;
       assert(output.length < 1024);
     }
-    const match = /^fixture-only (http:\/\/127\.0\.0\.1:\d+)\/api\/v1\/status\n/.exec(output);
+    const match = new RegExp(`^${mode} (http://127\\.0\\.0\\.1:\\d+)/api/v1/status\\n`).exec(output);
     assert(match, `startup failed: ${output}`);
     const base = match[1];
     const read = async (path: string) => {
@@ -32,6 +34,17 @@ try {
     };
     const status = decode(await read('/api/v1/status'), 'status');
     const snapshot = decode(await read('/api/v1/snapshot'), 'snapshot');
+    assert.equal(status.mode, mode);
+    if (mode === 'store-only') {
+      assert.equal(status.task_count, 0); assert.equal(status.event_count, 0);
+      assert.equal(status.schema_version, 2);
+      assert.equal(snapshot.generation, status.generation);
+      assert.deepEqual(snapshot.tasks, []); assert.deepEqual(snapshot.events, []);
+      assert.throws(() => decode(encode({ ...status, mode: 'fixture-only' }), 'status'));
+      assert.throws(() => decode(encode({ ...snapshot, schema_version: 1 }), 'snapshot'));
+      console.log('read API: real persistent daemon, empty install and strict mode/schema decoding passed');
+      continue;
+    }
     assert.equal(status.task_count, 1); assert.equal(status.event_count, 2);
     assert.equal(snapshot.generation, status.generation);
     assert.equal(snapshot.tasks[0].state, 'reconciling');
@@ -75,5 +88,6 @@ try {
     const [code, signal] = await exited;
     clearTimeout(timer);
     assert.equal(signal, null); assert.equal(code, 0);
+  }
   }
 } finally { rmSync(dir, { recursive: true, force: true }); }

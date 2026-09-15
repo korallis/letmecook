@@ -5,9 +5,15 @@ package store
 import (
 	"fmt"
 	"os"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 )
+
+func privateFile(info os.FileInfo) bool {
+	st, ok := info.Sys().(*syscall.Stat_t)
+	return ok && st.Uid == uint32(os.Geteuid()) && st.Nlink == 1
+}
 
 func lockDirectory(dir string) (*os.File, error) {
 	fd, err := unix.Open(dir, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)

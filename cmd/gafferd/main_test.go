@@ -25,7 +25,10 @@ func TestDaemonProcess(t *testing.T) {
 	if os.Getenv("GAFFER_ENTRYPOINT_TEST") != "1" {
 		return
 	}
-	os.Args = []string{os.Args[0]}
+	os.Args = []string{os.Args[0], "--fixture"}
+	if state := os.Getenv("GAFFER_TEST_STATE"); state != "" {
+		os.Args = []string{os.Args[0], "--state-dir", state, "--artifacts-dir", os.Getenv("GAFFER_TEST_ARTIFACTS"), "--listen", "127.0.0.1:0"}
+	}
 	main()
 }
 
@@ -122,11 +125,108 @@ func TestDaemonBoundary(t *testing.T) {
 	}
 }
 
+func TestPersistentDaemonReopenAndOwnership(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	dir := t.TempDir()
+	state, artifacts := filepath.Join(dir, "state"), filepath.Join(dir, "artifacts")
+	client := &http.Client{Transport: &http.Transport{Proxy: nil}, Timeout: 3 * time.Second}
+	defer client.CloseIdleConnections()
+	start := func() (*exec.Cmd, a.Status) {
+		cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestDaemonProcess$")
+		cmd.Env = append(os.Environ(), "GAFFER_ENTRYPOINT_TEST=1", "GAFFER_TEST_STATE="+state, "GAFFER_TEST_ARTIFACTS="+artifacts)
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		cmd.Stderr = os.Stderr
+		if err = cmd.Start(); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if cmd.ProcessState == nil {
+				cmd.Process.Kill()
+				cmd.Wait()
+			}
+		})
+		scanner := bufio.NewScanner(stdout)
+		if !scanner.Scan() || !strings.HasPrefix(scanner.Text(), "store-only http://127.0.0.1:") {
+			t.Fatal("persistent startup", scanner.Text())
+		}
+		url := strings.TrimPrefix(scanner.Text(), "store-only ")
+		res, err := client.Get(url)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var status a.Status
+		err = json.NewDecoder(res.Body).Decode(&status)
+		res.Body.Close()
+		if err != nil || status.Validate() != nil || status.Mode != "store-only" || status.TaskCount != 0 || status.EventCount != 0 {
+			t.Fatal("fresh install is not empty", status, err)
+		}
+		res, err = client.Get(strings.TrimSuffix(url, "/api/v1/status") + "/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if res.StatusCode != 404 {
+			t.Fatal("persistent store exposed fixture shell")
+		}
+		return cmd, status
+	}
+	first, before := start()
+	var output bytes.Buffer
+	args := []string{"--state-dir", state, "--artifacts-dir", artifacts, "--listen", "127.0.0.1:0"}
+	if err := run(ctx, args, &output); err == nil || output.Len() != 0 {
+		t.Fatal("second daemon claimed ownership")
+	}
+	if err := first.Process.Kill(); err != nil {
+		t.Fatal(err)
+	}
+	if err := first.Wait(); err == nil {
+		t.Fatal("SIGKILL succeeded")
+	}
+	second, after := start()
+	if before.Generation != after.Generation || before.DaemonBoot == after.DaemonBoot {
+		t.Fatal("crash recovery identity")
+	}
+	if err := second.Process.Signal(syscall.SIGTERM); err != nil {
+		t.Fatal(err)
+	}
+	if err := second.Wait(); err != nil {
+		t.Fatal(err)
+	}
+	third, graceful := start()
+	if after.Generation != graceful.Generation || after.DaemonBoot == graceful.DaemonBoot {
+		t.Fatal("graceful reopen identity")
+	}
+	third.Process.Signal(syscall.SIGTERM)
+	if err := third.Wait(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(state, "state.db")); err != nil {
+		t.Fatal("shutdown removed persistent state", err)
+	}
+	for _, bad := range [][]string{
+		nil, {"--fixture", "--state-dir", state}, {"--state-dir", state},
+		{"--state-dir", state, "--artifacts-dir", artifacts, "--listen", "0.0.0.0:8000"},
+		{"--state-dir", state, "--artifacts-dir", artifacts, "--listen", "localhost:8000"},
+		{"--state-dir", state, "--artifacts-dir", artifacts, "--listen", "127.0.0.1:08000"},
+	} {
+		output.Reset()
+		if err := run(ctx, bad, &output); err == nil || output.Len() != 0 {
+			t.Fatal("invalid install accepted", bad)
+		}
+	}
+}
+
 func TestFailedStartupNoReadyClaim(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	var out bytes.Buffer
-	if err := run(ctx, nil, &out); err == nil || out.Len() != 0 {
+	dir := t.TempDir()
+	args := []string{"--state-dir", filepath.Join(dir, "state"), "--artifacts-dir", filepath.Join(dir, "artifacts"), "--listen", "127.0.0.1:0"}
+	if err := run(ctx, args, &out); err == nil || out.Len() != 0 {
 		t.Fatal("failed startup claimed ready")
 	}
 }
