@@ -27,6 +27,7 @@ export interface Operation {
   request_id: string; ordinal: number; boot: string; generation: number; revision: string;
   provider: string; model: string; connection_id: string; terminal: string; local_stop: string;
   scope_id?:string;body_digest?:string;output_digest?:string|null;
+  response_observation?: {status:number;mediaType:'sse'|'json'|'html'|'missing'|'other';bodyPresent:boolean}|null;
 }
 export interface ReceiptEvidence {
   disposition: 'pending_or_unknown' | 'quiescent_failure' | 'original_success';
@@ -106,7 +107,13 @@ export function classifyReceipt(raw: unknown, id: string, saved: RouterReservati
     requireValue(['running','local_eof','local_error','local_cancel','cancelled_unknown','crash_unknown'].includes(raw.local_stop) && [0,1].includes(raw.handler_done) && typeof raw.quiescent === 'boolean' && Array.isArray(raw.operations) && raw.operations.length <= (p.schema===3?p.native.scope.maxInferenceAttempts:16));
     const route = p.graph.routes.find((r: any) => r.id === p.routeId && r.name === p.routerModel);
     for (const [i,o] of raw.operations.entries()) {
-      exact(o,['request_id','ordinal','boot','generation','revision','provider','model','connection_id','terminal','local_stop',...(p.schema===3?['scope_id','body_digest','output_digest']:[])]);
+      exact(o,['request_id','ordinal','boot','generation','revision','provider','model','connection_id','terminal','local_stop',...(p.schema===3?['scope_id','body_digest','output_digest']:[]),...(Object.hasOwn(o,'response_observation')?['response_observation']:[])]);
+      // Legacy evidence may omit this diagnostic; current unavailable evidence
+      // is null. Its values never establish terminality or change qualification.
+      if(o.response_observation!==undefined&&o.response_observation!==null){
+        const observation=o.response_observation;exact(observation,['status','mediaType','bodyPresent']);
+        requireValue(Number.isSafeInteger(observation.status)&&observation.status>=100&&observation.status<=599&&['sse','json','html','missing','other'].includes(observation.mediaType)&&typeof observation.bodyPresent==='boolean');
+      }
       if(p.schema===3)requireValue(o.scope_id===p.native.scope.id&&sha(o.body_digest)&&(o.output_digest===null||sha(o.output_digest))&&(o.terminal!=='provider_completed'||sha(o.output_digest)));
       requireValue(o.request_id === id && o.ordinal === i+1 && o.boot === raw.boot && o.generation === raw.generation && o.revision === raw.revision);
       requireValue(p.graph.connections.some((c: any) => c.id === o.connection_id && c.provider === o.provider && c.isActive === true));
