@@ -70,8 +70,10 @@ These protocol records do not implement grants or either limits profile.
 ## State and refusal contract
 
 Attempt state changes require matching current identity and `expected_revision`;
-revision mismatch returns `revision_conflict`. Revision increases on accepted
-changes, not replays. Allowed edges (all other edges return `invalid_transition`):
+revision mismatch or exhaustion of the safe-integer range returns
+`revision_conflict`. The future state owner must increment revision on accepted
+changes, not replays; the pure check mutates no state. Allowed edges (all other
+edges return `invalid_transition`):
 
 | From | To |
 | --- | --- |
@@ -138,9 +140,10 @@ path handling, chunking and custody format remain for #9/#10 reconciliation.
 A durable result receipt must bind the current full identity and exact manifest.
 The pure acknowledgement check requires matching `result` and `result_ack` plus
 matching receipt identity/manifest/receipt ID, `artifacts = verified_durable` and
-`metadata = manifest_and_result_committed`. Unknown artifacts, event-only metadata,
-missing/mismatched receipts or conflicting manifests return `ack_not_durable` or
-`identity_conflict`. A receipt is a **trusted-owner evidence claim**, not a worker
+`metadata = manifest_and_result_committed`. Unknown artifacts, event-only metadata
+or a well-formed but mismatched receipt return `ack_not_durable`; conflicting
+result/ack manifests return `identity_conflict`. Missing or malformed receipt
+fields return `malformed`. A receipt is a **trusted-owner evidence claim**, not a worker
 assertion or proof supplied by JSON validation. The future custody owner must verify
 all digests, atomically promote and sync every referenced blob and manifest, then
 commit the manifest/reference and result event before issuing that receipt.
@@ -170,17 +173,15 @@ owner and therefore cannot issue real result acknowledgements.
   against real blobs and store. Never substitute event durability for custody.
 - [ ] Define evidence-authorized recovery and task acceptance transitions separately
   from desired state, result ack, execution, publication and merge.
-- [ ] Obtain fresh independent contract review before lock and exact-final-head code
-  review plus actual applicable CI. Head changes require renewed review. The
-  configured validation reviewer is GPT-5.6 Sol-review via 9Router, **not Opus**;
-  disclose this distinction and retain any outstanding Opus gate for firstmate.
+- [ ] Satisfy the contract-review requirement in #93 before lock and obtain
+  independent exact-final-head code review plus actual applicable CI. Head changes
+  require renewed review; a different validation reviewer does not satisfy the
+  issue's required contract review.
 
 ## Checks
 
-From repository root: `node tests/fixtures/protocol/check.ts`, `go test ./...`,
-`go vet ./...`. CI also checks Go formatting and TypeScript strict type checking.
-No live inference or external process execution is involved beyond owned test/build
-commands. Shared fixtures use public synthetic identities only. TypeScript reuses
+See the [fixture guide](../../tests/fixtures/protocol/README.md) for prerequisites,
+commands and evidence limits. TypeScript reuses
 `experiments/inference-boundary/json.ts` for strict duplicate-key parsing; that
 module has no imports, network or execution side effects. CI includes its changes
 and reuses the existing pinned TypeScript toolchain without new dependencies.

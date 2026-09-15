@@ -7,9 +7,10 @@ for coding agents. Capture an idea, approve a bounded plan, run it on an eligibl
 machine, and review the exact changes with verification evidence.
 
 **M0 experiments are in progress.** The reviewed v0.4 design, documentation reader
-and issue-based workflow now sit alongside isolated feasibility experiments. The
-application is not implemented yet; milestone evidence determines what gets built
-next. See the [inference boundary proof](docs/evidence/inference-boundary.md),
+and issue-based workflow now sit alongside isolated feasibility experiments and
+the [provisional execution protocol](schemas/execution/README.md). The application
+is not implemented yet; milestone evidence determines what gets built next.
+See the [inference boundary proof](docs/evidence/inference-boundary.md),
 [passive status experiment](experiments/router-status/README.md),
 [Linux isolation proof](docs/evidence/linux-profile.md), and the
 [9Router integration contract](docs/contracts/9router.md).

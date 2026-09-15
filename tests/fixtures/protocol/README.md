@@ -1,16 +1,20 @@
 # Provisional protocol consistency fixtures
 
-Run from repository root:
+Use Node 24+ and the Go version declared in [go.mod](../../../go.mod). Run from
+repository root, installing the existing pinned TypeScript toolchain first:
 
 ```sh
-node tests/fixtures/protocol/check.ts
-go test ./...
+npm --prefix experiments/inference-boundary ci --ignore-scripts
+experiments/inference-boundary/node_modules/.bin/tsc --noEmit --strict --target es2023 --module nodenext --allowImportingTsExtensions schemas/execution/protocol.ts tests/fixtures/protocol/check.ts --typeRoots experiments/inference-boundary/node_modules/@types
+test -z "$(gofmt -l schemas/execution tests/fixtures/protocol)"
 go vet ./...
-tsc --noEmit --strict --target es2023 --module nodenext --allowImportingTsExtensions schemas/execution/protocol.ts
+go test -race ./...
+node tests/fixtures/protocol/check.ts
 ```
 
-Node 24+ runs TypeScript directly; Go 1.26+ uses only stdlib. Type checking needs
-TypeScript (CI pins it). No application dependency or test framework is added.
+Node runs TypeScript directly; Go uses only stdlib. These commands match the
+[protocol workflow](../../../.github/workflows/execution-protocol.yml).
+No application dependency or test framework is added.
 `check.ts` calls the actual TypeScript validator/check interfaces, runs the Go
 fixture command with the same JSON, and asserts every output against both explicit
 expectations and its peer. `go test` independently runs the same expectations.
