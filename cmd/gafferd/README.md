@@ -73,18 +73,14 @@ application identities, checked before migration; no version relabelling/import.
 ## Owner bootstrap and runner enrollment
 
 [Identity setup, API and recovery](IDENTITY.md) owns the provisional #13 boundary.
-Local `--bootstrap-owner-cert` / `--recover-owner-cert` commands are offline and
-exclusive with listener/fixture flags. HTTPS startup requires `--tls-cert`,
-`--tls-key`, `--endpoint` plus existing install flags. Enrollment pins an explicitly
-selected machine's certificate and consumes a ten-minute one-use token; runners
-join disabled. No browser session or execution permission follows.
+Follow it for local owner commands, HTTPS configuration and runner enrollment.
 
 ## Read contract for #95
 
 `schemas/readapi/types.go` / `types.ts` retain `read-provisional-v1`, extending its
 closed mode/schema combinations: `fixture-only` / schema 1, `store-only` / schema 2
 or 3. New persistent opens migrate to 3; clients retain historical schema 2 reads.
-Old strict clients refuse the new mode rather than misreading it as fixture data.
+Strict clients reject unsupported mode/schema combinations.
 Go validates projections before JSON; TypeScript `decode(bytes, 'status' | 'snapshot')`
 validates bounded input at runtime. The fixture shell remains fixture-only and is
 not served in persistent mode; no UI work or product exposure is introduced.
@@ -143,7 +139,7 @@ No CORS, preflight, browser session or cross-origin exception.
   Unknown schemas, unrecognized DBs and fixture imports fail closed. Migration,
   fresh boot and restart recovery share one commit. Generation survives ordinary
   restart; restore/new-generation/retired namespaces remain #23, not file copying.
-- Identity/event writes share one transaction. Task/attempt/assignment/message IDs,
+- Attempt identity/event writes share one transaction. Task/attempt/assignment/message IDs,
   task epoch and event revision uniqueness plus composite foreign keys survive
   replay. One attempt per task remains deliberate: safe replacement, increasing
   epochs, grants, capacity/budget reservation and outbox delivery belong to #12/#15.

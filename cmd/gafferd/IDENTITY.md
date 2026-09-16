@@ -86,10 +86,11 @@ contract's `execution-provisional-v2` ALPN; O2/O6 execution reconciliation remai
 
 ## Bounded control API
 
-All responses carry `version: "identity-provisional-v1"`. All mutation bodies also
-require a canonical UUIDv4 `message_id` and exactly the fields below; unknown,
-duplicate or missing fields, null, invalid UTF-8, trailing values and bodies over
-2048 bytes reject. Content-Type must be `application/json`. No query parameters,
+Responses under `/api/v1/identity/` carry `version: "identity-provisional-v1"`.
+Mutation bodies require that version, a canonical UUIDv4 `message_id` and exactly
+the fields below; unknown, duplicate or missing fields, null, invalid UTF-8,
+trailing values and bodies over 2048 bytes reject.
+Content-Type must be `application/json`. No query parameters,
 encoded paths, Origin, Cookie, Authorization, forwarding or cross-site headers.
 Existing request concurrency/time/header bounds apply. All responses are no-store;
 errors use fixed codes without reflected input or driver/path detail.
@@ -100,7 +101,9 @@ errors use fixed codes without reflected input or driver/path detail.
 | `POST /api/v1/identity/enrollments` | Owner only: `fingerprint` (64 lowercase hex SHA-256 DER of selected runner certificate). Returns `id` (message ID), `runner_id`, `token`, `expires` (Unix seconds). |
 | `POST /api/v1/identity/enroll` | Selected runner's mTLS leaf plus `token`. Atomically consumes invitation and creates disabled runner bound to its preallocated stable ID. |
 | `POST /api/v1/identity/update` | Owner only: `id`, `revision`, `action`, `fingerprint`. Actions: `enable`, `disable`, `revoke`, `rotate`. Fingerprint is empty except for rotation. |
-| `GET /api/v1/status`, `/api/v1/snapshot` | Owner only on HTTPS. Existing bounded read schema; no fixture shell in persistent mode. |
+
+Store read routes retain their separate [read contract](README.md#read-contract-for-95),
+including response version, query parameters and HTTPS owner authorization.
 
 For example, an invitation body (substitute a real fresh UUID and public pin):
 
@@ -116,9 +119,10 @@ openssl x509 -in runner.crt -outform DER | openssl dgst -sha256
 
 Verify this public pin over an operator-controlled channel before issuing the invite.
 Transfer the secret invitation only to that chosen machine through a protected
-channel. Submit JSON via `curl --data-binary @request.json` or protected stdin, with
-explicit `--cacert`, `--cert`, `--key`, without verbose/trace flags; do not put secrets
-in arguments, URLs, shell history, logs, model prompts, repository files or artifacts.
+channel. Submit JSON via `curl -H 'Content-Type: application/json' --data-binary @request.json`
+or protected stdin, with explicit `--cacert`, `--cert`, `--key`, without verbose/trace
+flags; do not put secrets in arguments, URLs, shell history, logs, model prompts,
+repository files or artifacts.
 Capture the invitation response into a private 0600 file outside repositories rather
 than terminal/session logs. Enrollment token is 256 random bits, expires after ten
 minutes, and is stored only as SHA-256. It is never a reusable login password. Only
