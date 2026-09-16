@@ -103,11 +103,18 @@ fit total time and grant/local/evidence validity. Unknown prior monetary allowan
 cannot become a known balance under a later hard-cost/output grant. Native subscription
 profile still rejects hard monetary/output requirements; no cap stripping.
 
-`StopDispatch(owner, taskID)` is sticky and serializes with dispatch/delivery;
-grant invalidation and runner disable/revoke also suppress new admission/delivery.
-None confirms termination or releases resources. #19 still owns lease cancellation
-and real stop evidence. Local-policy tightening changes facts so stale admission
-and delivery refuse; it cannot physically stop an already running process here.
+`StopDispatch(owner, taskID)` is sticky and serializes with dispatch/delivery and
+reconciliation. For a current dispatched `assigned` attempt, the same durable
+transaction inserts the stop latch, applies `assigned` to `stopping`, updates the
+task to `reconciling` and appends the transition event. Duplicate stop does not
+advance revision or append another event. Missing, unknown, already stopping and
+terminal attempts retain their state; unknown attempts still require reconciliation.
+Grant invalidation and runner disable/revoke also suppress new admission/delivery.
+None confirms termination or releases resources. This bounded admission-store
+transition lets owner terminal proof reconcile without a daemon restart. #19 still
+owns runtime cancellation/termination orchestration, lease fencing and real stop
+evidence. Local-policy tightening changes facts so stale admission and delivery
+refuse; it cannot physically stop an already running process here.
 
 `ReconcileDispatch(owner, proof)` is a trusted owner-reviewed reconciliation entry
 point, not a worker report. Only protocol edges `unknown|stopping` to
@@ -130,8 +137,9 @@ go test -race -count=1 ./internal/store ./internal/scheduler ./internal/authorit
 `internal/store/dispatch*_test.go` executes public methods on disposable SQLite and
 local synthetic Git repositories: concurrent duplicate/competing dispatch, named
 refusals, stale graph/billing/isolation/policy, lost ack, immutable input resolution,
-stop/revocation races, terminal reconciliation, retry/budget/resource ceilings,
-unknown-headroom strict/native cases, migration, cancellation, real `SQLITE_FULL`
+stop/revocation races, duplicate stop and concurrent stop/reconciliation, atomic
+stop rollback, owner proof validation, terminal reconciliation, retry/budget/resource
+ceilings, unknown-headroom strict/native cases, migration, cancellation, real `SQLITE_FULL`
 and owned-subprocess SIGKILL before/after commit. Existing read fixtures cover
 schema 6 and prior schema reads. No live inference, Docker, private repository,
 physical power-loss, runtime isolation, remote stop or artifact custody is proven.

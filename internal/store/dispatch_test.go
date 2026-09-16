@@ -198,16 +198,26 @@ func TestDispatchCompetingIntentAndGlobalConcurrency(t *testing.T) {
 		t.Fatal("multiple winners", errs)
 	}
 	dispatchRows(t, f.s, 1)
+	other = otherTaskRequest(t, f)
+	_, err := f.s.Dispatch(ctx, other)
+	requireReason(t, err, "concurrency_ceiling")
+}
+
+func otherTaskRequest(t *testing.T, f dispatchFixture) DispatchRequest {
+	t.Helper()
+	other := f.request
 	other.ID = newID()
 	other.Request.TaskID, other.Request.GrantID = newID(), newID()
 	other.Decision.ID, other.Decision.Assessment.TaskID = newID(), other.Request.TaskID
-	hash, _ := sc.Digest(other.Decision)
+	hash, err := sc.Digest(other.Decision)
+	if err != nil {
+		t.Fatal(err)
+	}
 	other.Request.Envelope.RouteDecision.SHA256 = hash
 	grant := f.grant
 	grant.ID, grant.TaskID, grant.Envelope.RouteDecision = other.Request.GrantID, other.Request.TaskID, other.Request.Envelope.RouteDecision
 	approve(t, f.s, "", grant)
-	_, err := f.s.Dispatch(ctx, other)
-	requireReason(t, err, "concurrency_ceiling")
+	return other
 }
 
 func TestDispatchRefusalsUnderConcurrency(t *testing.T) {
@@ -362,7 +372,11 @@ func TestDispatchStopRace(t *testing.T) {
 				requireReason(t, result, reason)
 			} else {
 				_, err := f.s.Delivery(ctx, f.runner, f.request.ID)
-				requireReason(t, err, reason)
+				deliveryReason := reason
+				if !revoke {
+					deliveryReason = "reconciliation_required"
+				}
+				requireReason(t, err, deliveryReason)
 				v, err := f.s.Assignment(ctx, f.request.ID)
 				if err != nil || v.Released {
 					t.Fatal("stop released reservation", err)
@@ -375,13 +389,200 @@ func TestDispatchStopRace(t *testing.T) {
 	}
 }
 
-func reconcile(t *testing.T, f dispatchFixture, v Dispatch) Reconciliation {
+func reconciliation(v Dispatch) Reconciliation {
+	return Reconciliation{DispatchID: v.ID, Identity: v.Assignment.Identity, ExpectedRevision: 2, To: p.Cancelled, ConfirmedProcess: "terminated", RemoteWork: "quiescent", LaunchFenced: true, ArtifactsPreserved: true, EvidenceDigest: strings.Repeat("a", 64)}
+}
+
+func recoverDispatch(t *testing.T, f *dispatchFixture, v Dispatch) Reconciliation {
 	t.Helper()
-	m := p.Message{Version: p.FencedVersion, Kind: "transition", MessageID: newID(), Identity: v.Assignment.Identity, ExpectedRevision: new(int64(1)), From: p.Assigned, To: p.Stopping}
-	if err := f.s.transition(ctx, m); err != nil {
+	if err := f.s.Close(); err != nil {
 		t.Fatal(err)
 	}
-	return Reconciliation{DispatchID: v.ID, Identity: v.Assignment.Identity, ExpectedRevision: 2, To: p.Cancelled, ConfirmedProcess: "terminated", RemoteWork: "quiescent", LaunchFenced: true, ArtifactsPreserved: true, EvidenceDigest: strings.Repeat("a", 64)}
+	r, err := Open(ctx, f.s.dir, f.artifacts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := r.Close(); err != nil {
+			t.Error(err)
+		}
+	})
+	f.s = r
+	return reconciliation(v)
+}
+
+func TestDispatchStopReconcileLifecycle(t *testing.T) {
+	for _, phase := range []string{"cancelled", "expired", "unknown"} {
+		t.Run(phase, func(t *testing.T) {
+			f := dispatchFixtureFor(t, nil)
+			v := admitted(t, f)
+			proof := reconciliation(v)
+			wantState := p.Stopping
+			if phase == "unknown" {
+				proof = recoverDispatch(t, &f, v)
+				wantState = p.Unknown
+			} else {
+				premature := proof
+				premature.ExpectedRevision = 1
+				if err := f.s.ReconcileDispatch(ctx, f.owner, premature); !errors.Is(err, p.InvalidTransition) {
+					t.Fatal("assigned attempt released without stop", err)
+				}
+			}
+			if phase == "expired" {
+				proof.To, proof.ConfirmedProcess = p.Expired, "not_started"
+			}
+			before := snapshot(t, f.s)
+			for _, actor := range []string{"", strings.Repeat("f", 64), f.runner} {
+				if err := f.s.StopDispatch(ctx, actor, f.grant.TaskID); !errors.Is(err, i.Denied) {
+					t.Fatal("stop accepted non-owner", err)
+				}
+				if err := f.s.ReconcileDispatch(ctx, actor, proof); !errors.Is(err, i.Denied) {
+					t.Fatal("release accepted non-owner", err)
+				}
+			}
+			if !reflect.DeepEqual(before, snapshot(t, f.s)) {
+				t.Fatal("unauthorized request changed attempt")
+			}
+			if err := f.s.StopDispatch(ctx, f.owner, f.grant.TaskID); err != nil {
+				t.Fatal(err)
+			}
+			stopped := snapshot(t, f.s)
+			if stopped.Tasks[0].Attempt.State != wantState || stopped.Tasks[0].Attempt.Revision != 2 || stopped.Tasks[0].State != p.TaskReconciling || len(stopped.Events) != 2 {
+				t.Fatal("stop state/event missing", stopped)
+			}
+			if phase == "unknown" {
+				if !reflect.DeepEqual(before, stopped) {
+					t.Fatal("stop changed unknown attempt")
+				}
+			} else {
+				event := stopped.Events[1]
+				if event.Revision != 2 || event.Message.To != p.Stopping || p.CheckTransition(event.Message, v.Assignment.Identity, p.Assigned, 1) != p.OK {
+					t.Fatal("stop event does not match transition", event)
+				}
+			}
+			if err := f.s.StopDispatch(ctx, f.owner, f.grant.TaskID); err != nil {
+				t.Fatal(err)
+			}
+			other := otherTaskRequest(t, f)
+			for _, change := range []func(*Reconciliation){
+				func(r *Reconciliation) { *r = Reconciliation{} },
+				func(r *Reconciliation) { r.ConfirmedProcess = "" },
+				func(r *Reconciliation) { r.ConfirmedProcess = "unknown" },
+				func(r *Reconciliation) { r.RemoteWork = "" },
+				func(r *Reconciliation) { r.RemoteWork = "unknown" },
+				func(r *Reconciliation) { r.LaunchFenced = false },
+				func(r *Reconciliation) { r.ArtifactsPreserved = false },
+				func(r *Reconciliation) { r.EvidenceDigest = "" },
+				func(r *Reconciliation) { r.EvidenceDigest = strings.Repeat("z", 64) },
+				func(r *Reconciliation) { r.Identity.Generation = newID() },
+				func(r *Reconciliation) { r.Identity.TaskID = newID() },
+				func(r *Reconciliation) { r.Identity.AttemptID = newID() },
+				func(r *Reconciliation) { r.Identity.Epoch++ },
+				func(r *Reconciliation) { r.ExpectedRevision-- },
+				func(r *Reconciliation) { r.ExpectedRevision++ },
+				func(r *Reconciliation) { r.To = p.Succeeded },
+			} {
+				bad := proof
+				change(&bad)
+				if err := f.s.ReconcileDispatch(ctx, f.owner, bad); err == nil {
+					t.Fatal("invalid proof released reservation", bad)
+				}
+			}
+			if !reflect.DeepEqual(stopped, snapshot(t, f.s)) {
+				t.Fatal("duplicate stop or invalid proof changed attempt/events")
+			}
+			retained, err := f.s.Assignment(ctx, v.ID)
+			if err != nil || !reflect.DeepEqual(retained, v) {
+				t.Fatal("stop changed reservation", err)
+			}
+			_, err = f.s.Delivery(ctx, f.runner, v.ID)
+			requireReason(t, err, "reconciliation_required")
+			_, err = f.s.Dispatch(ctx, other)
+			requireReason(t, err, "concurrency_ceiling")
+			for range 2 {
+				if err := f.s.ReconcileDispatch(ctx, f.owner, proof); err != nil {
+					t.Fatal(err)
+				}
+			}
+			terminal := snapshot(t, f.s)
+			if terminal.Tasks[0].Attempt.State != proof.To || terminal.Tasks[0].Attempt.Revision != 3 || len(terminal.Events) != 3 {
+				t.Fatal("terminal state/event missing", terminal)
+			}
+			if err := f.s.StopDispatch(ctx, f.owner, f.grant.TaskID); err != nil {
+				t.Fatal(err)
+			}
+			proof.EvidenceDigest = strings.Repeat("b", 64)
+			if err := f.s.ReconcileDispatch(ctx, f.owner, proof); !errors.Is(err, p.IdentityConflict) {
+				t.Fatal("conflicting terminal proof accepted", err)
+			}
+			if !reflect.DeepEqual(terminal, snapshot(t, f.s)) {
+				t.Fatal("terminal history changed")
+			}
+			retained, err = f.s.Assignment(ctx, v.ID)
+			if err != nil || !retained.Released || !reflect.DeepEqual(retained.Assignment, v.Assignment) {
+				t.Fatal("release lost assignment", err)
+			}
+			pending, err := f.s.PendingAssignments(ctx, "", 128)
+			if err != nil || len(pending) != 0 {
+				t.Fatal("released outbox still pending", pending, err)
+			}
+			f.request.ID = newID()
+			_, err = f.s.Dispatch(ctx, f.request)
+			requireReason(t, err, "stopped")
+			if _, err := f.s.Dispatch(ctx, other); err != nil {
+				t.Fatal("terminal proof did not release global capacity", err)
+			}
+		})
+	}
+}
+
+func TestDispatchConcurrentStopReconcile(t *testing.T) {
+	for _, phase := range []string{"assigned", "stopping", "unknown"} {
+		t.Run(phase, func(t *testing.T) {
+			f := dispatchFixtureFor(t, nil)
+			v := admitted(t, f)
+			proof := reconciliation(v)
+			if phase == "stopping" {
+				if err := f.s.StopDispatch(ctx, f.owner, f.grant.TaskID); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if phase == "unknown" {
+				proof = recoverDispatch(t, &f, v)
+			}
+			start := make(chan struct{})
+			var wg sync.WaitGroup
+			var result error
+			for range 4 {
+				wg.Go(func() {
+					<-start
+					if err := f.s.StopDispatch(ctx, f.owner, f.grant.TaskID); err != nil {
+						t.Error(err)
+					}
+				})
+			}
+			wg.Go(func() { <-start; result = f.s.ReconcileDispatch(ctx, f.owner, proof) })
+			close(start)
+			wg.Wait()
+			if result != nil && (phase != "assigned" || !errors.Is(result, p.RevisionConflict)) {
+				t.Fatal("unexpected concurrent reconciliation refusal", result)
+			}
+			if err := f.s.ReconcileDispatch(ctx, f.owner, proof); err != nil {
+				t.Fatal(err)
+			}
+			view := snapshot(t, f.s)
+			if view.Tasks[0].Attempt.State != p.Cancelled || view.Tasks[0].Attempt.Revision != 3 || len(view.Events) != 3 {
+				t.Fatal("concurrent stop/reconcile changed revision twice", view)
+			}
+			retained, err := f.s.Assignment(ctx, v.ID)
+			if err != nil || !retained.Released {
+				t.Fatal("concurrent terminal proof did not release", err)
+			}
+			f.request.ID = newID()
+			_, err = f.s.Dispatch(ctx, f.request)
+			requireReason(t, err, "stopped")
+		})
+	}
 }
 
 func TestDispatchReleaseAndTaskCeilings(t *testing.T) {
@@ -416,7 +617,7 @@ func TestDispatchReleaseAndTaskCeilings(t *testing.T) {
 				}
 			})
 			v := admitted(t, f)
-			proof := reconcile(t, f, v)
+			proof := recoverDispatch(t, &f, v)
 			bad := proof
 			bad.RemoteWork = "unknown"
 			requireReason(t, f.s.ReconcileDispatch(ctx, f.owner, bad), "reconciliation_required")
@@ -456,7 +657,7 @@ func TestDispatchReleaseAndTaskCeilings(t *testing.T) {
 	}
 	f := dispatchFixtureFor(t, nil)
 	first := admitted(t, f)
-	proof := reconcile(t, f, first)
+	proof := recoverDispatch(t, &f, first)
 	if err := f.s.ReconcileDispatch(ctx, f.owner, proof); err != nil {
 		t.Fatal(err)
 	}

@@ -165,9 +165,12 @@ No CORS, preflight, browser session or cross-origin exception.
   + event insert commit together; append-only event triggers prevent update/delete.
 - Persistent attempt writes validate v2 and current generation before replay. No
   transitions to starting/running/result/success without future evidence owners;
-  private transitions allow unknown/stopping, and owner-reviewed reconciliation
-  permits cancelled/expired with reservation release. Restart changes active
-  attempts to unknown/reconciling and appends matching events atomically with fresh boot.
+  owner stop atomically latches dispatch suppression and moves a dispatched assigned
+  attempt to stopping with its task projection and event. Unknown attempts remain
+  unknown. Owner-reviewed terminal proof permits cancelled/expired with reservation
+  release; stop alone never releases capacity. Runtime cancellation remains #19.
+  Restart changes active attempts to unknown/reconciling and appends matching
+  events atomically with fresh boot.
   Unknown/terminal history is not replayed or resumed. Exhaustion/errors abort
   startup rather than wrapping revision or fabricating safe state.
 - Artifact directory is explicit configuration, **not artifact durability**. No blob,

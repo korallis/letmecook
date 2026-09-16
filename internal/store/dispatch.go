@@ -651,8 +651,30 @@ func (s *Store) StopDispatch(ctx context.Context, actor, taskID string) error {
 		if err != nil {
 			return err
 		}
-		_, err = tx.ExecContext(ctx, "INSERT INTO dispatch_stops VALUES(?,?) ON CONFLICT(task_id) DO NOTHING", taskID, who.ID)
-		return err
+		if _, err := tx.ExecContext(ctx, "INSERT INTO dispatch_stops VALUES(?,?) ON CONFLICT(task_id) DO NOTHING", taskID, who.ID); err != nil {
+			return err
+		}
+		m := p.Message{Version: p.FencedVersion, Kind: "transition", Identity: p.Identity{Generation: s.meta.Generation, TaskID: taskID}, From: p.Assigned, To: p.Stopping}
+		var id string
+		var revision int64
+		err = tx.QueryRowContext(ctx, "SELECT d.id,a.id,a.epoch,a.revision FROM attempts a JOIN dispatches d ON d.attempt_id=a.id WHERE a.task_id=? AND a.state='assigned'", taskID).Scan(&id, &m.Identity.AttemptID, &m.Identity.Epoch, &revision)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		m.MessageID, m.ExpectedRevision = dispatchID(id, "stop"), &revision
+		if r := p.CheckTransition(m, m.Identity, p.Assigned, revision); r != p.OK {
+			return r
+		}
+		if _, err := tx.ExecContext(ctx, "UPDATE attempts SET state='stopping',revision=revision+1 WHERE id=? AND revision=?", m.Identity.AttemptID, revision); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx, "UPDATE tasks SET state='reconciling' WHERE id=?", taskID); err != nil {
+			return err
+		}
+		return record(ctx, tx, m, revision+1)
 	})
 }
 

@@ -76,7 +76,10 @@ func TestDispatchAckAndReleaseWriteFailure(t *testing.T) {
 	if err := f.s.AcknowledgeAssignment(ctx, f.runner, v.ID, ack); err != nil {
 		t.Fatal(err)
 	}
-	proof := reconcile(t, f, v)
+	if err := f.s.StopDispatch(ctx, f.owner, f.grant.TaskID); err != nil {
+		t.Fatal(err)
+	}
+	proof := reconciliation(v)
 	sqlExec(t, f.s, "CREATE TRIGGER fail_release BEFORE INSERT ON dispatch_releases BEGIN SELECT RAISE(ABORT,'interrupted'); END")
 	if err := f.s.ReconcileDispatch(ctx, f.owner, proof); err == nil {
 		t.Fatal("failed release succeeded")
@@ -92,6 +95,38 @@ func TestDispatchAckAndReleaseWriteFailure(t *testing.T) {
 	sqlExec(t, f.s, "DROP TRIGGER fail_release")
 	if err := f.s.ReconcileDispatch(ctx, f.owner, proof); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestDispatchStopWriteFailure(t *testing.T) {
+	for _, target := range []string{"INSERT ON dispatch_stops", "UPDATE ON attempts", "UPDATE ON tasks", "INSERT ON events"} {
+		t.Run(target, func(t *testing.T) {
+			f := dispatchFixtureFor(t, nil)
+			v := admitted(t, f)
+			before := snapshot(t, f.s)
+			sqlExec(t, f.s, "CREATE TRIGGER fail_stop BEFORE "+target+" BEGIN SELECT RAISE(ABORT,'interrupted'); END")
+			if err := f.s.StopDispatch(ctx, f.owner, f.grant.TaskID); err == nil {
+				t.Fatal("failed stop succeeded")
+			}
+			if !reflect.DeepEqual(before, snapshot(t, f.s)) {
+				t.Fatal("partial stop transaction")
+			}
+			retained, err := f.s.Assignment(ctx, v.ID)
+			if err != nil || !reflect.DeepEqual(retained, v) {
+				t.Fatal("failed stop changed reservation", err)
+			}
+			m, err := f.s.Delivery(ctx, f.runner, v.ID)
+			if err != nil || !reflect.DeepEqual(m, v.Assignment) {
+				t.Fatal("failed stop left sticky latch", err)
+			}
+			sqlExec(t, f.s, "DROP TRIGGER fail_stop")
+			if err := f.s.StopDispatch(ctx, f.owner, f.grant.TaskID); err != nil {
+				t.Fatal(err)
+			}
+			if err := f.s.ReconcileDispatch(ctx, f.owner, reconciliation(v)); err != nil {
+				t.Fatal("stop retry failed to reconcile", err)
+			}
+		})
 	}
 }
 
@@ -155,7 +190,8 @@ func TestDispatchNativeHardBoundRefusal(t *testing.T) {
 		f.request.Decision.Selected = *route
 	})
 	v := admitted(t, f)
-	if err := f.s.ReconcileDispatch(ctx, f.owner, reconcile(t, f, v)); err != nil {
+	proof := recoverDispatch(t, &f, v)
+	if err := f.s.ReconcileDispatch(ctx, f.owner, proof); err != nil {
 		t.Fatal(err)
 	}
 	f.grant.ID, f.grant.Revision = newID(), 2
@@ -182,7 +218,8 @@ func TestDispatchNativeHardBoundRefusal(t *testing.T) {
 func TestDispatchChargesSurviveGrantRevisionAndRestart(t *testing.T) {
 	f := dispatchFixtureFor(t, func(f *dispatchFixture) { f.grant.Envelope.Budgets.Requests = 1 })
 	v := admitted(t, f)
-	if err := f.s.ReconcileDispatch(ctx, f.owner, reconcile(t, f, v)); err != nil {
+	proof := recoverDispatch(t, &f, v)
+	if err := f.s.ReconcileDispatch(ctx, f.owner, proof); err != nil {
 		t.Fatal(err)
 	}
 	next := cloneGrant(t, f.grant)
