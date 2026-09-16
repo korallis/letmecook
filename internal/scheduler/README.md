@@ -71,7 +71,13 @@ Partial-current unique index prevents two current assignments per task.
   assigned phase, stop/grant, current facts and repository policy. Repeated delivery
   returns exactly the same v2 `assign`, including after lost acknowledgement.
   `AcknowledgeAssignment` validates full identity/assignment/current boots and
-  stores the exact immutable `accept` before success. Caller must negotiate v2.
+  stores the exact immutable `accept` before success. Exact receipt replay requires
+  the matching runner's current non-revoked credential and retained generation,
+  but precedes mutable admission checks: stop, grant revocation, eligibility drift,
+  runner disablement, release or daemon restart cannot hide a committed receipt.
+  Old boots may match that exact receipt after restart; first-time acknowledgements
+  still need current delivery eligibility and boots. Replay neither enables delivery
+  nor releases reservations. Caller must negotiate v2.
 - Restart preserves assignment and charges but existing #11 recovery marks attempts
   unknown/reconciling. Outbox remains readable; new delivery/launch stays refused
   pending reconciliation. No lease or resume API exists. Restore remains #23;

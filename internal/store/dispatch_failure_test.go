@@ -98,6 +98,104 @@ func TestDispatchAckAndReleaseWriteFailure(t *testing.T) {
 	}
 }
 
+func TestDispatchAckReplayAfterStateChange(t *testing.T) {
+	for _, state := range []string{"unchanged", "stop", "grant-revoked", "eligibility", "restart", "runner-disabled", "released"} {
+		for _, committed := range []bool{false, true} {
+			t.Run(state+map[bool]string{false: "/first-ack", true: "/lost-response"}[committed], func(t *testing.T) {
+				f := dispatchFixtureFor(t, nil)
+				v := admitted(t, f)
+				ack := p.Message{Version: p.FencedVersion, Kind: "accept", MessageID: newID(), Identity: v.Assignment.Identity, AssignmentID: v.Assignment.AssignmentID, RunnerBoot: f.facts.RunnerBoot, DaemonBoot: f.s.meta.DaemonBoot}
+				if committed {
+					// Commit succeeds but caller loses response before its retry.
+					if err := f.s.AcknowledgeAssignment(ctx, f.runner, v.ID, ack); err != nil {
+						t.Fatal(err)
+					}
+				}
+				switch state {
+				case "stop", "released":
+					if err := f.s.StopDispatch(ctx, f.owner, f.grant.TaskID); err != nil {
+						t.Fatal(err)
+					}
+					if state == "released" {
+						if err := f.s.ReconcileDispatch(ctx, f.owner, reconciliation(v)); err != nil {
+							t.Fatal(err)
+						}
+					}
+				case "grant-revoked":
+					if err := f.s.InvalidateExecution(ctx, f.grant.TaskID, f.grant.ID, "operator", "revoked"); err != nil {
+						t.Fatal(err)
+					}
+				case "eligibility":
+					changed := f.facts
+					changed.Revision++
+					changed.Enabled = false
+					if err := f.s.PublishEligibility(ctx, f.owner, 1, changed); err != nil {
+						t.Fatal(err)
+					}
+				case "restart":
+					if err := f.s.Close(); err != nil {
+						t.Fatal(err)
+					}
+					reopened, err := Open(ctx, f.s.dir, f.artifacts)
+					if err != nil {
+						t.Fatal(err)
+					}
+					defer reopened.Close()
+					f.s = reopened
+				case "runner-disabled":
+					if _, err := f.s.UpdateIdentity(ctx, f.owner, f.facts.Repository.RunnerRoot.RunnerID, 2, "disable", ""); err != nil {
+						t.Fatal(err)
+					}
+				}
+				before := snapshot(t, f.s)
+				err := f.s.AcknowledgeAssignment(ctx, f.runner, v.ID, ack)
+				wantSuccess := committed || state == "unchanged"
+				if (err == nil) != wantSuccess {
+					t.Fatalf("committed=%v state=%s: replay result %v", committed, state, err)
+				}
+				stored, err := f.s.Assignment(ctx, v.ID)
+				if err != nil || stored.Acknowledged != wantSuccess || !reflect.DeepEqual(stored.Assignment, v.Assignment) {
+					t.Fatal("receipt or assignment changed", err)
+				}
+				if !reflect.DeepEqual(before, snapshot(t, f.s)) {
+					t.Fatal("receipt replay changed attempt/events")
+				}
+				if state != "unchanged" {
+					if _, err := f.s.Delivery(ctx, f.runner, v.ID); err == nil {
+						t.Fatal("replay restored delivery authority")
+					}
+				}
+				if !wantSuccess {
+					return
+				}
+				for _, mutate := range []func(*p.Message){
+					func(m *p.Message) { m.MessageID = newID() },
+					func(m *p.Message) { m.AssignmentID = newID() },
+					func(m *p.Message) { m.Identity.AttemptID = newID() },
+					func(m *p.Message) { m.Identity.Generation = newID() },
+					func(m *p.Message) { m.RunnerBoot = newID() },
+					func(m *p.Message) { m.DaemonBoot = newID() },
+				} {
+					bad := ack
+					mutate(&bad)
+					if err := f.s.AcknowledgeAssignment(ctx, f.runner, v.ID, bad); err == nil {
+						t.Fatal("mismatched receipt accepted")
+					}
+				}
+				if err := f.s.AcknowledgeAssignment(ctx, f.owner, v.ID, ack); err == nil {
+					t.Fatal("owner impersonated runner")
+				}
+				if _, err := f.s.UpdateIdentity(ctx, f.owner, f.facts.Repository.RunnerRoot.RunnerID, map[bool]int64{false: 2, true: 3}[state == "runner-disabled"], "revoke", ""); err != nil {
+					t.Fatal(err)
+				}
+				if err := f.s.AcknowledgeAssignment(ctx, f.runner, v.ID, ack); !errors.Is(err, i.Denied) {
+					t.Fatal("revoked credential replayed receipt", err)
+				}
+			})
+		}
+	}
+}
+
 func TestDispatchStopWriteFailure(t *testing.T) {
 	for _, target := range []string{"INSERT ON dispatch_stops", "UPDATE ON attempts", "UPDATE ON tasks", "INSERT ON events"} {
 		t.Run(target, func(t *testing.T) {

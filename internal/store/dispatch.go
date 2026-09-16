@@ -582,10 +582,12 @@ func deliverable(ctx context.Context, tx *sql.Tx, fingerprint, id, generation st
 
 // AcknowledgeAssignment accepts only protocol-validated exact assignment/boots
 // from the enrolled runner; commit failure never reports a positive acknowledgement.
+// Exact retained receipts replay before mutable admission checks, including old
+// boots after restart. Replay is history, never delivery or launch authority.
 func (s *Store) AcknowledgeAssignment(ctx context.Context, fingerprint, id string, ack p.Message) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if ack.Kind != "accept" || ack.Version != p.FencedVersion || p.CheckCurrent(ack, ack.Identity) != p.OK {
+	if !p.ValidID(id) || ack.Kind != "accept" || ack.Version != p.FencedVersion || p.CheckCurrent(ack, ack.Identity) != p.OK {
 		return p.Malformed
 	}
 	tx, err := s.grantTransaction(ctx)
@@ -593,21 +595,19 @@ func (s *Store) AcknowledgeAssignment(ctx context.Context, fingerprint, id strin
 		return err
 	}
 	defer tx.Rollback()
-	if err := expireGrants(ctx, tx, time.Now().UnixMilli()); err != nil {
-		return err
-	}
-	v, err := deliverable(ctx, tx, fingerprint, id, s.meta.Generation)
+	who, err := principal(ctx, tx, fingerprint)
 	if err != nil {
-		if commitErr := tx.Commit(); commitErr != nil {
-			return commitErr
-		}
 		return err
 	}
-	if ack.Identity != v.Assignment.Identity || ack.AssignmentID != v.Assignment.AssignmentID {
-		return p.IdentityConflict
+	retained, err := loadDispatch(ctx, tx, id)
+	if err != nil {
+		return err
 	}
-	if ack.RunnerBoot != v.Facts.RunnerBoot || ack.DaemonBoot != s.meta.DaemonBoot {
-		return p.BootMismatch
+	if who.Role != "runner" || who.ID != retained.Facts.Repository.RunnerRoot.RunnerID {
+		return g.Deny("runner_disabled", "delivery")
+	}
+	if retained.Assignment.Identity.Generation != s.meta.Generation {
+		return p.StaleGeneration
 	}
 	body, err := json.Marshal(ack)
 	if err != nil {
@@ -623,6 +623,22 @@ func (s *Store) AcknowledgeAssignment(ctx context.Context, fingerprint, id strin
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return err
+	}
+	if err := expireGrants(ctx, tx, time.Now().UnixMilli()); err != nil {
+		return err
+	}
+	v, err := deliverable(ctx, tx, fingerprint, id, s.meta.Generation)
+	if err != nil {
+		if commitErr := tx.Commit(); commitErr != nil {
+			return commitErr
+		}
+		return err
+	}
+	if ack.Identity != v.Assignment.Identity || ack.AssignmentID != v.Assignment.AssignmentID {
+		return p.IdentityConflict
+	}
+	if ack.RunnerBoot != v.Facts.RunnerBoot || ack.DaemonBoot != s.meta.DaemonBoot {
+		return p.BootMismatch
 	}
 	var conflict bool
 	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM events WHERE message_id=?) OR EXISTS(SELECT 1 FROM dispatch_acks WHERE message_id=?)", ack.MessageID, ack.MessageID).Scan(&conflict); err != nil {
