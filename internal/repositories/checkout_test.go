@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"os/exec"
@@ -70,6 +71,113 @@ func cloneProfile(v Profile) Profile {
 	v.Verification.Commands = append([]Command{}, v.Verification.Commands...)
 	return v
 }
+
+func outputGit(t *testing.T, output string) gitClient {
+	t.Helper()
+	root := t.TempDir()
+	binary := filepath.Join(root, "git")
+	put(t, filepath.Join(root, "stdout"), output, 0600)
+	put(t, binary, "#!/bin/sh\nexec cat \"${0%/*}/stdout\"\n", 0700)
+	return gitClient{binary: binary, home: root}
+}
+
+func TestGitOutputLimit(t *testing.T) {
+	for _, size := range []int{0, 8191, 8192, 8193, 65536} {
+		t.Run(fmt.Sprint(size), func(t *testing.T) {
+			want := strings.Repeat("x", size)
+			g := outputGit(t, want)
+			got, err := g.run(context.Background(), g.home, "ls-remote")
+			if size > 8192 {
+				if !errors.Is(err, Unavailable) || got != "" {
+					t.Fatalf("overflow returned %d bytes, error %v", len(got), err)
+				}
+			} else if err != nil || got != want {
+				t.Fatalf("bounded output returned %d bytes, error %v", len(got), err)
+			}
+		})
+	}
+}
+
+func TestCheckRefRejectsMalformedOutput(t *testing.T) {
+	sha := strings.Repeat("a", 40)
+	ref := "refs/heads/main"
+	exact := sha + "\t" + ref + "\n"
+	suffix := sha + "\trefs/heads/topic/" + ref + "\n"
+	for _, tc := range []struct {
+		name, output string
+	}{
+		{"empty", ""},
+		{"unterminated", strings.TrimSuffix(exact, "\n")},
+		{"blank record", exact + "\n"},
+		{"space separator", sha + " " + ref + "\n"},
+		{"extra field", sha + "\t" + ref + "\tother\n"},
+		{"carriage return", sha + "\t" + ref + "\r\n"},
+		{"invalid hash", "invalid\t" + ref + "\n"},
+		{"mixed hash formats", exact + strings.Repeat("b", 64) + "\trefs/heads/topic/" + ref + "\n"},
+		{"invalid ref", exact + sha + "\trefs/heads/topic//" + ref + "\n"},
+		{"control in ref", exact + sha + "\trefs/heads/topic\x00/" + ref + "\n"},
+		{"unexpected ref", exact + sha + "\trefs/heads/other\n"},
+		{"missing exact ref", suffix},
+		{"duplicate exact ref", exact + exact},
+		{"changed exact ref", strings.Repeat("b", 40) + "\t" + ref + "\n" + suffix},
+		{"conflicting exact refs", exact + strings.Repeat("b", 40) + "\t" + ref + "\n"},
+		{"malformed after exact", exact + "invalid\n"},
+		{"malformed before exact", "invalid\n" + exact},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g := outputGit(t, tc.output)
+			v := Profile{Remote: "https://example.com/repository.git", Base: Base{Ref: ref, Commit: sha}}
+			if err := g.checkRef(context.Background(), g.home, v); !errors.Is(err, RemoteChanged) {
+				t.Fatalf("malformed advertisement accepted: %v", err)
+			}
+		})
+	}
+	for _, size := range []int{40, 64} {
+		t.Run(fmt.Sprintf("valid %d-digit object ID", size), func(t *testing.T) {
+			sha := strings.Repeat("a", size)
+			g := outputGit(t, sha+"\t"+ref+"\n")
+			v := Profile{Remote: "https://example.com/repository.git", Base: Base{Ref: ref, Commit: sha}}
+			if err := g.checkRef(context.Background(), g.home, v); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestAccessWithSuffixMatchingRefs(t *testing.T) {
+	v, operator := profileFixture(t)
+	git(t, operator, "commit", "--quiet", "--allow-empty", "-m", "suffix target")
+	for _, ref := range []string{"refs/heads/topic/", "refs/heads/tópico/", "refs/tags/topic./"} {
+		git(t, operator, "push", "--quiet", v.Remote, "HEAD:"+ref+v.Base.Ref)
+	}
+	ctx := context.Background()
+	validation, err := ValidateAccess(ctx, v)
+	if err != nil || validation.BaseCommit != v.Base.Commit {
+		t.Fatal("validation with suffix matches", validation, err)
+	}
+	checkout, err := Prepare(ctx, v, selection(t, v))
+	if err != nil {
+		t.Fatal("preparation with suffix matches", err)
+	}
+	if checkout.Validation != validation || git(t, checkout.Path, "rev-parse", "HEAD") != v.Base.Commit {
+		t.Fatal("checkout did not retain pinned base", checkout)
+	}
+	git(t, operator, "push", "--quiet", "--force", v.Remote, v.Base.Commit+":refs/heads/topic/"+v.Base.Ref, "HEAD:"+v.Base.Ref)
+	if _, err := ValidateAccess(ctx, v); !errors.Is(err, RemoteChanged) {
+		t.Fatal("suffix masked changed exact ref during validation", err)
+	}
+	if _, err := Prepare(ctx, v, selection(t, v)); !errors.Is(err, RemoteChanged) {
+		t.Fatal("suffix masked changed exact ref during preparation", err)
+	}
+	git(t, filepath.Join(filepath.Dir(operator), "remote.git"), "update-ref", "-d", v.Base.Ref)
+	if _, err := ValidateAccess(ctx, v); !errors.Is(err, RemoteChanged) {
+		t.Fatal("suffix replaced missing exact ref", err)
+	}
+	if _, err := Prepare(ctx, v, selection(t, v)); !errors.Is(err, RemoteChanged) {
+		t.Fatal("suffix replaced missing exact ref during preparation", err)
+	}
+}
+
 func TestAccessCheckoutAndDirtyPreservation(t *testing.T) {
 	v, operator := profileFixture(t)
 	git(t, operator, "switch", "-c", "user-branch")
@@ -268,6 +376,9 @@ func TestProfileValidationProtectedChangesAndDigest(t *testing.T) {
 		func(v *Profile) { v.Remote = "git@example.com:repo.git" },
 		func(v *Profile) { v.Base.Ref = "refs/heads/-bad.lock" },
 		func(v *Profile) { v.Base.Ref = "refs/heads/main:refs/heads/other" },
+		func(v *Profile) { v.Base.Ref = "refs/heads/topic./main" },
+		func(v *Profile) { v.Base.Ref = "refs/heads/tópico/main" },
+		func(v *Profile) { v.Base.Ref = "refs/heads/" + strings.Repeat("a", 256) },
 		func(v *Profile) { v.Base.Policy = "follow" },
 		func(v *Profile) { v.ContextScope = []string{"../secret"} },
 		func(v *Profile) { v.ProtectedPaths = nil },

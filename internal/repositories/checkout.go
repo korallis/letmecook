@@ -23,13 +23,13 @@ type Checkout struct {
 type gitClient struct{ binary, home string }
 
 // cappedOutput bounds untrusted Git stdout without reflecting stderr/URLs/secrets.
-type cappedOutput struct{ bytes.Buffer }
+type cappedOutput struct{ buffer bytes.Buffer }
 
 func (b *cappedOutput) Write(p []byte) (int, error) {
-	if len(p) > 8192-b.Len() {
+	if len(p) > 8192-b.buffer.Len() {
 		return 0, Unavailable
 	}
-	return b.Buffer.Write(p)
+	return b.buffer.Write(p)
 }
 func (g gitClient) run(ctx context.Context, dir string, args ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -49,7 +49,7 @@ func (g gitClient) run(ctx context.Context, dir string, args ...string) (string,
 	if err := cmd.Run(); err != nil {
 		return "", Unavailable
 	}
-	return out.String(), nil
+	return out.buffer.String(), nil
 }
 func newGit(home string) (gitClient, error) {
 	binary, err := exec.LookPath("git")
@@ -85,7 +85,26 @@ func (g gitClient) checkRef(ctx context.Context, dir string, v Profile) error {
 	if err != nil {
 		return err
 	}
-	if out != v.Base.Commit+"\t"+v.Base.Ref+"\n" {
+	out, terminated := strings.CutSuffix(out, "\n")
+	if !terminated {
+		return RemoteChanged
+	}
+	found := false
+	for line := range strings.SplitSeq(out, "\n") {
+		sha, ref, ok := strings.Cut(line, "\t")
+		if !ok || !commit.MatchString(sha) || len(sha) != len(v.Base.Commit) || !validRefName(ref) {
+			return RemoteChanged
+		}
+		if ref == v.Base.Ref {
+			if found || sha != v.Base.Commit {
+				return RemoteChanged
+			}
+			found = true
+		} else if !strings.HasSuffix(ref, "/"+v.Base.Ref) {
+			return RemoteChanged
+		}
+	}
+	if !found {
 		return RemoteChanged
 	}
 	return nil

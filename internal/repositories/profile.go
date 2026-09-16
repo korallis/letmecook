@@ -144,11 +144,19 @@ func ValidRemote(raw string) bool {
 	}
 }
 func ValidRef(ref string) bool {
-	if !strings.HasPrefix(ref, "refs/heads/") || !printable(ref, 256) || strings.ContainsAny(ref, " ~^:?*[\\") || strings.Contains(ref, "..") || strings.Contains(ref, "@{") {
+	return strings.HasPrefix(ref, "refs/heads/") && printable(ref, 256) && !strings.Contains(ref, "./") && validRefName(ref)
+}
+func validRefName(ref string) bool {
+	if !strings.HasPrefix(ref, "refs/") || strings.HasSuffix(ref, ".") || strings.ContainsAny(ref, " ~^:?*[\\") || strings.Contains(ref, "..") || strings.Contains(ref, "@{") {
 		return false
 	}
+	for _, c := range ref {
+		if c < 32 || c == 127 {
+			return false
+		}
+	}
 	for _, part := range strings.Split(ref, "/") {
-		if part == "" || strings.HasPrefix(part, ".") || strings.HasSuffix(part, ".") || strings.HasSuffix(part, ".lock") {
+		if part == "" || strings.HasPrefix(part, ".") || strings.HasSuffix(part, ".lock") {
 			return false
 		}
 	}
