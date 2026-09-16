@@ -37,10 +37,11 @@ try {
     assert.equal(status.mode, mode);
     if (mode === 'store-only') {
       assert.equal(status.task_count, 0); assert.equal(status.event_count, 0);
-      assert.equal(status.schema_version, 4);
+      assert.equal(status.schema_version, 5);
       assert.equal(decode(encode({ ...status, schema_version: 2 }), 'status').schema_version, 2);
       assert.equal(decode(encode({ ...status, schema_version: 3 }), 'status').schema_version, 3);
-      assert.throws(() => decode(encode({ ...status, schema_version: 5 }), 'status'));
+      assert.equal(decode(encode({ ...status, schema_version: 4 }), 'status').schema_version, 4);
+      assert.throws(() => decode(encode({ ...status, schema_version: 6 }), 'status'));
       assert.equal(snapshot.generation, status.generation);
       assert.deepEqual(snapshot.tasks, []); assert.deepEqual(snapshot.events, []);
       assert.throws(() => decode(encode({ ...status, mode: 'fixture-only' }), 'status'));

@@ -9,9 +9,11 @@ This extension adds persistent empty installation/reopen, fail-closed restart
 handling and a pinned mTLS owner/runner identity boundary. #13 closure is also
 deferred pending accepted/locked #9/#10; identity enrollment grants no execution.
 The provisional [#12 grant service](../../internal/authority/README.md)
-adds typed in-process authority checks; no grant HTTP mutation API is exposed. This
-supplies no formal #11 acceptance, supported worker runtime, execution readiness
-or product readiness.
+adds typed in-process authority checks; no grant HTTP mutation API is exposed.
+The provisional [#14 repository profile](../../docs/operations/repositories.md)
+adds owner-gated in-process registration and separate trusted checkout, not a
+repository HTTP endpoint or execution authority. This supplies no formal #11
+acceptance, supported worker runtime, execution readiness or product readiness.
 The [decision](../../docs/decisions/0001-execution-foundation.md) and
 [execution contract](../../docs/contracts/execution.md) retain their acceptance gates.
 
@@ -83,8 +85,9 @@ Follow it for local owner commands, HTTPS configuration and runner enrollment.
 
 `schemas/readapi/types.go` / `types.ts` retain `read-provisional-v1`, extending its
 closed mode/schema combinations: `fixture-only` / schema 1, `store-only` / schema 2,
-3 or 4 (current). New persistent opens migrate to 4; clients retain historical
-schema 2/3 reads. Schema 4 adds no HTTP capability; neither response exposes grants.
+3, 4 or 5 (current). New persistent opens migrate to 5; clients retain historical
+schema 2/3/4 reads. Schema 5 adds no HTTP capability; neither response exposes grants
+or repository profiles.
 Older strict clients refuse unsupported mode/schema combinations rather than
 misreading persistent state as fixture data.
 Go validates projections before JSON; TypeScript `decode(bytes, 'status' | 'snapshot')`
@@ -141,7 +144,8 @@ No CORS, preflight, browser session or cross-origin exception.
   metadata/tasks/attempts/events through schema 2 (append-only event triggers; legacy
   artifact-location column retained but unused) to schema 3 (principals,
   credential-pin tombstones and expiring enrollment hashes), then schema 4 (immutable
-  grants, CAS heads and durable invalidations). Persistent application ID
+  grants, CAS heads and durable invalidations), then schema 5 (immutable repository
+  identities and approved input profiles). Persistent application ID
   `0x47414646` distinguishes it from #94.
   Unknown schemas, unrecognized DBs and fixture imports fail closed. Migration,
   fresh boot and restart recovery share one commit. Generation survives ordinary
@@ -160,9 +164,11 @@ No CORS, preflight, browser session or cross-origin exception.
   Unknown/terminal history is not replayed or resumed. Exhaustion/errors abort
   startup rather than wrapping revision or fabricating safe state.
 - Artifact directory is explicit configuration, **not artifact durability**. No blob,
-  manifest, result receipt, lease, runner runtime, inference, repository access,
-  acceptance, publication or merge exists. Store event durability proves none of
-  #10's physical custody, fencing, stop or live-evidence obligations.
+  manifest, result receipt, lease, runner runtime, inference,
+  acceptance, publication or merge exists. Repository validation is a separate
+  typed in-process operation; daemon startup never contacts repositories. Store
+  event durability proves none of #10's physical custody, fencing, stop or
+  live-evidence obligations.
 
 ## Verification
 
