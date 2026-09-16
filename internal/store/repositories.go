@@ -161,8 +161,8 @@ func (s *Store) RepositoryProfile(ctx context.Context, actor, id string) (r.Prof
 }
 
 // CheckRepositorySelection checks the current profile and enabled runner identity,
-// not runner-local permission, OS confinement, grant authority or dispatch. A future
-// scheduler must use this logic in its admission transaction with all those checks.
+// not runner-local permission, OS confinement, grant authority or dispatch.
+// Dispatch rechecks placement in its admission transaction; see ../scheduler/README.md.
 func (s *Store) CheckRepositorySelection(ctx context.Context, selection r.Selection) error {
 	return s.identityWrite(ctx, func(tx *sql.Tx) error {
 		profile, err := repositoryProfile(ctx, tx, selection.Repository)

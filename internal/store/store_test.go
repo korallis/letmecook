@@ -395,7 +395,7 @@ func TestOwnedStoreProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer s.Close()
-	if mode == "crash" || mode == "grant-crash" {
+	if mode == "crash" || mode == "grant-crash" || mode == "dispatch-crash" {
 		err = sqlite.RegisterScalarFunction("owned_test_pause", 0, func(*sqlite.FunctionContext, []driver.Value) (driver.Value, error) {
 			fmt.Println("interrupted")
 			bufio.NewReader(os.Stdin).ReadByte()
@@ -414,11 +414,15 @@ func TestOwnedStoreProcess(t *testing.T) {
 		sqlExec(t, s, "PRAGMA trusted_schema=ON")
 		if mode == "grant-crash" {
 			sqlExec(t, s, "CREATE TRIGGER pause_write BEFORE UPDATE ON execution_grant_heads BEGIN SELECT owned_test_pause(); END")
+		} else if mode == "dispatch-crash" {
+			sqlExec(t, s, "CREATE TRIGGER pause_write BEFORE INSERT ON dispatches BEGIN SELECT owned_test_pause(); END")
 		} else {
 			sqlExec(t, s, "CREATE TRIGGER pause_write BEFORE INSERT ON events BEGIN SELECT owned_test_pause(); END")
 		}
 	}
-	if mode == "grant-crash" || mode == "grant-commit" {
+	if mode == "dispatch-crash" || mode == "dispatch-commit" {
+		ownedDispatch(t, s)
+	} else if mode == "grant-crash" || mode == "grant-commit" {
 		grant, err := s.ExecutionGrant(ctx, os.Getenv("GAFFER_OWNED_TEST_GRANT"))
 		if err != nil {
 			t.Fatal(err)

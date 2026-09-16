@@ -49,10 +49,11 @@ authenticates owners and runners; grant methods remain in-process only.
   exists. Expiry uses the trusted daemon's wall clock, never worker timestamps;
   once persisted it cannot be undone by clock rollback.
 
-**A successful check is not an admission token.** #15 must reuse the private
-`checkExecution` inside the same transaction as reservation/attempt/outbox creation,
-not perform a check-then-dispatch sequence. Current full-graph capability, repository
-policy, runner policy and isolation eligibility also remain #14/#15 obligations.
+**A successful check is not an admission token.** The provisional
+[#15 admission service](../scheduler/README.md) reuses private `checkExecution`
+inside reservation/attempt/outbox creation, together with current full-graph,
+repository, runner policy and isolation eligibility checks. No check-then-dispatch
+sequence is permitted.
 #19 consumes invalidation signals to fence leases and reconcile; a signal never
 proves local termination, remote quiescence, custody, or safe replacement.
 
@@ -87,8 +88,8 @@ capabilities or prove graph completeness from a model-supplied list.
 Budgets cover logical requests, physical subattempts, execution attempts, retries,
 concurrency, request/response bytes, total/attempt/first-output/idle time, provider
 output tokens and optional monetary cap. They are ceilings, **not** fresh balances
-per revision/check. #15 must retain task-wide charges and unresolved reservations
-across revisions, failed/discarded work and restarts. Strict profile requires a
+per revision/check. See [admission charges](../scheduler/README.md#charges-stop-and-release)
+for retained task accounting. Strict profile requires a
 positive provider output cap. Native profile requires explicit authority, exclusively
 subscription targets, zero provider output cap and nil monetary cap (unavailable,
 not unlimited). A monetary pointer to zero means a real zero-spend requirement.

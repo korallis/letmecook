@@ -264,10 +264,10 @@ func (s *Store) InvalidateExecution(ctx context.Context, taskID, expectedID, act
 	return tx.Commit()
 }
 
-// CheckExecution is an authority check, NOT a dispatch/admission token. #15 must
-// call checkExecution in its reservation/attempt/outbox transaction, then validate
-// current full-graph capability/data/runner policy. Never check now and dispatch
-// later: invalidation could commit between them. No dispatcher exists here.
+// CheckExecution is an authority check, NOT a dispatch/admission token. Dispatch
+// calls checkExecution in its reservation/attempt/outbox transaction with current
+// full-graph capability/data/runner policy checks. Never check now and dispatch
+// later: invalidation could commit between them.
 func (s *Store) CheckExecution(ctx context.Context, request g.Request) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

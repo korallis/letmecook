@@ -1,5 +1,5 @@
 // Package store owns local SQLite workflow metadata and immutable provisional grants.
-// It supplies no dispatch, runtime or external-effect authority.
+// It supplies provisional atomic admission, not runtime or external-effect authority.
 package store
 
 import (
@@ -163,7 +163,7 @@ func openStore(ctx context.Context, dir string, fixture bool) (_ *Store, err err
 const schema = `
 CREATE TABLE metadata (singleton INTEGER PRIMARY KEY CHECK(singleton=1), generation TEXT NOT NULL UNIQUE, daemon_boot TEXT NOT NULL UNIQUE) STRICT;
 CREATE TABLE tasks (id TEXT PRIMARY KEY, state TEXT NOT NULL CHECK(state IN ('ready','reconciling','verifying','awaiting_review'))) STRICT;
--- ponytail: one attempt per task; replacement/epoch admission belongs to #15 after authority/reconciliation.
+-- ponytail: one attempt per task in fixture/legacy schema; dispatchSchema permits retained epochs in persistent stores.
 CREATE TABLE attempts (
  id TEXT PRIMARY KEY, task_id TEXT NOT NULL UNIQUE REFERENCES tasks(id),
  epoch INTEGER NOT NULL CHECK(epoch BETWEEN 1 AND 9007199254740991),
@@ -221,7 +221,7 @@ func (s *Store) migrate(ctx context.Context) error {
 			}
 		}
 		version = 1
-	} else if version != 1 && (s.fixture || version != 2 && version != 3 && version != 4 && version != 5) {
+	} else if version != 1 && (s.fixture || version != 2 && version != 3 && version != 4 && version != 5 && version != 6) {
 		return fmt.Errorf("unsupported schema version")
 	}
 	mode := "fixture-only"
@@ -253,6 +253,12 @@ PRAGMA user_version=2;`); err != nil {
 				return err
 			}
 			version = 5
+		}
+		if version == 5 {
+			if _, err = tx.ExecContext(ctx, dispatchSchema); err != nil {
+				return err
+			}
+			version = 6
 		}
 		if err = expireGrants(ctx, tx, time.Now().UnixMilli()); err != nil {
 			return err
@@ -381,9 +387,8 @@ func (s *Store) assign(ctx context.Context, m p.Message) error {
 	return tx.Commit()
 }
 
-// transition consumes validated synthetic attempt messages only. No exported
-// attempt-write API, process evidence, result/receipt persistence or acceptance
-// exists.
+// transition consumes validated synthetic attempt messages only.
+// Trusted admission and reconciliation use dispatch.go; see ../scheduler/README.md.
 func (s *Store) transition(ctx context.Context, m p.Message) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -400,7 +405,7 @@ func (s *Store) transition(ctx context.Context, m p.Message) error {
 		if m.Version != p.FencedVersion {
 			return p.UnknownVersion
 		}
-		// Without authority, process or custody owners, only fail-closed edges exist.
+		// This synthetic path has no authority, process or custody evidence.
 		if m.To != p.Unknown && m.To != p.Stopping {
 			return p.ReconciliationRequired
 		}
@@ -416,7 +421,7 @@ func (s *Store) transition(ctx context.Context, m p.Message) error {
 	current := p.Identity{Generation: s.meta.Generation, TaskID: m.Identity.TaskID}
 	var state p.AttemptState
 	var revision int64
-	err = tx.QueryRowContext(ctx, "SELECT id,epoch,state,revision FROM attempts WHERE task_id=?", m.Identity.TaskID).Scan(&current.AttemptID, &current.Epoch, &state, &revision)
+	err = tx.QueryRowContext(ctx, "SELECT id,epoch,state,revision FROM attempts WHERE task_id=? ORDER BY epoch DESC LIMIT 1", m.Identity.TaskID).Scan(&current.AttemptID, &current.Epoch, &state, &revision)
 	if errors.Is(err, sql.ErrNoRows) {
 		return p.StaleAttempt
 	}
@@ -497,7 +502,7 @@ func (s *Store) Snapshot(ctx context.Context, taskID string, limit int) (a.Snaps
 		return v, err
 	}
 	defer tx.Rollback()
-	rows, err := tx.QueryContext(ctx, `SELECT t.id,t.state,a.id,a.epoch,a.state,a.revision FROM tasks t JOIN attempts a ON a.task_id=t.id WHERE (?='' OR t.id=?) ORDER BY t.id LIMIT ?`, taskID, taskID, limit)
+	rows, err := tx.QueryContext(ctx, `SELECT t.id,t.state,a.id,a.epoch,a.state,a.revision FROM tasks t JOIN attempts a ON a.task_id=t.id WHERE a.epoch=(SELECT max(epoch) FROM attempts WHERE task_id=t.id) AND (?='' OR t.id=?) ORDER BY t.id LIMIT ?`, taskID, taskID, limit)
 	if err != nil {
 		return v, err
 	}
