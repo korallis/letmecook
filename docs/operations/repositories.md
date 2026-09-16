@@ -44,9 +44,10 @@ boundary; do not expose a raw fingerprint argument over the wire.
 
 The actor is a certificate fingerprint established by #13's proof-of-possession
 boundary (or explicit local owner setup), not authentication by possession of a
-string. Owner auth is checked again after slow Git I/O; SQL commit failure returns
-no registration. Read/profile errors use fixed repository or identity codes; Git
-stderr, credentials and raw remote output are not returned.
+string. Registration rechecks owner auth after slow Git I/O; SQL commit failure
+returns no registration. Store errors use fixed identity codes; Git failures use
+repository codes without stderr or raw remote output. Temporary-directory cleanup
+failures can include filesystem error details; a future wire boundary must redact them.
 
 Registration grants no execution, local acceptance, publication or merge. It creates
 no execution grant, task or event and does not enable runners. Existing authority
@@ -71,9 +72,9 @@ Version: `repository-provisional-v1`. Profile binds:
   and positive timeout for each command. It cannot be replaced by repository text.
 - Sorted exact enrolled runner-ID / absolute clean root pairs. Roots for remote
   runners are recorded, not probed by the daemon; local preparation validates its
-  selected root. Symlink aliases, world/group-accessible roots and roots inside
-  ordinary or bare Git administration are refused. Roots must be independently
-  provisioned by that host's operator outside existing checkouts.
+  selected root, which must have mode 0700. Symlink aliases and roots inside ordinary
+  or bare Git administration are refused. Roots must be independently provisioned
+  by that host's operator outside existing checkouts.
 
 Collections cap at 128 entries, verification commands at 32 and serialized profile
 at 64 KiB. SHA-256 binds the full typed profile including revision, protection,
@@ -95,16 +96,19 @@ local repositories provide actual read access without a forge credential.
 
 Trusted checkout uses Git from the trusted host installation, with a fresh empty
 HOME and explicit environment rather than inherited Git, proxy, token or SSH state.
-System/global configuration, templates, attributes and unmanaged hooks are disabled;
-credential helpers are empty, redirects forbidden, protocols allowlisted, submodules
+System/global Git configuration and attributes, templates and unmanaged hooks are
+disabled; repository `.gitattributes` can still apply built-in transformations.
+Credential helpers are empty, redirects forbidden, protocols allowlisted, submodules
 not initialized, replace objects disabled and maintenance disabled. Each Git command
 has a 30-second deadline, overall preparation two minutes, bounded stdout and no
 returned stderr. Linux/macOS cancellation kills only that command's owned process
-group, including transport children; unsupported platforms refuse preparation. It fetches only the selected branch at depth 1 into fresh independent
-Git administration, compares the fetched commit to the approved immutable SHA,
+group, including transport children; unsupported platforms refuse preparation.
+It fetches only the selected branch at depth 1 into fresh independent Git
+administration, compares the fetched commit to the approved immutable SHA,
 rechecks the advertised ref, then checks out detached. No reset, clean, branch change
 or command runs in the operator's existing checkout. No shared object alternates or
-worktree administration. Returned clone retains neither remote nor credential config.
+worktree administration. Returned clone retains no remote URL or credentials;
+its local configuration keeps credential helpers disabled.
 
 A ref can move after validation; the delivered checkout still contains the exact
 pinned commit. Every later preparation revalidates the ref. URL plus pinned commit
@@ -142,6 +146,8 @@ helpers, not source-string assertions or live repositories. Coverage includes:
   branch and refs remain unchanged.
 - Inaccessible/missing remote/ref, branch drift, relabelled repository or remote,
   wrong/aliased root, checkout-root refusal, cancellation and failed-clone cleanup.
+- Exact-ref selection with real suffix-matching refs, malformed advertisement
+  refusal and stdout overflow through the `os/exec` copy path.
 - Malicious operator/remote/template hooks, inherited hook/URL rewrite/filter/helper
   configuration, local upload-pack hook, askpass and SSH-agent variables; marker
   side effects never occur. Owned transport-child cancellation has a separate

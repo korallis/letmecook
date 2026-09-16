@@ -4,8 +4,9 @@ Operator-authorized reversible work on the merged #11 store. Related to #13;
 closure is deferred until #9/#10 are accepted/locked and reconciled. This supplies
 neither foundation lock, supported execution runtime, execution readiness nor any
 lease, grant, scheduler, process, model or artifact authority. Enabling a runner is
-not eligibility: project allowlists, runner-local policy and isolation still
-belong to their future owners; grants belong to the
+not eligibility: [repository profiles](../../docs/operations/repositories.md) own
+candidate project/root allowlists; runner-local policy and isolation remain future
+work. Grants belong to the
 [authority service](../../internal/authority/README.md).
 No browser sessions, SSO or multi-user roles.
 
