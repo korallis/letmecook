@@ -11,7 +11,7 @@ acceptance follows from this slice.
 
 `internal/repositories/` owns `Profile`, `Selection`, validation, protected-path
 checks and trusted Git checkout. `internal/store/repositories.go` owns immutable
-registration in the existing SQLite store (schema 5), not another database.
+registration in the existing SQLite store, not another database.
 No repository HTTP endpoint, CLI command, discovery, UI, scheduler or job launcher
 is added. The later CLI can call these typed operations through an authenticated
 boundary; do not expose a raw fingerprint argument over the wire.
@@ -51,9 +51,9 @@ failures can include filesystem error details; a future wire boundary must redac
 
 Registration grants no execution, local acceptance, publication or merge. It creates
 no execution grant, task or event and does not enable runners. Existing authority
-checks remain separate. #15 must evaluate current repository, grant and runner-local
-policy in its admission transaction; neither a selection check nor a checkout result
-is a dispatch token. #16 must enforce host-local restrictions and OS confinement.
+checks remain separate. The [admission service](../../internal/scheduler/README.md#trust-and-eligibility)
+owns current placement checks; neither a selection check nor a checkout result is
+a dispatch token. #16 must enforce host-local restrictions and OS confinement.
 An owner-selected runner/root is a candidate allowlist entry, not authority to weaken
 that runner's policy.
 

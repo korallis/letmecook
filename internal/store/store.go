@@ -163,7 +163,7 @@ func openStore(ctx context.Context, dir string, fixture bool) (_ *Store, err err
 const schema = `
 CREATE TABLE metadata (singleton INTEGER PRIMARY KEY CHECK(singleton=1), generation TEXT NOT NULL UNIQUE, daemon_boot TEXT NOT NULL UNIQUE) STRICT;
 CREATE TABLE tasks (id TEXT PRIMARY KEY, state TEXT NOT NULL CHECK(state IN ('ready','reconciling','verifying','awaiting_review'))) STRICT;
--- ponytail: one attempt per task; replacement/epoch admission belongs to #15 after authority/reconciliation.
+-- ponytail: one attempt per task in fixture/legacy schema; dispatchSchema permits retained epochs in persistent stores.
 CREATE TABLE attempts (
  id TEXT PRIMARY KEY, task_id TEXT NOT NULL UNIQUE REFERENCES tasks(id),
  epoch INTEGER NOT NULL CHECK(epoch BETWEEN 1 AND 9007199254740991),

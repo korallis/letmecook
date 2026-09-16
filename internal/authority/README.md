@@ -88,8 +88,8 @@ capabilities or prove graph completeness from a model-supplied list.
 Budgets cover logical requests, physical subattempts, execution attempts, retries,
 concurrency, request/response bytes, total/attempt/first-output/idle time, provider
 output tokens and optional monetary cap. They are ceilings, **not** fresh balances
-per revision/check. #15 admission retains task-wide worst-case charges and
-unresolved reservations across revisions, failed/discarded work and restarts. Strict profile requires a
+per revision/check. See [admission charges](../scheduler/README.md#charges-stop-and-release)
+for retained task accounting. Strict profile requires a
 positive provider output cap. Native profile requires explicit authority, exclusively
 subscription targets, zero provider output cap and nil monetary cap (unavailable,
 not unlimited). A monetary pointer to zero means a real zero-spend requirement.

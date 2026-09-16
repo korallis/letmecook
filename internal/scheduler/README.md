@@ -5,8 +5,8 @@ Related work: [#15](https://github.com/korallis/letmecook/issues/15),
 accepted/locked #9/#10.** Reversible metadata implementation, not foundation lock,
 Docker-free runtime qualification, lease issuance or execution readiness.
 No inference, provider client, account selection, semantic planner or HTTP mutation
-endpoint is added. Halted `initial_20260915` remains untouched: spent 1, one-use,
-unknown original; no retry or new live scope.
+endpoint is added. Existing live-work restrictions remain owned by the
+[first live attempt record](../../docs/evidence/router-initial-live.md).
 
 ## Trust and eligibility
 
@@ -93,15 +93,16 @@ or scheduler tick loop is needed; caller owns presentation/backoff.
 
 Task request ceilings must fit both grant and local policy. Separate finite
 single-attempt allowance reserves requests, subattempts, duration, output tokens
-and cost plus decision's CPU/memory/disk/process resources. Allowance has one
-attempt/concurrent process and no execution retry of its own. Local bytes and
+and cost plus decision's CPU/memory/disk/process resources. Allowance covers one
+execution attempt, with concurrency one and no retry of its own. Local bytes and
 first-output/idle deadlines remain in immutable allowance for future enforcement.
 Worst-case allowance is charged at commit, including failures/discarded work;
 **no refunds**. Counts/retries and sum of allowance charges survive grant revision,
 restart and terminal release. Elapsed task time and proposed duration must still
-fit total time and grant/local/evidence validity. Unknown prior monetary allowance or native output consumption
-cannot become a known balance under a later hard-cost/output grant. Native subscription
-profile still rejects hard monetary/output requirements; no cap stripping.
+fit total time and grant/local/evidence validity. Unknown prior monetary allowance
+or native output consumption cannot become a known balance under a later
+hard-cost/output grant. Native subscription profile still rejects hard
+monetary/output requirements; no cap stripping.
 
 `StopDispatch(owner, taskID)` is sticky and serializes with dispatch/delivery and
 reconciliation. For a current dispatched `assigned` attempt, the same durable
@@ -120,8 +121,10 @@ refuse; it cannot physically stop an already running process here.
 point, not a worker report. Only protocol edges `unknown|stopping` to
 `cancelled|expired` release capacity. It requires exact identity/revision,
 not-started/terminated evidence, remote quiescence, revoked launch capability,
-preserved artifacts and verified evidence digest. Terminal CAS, event, release
-receipt and owner audit identity commit together. Duplicate exact proof is
+preserved artifacts and an evidence digest. The owner must verify the referenced
+evidence before submitting proof; the store validates proof fields and digest
+format, without fetching evidence or observing termination. Terminal CAS, event,
+release receipt and owner audit identity commit together. Duplicate exact proof is
 idempotent; unknown remote work, local timeout, stop receipt or bare process exit
 cannot release. Budget charges remain consumed. Success/failure release awaits
 real result/custody owners; no premature success/acceptance API is supplied.
@@ -143,5 +146,5 @@ ceilings, unknown-headroom strict/native cases, migration, cancellation, real `S
 and owned-subprocess SIGKILL before/after commit. Existing read fixtures cover
 schema 6 and prior schema reads. No live inference, Docker, private repository,
 physical power-loss, runtime isolation, remote stop or artifact custody is proven.
-Independent pipeline review is GPT-5.6 Sol-review, not Opus; actual pipeline/CI
-results belong to delivery record, not this list of runnable checks.
+Actual pipeline/CI results and reviewer identity belong to the delivery record,
+not this list of runnable checks.

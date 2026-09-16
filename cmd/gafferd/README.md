@@ -163,16 +163,14 @@ No CORS, preflight, browser session or cross-origin exception.
   the [grant service](../../internal/authority/README.md) owns #12 authority revisions.
   Snapshot selects each task's highest retained epoch. Attempt CAS + task projection
   + event insert commit together; append-only event triggers prevent update/delete.
-- Persistent attempt writes validate v2 and current generation before replay. No
-  transitions to starting/running/result/success without future evidence owners;
-  owner stop atomically latches dispatch suppression and moves a dispatched assigned
-  attempt to stopping with its task projection and event. Unknown attempts remain
-  unknown. Owner-reviewed terminal proof permits cancelled/expired with reservation
-  release; stop alone never releases capacity. Runtime cancellation remains #19.
+- Persistent attempt writes validate v2 and current generation before replay. The
+  [admission lifecycle](../../internal/scheduler/README.md#charges-stop-and-release)
+  owns stop and proof-gated terminal transitions. Starting/running/result/success
+  transitions still await their evidence owners.
   Restart changes active attempts to unknown/reconciling and appends matching
   events atomically with fresh boot.
-  Unknown/terminal history is not replayed or resumed. Exhaustion/errors abort
-  startup rather than wrapping revision or fabricating safe state.
+  Recovery leaves unknown/terminal history unchanged and never resumes execution.
+  Exhaustion/errors abort startup rather than wrapping revision or fabricating safe state.
 - Artifact directory is explicit configuration, **not artifact durability**. No blob,
   manifest, result receipt, lease, runner runtime, inference,
   acceptance, publication or merge exists. Repository validation is a separate
