@@ -395,7 +395,7 @@ func TestOwnedStoreProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer s.Close()
-	if mode == "crash" {
+	if mode == "crash" || mode == "grant-crash" {
 		err = sqlite.RegisterScalarFunction("owned_test_pause", 0, func(*sqlite.FunctionContext, []driver.Value) (driver.Value, error) {
 			fmt.Println("interrupted")
 			bufio.NewReader(os.Stdin).ReadByte()
@@ -412,9 +412,24 @@ func TestOwnedStoreProcess(t *testing.T) {
 		}
 		s.db.SetMaxIdleConns(1)
 		sqlExec(t, s, "PRAGMA trusted_schema=ON")
-		sqlExec(t, s, "CREATE TRIGGER pause_write BEFORE INSERT ON events BEGIN SELECT owned_test_pause(); END")
+		if mode == "grant-crash" {
+			sqlExec(t, s, "CREATE TRIGGER pause_write BEFORE UPDATE ON execution_grant_heads BEGIN SELECT owned_test_pause(); END")
+		} else {
+			sqlExec(t, s, "CREATE TRIGGER pause_write BEFORE INSERT ON events BEGIN SELECT owned_test_pause(); END")
+		}
 	}
-	if err := s.transition(ctx, next(t, s, p.Stopping)); err != nil {
+	if mode == "grant-crash" || mode == "grant-commit" {
+		grant, err := s.ExecutionGrant(ctx, os.Getenv("GAFFER_OWNED_TEST_GRANT"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		next := cloneGrant(t, grant)
+		next.ID, next.Revision = newID(), grant.Revision+1
+		next.Envelope.Paths = next.Envelope.Paths[:1]
+		if _, err := s.RestrictExecution(ctx, grant.ID, next); err != nil {
+			t.Fatal(err)
+		}
+	} else if err := s.transition(ctx, next(t, s, p.Stopping)); err != nil {
 		t.Fatal(err)
 	}
 	fmt.Println("committed")

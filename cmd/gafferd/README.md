@@ -6,8 +6,10 @@ reconciling the merged #94 store toward the decided (not-yet-locked) foundation.
 **Full #11 acceptance reconciliation is deliberately deferred until #9 is accepted
 and locked and #10 O1–O8 close**, including execution/runtime qualification.
 This extension adds persistent empty installation/reopen and fail-closed restart
-handling. It supplies no formal #11 acceptance, execution authority, supported worker
-runtime, execution readiness or product readiness.
+handling. The provisional [#12 grant service](../../internal/authority/README.md)
+adds typed in-process authority checks; no HTTP mutation API is exposed. This
+supplies no formal #11 acceptance, supported worker runtime, execution readiness
+or product readiness.
 The [decision](../../docs/decisions/0001-execution-foundation.md) and
 [execution contract](../../docs/contracts/execution.md) retain their acceptance gates.
 
@@ -39,7 +41,8 @@ persistent state. Startup prints `store-only http://127.0.0.1:<port>/api/v1/stat
 only after ownership, migration, boot/recovery transaction and directory sync.
 `GET` that URL or replace `status` with `snapshot`. Fresh installation is empty.
 No task creation, execution, grant, enrollment, mutation or import endpoint exists.
-Store write primitives remain private; tests exercise them with synthetic v2 inputs.
+Attempt write primitives remain private; tests exercise them with synthetic v2
+inputs. Grant methods are trusted in-process entry points, not authenticated APIs.
 
 Installation configuration is **flags only**:
 
@@ -70,8 +73,10 @@ application identities, checked before migration; no version relabelling/import.
 ## Read contract for #95
 
 `schemas/readapi/types.go` / `types.ts` retain `read-provisional-v1`, extending its
-closed mode/schema combinations: `fixture-only` / schema 1, `store-only` / schema 2.
-Old strict clients refuse the new mode rather than misreading it as fixture data.
+closed mode/schema combinations: `fixture-only` / schema 1, `store-only` / schema 2
+or 3 (current). Schema 3 adds no HTTP capability; neither response exposes grants.
+Older strict clients refuse unsupported mode/schema combinations rather than
+misreading persistent state as fixture data.
 Go validates projections before JSON; TypeScript `decode(bytes, 'status' | 'snapshot')`
 validates bounded input at runtime. The fixture shell remains fixture-only and is
 not served in persistent mode; no UI work or product exposure is introduced.
@@ -120,9 +125,10 @@ cross-site fetch metadata. Host equals actual listener, optional Origin equals
   fullfsync/checkpoint_fullfsync ON, trusted_schema OFF; effective values checked.
   New directory parents and DB directory entries synced before ready. Commit errors
   never become successful writes/acks. No hardware power-loss/fsync-failure claim.
-- One schema owner. Empty persistent schema migrates transactionally through base
-  metadata/tasks/attempts/events to schema 2 (append-only event triggers; legacy
-  artifact-location column retained but unused). Persistent application ID
+- One schema owner. Empty persistent schema migrates transactionally from base
+  metadata/tasks/attempts/events through schema 2 (append-only event triggers; legacy
+  artifact-location column retained but unused) to schema 3 (immutable grants,
+  CAS heads and durable invalidations). Persistent application ID
   `0x47414646` distinguishes it from #94.
   Unknown schemas, unrecognized DBs and fixture imports fail closed. Migration,
   fresh boot and restart recovery share one commit. Generation survives ordinary
@@ -130,17 +136,18 @@ cross-site fetch metadata. Host equals actual listener, optional Origin equals
 - Identity/event writes share one transaction. Task/attempt/assignment/message IDs,
   task epoch and event revision uniqueness plus composite foreign keys survive
   replay. One attempt per task remains deliberate: safe replacement, increasing
-  epochs, grants, capacity/budget reservation and outbox delivery belong to #12/#15.
+  epochs, capacity/budget reservation and outbox delivery belong to #15. The
+  [grant service](../../internal/authority/README.md) owns #12 authority revisions.
   No speculative tables or dispatch are introduced. Attempt CAS + task projection
   + event insert commit together; append-only event triggers prevent update/delete.
-- Persistent writes validate v2 and current generation before replay. No transitions
-  to starting/running/result/success/terminal states without future evidence owners;
-  only unknown/stopping edges are available. Restart changes active attempts to
-  unknown/reconciling and appends matching events atomically with fresh boot.
+- Persistent attempt writes validate v2 and current generation before replay. No
+  transitions to starting/running/result/success/terminal states without future
+  evidence owners; only unknown/stopping edges are available. Restart changes active
+  attempts to unknown/reconciling and appends matching events atomically with fresh boot.
   Unknown/terminal history is not replayed or resumed. Exhaustion/errors abort
   startup rather than wrapping revision or fabricating safe state.
 - Artifact directory is explicit configuration, **not artifact durability**. No blob,
-  manifest, result receipt, lease, runner, inference, grants, repository access,
+  manifest, result receipt, lease, runner, inference, repository access,
   acceptance, publication or merge exists. Store event durability proves none of
   #10's physical custody, fencing, stop or live-evidence obligations.
 
