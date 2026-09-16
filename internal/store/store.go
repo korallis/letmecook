@@ -387,9 +387,8 @@ func (s *Store) assign(ctx context.Context, m p.Message) error {
 	return tx.Commit()
 }
 
-// transition consumes validated synthetic attempt messages only. No exported
-// attempt-write API, process evidence, result/receipt persistence or acceptance
-// exists.
+// transition consumes validated synthetic attempt messages only.
+// Trusted admission and reconciliation use dispatch.go; see ../scheduler/README.md.
 func (s *Store) transition(ctx context.Context, m p.Message) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -406,7 +405,7 @@ func (s *Store) transition(ctx context.Context, m p.Message) error {
 		if m.Version != p.FencedVersion {
 			return p.UnknownVersion
 		}
-		// Without authority, process or custody owners, only fail-closed edges exist.
+		// This synthetic path has no authority, process or custody evidence.
 		if m.To != p.Unknown && m.To != p.Stopping {
 			return p.ReconciliationRequired
 		}
