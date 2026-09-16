@@ -453,7 +453,7 @@ func TestExecutionGrantSchemaThreeMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.Exec("DROP TABLE repository_profiles; DROP TABLE repositories; DROP TABLE execution_grant_heads; DROP TABLE execution_invalidations; DROP TABLE execution_grants; PRAGMA user_version=3"); err != nil {
+	if _, err = db.Exec(dropDispatchSchema + "DROP TABLE repository_profiles; DROP TABLE repositories; DROP TABLE execution_grant_heads; DROP TABLE execution_invalidations; DROP TABLE execution_grants; PRAGMA user_version=3"); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Close(); err != nil {
@@ -465,7 +465,7 @@ func TestExecutionGrantSchemaThreeMigration(t *testing.T) {
 	}
 	defer r.Close()
 	after := snapshot(t, r)
-	if after.SchemaVersion != 5 || after.Generation != before.Generation || len(after.Events) != 0 {
+	if after.SchemaVersion != 6 || after.Generation != before.Generation || len(after.Events) != 0 {
 		t.Fatal(after)
 	}
 	grant := approve(t, r, "", grantFixture())

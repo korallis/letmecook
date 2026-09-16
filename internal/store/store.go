@@ -1,5 +1,5 @@
 // Package store owns local SQLite workflow metadata and immutable provisional grants.
-// It supplies no dispatch, runtime or external-effect authority.
+// It supplies provisional atomic admission, not runtime or external-effect authority.
 package store
 
 import (
@@ -221,7 +221,7 @@ func (s *Store) migrate(ctx context.Context) error {
 			}
 		}
 		version = 1
-	} else if version != 1 && (s.fixture || version != 2 && version != 3 && version != 4 && version != 5) {
+	} else if version != 1 && (s.fixture || version != 2 && version != 3 && version != 4 && version != 5 && version != 6) {
 		return fmt.Errorf("unsupported schema version")
 	}
 	mode := "fixture-only"
@@ -253,6 +253,12 @@ PRAGMA user_version=2;`); err != nil {
 				return err
 			}
 			version = 5
+		}
+		if version == 5 {
+			if _, err = tx.ExecContext(ctx, dispatchSchema); err != nil {
+				return err
+			}
+			version = 6
 		}
 		if err = expireGrants(ctx, tx, time.Now().UnixMilli()); err != nil {
 			return err
@@ -416,7 +422,7 @@ func (s *Store) transition(ctx context.Context, m p.Message) error {
 	current := p.Identity{Generation: s.meta.Generation, TaskID: m.Identity.TaskID}
 	var state p.AttemptState
 	var revision int64
-	err = tx.QueryRowContext(ctx, "SELECT id,epoch,state,revision FROM attempts WHERE task_id=?", m.Identity.TaskID).Scan(&current.AttemptID, &current.Epoch, &state, &revision)
+	err = tx.QueryRowContext(ctx, "SELECT id,epoch,state,revision FROM attempts WHERE task_id=? ORDER BY epoch DESC LIMIT 1", m.Identity.TaskID).Scan(&current.AttemptID, &current.Epoch, &state, &revision)
 	if errors.Is(err, sql.ErrNoRows) {
 		return p.StaleAttempt
 	}
@@ -497,7 +503,7 @@ func (s *Store) Snapshot(ctx context.Context, taskID string, limit int) (a.Snaps
 		return v, err
 	}
 	defer tx.Rollback()
-	rows, err := tx.QueryContext(ctx, `SELECT t.id,t.state,a.id,a.epoch,a.state,a.revision FROM tasks t JOIN attempts a ON a.task_id=t.id WHERE (?='' OR t.id=?) ORDER BY t.id LIMIT ?`, taskID, taskID, limit)
+	rows, err := tx.QueryContext(ctx, `SELECT t.id,t.state,a.id,a.epoch,a.state,a.revision FROM tasks t JOIN attempts a ON a.task_id=t.id WHERE a.epoch=(SELECT max(epoch) FROM attempts WHERE task_id=t.id) AND (?='' OR t.id=?) ORDER BY t.id LIMIT ?`, taskID, taskID, limit)
 	if err != nil {
 		return v, err
 	}

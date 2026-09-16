@@ -12,7 +12,10 @@ The provisional [#12 grant service](../../internal/authority/README.md)
 adds typed in-process authority checks; no grant HTTP mutation API is exposed.
 The provisional [#14 repository profile](../../docs/operations/repositories.md)
 adds owner-gated in-process registration and separate trusted checkout, not a
-repository HTTP endpoint or execution authority. This supplies no formal #11
+repository HTTP endpoint or execution authority. The provisional
+[#15 admission service](../../internal/scheduler/README.md) adds in-process atomic
+attempt/reservation/outbox metadata, not lease issuance or process launch.
+This supplies no formal #11
 acceptance, supported worker runtime, execution readiness or product readiness.
 The [decision](../../docs/decisions/0001-execution-foundation.md) and
 [execution contract](../../docs/contracts/execution.md) retain their acceptance gates.
@@ -46,8 +49,9 @@ only after ownership, migration, boot/recovery transaction and directory sync.
 `GET` that URL or replace `status` with `snapshot`. Fresh installation is empty.
 Before owner bootstrap, this loopback-only mode has no mutation endpoint. After
 bootstrap, plaintext startup refuses; use the HTTPS identity configuration below.
-No task creation, execution, grant or import endpoint exists. Attempt write
-primitives remain private; tests exercise them with synthetic v2 inputs.
+No task creation, execution, grant or import HTTP endpoint exists. Atomic dispatch
+and reconciliation are trusted in-process entry points with synthetic v2 tests;
+no network assignment sender, lease or process launcher exists.
 Grant methods are trusted in-process entry points, not authenticated APIs.
 
 Installation configuration is **flags only**:
@@ -85,9 +89,9 @@ Follow it for local owner commands, HTTPS configuration and runner enrollment.
 
 `schemas/readapi/types.go` / `types.ts` retain `read-provisional-v1`, extending its
 closed mode/schema combinations: `fixture-only` / schema 1, `store-only` / schema 2,
-3, 4 or 5 (current). New persistent opens migrate to 5; clients retain historical
-schema 2/3/4 reads. Schema 5 adds no HTTP capability; neither response exposes grants
-or repository profiles.
+3, 4, 5 or 6 (current). New persistent opens migrate to 6; clients retain historical
+schema 2/3/4/5 reads. Schema 6 adds no HTTP capability; neither response exposes grants,
+repository profiles or dispatch input records.
 Older strict clients refuse unsupported mode/schema combinations rather than
 misreading persistent state as fixture data.
 Go validates projections before JSON; TypeScript `decode(bytes, 'status' | 'snapshot')`
@@ -145,21 +149,24 @@ No CORS, preflight, browser session or cross-origin exception.
   artifact-location column retained but unused) to schema 3 (principals,
   credential-pin tombstones and expiring enrollment hashes), then schema 4 (immutable
   grants, CAS heads and durable invalidations), then schema 5 (immutable repository
-  identities and approved input profiles). Persistent application ID
+  identities and approved input profiles), then schema 6 (atomic dispatch input,
+  reservation/outbox, eligibility history, sticky stops and ack/release receipts;
+  retained attempts with a unique current-attempt index). Persistent application ID
   `0x47414646` distinguishes it from #94.
   Unknown schemas, unrecognized DBs and fixture imports fail closed. Migration,
   fresh boot and restart recovery share one commit. Generation survives ordinary
   restart; restore/new-generation/retired namespaces remain #23, not file copying.
 - Attempt identity/event writes share one transaction. Task/attempt/assignment/message IDs,
   task epoch and event revision uniqueness plus composite foreign keys survive
-  replay. One attempt per task remains deliberate: safe replacement, increasing
-  epochs, capacity/budget reservation and outbox delivery belong to #15. The
-  [grant service](../../internal/authority/README.md) owns #12 authority revisions.
-  No speculative tables or dispatch are introduced. Attempt CAS + task projection
+  replay. The [admission service](../../internal/scheduler/README.md) owns increasing
+  epochs, sequential reservations, immutable route decisions and outbox replay;
+  the [grant service](../../internal/authority/README.md) owns #12 authority revisions.
+  Snapshot selects each task's highest retained epoch. Attempt CAS + task projection
   + event insert commit together; append-only event triggers prevent update/delete.
 - Persistent attempt writes validate v2 and current generation before replay. No
-  transitions to starting/running/result/success/terminal states without future
-  evidence owners; only unknown/stopping edges are available. Restart changes active
+  transitions to starting/running/result/success without future evidence owners;
+  private transitions allow unknown/stopping, and owner-reviewed reconciliation
+  permits cancelled/expired with reservation release. Restart changes active
   attempts to unknown/reconciling and appends matching events atomically with fresh boot.
   Unknown/terminal history is not replayed or resumed. Exhaustion/errors abort
   startup rather than wrapping revision or fabricating safe state.

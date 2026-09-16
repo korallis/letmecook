@@ -40,7 +40,7 @@ func assignment(s *Store) p.Message {
 func TestPersistentTransactionsAndRecovery(t *testing.T) {
 	s, artifacts := persistent(t)
 	fresh := snapshot(t, s)
-	if fresh.Mode != "store-only" || fresh.SchemaVersion != 5 || len(fresh.Tasks) != 0 || len(fresh.Events) != 0 {
+	if fresh.Mode != "store-only" || fresh.SchemaVersion != 6 || len(fresh.Tasks) != 0 || len(fresh.Events) != 0 {
 		t.Fatal(fresh)
 	}
 	m := assignment(s)
@@ -109,7 +109,7 @@ func TestPersistentMigrationAndFixtureRefusal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.Exec("DROP TABLE repository_profiles; DROP TABLE repositories; DROP TABLE execution_grant_heads; DROP TABLE execution_invalidations; DROP TABLE execution_grants; DROP TABLE credentials; DROP TABLE enrollments; DROP TABLE principals; DROP TRIGGER events_no_update; DROP TRIGGER events_no_delete; ALTER TABLE metadata DROP COLUMN artifacts_dir; PRAGMA user_version=1")
+	_, err = db.Exec(dropDispatchSchema + "DROP TABLE repository_profiles; DROP TABLE repositories; DROP TABLE execution_grant_heads; DROP TABLE execution_invalidations; DROP TABLE execution_grants; DROP TABLE credentials; DROP TABLE enrollments; DROP TABLE principals; DROP TRIGGER events_no_update; DROP TRIGGER events_no_delete; ALTER TABLE metadata DROP COLUMN artifacts_dir; PRAGMA user_version=1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestPersistentMigrationAndFixtureRefusal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.meta.SchemaVersion != 5 || r.meta.Generation != generation {
+	if r.meta.SchemaVersion != 6 || r.meta.Generation != generation {
 		t.Fatal("migration identity")
 	}
 	r.Close()
@@ -275,6 +275,7 @@ func TestPersistentFailuresAndPaths(t *testing.T) {
 	s, _ := persistent(t)
 	m := assignment(s)
 	sqlExec(t, s, "CREATE TABLE pressure(payload BLOB) STRICT")
+	sqlExec(t, s, "CREATE TRIGGER full_write BEFORE INSERT ON events BEGIN INSERT INTO pressure VALUES(zeroblob(1048576)); END")
 	var pages int
 	if err := s.db.QueryRow("PRAGMA page_count").Scan(&pages); err != nil {
 		t.Fatal(err)
@@ -282,7 +283,6 @@ func TestPersistentFailuresAndPaths(t *testing.T) {
 	if _, err := s.db.Exec("PRAGMA max_page_count=" + strconv.Itoa(pages)); err != nil {
 		t.Fatal(err)
 	}
-	sqlExec(t, s, "CREATE TRIGGER full_write BEFORE INSERT ON events BEGIN INSERT INTO pressure VALUES(zeroblob(1048576)); END")
 	err := s.assign(ctx, m)
 	var full *sqlite.Error
 	if !errors.As(err, &full) || full.Code() != 13 {

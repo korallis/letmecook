@@ -211,7 +211,7 @@ func TestRepositoryConcurrentApprovalAndSchemaFourMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec("DROP TABLE repository_profiles; DROP TABLE repositories; PRAGMA user_version=4"); err != nil {
+	if _, err := db.Exec(dropDispatchSchema + "DROP TABLE repository_profiles; DROP TABLE repositories; PRAGMA user_version=4"); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Close(); err != nil {
@@ -222,7 +222,7 @@ func TestRepositoryConcurrentApprovalAndSchemaFourMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer reopened.Close()
-	if reopened.meta.SchemaVersion != 5 {
+	if reopened.meta.SchemaVersion != 6 {
 		t.Fatal("migration")
 	}
 	var wg sync.WaitGroup
