@@ -74,8 +74,9 @@ application identities, checked before migration; no version relabelling/import.
 
 `schemas/readapi/types.go` / `types.ts` retain `read-provisional-v1`, extending its
 closed mode/schema combinations: `fixture-only` / schema 1, `store-only` / schema 2
-or 3 (current). Schema 3 adds grant metadata, not a new HTTP capability.
-Old strict clients refuse the new mode rather than misreading it as fixture data.
+or 3 (current). Schema 3 adds no HTTP capability; neither response exposes grants.
+Older strict clients refuse unsupported mode/schema combinations rather than
+misreading persistent state as fixture data.
 Go validates projections before JSON; TypeScript `decode(bytes, 'status' | 'snapshot')`
 validates bounded input at runtime. The fixture shell remains fixture-only and is
 not served in persistent mode; no UI work or product exposure is introduced.
@@ -124,7 +125,7 @@ cross-site fetch metadata. Host equals actual listener, optional Origin equals
   fullfsync/checkpoint_fullfsync ON, trusted_schema OFF; effective values checked.
   New directory parents and DB directory entries synced before ready. Commit errors
   never become successful writes/acks. No hardware power-loss/fsync-failure claim.
-- One schema owner. Empty persistent schema migrates transactionally through base
+- One schema owner. Empty persistent schema migrates transactionally from base
   metadata/tasks/attempts/events through schema 2 (append-only event triggers; legacy
   artifact-location column retained but unused) to schema 3 (immutable grants,
   CAS heads and durable invalidations). Persistent application ID
@@ -139,10 +140,10 @@ cross-site fetch metadata. Host equals actual listener, optional Origin equals
   [grant service](../../internal/authority/README.md) owns #12 authority revisions.
   No speculative tables or dispatch are introduced. Attempt CAS + task projection
   + event insert commit together; append-only event triggers prevent update/delete.
-- Persistent writes validate v2 and current generation before replay. No transitions
-  to starting/running/result/success/terminal states without future evidence owners;
-  only unknown/stopping edges are available. Restart changes active attempts to
-  unknown/reconciling and appends matching events atomically with fresh boot.
+- Persistent attempt writes validate v2 and current generation before replay. No
+  transitions to starting/running/result/success/terminal states without future
+  evidence owners; only unknown/stopping edges are available. Restart changes active
+  attempts to unknown/reconciling and appends matching events atomically with fresh boot.
   Unknown/terminal history is not replayed or resumed. Exhaustion/errors abort
   startup rather than wrapping revision or fabricating safe state.
 - Artifact directory is explicit configuration, **not artifact durability**. No blob,
