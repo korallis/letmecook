@@ -58,7 +58,7 @@ type Route struct {
 }
 
 // Budgets are ceilings, not remaining balances or reservations. Zero output
-// tokens and nil cost explicitly mean unavailable provider bounds (native only).
+// tokens are native-only; nil cost means no monetary cap in either profile.
 // A zero cost pointer is a required zero-spend cap, not unlimited spend.
 type Budgets struct {
 	Requests             int64  `json:"requests"`

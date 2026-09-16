@@ -375,8 +375,9 @@ func (s *Store) assign(ctx context.Context, m p.Message) error {
 	return tx.Commit()
 }
 
-// transition consumes validated synthetic messages only. No exported write API,
-// process evidence, result/receipt persistence or acceptance exists.
+// transition consumes validated synthetic attempt messages only. No exported
+// attempt-write API, process evidence, result/receipt persistence or acceptance
+// exists.
 func (s *Store) transition(ctx context.Context, m p.Message) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

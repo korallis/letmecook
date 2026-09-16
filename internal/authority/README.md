@@ -24,17 +24,22 @@ authenticates owners and runners; grant methods remain in-process only.
   Retained IDs cannot change content; grant revisions increase by exactly one.
   Brief/plan/decision revisions cannot roll back or change content at the same
   revision. New or changed route/profile candidates need a new route-decision
-  revision/digest. Existing route/profile identities cannot change at the same
-  route revision; limits-profile changes also need a new policy revision/digest.
-- `RestrictExecution` can only narrow existing unrevoked authority. Exact unchanged
-  envelopes return the existing grant, with no extra approval, row, invalidation or
-  budget reset. An inside-envelope route choice is just a request, not a revision.
+  revision/digest. Limits-profile changes also need a new policy revision/digest.
+  Replacements are checked against all retained task grants, including routes
+  removed by earlier restrictions; route, policy and evidence revisions cannot
+  roll back or reuse a retained revision with different content.
+- `RestrictExecution` can only narrow existing unexpired, uninvalidated authority.
+  Both methods reuse the current unexpired, uninvalidated grant for unchanged
+  envelopes with the same actor, with no extra approval, row, invalidation or
+  budget reset.
+  An inside-envelope route choice is just a request, not a revision.
 - `InvalidateExecution` persists revocation or supersession without replacement
   (for a material edit awaiting approval). Replacement approval atomically writes
   the new immutable grant/head and invalidates the old one. Old authority stays
   refused even on replay; explicit fresh approval cannot undo old invalidations.
-- `CheckExecution` returns nil or `*authority.Refusal{Code, Field}`. Examples:
-  `stale_revision`, `revision_conflict`, `widened_scope`, `expired`, `revoked`,
+- `CheckExecution` returns nil on success, `*authority.Refusal{Code, Field}` for
+  denied authority, or a storage/context error. Refusal examples:
+  `stale_revision`, `unknown_grant`, `widened_scope`, `expired`, `revoked`,
   `superseded`, `incompatible_route_policy`, `distinct_authority_required`.
   It checks stored head/invalidation before approving the request envelope.
 - `ExecutionGrant` reads immutable history, **not** current authority.
@@ -59,9 +64,10 @@ exact paths, operations, systems, runners, validity and finite resource ceilings
 Base advancement always needs explicit approval; no implicit rebase policy.
 
 Collections are non-null, sorted, unique and bounded to 128 entries; grant/envelope
-serialization caps at 64 KiB. IDs use existing canonical UUIDv4. Paths are exact,
-relative portable ASCII file paths up to 512 bytes, excluding traversal, globs,
-backslashes and `.git`. No directory-prefix or symlink authority is inferred.
+serialization caps at 64 KiB. Grant, task and runner IDs use existing canonical
+UUIDv4. Paths are exact, relative portable ASCII file paths up to 512 bytes,
+excluding traversal, globs, backslashes and `.git`. No directory-prefix or symlink
+authority is inferred.
 Actual filesystem resolution belongs to the qualified runner. Operations are
 `read`, `verify`, `write`; no generic shell, publication or merge operation exists.
 Execution action accepts only `execute`; acceptance, publication and merge are
@@ -86,15 +92,13 @@ across revisions, failed/discarded work and restarts. Strict profile requires a
 positive provider output cap. Native profile requires explicit authority, exclusively
 subscription targets, zero provider output cap and nil monetary cap (unavailable,
 not unlimited). A monetary pointer to zero means a real zero-spend requirement.
-No strict-to-native downgrade or unsupported cap stripping is accepted.
+Requests and restrictions cannot downgrade strict to native or strip approved caps.
 
 ## Durability and evidence
 
-Persistent schema 3 adds immutable grants, one head per task and append-only
-invalidations in the existing migration transaction. Historical fixture schema 1
-has no grants. Persistent schema 1/2 migrates without relabelling fixture data;
-read schemas accept store-only 2/3 while the current daemon reports 3. Grant task
-IDs can precede attempts; they do not create runnable tasks in the old snapshot.
+The [store guide](../../cmd/gafferd/README.md) owns schema migrations and read API
+compatibility. Grant methods refuse fixture stores. Grant task IDs can precede
+attempts; they do not create runnable tasks in the snapshot.
 
 Run:
 
@@ -104,9 +108,10 @@ go test -race -count=1 ./internal/store ./internal/authority
 
 `internal/store/grants_test.go` exercises real public grant methods on disposable
 SQLite state: exact bindings, replay/no-op, concurrent revision conflict, narrower
-versus material changes, strict/native and fallback mismatch, invalid model-derived
-permissions, hostile values, revocation/expiry and cursor replay after reopen,
-schema 2 migration, SQL immutability/FK constraints, transaction cancellation,
-real `SQLITE_FULL`, failed revocation, and owned-subprocess SIGKILL before/after
+versus material changes, reintroduced route history after reopen
+(`TestExecutionGrantReintroducedRouteHistory`), strict/native and fallback mismatch,
+invalid model-derived permissions, hostile values, revocation/expiry and cursor
+replay after reopen, schema 3 migration, SQL immutability/FK constraints,
+transaction cancellation, real `SQLITE_FULL`, failed revocation, and owned-subprocess SIGKILL before/after
 commit. These prove metadata behavior, not hardware power loss or active-process
 termination. No live model, provider endpoint or real repository is contacted.
