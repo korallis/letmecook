@@ -2,154 +2,291 @@
 
 ## 1. Scope and honesty
 
-**Checkpoint evidence, not acceptance.** Issue #24's public-binary system proof
-runs on `macos-sandbox-exec-dev`. This is a development profile, unqualified for
-unattended execution; `supported` is false. No supported runtime, completed M1
-acceptance gate, #9/#10 acceptance, or original downstream acceptance follows.
-A failed prerequisite fails its scenario; subsequent effects are not inferred.
-The immutable fixture corpus is input, never evidence of execution.
+**Completed checkpoint, failed acceptance gate.** Issue #24's proof drives public
+binaries on `macos-sandbox-exec-dev`: qualification is development, `supported`
+is false, and unattended execution is not qualified. No supported runtime,
+completed M1 gate, #9/#10 acceptance or original downstream acceptance follows.
+A failed prerequisite fails its scenario; later effects are not inferred.
+Immutable fixtures are inputs, never evidence of execution.
 
-The machine-readable evidence is [m1-acceptance-run.json](m1-acceptance-run.json).
-Its `head`, `environment`, `scenarios`, `recovery_samples`, and
-`recovery_statistics` fields identify the exact run and observations. This is the completed initial checkpoint, not the pending fixed-integration
-rerun. Later integration changes require rebuilt binaries and a fresh full run.
+[m1-acceptance-run.json](m1-acceptance-run.json) is the completed, unfiltered run
+at `ee810913c11acc781d5ef423028cc4a3b50566e5`. It replaces the initial
+clock-domain-blocked checkpoint. The integration fixes now permit real launch,
+custody, verification and local acceptance in S-04. Current failures below are
+not the already-fixed first-lease clock comparison or opaque startup diagnostic.
+The evidence-only commit containing this document does not change tested code.
 
 ## 2. Environment
 
-The run records actual `sw_vers`, `uname -a`, `go version`, `node --version`,
-OpenCode binary SHA-256, checkout SHA, start/end times and the private run root.
-Hostnames, non-run-root user paths and structured credentials are redacted before
-the JSON is written. OpenCode's installed binary digest is an observation, not
-proof of a live execution. Observed versions: macOS 26.6.2 (25G83), Darwin
-25.6.0 arm64, Go 1.26.5, Node 26.8.2; OpenCode SHA-256
-`16c960ba77421da11b53e785f359b73f328a86118b48feb4af143db5d9afb198`. The starting integration/corpus checkpoint is
-`e470d6fc36fd9f6996177325409dfe7556540022` (integration ancestor `d085ec0`).
+Actual observations in `/environment`, `/head`, `/started` and `/finished`:
+
+- macOS 26.6.2, build 25G83; Darwin 25.6.0, arm64.
+- Go 1.26.5; Node v26.8.2.
+- Installed OpenCode SHA-256:
+  `16c960ba77421da11b53e785f359b73f328a86118b48feb4af143db5d9afb198`.
+  This digest and the synthetic config-isolation probe are not live inference evidence.
+- Returned integration/fixture head: `1e83fbe`; proof corrections: `ee81091`.
+- Start: `2026-09-17T19:27:42.096116Z`; finish:
+  `2026-09-17T19:35:47.718467Z`.
+- Fresh private root:
+  `/Users/Shared/gaffer-system-501/20260917T192741Z-89896`.
+- Full proof and standard matrix ran concurrently. No successful recovery
+  percentile is claimed from this run.
+
+The JSON redacts credentials, hosts and user paths outside the run root, including
+JSON/NDJSON inside strings and UTF-8 native/prefix bytes stored as base64. The
+completed-file audit inspected 2,165 encoded fields and 999 credential fields:
+zero detected credential-field, host or non-run-root user-path violations. It did
+not read the live gateway config or key. Digests and byte assertions are computed
+before redaction; redacted native payloads are not byte-identical replay inputs.
 
 ## 3. Procedure
 
-Run `scripts/m1-proof.sh` on macOS. It builds `gafferd`, `gaffer`, and
-`gaffer-runner` with `CGO_ENABLED=0` into `/private/tmp/gaffer-m1-bin`, then invokes
-`go test -tags system -count=1 -timeout 90m -v ./tests/system/...`. Each scenario
-has fresh state/artifacts, CLI-generated certificates, pinned owner mTLS and the
-separate `execution-provisional-v2` ALPN listener. Fake cases run the actual
-`gaffer-runner mock-gateway` and an authenticated `facts` probe. No internal
-product implementation is imported; only public protocol schemas are decoded.
-SQLite is read only after orderly shutdown/checkpoint, using section 7's allowlist.
+`scripts/m1-proof.sh` builds `gafferd`, `gaffer` and `gaffer-runner` with
+`CGO_ENABLED=0` into `/private/tmp/gaffer-m1-bin`, then runs
+`go test -tags system -count=1 -timeout 90m -v ./tests/system/...`. Fresh
+installations use CLI-generated certificates, pinned owner mTLS/TLS 1.3 and the
+separate `execution-provisional-v2` ALPN listener. Synthetic cases run the actual
+`gaffer-runner mock-gateway` and authenticated `facts`. No internal implementation
+is imported. SQL is limited to section 7, after daemon shutdown/checkpoint.
 
-Amendments to integration record §11's abbreviated transcript:
+Explicit amendments to the abbreviated integration transcript:
 
-- `GAFFER_SYSTEM_ROOT` defaults to `$HOME/.gaffer-system/<run>` (0700), not
-  `/private/tmp`. The development verifier intentionally refuses canary roots
-  inside system-temp exceptions. S-01 positively asserts this refusal and checks
-  its diagnostic. All verification uses the explicit development profile; there
-  is no unqualified fallback.
-- Enrollment initially disables the runner. The owner must explicitly enable it,
-  provision independent `--policy` and `--repository-profile` inputs, and register
-  and validate the pinned repository before admission.
-- `facts` requires gateway configuration (and the mock CA) and increments an
-  already valid local policy revision. The proof first imports an explicitly
-  unauthenticated revision-1 policy, which cannot admit work, then measures and
-  imports authenticated revision 2. This is not a claim that placeholder policy
-  digests are measured facts. Every restarted runner is measured/imported again.
-- `flow run` needs a stable `--flow-id` and explicit `--fake-spec` to edit a file;
-  the abbreviated default is not the desired greeting task.
-- The supported offline restore command is `gaffer restore --backup …
-  --state-dir … --artifacts-dir …`; there is no `gafferd --restore` flag.
-- S-08/S-09 use a test-owned TLS proxy. S-13 additionally holds one committed
-  `running` response until the daemon is killed, synchronizing a real crash of
-  the trivial in-flight task without altering its fixture or product code.
-- Current public event reads have sequence/revision/message, but no timestamps.
-  Recovery admission/classification observations are owner-read upper bounds,
-  explicitly labelled as such, not fabricated daemon event timestamps.
+- The development verifier correctly refuses `/private/tmp` canary roots because
+  of system-temp sandbox exceptions. S-01 asserts that refusal and its specific
+  diagnostic. The script's default `$HOME/.gaffer-system/<run>` is also unsuitable
+  on this host: `/Users/leebarry/.git` makes it part of an operator worktree, which
+  repository preparation correctly refuses. This run explicitly selected the
+  private 0700 Shared root above, outside both boundaries. Neither refusal is a bug.
+- Enrollment starts disabled. The owner enables the runner, independently
+  provisions its local policy/profile, and registers/validates the pinned repository.
+  Imported revision 1 is explicitly unauthenticated and cannot admit work;
+  measured authenticated revision 2 permits admission. Every new runner boot is
+  remeasured/imported before new dispatch.
+- `flow run` receives a stable `--flow-id` and explicit `--fake-spec`. Acceptance
+  is `review.accepted` with decision action `accept`, not task phase `accepted`.
+  Trusted check IDs are digests; command names and approval provenance are checked.
+- Approvals explicitly allow three attempts/two retries and bounded aggregate
+  requests/subattempts. This does not work around the retry-allocation defect.
+- Offline restore uses documented `gaffer restore --backup ... --state-dir ...
+  --artifacts-dir ...`. There is no `gafferd --restore` flag.
+- S-08/S-09 inject transport failures through a pinned TLS proxy. S-13 holds one
+  committed `running` reply, then truly SIGKILLs the daemon. The durable attempt
+  is in flight; a trivial child may already have exited, so this is not proof of
+  a live OS child at every scheduled kill.
+- The public events API exposes sequence/revision/message, not timestamps.
+  Recovery timing uses explicitly labelled harness observations and event sequences.
+  No database timestamp or clock is manipulated.
+- S-11's inference hang uses real OpenCode with the public mock's `--hang-after 0`,
+  not a fake process hang. The adapter refuses before a request, so the case fails.
+- Large stream pages are requested at the legal limit 128. A 503 remains a failed
+  assertion; subsequent eight-record pages collect diagnostics without hiding it.
 
 ## 4. Results by scenario
 
-The initial S-01–S-04 smoke passed S-02 and S-03. S-01 refused the unsafe root
-but failed its required diagnostic. S-04 never launched: the first lease returned
-`409 delayed_reply`, and the attempt became `assigned → stopping → cancelled`.
-The subsequent complete S-05–S-13 dry run failed all nine scenarios; attempts
-were blocked at launch, not successfully fault-injected. The full checkpoint returned exit 1 in 137.812 seconds. Its actual table follows.
+The full script exited **1**; Go reported **486.622 seconds**. No scenario filter
+was set. The observed table is:
 
 | Scenario | Result | Duration (ms) | JSON pointer |
 | --- | --- | ---: | --- |
-| S-01 | FAIL | 1487 | `/scenarios/0` |
-| S-02 | PASS | 1014 | `/scenarios/1` |
-| S-03 | PASS | 2212 | `/scenarios/2` |
-| S-04 | FAIL | 2251 | `/scenarios/3` |
-| S-05 | FAIL | 1878 | `/scenarios/4` |
-| S-06 | FAIL | 1820 | `/scenarios/5` |
-| S-07 | FAIL | 1710 | `/scenarios/6` |
-| S-08 | FAIL | 1941 | `/scenarios/7` |
-| S-09 | FAIL | 1994 | `/scenarios/8` |
-| S-10 | FAIL | 31727 | `/scenarios/9` |
-| S-11 | FAIL | 18126 | `/scenarios/10` |
-| S-12 | FAIL | 12988 | `/scenarios/11` |
-| S-13 | FAIL | 54409 | `/scenarios/12` |
+| S-01 | PASS | 1514 | `/scenarios/0` |
+| S-02 | PASS | 995 | `/scenarios/1` |
+| S-03 | PASS | 2155 | `/scenarios/2` |
+| S-04 | PASS | 4651 | `/scenarios/3` |
+| S-05 | FAIL | 2595 | `/scenarios/4` |
+| S-06 | FAIL | 70666 | `/scenarios/5` |
+| S-07 | FAIL | 68215 | `/scenarios/6` |
+| S-08 | PASS | 2810 | `/scenarios/7` |
+| S-09 | PASS | 15184 | `/scenarios/8` |
+| S-10 | FAIL | 30810 | `/scenarios/9` |
+| S-11 | FAIL | 72096 | `/scenarios/10` |
+| S-12 | FAIL | 46407 | `/scenarios/11` |
+| S-13 | FAIL | 164615 | `/scenarios/12` |
 | S-14 | SKIP | 0 | `/scenarios/13` |
 
-The initial full run additionally used an invalid event-page limit of128 in a
-proof-only revision assertion. It has been corrected to the public maximum50;
-a separate S-04 reproduction confirmed revision checks pass while the same
-lease blocker remains. That read-decoder failure is not a product finding. The
-next full run must replace this checkpoint evidence rather than editing its
-failed assertions after the fact.
+S-04 proves exact greeting bytes, durable streams/custody/head, trusted verification,
+local acceptance and a second task. S-05's actual runner cancellation acknowledgement
+was 92 ms on co-located wall clocks, with process termination/quiescence and release;
+retry then failed. S-08 proves byte-identical lost-commit replay and one custody row.
+S-09 proves partition cutoff/guardian termination and released expiry. These are
+selected development results, not a supported runtime qualification.
 
-Confirmed product findings at the initial checkpoint:
+### Product findings and minimal proposed changes
 
-1. **First lease mixes clock domains.** `internal/store/execution.go` supplies
-   daemon wall-clock milliseconds as `CheckLease.ReceivedMS` for a runner's
-   boot-local `sent_ms`. An ordinary first dispatch is rejected `delayed_reply`.
-   Reproduce with S-04. Proposed patch: validate lease binding/bounds at issuance
-   without comparing clocks from different processes; keep the daemon's durable
-   issuance deadline separate, and enforce `CheckLease`'s S/R cutoff on the
-   runner's same-boot clock. No product patch is part of this lane.
-2. **Unsafe-root refusal loses its diagnostic.** Starting the development verifier
-   under system temp exits before readiness but prints only `gafferd startup or
-   shutdown failed`. Reproduce with S-01. Proposed patch: safely expose the
-   profile and rejected path in the startup error, never gateway configuration
-   or credentials. The refusal itself is a correct security control.
+All reproductions are scenario selections from section 10. Product files are
+read-only in this lane; no proposed change below was applied.
 
-Test-only defects found during construction were corrected: required empty fake
-`edits` arrays, manifest category decoding, structured verification status,
-JSON-in-string redaction, and complete stream windows. These are not product
-findings.
+1. **Aggregate allowance leaves no retry capacity (S-05, S-12, S-13).**
+   `/scenarios/4/assertions/53`: retry returns HTTP 422 `budget_exhausted: task`
+   after confirmed stop/release/resume. `BuildDispatch` copies all 12 aggregate
+   requests/subattempts into the first attempt; store accounting conservatively
+   charges those allowances and `PlanRetry` reuses them. Raising the aggregate
+   ceiling alone cannot help. Minimal change: allocate bounded per-attempt
+   request/subattempt allowances with capacity reserved for approved retries, or
+   expose an explicit bounded allowance selection; preserve conservative accounting.
+2. **Daemon restart leaves admissible termination stranded (S-06).**
+   `/scenarios/5/steps/48` remains `stopping`, revision 5, unreleased after the
+   bounded wait; `/scenarios/5/steps/41` classifies `lease_lapsed_unconfirmed`.
+   The runner journal records `session_stale`, guardian termination and a
+   terminated/quiescent outbox. Source inspection shows replay skips refused
+   outbox entries and recovery returns early merely because a terminated entry
+   exists. Minimal change: distinguish queued/refused from delivered termination
+   and replay validated old-boot evidence through a fresh session. Do not release
+   solely because time elapsed. The replay mechanism is a source-supported
+   diagnosis, not a completed patch validation.
+3. **Recovered runner-local stop is not latched (S-07).**
+   `/scenarios/6/steps/37/data/body/entries/0` reports `terminated_old_boot` but
+   `store refused: reconciliation_required: stop_id`. Guardian EOF/empty pgid and
+   fresh facts are present, yet the attempt stays `running`, revision 3, unreleased.
+   Minimal change: a validated recovered local-stop latch/handshake that retains
+   identity, quiescence and replacement-barrier checks.
+4. **Restored quarantine acknowledgement aborts the runner (S-10).**
+   `/scenarios/9/assertions/50`: the restarted old journal exits with
+   `custody acknowledgement mismatch`. `resumeCustody` treats a quarantined
+   receipt as a fatal mismatch. Minimal change: retain quarantine/fencing evidence,
+   never promote/finalize an old-generation result, and continue recovery-only
+   operation instead of aborting the supervisor. New-generation dispatch was not reached.
+5. **Trusted Go verification has no private writable runtime environment (S-12).**
+   Tasks 05–07 execute but `go test ./...` fails with
+   `go: creating work dir: mkdir /tmp/go-build...: operation not permitted`.
+   `/scenarios/11/assertions/198` records only `PATH` in `env_keys`.
+   Minimal change: supply explicit private TMPDIR/HOME/cache paths in
+   `internal/verification/profile_dev.go`; never broaden sandbox filesystem access.
+6. **Public OpenCode settings and adapter disagree (S-11 hang; blocks S-14).**
+   Documented `{"model":"gpt-6-astra"}` is accepted at task creation but produces
+   `opencode_run_refused` in `/scenarios/10/steps/507`; the attempt never reaches
+   running and has zero model reservations/receipts. The adapter only allows empty
+   settings, while public workflow normalization rejects `{}`. Minimal change:
+   reconcile the approved model/variant schema at both boundaries and reject
+   mismatches/unknowns without creating new routing authority.
+7. **Legal large stream pages overflow the owner response cap (S-11/S-12).**
+   `/scenarios/10/assertions/265`: `stream?after=0&limit=128` returns HTTP 503
+   `store_unavailable`. Smaller pages recover all 198 records/1,608,636 native
+   bytes and the terminal `spool_full` record. Minimal change: byte-bound each
+   contiguous response page within the 1 MiB owner limit, preserving watermarks;
+   do not make the response unbounded or mistake this for proven durable byte loss.
+
+The standard matrix additionally exposes an **integration-test contract mismatch**:
+`cmd/gaffer/review_round2_test.go:176` expects an exactly 65,536-byte owner task
+request to return 201; current task normalization reserves the larger real runner
+input envelope and returns 422 `oversized`. Both race and CGO-free tests fail
+identically. Minimal change in that test: distinguish the HTTP-body cap from the
+smaller deliverable task-envelope boundary and retain overflow rejection. This
+lane neither changes that test nor weakens the new wire bound.
+
+### S-12 twenty-task corpus
+
+All twenty immutable inputs were attempted sequentially. The following pointers
+identify each input and its following command/assertion evidence; PASS/FAIL is the
+actual Go subtest result, not merely the terminal execution state.
+
+| Task | Fixture expectation | Result | Observed gate | JSON input pointer |
+| --- | --- | --- | --- | --- |
+| task-01 | succeeded | PASS | Exact edits, trusted checks and acceptance passed | `/scenarios/11/steps/57` |
+| task-02 | succeeded | PASS | Exact edits, trusted checks and acceptance passed | `/scenarios/11/steps/84` |
+| task-03 | succeeded | PASS | Exact edits, trusted checks and acceptance passed | `/scenarios/11/steps/112` |
+| task-04 | failed_verification | PASS | Expected failed verification and explicit rejection | `/scenarios/11/steps/139` |
+| task-05 | succeeded | FAIL | Go verifier cannot create /tmp/go-build | `/scenarios/11/steps/166` |
+| task-06 | succeeded | FAIL | Go verifier cannot create /tmp/go-build | `/scenarios/11/steps/191` |
+| task-07 | succeeded | FAIL | Go verifier cannot create /tmp/go-build | `/scenarios/11/steps/217` |
+| task-08 | retry_then_succeeded | FAIL | Retry refused: budget_exhausted | `/scenarios/11/steps/243` |
+| task-09 | stopped | PASS | Cancelled and released | `/scenarios/11/steps/262` |
+| task-10 | rejected | FAIL | Large stream page 503; no head to review-reject | `/scenarios/11/steps/283` |
+| task-11 | approval_blocked | PASS | Approval blocked, not accepted | `/scenarios/11/steps/327` |
+| task-12 | succeeded | PASS | Exact edits, trusted checks and acceptance passed | `/scenarios/11/steps/345` |
+| task-13 | succeeded | PASS | Exact edits, trusted checks and acceptance passed | `/scenarios/11/steps/372` |
+| task-14 | succeeded | FAIL | README content absent: delete mode deleted it | `/scenarios/11/steps/400` |
+| task-15 | succeeded | PASS | Exact edits, trusted checks and acceptance passed | `/scenarios/11/steps/428` |
+| task-16 | succeeded | PASS | Exact edits, trusted checks and acceptance passed | `/scenarios/11/steps/455` |
+| task-17 | succeeded | PASS | Exact edits, trusted checks and acceptance passed | `/scenarios/11/steps/483` |
+| task-18 | succeeded | PASS | Exact edits, trusted checks and acceptance passed | `/scenarios/11/steps/510` |
+| task-19 | succeeded | PASS | Exact edits, trusted checks and acceptance passed | `/scenarios/11/steps/538` |
+| task-20 | succeeded | PASS | Exact edits, trusted checks and acceptance passed | `/scenarios/11/steps/565` |
+
+`/scenarios/11/steps/593` records 20 wall-time samples: p50 1,672 ms, p95 2,515 ms,
+max 7,537 ms. These include failures and are **not** an accepted-work throughput
+claim. Only 16 compact `corpus-row` summaries exist: tasks 05–08 fail before that
+end-of-case step. Their inputs, commands, assertions and cleanup observations
+remain present. Compact row observations precede review; final review is in its
+separate command/read/assertion evidence.
 
 ## 5. Recovery statistics
 
-The initial dry S-13 ran the immutable 100-task schedule twice with `--auto-retry`.
-All 20 scheduled kills were blocked because their attempts never reached running;
-**zero real restart samples** were manufactured. Successful samples: 0; blocking
-scheduled cases: 20; p50/p95/max: **null, not zero**. Nearest-rank statistics apply
-only to successful measured samples; blocking cases fail the gate. No old-lease
-barrier is subtracted. The actual restart barrier is 30 seconds maximum validity
-plus the retained 7-second margin, not the fixture's abbreviated 30 seconds.
+S-13 attempted both immutable 100-task cycles with `--auto-retry` and all twenty
+scheduled kill positions retained in `/recovery_samples`. There were **two real
+SIGKILL/restarts**, one at task 008 of each cycle, **zero successful recoveries**,
+and **twenty blocking scheduled cases**. A held unresolved reservation prevents
+184 later task dispatches with `concurrency_ceiling`; eighteen scheduled kills
+never become admissible and are explicitly `kill_performed: false`. They are not
+fabricated restarts.
+
+`/recovery_statistics` records successful classify/recovery p50, p95 and max as
+**null, not zero**. Nearest-rank statistics would apply only to successful
+samples; blocked cases remain visible and fail the gate. The old-lease barrier
+is 30 seconds maximum validity plus 7 seconds retained issuance margin (37 s),
+never subtracted. Twenty actual successful samples and recovery p95 <60 s were
+**not achieved**. Public event sequence and harness-observation clocks are kept
+separate. The current recovery helper requires a second attempt; original-result
+finalization is another contract-permitted recovery path not generalized by that
+helper and not successfully observed here.
 
 ## 6. Fault matrix and immutable fixture discrepancies
 
-Every row retains expected and observed identities, states, revisions, stream
-watermarks, custody, reservation and remote-work evidence. A pre-launch refusal
-is not proof that the fault mode ran. Unknown process/remote-work remains blocking.
-The corpus files are untouched. Known discrepancies to resolve, not silently relax:
+All nine rows retain identities, revisions, full stream watermarks, custody IDs,
+reservation state and available stop/remote-work evidence. `held` is blocking,
+never recovered. The row PASS means its intentional fault expectation matched,
+not that unknown work became safe.
 
-- Corpus `edit/create/delete` labels are not the closed authority vocabulary
-  `read/verify/write`; the test records that explicit translation.
-- Several failed-execution rows demand no custody receipt/no manifest, whereas
-  the execution implementation packs and commits failed manifests before release.
-  The original fixture expectations remain assertions, not rewritten passes.
-- The `hang` fault row describes an inference request hang, but fake bypasses
-  inference entirely. The public mock has no `--hang` flag. A fake process hang
-  cannot establish an outstanding upstream reservation or its drain behavior.
-- Reservations are immutable `dispatches` plus `dispatch_releases`, not a
-  `dispatch_reservations` table.
-- Recovery's quoted barrier and event timestamp availability differ as described
-  in sections 3 and 5. There is no clock manipulation or SQL timestamp injection.
+| Fault | Row result | Attempt / revision | Reservation | Custody | Stream through / bytes | JSON pointer |
+| --- | --- | --- | --- | --- | --- | --- |
+| crash | PASS | failed / 5 | released | retained | 2 / 58 | `/scenarios/10/steps/38` |
+| approval | PASS | failed / 5 | released | retained | 2 / 97 | `/scenarios/10/steps/93` |
+| ignore_term | PASS | cancelled / 5 | released | none | 1 / 41 | `/scenarios/10/steps/151` |
+| huge_output | FAIL | failed / 5 | released | retained | 198 / 1608636 | `/scenarios/10/steps/230` |
+| create_empty | PASS | succeeded / 5 | released | retained | 2 / 86 | `/scenarios/10/steps/285` |
+| delete | PASS | succeeded / 5 | released | retained | 2 / 86 | `/scenarios/10/steps/340` |
+| exit_nonzero | PASS | failed / 5 | released | retained | 3 / 98 | `/scenarios/10/steps/394` |
+| detached_child | PASS | stopping / 4 | held | none | 2 / 72 | `/scenarios/10/steps/451` |
+| hang | FAIL | stopping / 3 | held | none | 0 / 0 | `/scenarios/10/steps/504` |
+
+`ignore_term` records terminated/quiescent stop evidence. `detached_child`
+retains unknown stop evidence and blocks release/retry. Rows without an owner
+stop view do not invent a remote-work observation. The inference-hang row is
+blocked before inference; its zero reservations are not evidence of a drained
+upstream request. The public mock now has `--hang-after`; the initial missing-flag
+finding is obsolete. Source inspection suggests its simple nonstreaming request
+schema may also need alignment with OpenCode's streaming/tool payloads once the
+settings gate is fixed; that is an **unexecuted compatibility concern**, not an
+observed second failure.
+
+The corpus directory was not changed by this lane. Coordinator commit `1e83fbe`
+already corrected crash/approval/nonzero-exit failed-custody expectations and the
+37-second/harness-clock recovery method. Remaining exact discrepancies:
+
+- `fault-matrix-v1.json` huge_output still expects "failed manifest (no custody
+  receipt)"; this run retains a failed receipt without promoting a head. The
+  no-receipt assertion remains failed, not silently rewritten.
+- `corpus-v1.json` task-10 expects explicit rejection after huge_output, but failed
+  execution has no successful result head and `review reject` is refused.
+- Task-14 uses mode `delete` for both deleting the placeholder and writing README
+  content. The fake implementation deletes both edit targets, so README content
+  is missing. Choose a fixture-compatible per-edit mode/meaning in the corpus or
+  clarify the fake contract; this lane changes neither.
+- Fixture edit/create/delete labels are explicitly mapped to authority
+  read/verify/write and recorded. Fixture README wording that no system tests
+  exist is stale; untouched. Reservations are immutable dispatch rows plus
+  dispatch-release rows, not a separate `dispatch_reservations` table.
 
 ## 7. Read-only invariant queries
 
+There were **220 successful query observations across 22 installations**, including
+132 zero-row safety observations. All first-six-query assertions passed. This
+proves those stored invariants, not forward progress of held reservations.
+
 The test refuses a nonempty WAL before opening
-`file:<state.db>?mode=ro&immutable=1`; a live immutable connection could miss WAL
-state and is never used. The first six queries must return zero rows. The final
-four retain inventories, without changing any row. This is the entire SQL allowlist.
+`file:<state.db>?mode=ro&immutable=1`. It never uses a live immutable connection
+that could miss WAL state. First six queries must return zero rows; the final
+four are inventories. This is the entire SQL allowlist.
 
 ```sql
 SELECT task_id,count(*) AS n FROM attempts WHERE state NOT IN ('succeeded','failed','cancelled','expired') GROUP BY task_id HAVING count(*)>1;
@@ -166,39 +303,168 @@ SELECT attempt_id,kind,runner_boot,daemon_boot,body FROM runtime_observations WH
 
 ## 8. Redacted live run
 
-**Not run: zero live requests and zero live receipts.** S-14 is gated behind all
-S-01–S-13 passing and explicit `GAFFER_LIVE_GATEWAY=1`. The external config/key is
-not copied into the checkout, fixtures, workspace or evidence. An invocation
-without that environment may skip only S-14; it cannot turn synthetic failures
-into acceptance. Any eventual live result must show the pinned model, nonzero
-receipts with `gateway_usage`/`gateway_usage_unknown`, actual job-side credential
-read denial, exact greeting bytes, verification and local acceptance. Gateway and
-credential appear only as `<gateway>` and `<redacted>`.
+**Not run: zero live model requests and zero live receipts.** S-14 was skipped
+without `GAFFER_LIVE_GATEWAY=1`; synthetic failures independently prohibit using
+the externally provisioned live gateway configuration. That file/key was not
+copied into the checkout, fixtures, logs, workspaces or this report. Synthetic
+OpenCode probing is not live gateway inference.
 
-## 9. Limitations and open questions
+An eventual live result must use the pinned model, nonzero
+`gateway_usage`/`gateway_usage_unknown` receipts, actual job-side credential read
+denial, exact greeting bytes, verification and local acceptance. A prompt/model
+marker echo is insufficient. The current completed-shell-output helper has only
+unit coverage, not a live denial proof; it also needs exact probe-command binding
+before treating a marker printed by an arbitrary shell command as denial evidence.
+Receipt count measures model-boundary requests, not every authenticated discovery
+HTTP request. The only report spellings for the live host and key are `<gateway>`
+and `<redacted>`.
 
-O1–O8 remain open. This checkpoint proves selected development bootstrap and
-facts behavior plus fail-closed failures, not an accepted execution/recovery
-runtime. Code added for unreachable stages is not execution evidence. No exact
-recovery event timestamps are exposed at the public read boundary. Broader #24
-requirements (route outage, corrupt checkout, disk-full, artifact promotion
-failure, supported Docker-free runtime comparison) are not established merely
-by this scenario scaffold. Publication, merge, deployments and package releases
-remain separate and were not performed.
+## 9. Limitations and O1–O8 status
+
+O1–O8 remain open. S-01 observes unqualified facts refusal/no launch, not an
+attempted unqualified task launch. S-02 establishes enrollment/repository setup;
+S-04 supplies the execution proof. Missing successful recovery/live samples,
+pre-review compact rows, unavailable daemon event timestamps and the S-13
+original-result-finalization measurement gap are explicit above. Code for an
+unreached stage is not evidence that it works.
+
+Broader #24 route-outage, corrupt-checkout, disk-full, artifact-promotion-failure
+and supported Docker-free runtime-comparison requirements are not established
+by this development checkpoint. No product or fixture patch, rebase, push, PR,
+merge, deployment or release was performed by this lane. Execution, local
+acceptance and external publication remain distinct authorities.
 
 ## 10. Reproduction and verification
 
+Use a private 0700 root outside system-temp exceptions and operator worktrees:
+
 ```sh
-scripts/m1-proof.sh
+cd /private/tmp/gaffer-work/24-acceptance-gate
+umask 077
+GAFFER_SYSTEM_ROOT=/Users/Shared/gaffer-system-501/$(date -u +%Y%m%dT%H%M%SZ)-$$ \
+  scripts/m1-proof.sh
 go vet -tags system ./tests/system/...
 gofmt -l tests scripts
 node tests/system/fixtures/check.ts
 ```
 
-`GAFFER_SCENARIOS=S-04 GAFFER_PROOF_JSON=<outside-repository-debug.json>` narrows a
-reproduction only; a filtered run is not the full gate. Retain fresh scenario
-roots for diagnosis. Run the coordinator's standard matrix on the final head;
-quote its actual exit and tail, never an expected result. `docs/build-reader.ts`
-loads only `docs/{README,evaluation,PRD,spec,roadmap}.md`, none changed here;
-the standard matrix nevertheless runs docs build/check. Do not edit generated
-`docs/index.html` directly.
+For diagnosis only, add `GAFFER_SCENARIOS=S-05` (or another named scenario) and
+`GAFFER_PROOF_JSON=/private/tmp/gaffer-diagnostic.json`; a filtered run is not the
+full gate. Preserve fresh roots for diagnosis. No failed JSON assertion was
+edited after the run. The final full script log is
+`/private/tmp/gaffer-s7-final-proof.log`; its actual tail is:
+
+```text
+SCENARIO STATUS DURATION_MS EVIDENCE
+S-01 PASS 1514 /scenarios/0
+S-02 PASS 995 /scenarios/1
+S-03 PASS 2155 /scenarios/2
+S-04 PASS 4651 /scenarios/3
+S-05 FAIL 2595 /scenarios/4
+S-06 FAIL 70666 /scenarios/5
+S-07 FAIL 68215 /scenarios/6
+S-08 PASS 2810 /scenarios/7
+S-09 PASS 15184 /scenarios/8
+S-10 FAIL 30810 /scenarios/9
+S-11 FAIL 72096 /scenarios/10
+S-12 FAIL 46407 /scenarios/11
+S-13 FAIL 164615 /scenarios/12
+S-14 SKIP 0 /scenarios/13
+run JSON: /private/tmp/gaffer-work/24-acceptance-gate/docs/evidence/m1-acceptance-run.json
+FAIL	github.com/korallis/letmecook/tests/system	486.622s
+FAIL
+```
+
+`go vet -tags system ./tests/system/...` and `gofmt -l tests scripts` both
+returned exit 0 with no output. Their captured logs contain only `EXIT=0`.
+The fixture check returned exit 0, with this exact tail:
+
+```text
+System fixture corpus verified: 20 unique S-12 tasks across greeting/calc/notes (3 opencode-capable), fault matrix 9 modes, recovery 100 tasks / 10 SIGKILLs, canonical JSON, gen-recovery deterministic (sha256 e535c1cc633c), make-repos.sh executable with pinned SHAs. Fixture data only; no execution evidence.
+EXIT=0
+```
+
+Helper checks for nested/encoded redaction and credential-marker decoding passed:
+`go test -tags system -run '^Test(EvidenceRedaction|EncodedEvidenceRedaction|CredentialProbeEvidence)$' ./tests/system/...`
+reported `ok github.com/korallis/letmecook/tests/system 0.400s`; the corresponding
+`-race` check reported `ok github.com/korallis/letmecook/tests/system 1.568s`.
+These do not imply that the unrun live scenario passed.
+
+The standard matrix was run on `ee81091`:
+
+```sh
+/Users/leebarry/.claude/jobs/13633b12/tmp/matrix.sh \
+  /private/tmp/gaffer-work/24-acceptance-gate \
+  /Users/leebarry/.claude/jobs/13633b12/tmp/s7-matrix.log
+```
+
+It returned **exit 1**, not a green suite. Both Go test modes failed at:
+
+```text
+review_round2_test.go:176: POST /api/v1/tasks got 422 want 201: {"version":"workflow-provisional-v1","error":"oversized","detail":"task"}
+```
+
+The complete bounded matrix summary is retained here so its final passing docs
+lines cannot conceal the earlier failures:
+
+```text
+=== head ===
+ee81091 test(system): reconcile public proof schemas and preserve crash evidence
+=== gofmt ===
+gofmt-clean
+=== vet ===
+vet-ok
+=== race ===
+--- FAIL: TestHTTPSTaskEnvelopeBoundaryAndBareIdentityConflict (1.31s)
+FAIL
+FAIL	github.com/korallis/letmecook/cmd/gaffer	38.768s
+ok  	github.com/korallis/letmecook/cmd/gaffer-runner	87.048s
+ok  	github.com/korallis/letmecook/internal/backup	58.871s
+ok  	github.com/korallis/letmecook/internal/httpapi	42.407s
+ok  	github.com/korallis/letmecook/internal/inference	5.455s
+ok  	github.com/korallis/letmecook/internal/inference/protocoljson	4.713s
+ok  	github.com/korallis/letmecook/internal/reconcile	63.072s
+ok  	github.com/korallis/letmecook/internal/runner	8.383s
+ok  	github.com/korallis/letmecook/internal/runnerjournal	5.018s
+ok  	github.com/korallis/letmecook/internal/store	214.386s
+FAIL
+race-FAIL rc=1
+=== cgo-free ===
+--- FAIL: TestHTTPSTaskEnvelopeBoundaryAndBareIdentityConflict (1.43s)
+FAIL
+FAIL	github.com/korallis/letmecook/cmd/gaffer	39.529s
+FAIL
+cgo-free-FAIL rc=1
+=== protocol ===
+239 shared cases: Go/TypeScript expected outputs agree; typed boundaries reject invalid input
+=== readapi ===
+read API: real CGO-free daemon, store-backed Go/TypeScript schema, bounded filters and adverse wire cases passed
+read API: real persistent daemon, empty install and strict mode/schema decoding passed
+=== web ===
+
+> typecheck
+> tsc --noEmit
+
+=== docs ===
+
+> build
+> node build-reader.ts
+
+Reader generated from 5 Markdown documents.
+
+> check
+> node build-reader.ts --check
+
+Reader verified: 5 documents, 127 unique anchors, all internal links valid.
+=== diff-check ===
+diff-check-ok
+=== tree ===
+ M docs/evidence/m1-acceptance-run.json
+EXIT=1
+```
+
+`docs/build-reader.ts` reads only `docs/{README,evaluation,PRD,spec,roadmap}.md`,
+none changed here. The matrix nevertheless built and checked the reader; generated
+`docs/index.html` was not edited. A final evidence consistency/redaction audit,
+immutable-fixture diff check and `git diff --check` passed before this evidence
+commit. The only post-test changes are this document and the emitted run JSON.
