@@ -101,7 +101,7 @@ func (a *Adapter) Start(ctx context.Context, req harness.RunRequest) (harness.Ru
 	if !passed {
 		return harness.RunHandle{}, ErrConfigIsolation
 	}
-	if err = prepareWorkspace(req.Workspace, true); err != nil {
+	if err = prepareWorkspace(req.Workspace, false); err != nil {
 		return harness.RunHandle{}, err
 	}
 	config, err := writeConfig(req.Workspace, req.Boundary, model)

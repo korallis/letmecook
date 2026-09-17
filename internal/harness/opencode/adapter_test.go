@@ -583,3 +583,50 @@ func TestProbeRebindsOptionalBoundaryLauncher(t *testing.T) {
 		t.Fatal("probe launcher was not bound to its endpoint", err)
 	}
 }
+
+func TestPreparedLauncherRuntimeFilesArePreserved(t *testing.T) {
+	a, launcher := helperAdapter(t, "chat_completions")
+	gateway, err := newProbeGateway("chat_completions", "model-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer gateway.close()
+	request := runRequest(t, launcher, gateway, "normal")
+	profile := filepath.Join(request.Workspace.RuntimeDir, "sandbox.sb")
+	marker := filepath.Join(request.Workspace.TempDir, "supervisor-canary")
+	for _, file := range []string{profile, marker} {
+		if err := os.WriteFile(file, []byte("trusted supervisor file"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	handle, err := a.Start(context.Background(), request)
+	if err != nil {
+		t.Fatal("prepared launcher was refused", err)
+	}
+	events := collect(t, a, handle)
+	if events[len(events)-1].Kind != harness.Completed {
+		t.Fatal("prepared launcher did not complete")
+	}
+	for _, file := range []string{profile, marker} {
+		raw, err := os.ReadFile(file)
+		if err != nil || string(raw) != "trusted supervisor file" {
+			t.Fatal("launcher file changed")
+		}
+	}
+	for _, symlink := range []bool{false, true} {
+		request = runRequest(t, launcher, gateway, "normal")
+		config := filepath.Join(request.Workspace.RuntimeDir, "opencode.json")
+		if symlink {
+			if err := os.Symlink(profile, config); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			if err := os.WriteFile(config, []byte(`{"plugin":["hostile"]}`), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := a.Start(context.Background(), request); !errors.Is(err, ErrRun) {
+			t.Fatal("preexisting runtime config was trusted", err)
+		}
+	}
+}

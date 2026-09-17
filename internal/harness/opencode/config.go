@@ -65,7 +65,7 @@ func boundaryURL(raw string) (string, error) {
 	u.Path = "/v1"
 	return u.String(), nil
 }
-func prepareWorkspace(w harness.Workspace, empty bool) error {
+func prepareWorkspace(w harness.Workspace, probe bool) error {
 	roots := []string{w.Root, w.PrivateHome, w.TempDir, w.RuntimeDir}
 	resolved := make([]string, len(roots))
 	for i, path := range roots {
@@ -91,7 +91,7 @@ func prepareWorkspace(w harness.Workspace, empty bool) error {
 				return ErrRun
 			}
 			entries, err := os.ReadDir(path)
-			if err != nil || (empty && len(entries) > 0) {
+			if err != nil || ((probe || i == 1) && len(entries) > 0) {
 				return ErrRun
 			}
 		}

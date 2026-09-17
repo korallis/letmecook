@@ -23,11 +23,12 @@ in-memory, per adapter/protocol/model, and a changed binary invalidates it.
 `Start` refuses without a successful probe and rehashes the binary before launch.
 No resume, sandbox implementation or execution permission is inferred.
 
-Prepare disjoint workspace, private HOME, temp and runtime directories. HOME,
-temp and runtime must be empty private directories (0700), not links or nested
-inside candidate content. Existing private-home configuration is refused, not
-merged. Start writes an exclusive, fsync'd 0600 `RuntimeDir/opencode.json`, outside
-the candidate:
+Prepare disjoint workspace, private HOME, temp and runtime directories. All
+private directories must be 0700, not links or nested inside candidate content.
+HOME must be empty: existing private-home configuration is refused, not merged.
+Temp/runtime may already contain supervisor-owned launcher or guardian files.
+Start writes an exclusive, fsync'd 0600 `RuntimeDir/opencode.json` (a preexisting
+file or symlink is refused), outside the candidate:
 
 - one `gaffer` provider, exactly the selected approved model;
 - `@ai-sdk/openai-compatible` for Chat, `@ai-sdk/openai` for Responses, or
