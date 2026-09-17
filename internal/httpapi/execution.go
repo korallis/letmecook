@@ -179,7 +179,7 @@ func (x executionAPI) session(ctx context.Context, a Actor, r Request) (any, *Er
 	if _, err := reconcile.OnHello(ctx, reconcile.Deps{Store: x.Store, Now: time.Now}, sess.RunnerID, hello); err != nil && !errors.Is(err, reconcile.ErrNotImplemented) {
 		return nil, &Error{503, "store_unavailable", ""}
 	}
-	return execwire.Session{SessionID: sess.SessionID, Generation: sess.Generation, DaemonBoot: sess.DaemonBoot, DaemonFingerprint: sess.DaemonFingerprint, RunnerID: sess.RunnerID, Mode: sess.Mode, DriftMS: sess.DriftMS, TerminationMS: sess.TerminationMS, LeaseValidityMS: sess.LeaseValidityMS, RenewEveryMS: sess.RenewEveryMS, Paused: sess.Paused}, nil
+	return execwire.Session{SessionID: sess.SessionID, Generation: sess.Generation, DaemonBoot: sess.DaemonBoot, DaemonFingerprint: x.DaemonFingerprint, RunnerID: sess.RunnerID, Mode: sess.Mode, DriftMS: sess.DriftMS, TerminationMS: sess.TerminationMS, LeaseValidityMS: sess.LeaseValidityMS, RenewEveryMS: sess.RenewEveryMS, Paused: sess.Paused}, nil
 }
 
 func (x executionAPI) state(ctx context.Context, a Actor, r Request) (any, *Error) {
@@ -248,7 +248,9 @@ func (x executionAPI) readInbox(ctx context.Context, a Actor, session string) (e
 		}
 		for _, id := range ids {
 			d, err := x.Store.Assignment(ctx, id)
-			if err != nil || d.Facts.Repository.RunnerRoot.RunnerID != a.ID {
+			// Only dispatches admitted for this runner under this session's boot and
+			// eligibility revision are offered; older incarnations are reconcile's.
+			if err != nil || d.Facts.Repository.RunnerRoot.RunnerID != a.ID || sess.Binds(d) != nil {
 				continue
 			}
 			if _, err := x.Store.Delivery(ctx, a.Fingerprint, id); err != nil {
@@ -318,15 +320,47 @@ func (x executionAPI) messages(ctx context.Context, a Actor, r Request) (any, *E
 	if !p.ValidID(env.MessageID) || !p.ValidID(env.DispatchID) {
 		return nil, &Error{400, "malformed", ""}
 	}
+	// One identity per runner message: the envelope's message_id is the message's
+	// message_id, so every retained receipt, fence and event answers to one key.
+	if env.MessageID != env.Message.MessageID {
+		return nil, &Error{409, "identity_conflict", "message_id"}
+	}
 	switch env.Message.Kind {
 	case "accept":
-		if _, err := x.Store.ExecutionSession(ctx, a.Fingerprint, r.Session); err != nil {
+		sess, err := x.Store.ExecutionSession(ctx, a.Fingerprint, r.Session)
+		if err != nil {
+			return nil, routeError(err)
+		}
+		d, err := x.Store.Assignment(ctx, env.DispatchID)
+		if err != nil {
+			return nil, routeError(err)
+		}
+		attempt := d.Assignment.Identity.AttemptID
+		if response, err := x.Store.RunnerReceipt(ctx, a.Fingerprint, r.Session, attempt, store.ReceiptMessages, env.MessageID, env.Message); err == nil {
+			var retained messageReply
+			if json.Unmarshal(response, &retained) != nil {
+				return nil, &Error{503, "store_unavailable", ""}
+			}
+			return retained, nil
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return nil, routeError(err)
+		}
+		// A paused daemon admits no new work and a session only acknowledges the
+		// dispatches admitted under its own boot and eligibility.
+		if sess.Paused {
+			return nil, &Error{409, "paused", "accept"}
+		}
+		if err := sess.Binds(d); err != nil {
 			return nil, routeError(err)
 		}
 		if err := x.Store.AcknowledgeAssignment(ctx, a.Fingerprint, env.DispatchID, env.Message); err != nil {
 			return nil, routeError(err)
 		}
-		return messageReply{Outcome: "acknowledged"}, nil
+		reply := messageReply{Outcome: "acknowledged"}
+		if err := x.Store.RecordRunnerReceipt(ctx, a.Fingerprint, r.Session, attempt, store.ReceiptMessages, env.MessageID, env.Message, reply); err != nil {
+			return nil, routeError(err)
+		}
+		return reply, nil
 	case "refuse":
 		if err := x.Store.RecordRefusal(ctx, a.Fingerprint, r.Session, r.Selected, env.DispatchID, env.Message); err != nil {
 			return nil, routeError(err)
@@ -378,6 +412,10 @@ func (x executionAPI) lease(ctx context.Context, a Actor, r Request) (any, *Erro
 	}
 	lease, err := x.Store.IssueLease(ctx, a.Fingerprint, r.Session, env.DispatchID, r.Selected, env.Request)
 	if err != nil {
+		// A fenced renewal may have latched the lease clock's cancel: wake the inbox.
+		if errors.Is(err, c.ErrFenced) && x.Hub != nil {
+			x.Hub.Notify(InboxKey)
+		}
 		return nil, routeError(err)
 	}
 	return lease.Reply, nil
@@ -439,9 +477,12 @@ func (x executionAPI) blob(ctx context.Context, a Actor, r Request) (any, *Error
 	if !p.ValidID(upload) || len(digest) != 64 {
 		return nil, &Error{400, "invalid_id", ""}
 	}
-	// The route seam does not expose Content-Length, so the inventory's promised
-	// size is enforced instead: the body must end exactly there.
-	blob, err := x.Store.RecordUploadedBlob(ctx, a.Fingerprint, r.Session, upload, digest, r.BodyReader, -1)
+	// The declared Content-Length must be present and equal the inventory's
+	// promised size; the body must then end exactly there.
+	if r.ContentLength < 0 {
+		return nil, &Error{411, "length_required", ""}
+	}
+	blob, err := x.Store.RecordUploadedBlob(ctx, a.Fingerprint, r.Session, upload, digest, r.BodyReader, r.ContentLength)
 	if err != nil {
 		return nil, routeError(err)
 	}

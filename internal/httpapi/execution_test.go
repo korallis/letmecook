@@ -77,6 +77,7 @@ type executionHarness struct {
 	request       store.DispatchRequest
 	d             store.Dispatch
 	hub           *notify.Hub
+	daemonPin     string
 }
 
 func newExecutionHarness(t *testing.T) *executionHarness {
@@ -179,6 +180,10 @@ func newExecutionHarness(t *testing.T) *executionHarness {
 	return &executionHarness{s: s, root: root, owner: owner, runner: runner, runnerID: principal.ID, facts: facts, grant: grant, request: request, d: d, hub: &notify.Hub{}}
 }
 
+func helloRecord(boot, eligibility string, revision int64) store.HelloRecord {
+	return store.HelloRecord{Version: execwire.Version, MessageID: newTestID(), RunnerBoot: boot, EligibilityID: eligibility, EligibilityRevision: revision, PolicyDigest: strings.Repeat("a", 64)}
+}
+
 func (h *executionHarness) hello() execwire.Hello {
 	return execwire.Hello{Version: execwire.Version, MessageID: newTestID(), RunnerBoot: h.facts.RunnerBoot, EligibilityID: h.facts.ID, EligibilityRevision: 1, PolicyDigest: strings.Repeat("a", 64), Journals: []execwire.Journal{}}
 }
@@ -206,7 +211,9 @@ func (h *executionHarness) serve(t *testing.T) (*http.Client, string) {
 		t.Fatal(err)
 	}
 	listener := ExecutionListener(raw, cfg, 5*time.Second)
-	handler, err := NewExecution(h.s, Deps{Store: h.s, Hub: h.hub})
+	leaf := sha256.Sum256(serverCert.Leaf.Raw)
+	h.daemonPin = hex.EncodeToString(leaf[:])
+	handler, err := NewExecution(h.s, Deps{Store: h.s, Hub: h.hub, DaemonFingerprint: h.daemonPin})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -338,7 +345,7 @@ func TestExecutionRoutesEndToEndOverTLS(t *testing.T) {
 	// Session: the only route without X-Gaffer-Session.
 	var sess execwire.Session
 	call(t, client, base, "POST", "/x/v1/session", "", encode(t, h.hello())).decode(t, &sess)
-	if sess.Mode != "normal" || sess.RunnerID != h.runnerID || sess.LeaseValidityMS != 20000 || sess.DriftMS != 2000 || sess.TerminationMS != 5000 || sess.RenewEveryMS != 5000 || sess.Paused || !p.ValidID(sess.SessionID) {
+	if sess.Mode != "normal" || sess.RunnerID != h.runnerID || sess.LeaseValidityMS != 20000 || sess.DriftMS != 2000 || sess.TerminationMS != 5000 || sess.RenewEveryMS != 5000 || sess.Paused || !p.ValidID(sess.SessionID) || sess.DaemonFingerprint != h.daemonPin || len(sess.DaemonFingerprint) != 64 {
 		t.Fatalf("session: %+v", sess)
 	}
 	session := sess.SessionID
@@ -443,6 +450,23 @@ func TestExecutionRoutesEndToEndOverTLS(t *testing.T) {
 	if got := call(t, client, base, "PUT", blobPath, session, []byte("hello, world!\n")); got.status != 422 || got.code(t) != "digest_mismatch" {
 		t.Fatal("wrong bytes accepted", got.status, string(got.body))
 	}
+	if got := call(t, client, base, "PUT", blobPath, session, []byte("short")); got.status != 422 || got.code(t) != "digest_mismatch" {
+		t.Fatal("wrong declared length accepted", got.status, string(got.body))
+	}
+	chunked, err := http.NewRequest("PUT", base+blobPath, io.NopCloser(bytes.NewReader(blobs[digest])))
+	if err != nil {
+		t.Fatal(err)
+	}
+	chunked.ContentLength = -1
+	chunked.Header.Set("X-Gaffer-Session", session)
+	res, err := client.Do(chunked)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != 411 {
+		t.Fatal("unknown length accepted", res.StatusCode)
+	}
 	if got := call(t, client, base, "PUT", blobPath, session, blobs[digest]); got.status != 201 {
 		t.Fatal(got.status, string(got.body))
 	}
@@ -529,7 +553,9 @@ func TestExecutionRouteRefusalsAndErrorEnvelopes(t *testing.T) {
 	h := newExecutionHarness(t)
 	handler := h.recorder(t)
 	session := h.sessionID(t)
-	envelope := string(encode(t, execwire.MessageEnvelope{Version: execwire.Version, MessageID: newTestID(), DispatchID: h.d.ID, Message: p.Message{Version: p.FencedVersion, Kind: "terminated", MessageID: newTestID(), Identity: h.d.Assignment.Identity, StopID: newTestID(), RunnerBoot: h.facts.RunnerBoot, DaemonBoot: newTestID(), ConfirmedProcess: "terminated", RemoteWork: "quiescent", EvidenceDigest: strings.Repeat("e", 64)}}))
+	terminatedID := newTestID()
+	envelope := string(encode(t, execwire.MessageEnvelope{Version: execwire.Version, MessageID: terminatedID, DispatchID: h.d.ID, Message: p.Message{Version: p.FencedVersion, Kind: "terminated", MessageID: terminatedID, Identity: h.d.Assignment.Identity, StopID: newTestID(), RunnerBoot: h.facts.RunnerBoot, DaemonBoot: newTestID(), ConfirmedProcess: "terminated", RemoteWork: "quiescent", EvidenceDigest: strings.Repeat("e", 64)}}))
+	resultID := newTestID()
 	sent := time.Now().Add(-time.Minute).UnixMilli()
 	delayed := string(encode(t, execwire.LeaseEnvelope{Version: execwire.Version, MessageID: newTestID(), DispatchID: h.d.ID, Request: p.Message{Version: p.FencedVersion, Kind: "lease_request", MessageID: newTestID(), Identity: h.d.Assignment.Identity, Nonce: newTestID(), RunnerBoot: h.facts.RunnerBoot, DaemonBoot: newTestID(), SentMS: &sent}}))
 	for _, tc := range []struct {
@@ -547,7 +573,8 @@ func TestExecutionRouteRefusalsAndErrorEnvelopes(t *testing.T) {
 		{"input unknown", "GET", "/x/v1/input?dispatch_id=" + newTestID(), session, "", 404, "not_found"},
 		{"inbox bound", "GET", "/x/v1/inbox?wait_ms=25001", session, "", 400, "invalid_bound"},
 		{"inbox query", "GET", "/x/v1/inbox?other=1", session, "", 400, "invalid_query"},
-		{"messages kind", "POST", "/x/v1/messages", session, `{"version":"` + execwire.Version + `","message_id":"` + newTestID() + `","dispatch_id":"` + h.d.ID + `","message":{"version":"` + p.FencedVersion + `","message_id":"` + newTestID() + `","identity":` + string(encode(t, h.d.Assignment.Identity)) + `,"kind":"result","manifest":{"manifest_id":"` + newTestID() + `","sha256":"` + strings.Repeat("a", 64) + `","bytes":1}}}`, 400, "malformed"},
+		{"messages kind", "POST", "/x/v1/messages", session, `{"version":"` + execwire.Version + `","message_id":"` + resultID + `","dispatch_id":"` + h.d.ID + `","message":{"version":"` + p.FencedVersion + `","message_id":"` + resultID + `","identity":` + string(encode(t, h.d.Assignment.Identity)) + `,"kind":"result","manifest":{"manifest_id":"` + newTestID() + `","sha256":"` + strings.Repeat("a", 64) + `","bytes":1}}}`, 400, "malformed"},
+		{"messages envelope identity", "POST", "/x/v1/messages", session, `{"version":"` + execwire.Version + `","message_id":"` + newTestID() + `","dispatch_id":"` + h.d.ID + `","message":{"version":"` + p.FencedVersion + `","message_id":"` + resultID + `","identity":` + string(encode(t, h.d.Assignment.Identity)) + `,"kind":"result","manifest":{"manifest_id":"` + newTestID() + `","sha256":"` + strings.Repeat("a", 64) + `","bytes":1}}}`, 409, "identity_conflict"},
 		{"terminated without measurement", "POST", "/x/v1/messages", session, envelope, 400, "malformed"},
 		{"lease wrong boot", "POST", "/x/v1/lease", session, delayed, 409, "boot_mismatch"},
 		{"streams bad id", "POST", "/x/v1/streams/nope", session, `{"version":"` + execwire.Version + `","records":[]}`, 400, "invalid_id"},
