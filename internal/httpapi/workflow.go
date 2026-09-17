@@ -15,6 +15,7 @@ import (
 	"github.com/korallis/letmecook/internal/closedjson"
 	c "github.com/korallis/letmecook/internal/control"
 	i "github.com/korallis/letmecook/internal/identity"
+	"github.com/korallis/letmecook/internal/isolation"
 	"github.com/korallis/letmecook/internal/jobs"
 	"github.com/korallis/letmecook/internal/reconcile"
 	repositories "github.com/korallis/letmecook/internal/repositories"
@@ -275,26 +276,26 @@ func workflowRoutes(d Deps) []Route {
 			return out, 201, err
 		})),
 		ownerRoute("POST", "/api/v1/eligibility", ownerMutation(d, "eligibility.publish", func(ctx context.Context, a Actor, r Request, in eligibilityCommand) (any, int, error) {
-			if in.Facts.Isolation.Qualification == "development" && !d.Policy.Development(in.Facts.Isolation.ID) {
-				return nil, 0, g.Deny("development_isolation_refused", "profile")
+			if err := developmentConsent(in.Facts.Isolation, d.Policy, true); err != nil {
+				return nil, 0, err
 			}
 			err := d.Store.PublishEligibility(ctx, a.Fingerprint, in.ExpectedRevision, in.Facts)
 			return in.Facts, 201, err
 		})),
 		ownerRoute("POST", "/api/v1/tasks/{id}/approve", ownerMutation(d, "task.approve", func(ctx context.Context, a Actor, r Request, in approveCommand) (any, int, error) {
+			facts, err := d.Store.Eligibility(ctx, in.EligibilityID)
+			if err != nil {
+				return nil, 0, err
+			}
+			if err = developmentConsent(facts.Isolation, d.Policy, in.AllowDevelopmentIsolation); err != nil {
+				return nil, 0, err
+			}
 			proposal, err := workflow.BuildGrant(ctx, d.Store, r.Path["id"], in.EligibilityID)
 			if err != nil {
 				return nil, 0, err
 			}
 			if proposal.Digests["proposal"] != in.ProposalDigest {
 				return nil, 0, g.Deny("revision_conflict", "proposal_digest")
-			}
-			facts, err := d.Store.Eligibility(ctx, in.EligibilityID)
-			if err != nil {
-				return nil, 0, err
-			}
-			if facts.Isolation.Qualification == "development" && (!in.AllowDevelopmentIsolation || !d.Policy.Development(facts.Isolation.ID)) {
-				return nil, 0, g.Deny("development_isolation_refused", "profile")
 			}
 			grant := proposal.Grant
 			grant.ID = in.MessageID
@@ -502,4 +503,15 @@ func queryBound(r Request, key string, fallback, max int64) (int64, error) {
 		return 0, g.Deny("invalid_query", key)
 	}
 	return n, nil
+}
+
+// Development identity, labeling and consent are independent requirements.
+func developmentConsent(profile sc.IsolationProfile, policy sc.AdmissionPolicy, consent bool) error {
+	if profile.ID == isolation.DevelopmentProfileID && (profile.Qualification != "development" || profile.Supported) {
+		return g.Deny("development_isolation_refused", "profile")
+	}
+	if profile.Qualification == "development" && (!consent || !policy.Development(profile.ID)) {
+		return g.Deny("development_isolation_refused", "profile")
+	}
+	return nil
 }

@@ -81,7 +81,7 @@ func TestAdmissionPolicyGatesDevelopmentProfiles(t *testing.T) {
 		"digest-drift":       {func(f *Eligibility) { f.Isolation.ObservedDigest = strings.Repeat("c", 64) }, "isolation_drift"},
 		"route-mismatch":     {func(f *Eligibility) { f.Isolation.ID = "macos-sandbox-exec-dev-2" }, "isolation_drift"},
 		"supported-claim":    {func(f *Eligibility) { f.Isolation.Supported = true }, "malformed"},
-		"unqualified-native": {func(f *Eligibility) { f.Isolation.Qualification = "" }, "isolation_unsupported"},
+		"unqualified-native": {func(f *Eligibility) { f.Isolation.Qualification = "" }, "malformed"},
 	} {
 		r, d, f := rebind(tc.mutate)
 		policy := allow
@@ -90,12 +90,19 @@ func TestAdmissionPolicyGatesDevelopmentProfiles(t *testing.T) {
 		}
 		code(t, CheckDispatchWithPolicy(r, d, f, 100000, policy), tc.want)
 	}
-	// Historical records without a qualification still need the full control set.
+	// Historical non-development records still need the full control set.
 	r, d, f := rebind(func(f *Eligibility) {
+		f.Isolation.ID = "historical-qualified-profile"
+		f.Route.Isolation = f.Isolation.ID
+		f.LocalEnvelope.Routes[0].Isolation = f.Isolation.ID
 		f.Isolation.Qualification = ""
 		f.Isolation.Supported = true
 		f.Isolation.Controls = RequiredIsolationControls()
 	})
+	d.Selected = f.Route
+	dhHistorical, _ := Digest(d)
+	r.Envelope.Routes = []g.Route{f.Route}
+	r.Envelope.RouteDecision = g.Revision{Number: 1, SHA256: dhHistorical}
 	if err := CheckDispatch(r, d, f, 100000); err != nil {
 		t.Fatal("supported profile refused", err)
 	}
@@ -152,16 +159,16 @@ func TestUnqualifiedProfileNeverAdmitted(t *testing.T) {
 		mutate func(*Eligibility)
 		want   string
 	}{
-		// Passes Validate; must be refused as unsupported by both entry points.
+		// The known development ID cannot be relabelled as unqualified.
 		"unqualified-native-full-controls": {func(f *Eligibility) {
 			f.Isolation.Qualification = "unqualified"
 			f.Isolation.Controls = RequiredIsolationControls()
-		}, "isolation_unsupported"},
+		}, "malformed"},
 		"unqualified-dedicated-vm": {func(f *Eligibility) {
 			f.Isolation.Qualification = "unqualified"
 			f.Isolation.Kind = "dedicated-vm"
 			f.Isolation.Controls = RequiredIsolationControls()
-		}, "isolation_unsupported"},
+		}, "malformed"},
 		// Fails Validate: a Supported claim cannot accompany an explicit qualification.
 		"unqualified-supported-full-controls": {func(f *Eligibility) {
 			f.Isolation.Qualification = "unqualified"
@@ -174,5 +181,18 @@ func TestUnqualifiedProfileNeverAdmitted(t *testing.T) {
 		code(t, CheckDispatchWithPolicy(r, d, f, 100000, AdmissionPolicy{}), tc.want)
 		code(t, CheckDispatchWithPolicy(r, d, f, 100000, allow), tc.want)
 		_ = name
+	}
+}
+
+func TestDevelopmentIdentityRequiresHonestLabels(t *testing.T) {
+	for _, qualification := range []string{"", "unqualified", "development", "test-only"} {
+		for _, supported := range []bool{false, true} {
+			_, _, facts := admissionFixture(t)
+			facts.Isolation.Qualification, facts.Isolation.Supported = qualification, supported
+			err := facts.Validate()
+			if (err == nil) != (qualification == "development" && !supported) {
+				t.Fatalf("qualification=%q supported=%t: %v", qualification, supported, err)
+			}
+		}
 	}
 }
