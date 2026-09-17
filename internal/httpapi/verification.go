@@ -121,7 +121,13 @@ func WorkflowJobHandlers(d Deps, options VerificationOptions) map[string]jobs.Ha
 			return nil, err
 		}
 		checks := v.TrustedChecks{ID: profileDigest, ApprovedBy: who.ID, ApprovalRef: profile.ID + ":" + strconv.FormatInt(profile.Revision, 10), Checks: []v.Check{}}
+		if len(grant.Envelope.Runners) == 0 {
+			return nil, g.Deny("malformed", "runners")
+		}
 		for index, command := range profile.Verification.Commands {
+			if len(command.Argv) == 0 {
+				return nil, g.Deny("malformed", "verification.commands.argv")
+			}
 			argv := append([]string(nil), command.Argv...)
 			if !filepath.IsAbs(argv[0]) {
 				var found string

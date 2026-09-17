@@ -1,13 +1,19 @@
 package verification
 
 import (
+	"bufio"
 	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	g "github.com/korallis/letmecook/internal/authority"
@@ -34,8 +40,7 @@ func checkEnvelope(ctx context.Context, root, repo, base string, e g.Envelope) (
 	if err != nil {
 		return nil, err
 	}
-	originals := map[string][]byte{}
-	var total int64
+	objects := []baseObject{}
 	for _, line := range bytes.Split(tree, []byte{0}) {
 		if len(line) == 0 {
 			continue
@@ -49,20 +54,21 @@ func checkEnvelope(ctx context.Context, root, repo, base string, e g.Envelope) (
 		if len(fields) != 3 || string(fields[1]) != "blob" || !safePath(path) || (string(fields[0]) != "100644" && string(fields[0]) != "100755") {
 			return refuse()
 		}
-		body, err := safeGit(ctx, repo, "cat-file", "blob", string(fields[2]))
-		if err != nil {
-			return nil, err
-		}
-		total += int64(len(body))
-		if total > 256<<20 || len(originals) >= 10000 {
+		oid := string(fields[2])
+		decoded, err := hex.DecodeString(oid)
+		if err != nil || (len(decoded) != 20 && len(decoded) != 32) || strings.ToLower(oid) != oid || len(objects) >= 10000 {
 			return refuse()
 		}
-		originals[path] = body
+		objects = append(objects, baseObject{path, oid})
+	}
+	originals, err := baseBlobs(ctx, repo, objects)
+	if err != nil {
+		return nil, err
 	}
 	changed := []string{}
 	seen := map[string]bool{}
 	count := 0
-	total = 0
+	var total int64
 	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
@@ -134,4 +140,75 @@ func checkEnvelope(ctx context.Context, root, repo, base string, e g.Envelope) (
 		}
 	}
 	return changed, nil
+}
+
+// Read every base blob through one bounded plumbing process, not N processes.
+type baseObject struct{ path, oid string }
+
+func baseBlobs(ctx context.Context, repo string, objects []baseObject) (map[string][]byte, error) {
+	out := map[string][]byte{}
+	if len(objects) == 0 {
+		return out, nil
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "git", "-C", repo, "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false", "-c", "diff.external=", "-c", "filter.lfs.process=", "--no-optional-locks", "cat-file", "--batch")
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_TERMINAL_PROMPT=0", "GIT_OPTIONAL_LOCKS=0", "GIT_ATTR_NOSYSTEM=1", "GIT_NO_LAZY_FETCH=1", "GIT_NO_REPLACE_OBJECTS=1"}
+	var input strings.Builder
+	for _, object := range objects {
+		input.WriteString(object.oid)
+		input.WriteByte('\n')
+	}
+	cmd.Stdin = strings.NewReader(input.String())
+	var stderr limitedBuffer
+	cmd.Stderr = &stderr
+	cmd.WaitDelay = time.Second
+	pipe, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	if err = cmd.Start(); err != nil {
+		return nil, err
+	}
+	waited := false
+	defer func() {
+		cancel()
+		if !waited {
+			_ = cmd.Wait()
+		}
+	}()
+	reader := bufio.NewReader(pipe)
+	var total int64
+	for _, object := range objects {
+		line, err := reader.ReadSlice('\n')
+		if err != nil {
+			return nil, fmt.Errorf("base blob header: %w", err)
+		}
+		fields := strings.Fields(string(line))
+		if len(fields) != 3 || fields[0] != object.oid || fields[1] != "blob" {
+			return nil, fmt.Errorf("base blob identity/type")
+		}
+		size, err := strconv.ParseInt(fields[2], 10, 64)
+		if err != nil || size < 0 || size > 1<<20 || total+size > 256<<20 {
+			return nil, fmt.Errorf("base blob bounds")
+		}
+		total += size
+		body := make([]byte, int(size))
+		if _, err = io.ReadFull(reader, body); err != nil {
+			return nil, fmt.Errorf("base blob truncated: %w", err)
+		}
+		if delimiter, err := reader.ReadByte(); err != nil || delimiter != '\n' {
+			return nil, fmt.Errorf("base blob delimiter")
+		}
+		out[object.path] = body
+	}
+	if _, err = reader.ReadByte(); err != io.EOF {
+		return nil, fmt.Errorf("base blob trailing output")
+	}
+	err = cmd.Wait()
+	waited = true
+	if err != nil {
+		return nil, fmt.Errorf("safe git batch: %w", err)
+	}
+	return out, nil
 }
