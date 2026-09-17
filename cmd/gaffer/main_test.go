@@ -72,7 +72,7 @@ func TestIdentityKeygenAndJSON(t *testing.T) {
 	}
 	original, _ := os.ReadFile(key)
 	var out, stderr bytes.Buffer
-	if code := run(context.Background(), []string{"--json", "identity", "keygen", "--cert", cert, "--key", key}, &out, &stderr); code != 1 || out.Len() != 0 || !strings.Contains(stderr.String(), `"code":"identity_write_refused"`) {
+	if code := run(context.Background(), []string{"--json", "identity", "keygen", "--cert", cert, "--key", key}, &out, &stderr); code != 1 || out.Len() != 0 || !strings.Contains(stderr.String(), `"code":"identity_write_refused"`) || !strings.Contains(stderr.String(), `"status":0`) {
 		t.Fatal("overwrite admitted", code, stderr.String())
 	}
 	retained, _ := os.ReadFile(key)
@@ -160,7 +160,7 @@ func TestIdentitySelfPinnedDaemon(t *testing.T) {
 	}
 	out.Reset()
 	stderr.Reset()
-	if code := run(context.Background(), wrong, &out, &stderr); code != 3 || out.Len() != 0 {
+	if code := run(context.Background(), wrong, &out, &stderr); code != 3 || out.Len() != 0 || !strings.Contains(stderr.String(), `"status":0`) {
 		t.Fatal("wrong pin did not fail", code, stderr.String())
 	}
 	// Same DER pin but wrong hostname must still fail PKI hostname verification.
@@ -172,7 +172,7 @@ func TestIdentitySelfPinnedDaemon(t *testing.T) {
 	}
 	out.Reset()
 	stderr.Reset()
-	if code := run(context.Background(), wrong, &out, &stderr); code != 3 || out.Len() != 0 {
+	if code := run(context.Background(), wrong, &out, &stderr); code != 3 || out.Len() != 0 || !strings.Contains(stderr.String(), `"status":0`) {
 		t.Fatal("wrong hostname did not fail", code, stderr.String())
 	}
 	principal, err := s.Authenticate(context.Background(), ownerPin)
@@ -184,7 +184,7 @@ func TestIdentitySelfPinnedDaemon(t *testing.T) {
 	}
 	out.Reset()
 	stderr.Reset()
-	if code := run(context.Background(), args, &out, &stderr); code != 1 || out.Len() != 0 || !strings.Contains(stderr.String(), `"code":"identity_denied"`) {
+	if code := run(context.Background(), args, &out, &stderr); code != 1 || out.Len() != 0 || !strings.Contains(stderr.String(), `"code":"identity_denied"`) || !strings.Contains(stderr.String(), `"status":403`) {
 		t.Fatal("revocation", code, stderr.String())
 	}
 }
@@ -207,7 +207,7 @@ func TestGlobalsHelpAndExitCodes(t *testing.T) {
 	}
 	out.Reset()
 	stderr.Reset()
-	if code := run(context.Background(), []string{"unknown"}, &out, &stderr); code != 2 || out.Len() != 0 || !strings.Contains(stderr.String(), `"status":400`) {
+	if code := run(context.Background(), []string{"unknown"}, &out, &stderr); code != 2 || out.Len() != 0 || !strings.Contains(stderr.String(), `"status":0`) {
 		t.Fatal("usage envelope", code, stderr.String())
 	}
 	for _, test := range []struct {
@@ -258,5 +258,39 @@ func TestNoRedirectsOrProxy(t *testing.T) {
 	sum := sha256.Sum256(pair.Leaf.Raw)
 	if pin != hex.EncodeToString(sum[:]) {
 		t.Fatal("pin algorithm")
+	}
+}
+
+func TestLocalFailuresHaveZeroStatus(t *testing.T) {
+	clearEnv(t)
+	for _, args := range [][]string{
+		{"unknown"}, {"--timeout", "0s", "version"}, {"help", "extra"},
+		{"version", "extra"}, {"identity"}, {"identity", "unknown"},
+		{"identity", "keygen"}, {"identity", "self"}, {"identity", "self", "extra"},
+	} {
+		var out, stderr bytes.Buffer
+		code := run(context.Background(), append([]string{"--json"}, args...), &out, &stderr)
+		var envelope struct {
+			Version string
+			Error   cliError
+		}
+		if err := json.Unmarshal(stderr.Bytes(), &envelope); err != nil || code != 2 || out.Len() != 0 || envelope.Version != cliVersion || envelope.Error.Status != 0 || envelope.Error.Code == "" {
+			t.Fatalf("local error %q: exit %d, %s (%v)", args, code, stderr.String(), err)
+		}
+	}
+	for _, tc := range []struct {
+		status, exit int
+		code         string
+	}{
+		{400, 2, "malformed"}, {403, 1, "identity_denied"}, {409, 1, "conflict"}, {503, 3, "busy"}, {409, 4, "reconciliation_required"},
+	} {
+		var stderr bytes.Buffer
+		if code := fail(globals{JSON: true, Err: &stderr}, tc.status, tc.code, ""); code != tc.exit {
+			t.Fatalf("HTTP exit %d != %d", code, tc.exit)
+		}
+		var envelope struct{ Error cliError }
+		if err := json.Unmarshal(stderr.Bytes(), &envelope); err != nil || envelope.Error.Status != tc.status {
+			t.Fatalf("HTTP status lost: %s", stderr.String())
+		}
 	}
 }

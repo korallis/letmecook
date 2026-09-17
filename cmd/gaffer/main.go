@@ -67,7 +67,15 @@ func exitCode(status int, code string) int {
 	}
 	return 1
 }
+
+// fail retains the real HTTP status; local failures use failLocal instead.
 func fail(g globals, status int, code, detail string) int {
+	return failure(g, status, exitCode(status, code), code, detail)
+}
+func failLocal(g globals, exit int, code, detail string) int {
+	return failure(g, 0, exit, code, detail)
+}
+func failure(g globals, status, exit int, code, detail string) int {
 	if g.JSON {
 		json.NewEncoder(g.Err).Encode(struct {
 			Version string   `json:"version"`
@@ -76,7 +84,7 @@ func fail(g globals, status int, code, detail string) int {
 	} else {
 		fmt.Fprintf(g.Err, "gaffer: %s: %s\n", code, detail)
 	}
-	return exitCode(status, code)
+	return exit
 }
 func emit(g globals, command string, result any) int {
 	var err error
@@ -93,7 +101,7 @@ func emit(g globals, command string, result any) int {
 		err = json.NewEncoder(g.Out).Encode(result)
 	}
 	if err != nil {
-		return fail(g, 0, "output_unavailable", "could not write command output")
+		return failLocal(g, 3, "output_unavailable", "could not write command output")
 	}
 	return 0
 }
@@ -180,14 +188,14 @@ func parseGlobals(args []string, out, errOut io.Writer) (globals, []string, erro
 func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	g, rest, err := parseGlobals(args, out, errOut)
 	if err != nil {
-		return fail(g, 400, "invalid_arguments", "invalid command-line arguments")
+		return failLocal(g, 2, "invalid_arguments", "invalid command-line arguments")
 	}
 	if len(rest) == 0 {
 		return helpCommand(ctx, g, nil)
 	}
 	command, ok := commands[rest[0]]
 	if !ok {
-		return fail(g, 400, "unknown_command", "use gaffer help for available commands")
+		return failLocal(g, 2, "unknown_command", "use gaffer help for available commands")
 	}
 	ctx, cancel := context.WithTimeout(ctx, g.Timeout)
 	defer cancel()
@@ -195,19 +203,19 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 }
 func helpCommand(ctx context.Context, g globals, args []string) int {
 	if len(args) != 0 {
-		return fail(g, 400, "invalid_arguments", "help takes no arguments")
+		return failLocal(g, 2, "invalid_arguments", "help takes no arguments")
 	}
 	return emit(g, "help", "gaffer (provisional)\nCommands: help, version, identity keygen, identity self\nGlobals: --endpoint --cert --key --daemon-fingerprint --json --message-id --timeout\nidentity keygen: --cert FILE --key FILE [--name NAME] [--days 30] [--server --host HOST]\nWorkflow, execution, verification and backup commands arrive in later slices.")
 }
 func versionCommand(ctx context.Context, g globals, args []string) int {
 	if len(args) != 0 {
-		return fail(g, 400, "invalid_arguments", "version takes no arguments")
+		return failLocal(g, 2, "invalid_arguments", "version takes no arguments")
 	}
 	return emit(g, "version", cliVersion)
 }
 func identityCommand(ctx context.Context, g globals, args []string) int {
 	if len(args) == 0 {
-		return fail(g, 400, "invalid_arguments", "identity requires keygen or self")
+		return failLocal(g, 2, "invalid_arguments", "identity requires keygen or self")
 	}
 	switch args[0] {
 	case "keygen":
@@ -215,7 +223,7 @@ func identityCommand(ctx context.Context, g globals, args []string) int {
 	case "self":
 		return identitySelf(ctx, g, args[1:])
 	default:
-		return fail(g, 400, "unknown_command", "identity subcommand is not implemented")
+		return failLocal(g, 2, "unknown_command", "identity subcommand is not implemented")
 	}
 }
 
@@ -238,20 +246,20 @@ func identityKeygen(ctx context.Context, g globals, args []string) int {
 	var names hosts
 	fs.Var(&names, "host", "server DNS name or IP SAN; repeatable")
 	if fs.Parse(args) != nil || fs.NArg() != 0 || g.Cert == "" || g.Key == "" || *days < 1 || *days > 365 || len(*name) > 128 || (*server && len(names) == 0) || (!*server && len(names) != 0) {
-		return fail(g, 400, "invalid_arguments", "keygen requires distinct new --cert and --key paths; servers also require --host")
+		return failLocal(g, 2, "invalid_arguments", "keygen requires distinct new --cert and --key paths; servers also require --host")
 	}
 	certPath, e1 := filepath.Abs(g.Cert)
 	keyPath, e2 := filepath.Abs(g.Key)
 	if e1 != nil || e2 != nil || certPath == keyPath {
-		return fail(g, 400, "invalid_arguments", "certificate and key paths must differ")
+		return failLocal(g, 2, "invalid_arguments", "certificate and key paths must differ")
 	}
 	pub, key, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
-		return fail(g, 0, "keygen_unavailable", "could not generate identity")
+		return failLocal(g, 3, "keygen_unavailable", "could not generate identity")
 	}
 	serial, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 	if err != nil {
-		return fail(g, 0, "keygen_unavailable", "could not generate identity")
+		return failLocal(g, 3, "keygen_unavailable", "could not generate identity")
 	}
 	serial.Add(serial, big.NewInt(1))
 	now := time.Now()
@@ -268,17 +276,17 @@ func identityKeygen(ctx context.Context, g globals, args []string) int {
 	}
 	der, err := x509.CreateCertificate(rand.Reader, template, template, pub, key)
 	if err != nil {
-		return fail(g, 0, "keygen_unavailable", "could not generate certificate")
+		return failLocal(g, 3, "keygen_unavailable", "could not generate certificate")
 	}
 	private, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
-		return fail(g, 0, "keygen_unavailable", "could not encode identity")
+		return failLocal(g, 3, "keygen_unavailable", "could not encode identity")
 	}
 	if ctx.Err() != nil {
-		return fail(g, 0, "cancelled", "command deadline or cancellation")
+		return failLocal(g, 3, "cancelled", "command deadline or cancellation")
 	}
 	if err := writeIdentityPair(keyPath, certPath, pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: private}), pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})); err != nil {
-		return fail(g, 1, "identity_write_refused", "identity files must be new and writable; nothing is overwritten")
+		return failLocal(g, 1, "identity_write_refused", "identity files must be new and writable; nothing is overwritten")
 	}
 	sum := sha256.Sum256(der)
 	fingerprint := hex.EncodeToString(sum[:])
@@ -393,25 +401,25 @@ func ownerClient(g globals) (*http.Client, error) {
 }
 func identitySelf(ctx context.Context, g globals, args []string) int {
 	if len(args) != 0 {
-		return fail(g, 400, "invalid_arguments", "identity self takes no arguments")
+		return failLocal(g, 2, "invalid_arguments", "identity self takes no arguments")
 	}
 	client, err := ownerClient(g)
 	if err != nil {
-		return fail(g, 400, "invalid_configuration", "explicit HTTPS endpoint, client certificate/key and daemon fingerprint are required")
+		return failLocal(g, 2, "invalid_configuration", "explicit HTTPS endpoint, client certificate/key and daemon fingerprint are required")
 	}
 	defer client.CloseIdleConnections()
 	req, err := http.NewRequestWithContext(ctx, "GET", g.Endpoint+"/api/v1/identity/self", nil)
 	if err != nil {
-		return fail(g, 400, "invalid_configuration", "invalid owner endpoint")
+		return failLocal(g, 2, "invalid_configuration", "invalid owner endpoint")
 	}
 	reply, err := client.Do(req)
 	if err != nil {
-		return fail(g, 0, "daemon_unavailable", "pinned mTLS request failed")
+		return failLocal(g, 3, "daemon_unavailable", "pinned mTLS request failed")
 	}
 	defer reply.Body.Close()
 	body, err := io.ReadAll(io.LimitReader(reply.Body, maxReply+1))
 	if err != nil || len(body) > maxReply || !json.Valid(body) {
-		return fail(g, 0, "invalid_response", "daemon response was not bounded JSON")
+		return failLocal(g, 3, "invalid_response", "daemon response was not bounded JSON")
 	}
 	if reply.StatusCode != 200 {
 		var errorBody struct {

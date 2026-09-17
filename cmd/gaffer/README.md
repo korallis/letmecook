@@ -32,7 +32,10 @@ explicit trust anchor, not automatic trust-on-first-use.
 
 `--json` emits one stdout envelope with `version: "gaffer-cli-v1"`, `command`,
 `message_id` and `result`; errors go only to stderr as `{version,error:{status,code,detail}}`.
-An omitted message ID is generated once for the invocation. Exit codes are 0 success,
+Local failures (including usage, configuration, filesystem and transport errors)
+always use `error.status: 0`; only received HTTP errors carry an HTTP status.
+The JSON status does not select the local exit category. An omitted message ID is
+generated once for the invocation. Exit codes are 0 success,
 1 refused/conflict, 2 usage, 3 unavailable and 4 reconciliation required.
 
 ## Planned commands
