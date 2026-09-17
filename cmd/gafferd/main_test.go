@@ -363,7 +363,11 @@ func TestMainStartupDiagnostics(t *testing.T) {
 			name string
 			mode os.FileMode
 			want string
-		}{"system-temp-state", 0700, "outside system-temp exception roots"})
+		}{"system-temp-state", 0700, "outside system-temp exception roots"}, struct {
+			name string
+			mode os.FileMode
+			want string
+		}{"symlink-parent", 0700, "requires a canonical directory"})
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -384,6 +388,13 @@ func TestMainStartupDiagnostics(t *testing.T) {
 				root, err := filepath.EvalSymlinks(parent)
 				if err != nil {
 					t.Fatal(err)
+				}
+				if tc.name == "symlink-parent" {
+					alias := filepath.Join(t.TempDir(), "parent-link")
+					if err := os.Symlink(root, alias); err != nil {
+						t.Fatal(err)
+					}
+					root = alias
 				}
 				state = filepath.Join(root, "state")
 				if err := os.Mkdir(state, 0700); err != nil {
@@ -413,5 +424,50 @@ func TestMainStartupDiagnostics(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestDevelopmentVerificationComposedDaemonReady(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("macOS development profile only")
+	}
+	parent, err := os.MkdirTemp("/var/tmp", "gafferd-private-verifier-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(parent)
+	parent, err = filepath.EvalSymlinks(parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := filepath.Join(parent, "state")
+	_, owner, _ := localCertificate(t, false)
+	_, cert, key := localCertificate(t, true)
+	base := []string{"--state-dir", state, "--artifacts-dir", filepath.Join(parent, "artifacts")}
+	if err := run(context.Background(), append(append([]string{}, base...), "--bootstrap-owner-cert", owner), io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	args := append(append([]string{}, base...), "--listen", "127.0.0.1:0", "--execution-listen", "127.0.0.1:0", "--endpoint", "https://127.0.0.1", "--tls-cert", cert, "--tls-key", key, "--allow-development-profile=macos-sandbox-exec-dev", "--verification-isolation-profile=macos-sandbox-exec-dev")
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	reader, writer := io.Pipe()
+	defer reader.Close()
+	done := make(chan error, 1)
+	go func() { err := run(ctx, args, writer); writer.CloseWithError(err); done <- err }()
+	defer func() {
+		cancel()
+		reader.Close()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	}()
+	scanner := bufio.NewScanner(reader)
+	for _, prefix := range []string{"store-only https://127.0.0.1/", "execution https://127.0.0.1:"} {
+		if !scanner.Scan() || !strings.HasPrefix(scanner.Text(), prefix) {
+			t.Fatal("composed development daemon did not reach readiness", scanner.Text(), scanner.Err())
+		}
+	}
+	info, err := os.Stat(state)
+	if err != nil || info.Mode().Perm() != 0700 {
+		t.Fatal("verifier state is not private", info, err)
 	}
 }
