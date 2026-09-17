@@ -54,6 +54,23 @@ type IsolationProfile struct {
 	Supported      bool       `json:"supported"`
 	DockerRequired bool       `json:"docker_required"`
 	Controls       []string   `json:"controls"`
+	// Qualification is "" or "unqualified" (refuses launch), "development" (an
+	// operator-allowed development profile, never supported) or "test-only".
+	// Historical records omit it; absence means unqualified.
+	Qualification string `json:"qualification,omitempty"`
+}
+
+// AdmissionPolicy is operator configuration, never runner-supplied facts. It names
+// the development isolation profiles (for example macos-sandbox-exec-dev) that a
+// daemon or supervisor may admit despite Supported == false. An empty policy is
+// the default and refuses every development profile.
+type AdmissionPolicy struct {
+	DevelopmentProfiles []string `json:"development_profiles,omitempty"`
+}
+
+// Development reports whether policy admits profile as a development profile.
+func (a AdmissionPolicy) Development(profile string) bool {
+	return profile != "" && slices.Contains(a.DevelopmentProfiles, profile)
 }
 
 // Eligibility is an operator-reviewed, authenticated local-policy mirror and
@@ -150,6 +167,13 @@ func (v Eligibility) Validate() error {
 	if iso.ID != "" && (!g.ValidActor(iso.ID) || !revision(iso.Revision) || !digest.MatchString(iso.RuntimeDigest) || !digest.MatchString(iso.ObservedDigest) || !g.ValidActor(iso.Kind) || !validSet(iso.Controls, true, g.ValidActor)) {
 		return g.Deny("malformed", "isolation")
 	}
+	if !slices.Contains([]string{"", "unqualified", "development", "test-only"}, iso.Qualification) || iso.ID == "" && iso.Qualification != "" {
+		return g.Deny("malformed", "isolation_qualification")
+	}
+	// A development or test-only profile is never a supported unattended runtime.
+	if iso.Supported && (iso.Qualification == "development" || iso.Qualification == "test-only") {
+		return g.Deny("malformed", "isolation_qualification")
+	}
 	_, err := Digest(v)
 	return err
 }
@@ -187,9 +211,28 @@ func RequiredIsolationControls() []string {
 	return []string{"bounded-resources", "controlled-egress", "external-supervisor", "non-root", "secret-separation", "tree-termination", "workspace-only"}
 }
 
+// DevelopmentIsolationControls is the measured subset a development profile must
+// report before an AdmissionPolicy may admit it. It is evidence of development
+// containment only, never a supported-runtime claim.
+func DevelopmentIsolationControls() []string {
+	return []string{"controlled-egress", "external-supervisor", "secret-separation", "tree-termination", "workspace-only"}
+}
+
 // CheckDispatch consumes already authenticated facts inside the store transaction.
 // It checks every reachable target, never substitutes a ranked route on outage.
+// It refuses every development profile: only CheckDispatchWithPolicy with an
+// explicit operator AdmissionPolicy can admit one.
 func CheckDispatch(request g.Request, decision Decision, facts Eligibility, now int64) error {
+	return CheckDispatchWithPolicy(request, decision, facts, now, AdmissionPolicy{})
+}
+
+// CheckDispatchWithPolicy is CheckDispatch plus operator admission policy. When
+// facts.Isolation.ID is in policy.DevelopmentProfiles, Supported is false, the
+// profile is recorded as qualification "development", native, matches the route and
+// its digests agree, the profile must report DevelopmentIsolationControls instead
+// of every RequiredIsolationControls. A development profile outside the policy
+// is refused development_isolation_refused; nothing else changes.
+func CheckDispatchWithPolicy(request g.Request, decision Decision, facts Eligibility, now int64, policy AdmissionPolicy) error {
 	if err := decision.Validate(); err != nil {
 		return err
 	}
@@ -240,13 +283,25 @@ func CheckDispatch(request g.Request, decision Decision, facts Eligibility, now 
 	if iso.ID == "" {
 		return g.Deny("isolation_missing", "profile")
 	}
-	if !iso.Supported || iso.DockerRequired || !slices.Contains([]string{"native", "dedicated-vm"}, iso.Kind) {
+	development := iso.Qualification == "development"
+	if development && !policy.Development(iso.ID) {
+		return g.Deny("development_isolation_refused", "profile")
+	}
+	if development {
+		if iso.Supported || iso.DockerRequired || iso.Kind != "native" {
+			return g.Deny("isolation_unsupported", "profile")
+		}
+	} else if !iso.Supported || iso.DockerRequired || !slices.Contains([]string{"native", "dedicated-vm"}, iso.Kind) {
 		return g.Deny("isolation_unsupported", "profile")
 	}
 	if iso.ID != facts.Route.Isolation || iso.RuntimeDigest != iso.ObservedDigest {
 		return g.Deny("isolation_drift", "profile")
 	}
-	for _, control := range RequiredIsolationControls() {
+	required := RequiredIsolationControls()
+	if development {
+		required = DevelopmentIsolationControls()
+	}
+	for _, control := range required {
 		if !slices.Contains(iso.Controls, control) {
 			return g.Deny("isolation_unsupported", "controls")
 		}
@@ -279,7 +334,8 @@ func CheckDispatch(request g.Request, decision Decision, facts Eligibility, now 
 			return g.Deny("hard_bound_unavailable", "provider")
 		}
 	}
-	if facts.Route.LimitsProfile == "native-subscription-local-v1" && (a.HardOutputBound || a.HardCostBound) {
+	// Neither the native nor the gateway-managed profile can prove a provider bound.
+	if (facts.Route.LimitsProfile == "native-subscription-local-v1" || facts.Route.LimitsProfile == "gateway-local-bounds-v1") && (a.HardOutputBound || a.HardCostBound) {
 		return g.Deny("hard_bound_unavailable", "limits_profile")
 	}
 	if !facts.RouterAuthenticated {
