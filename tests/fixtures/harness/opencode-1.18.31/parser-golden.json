@@ -1,0 +1,70 @@
+[
+  {
+    "kind": "started",
+    "summary": "step started"
+  },
+  {
+    "kind": "activity",
+    "summary": "tool glob completed"
+  },
+  {
+    "kind": "activity",
+    "summary": "step finished: tool-calls",
+    "usage": {
+      "prompt_tokens": 6946,
+      "completion_tokens": 19,
+      "source": "opencode_tokens"
+    }
+  },
+  {
+    "kind": "started",
+    "summary": "step started"
+  },
+  {
+    "kind": "activity",
+    "summary": "tool read completed"
+  },
+  {
+    "kind": "activity",
+    "summary": "step finished: tool-calls",
+    "usage": {
+      "prompt_tokens": 6997,
+      "completion_tokens": 39,
+      "source": "opencode_tokens"
+    }
+  },
+  {
+    "kind": "started",
+    "summary": "step started"
+  },
+  {
+    "kind": "activity",
+    "summary": "tool apply_patch completed"
+  },
+  {
+    "kind": "activity",
+    "summary": "step finished: tool-calls",
+    "usage": {
+      "prompt_tokens": 7100,
+      "completion_tokens": 63,
+      "source": "opencode_tokens"
+    }
+  },
+  {
+    "kind": "started",
+    "summary": "step started"
+  },
+  {
+    "kind": "activity",
+    "summary": "Updated `greeting.txt` to contain exactly:\n```text\nhello from harness\n```"
+  },
+  {
+    "kind": "completed",
+    "summary": "step finished: stop",
+    "usage": {
+      "prompt_tokens": 7184,
+      "completion_tokens": 22,
+      "source": "opencode_tokens"
+    }
+  }
+]
