@@ -439,3 +439,11 @@ func TestOwnerHTTPSStopResumeAfterForeignPauseClearance(t *testing.T) {
 	dispatch["grant_id"], dispatch["grant_revision"], dispatch["attempt_ms"] = approve["message_id"], int64(1), int64(60000)
 	postWorkflow(t, client, endpoint, "/api/v1/tasks/"+taskID+"/dispatch", dispatch, 201)
 }
+
+func TestOwnerHTTPSOpenCodeRequiresModelAtCreate(t *testing.T) {
+	f := newOwnerFixture(t)
+	endpoint, client := f.serve(t)
+	create := taskBody(f, "opencode-empty-settings")
+	create["harness"], create["settings"] = "opencode", json.RawMessage(`{}`)
+	postWorkflow(t, client, endpoint, "/api/v1/tasks", create, 400)
+}

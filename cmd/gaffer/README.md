@@ -142,7 +142,8 @@ object, **not a `fake_spec` wrapper**. Fake example:
 The runner selects `attempts[min(epoch-1,last)]`. Edits use exactly one of `content`,
 `content_base64`, or `delete:true`; timing/output controls are bounded `delay_ms` and
 `stream_bytes`. The default fake script is one noop attempt. OpenCode uses
-`{"model":"gateway-model-id"}` with optional `variant`. Unknown/duplicate/null
+`{"model":"gateway-model-id"}` matching the approved route model. A nonempty
+`variant` is currently unsupported and locally refused; empty is tolerated. Unknown/duplicate/null
 settings are refused. Both raw and canonical settings must fit 49,152 bytes;
 JSON escaping expansion is checked before persistence and returns typed
 `oversized`, never a database constraint failure. Settings object keys are recursively sorted, preserving

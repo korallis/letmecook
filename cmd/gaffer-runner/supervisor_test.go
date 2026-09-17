@@ -1742,3 +1742,33 @@ func TestShutdownDuringRunningAcknowledgementGap(t *testing.T) {
 		})
 	}
 }
+
+func TestOpenCodeModelMismatchRefusedBeforeAcceptance(t *testing.T) {
+	f := newFixture(t, "noop")
+	// Keep the test-only compatibility probe: this fixture must never launch.
+	f.s.cfg.Harness = "opencode"
+	f.d.mu.Lock()
+	f.d.input.Harness = "opencode"
+	f.d.input.Settings = json.RawMessage(`{"model":"unapproved-model"}`)
+	f.d.input.BriefSHA256, _ = f.d.input.Digest()
+	f.d.dispatch.Decision.Selected.Harness = "opencode"
+	f.d.dispatch.Request.Envelope.Brief.SHA256 = f.d.input.BriefSHA256
+	body, _ := json.Marshal(f.d.dispatch)
+	json.Unmarshal(body, &f.dispatch)
+	f.d.mu.Unlock()
+	if err := f.s.attempt(f.ctx, f.dispatch); !errors.Is(err, runner.ErrPolicy) || !strings.Contains(err.Error(), "settings_model_mismatch") {
+		t.Fatal(err)
+	}
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	if f.d.dispatch.Acknowledged || f.d.leaseCount != 0 || contains(f.d.calls, "running") {
+		t.Fatal("mismatch accepted", f.d.calls)
+	}
+	for _, body := range f.d.request {
+		var env w.MessageEnvelope
+		if json.Unmarshal(body, &env) == nil && env.Message.Kind == "refuse" && env.Message.Reason == p.LocalPolicyDenied {
+			return
+		}
+	}
+	t.Fatal("missing local_policy_denied refusal")
+}

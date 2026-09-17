@@ -196,7 +196,7 @@ func helperAdapter(t *testing.T, protocol string) (*Adapter, *testLauncher) {
 }
 func runRequest(t *testing.T, l *testLauncher, gateway *probeGateway, brief string) harness.RunRequest {
 	t.Helper()
-	return harness.RunRequest{Workspace: workspace(t), Brief: brief, Boundary: harness.BoundaryHandle{URL: gateway.url, Token: gateway.token, Models: []string{"model-a"}, Protocol: gateway.protocol}, Limits: harness.Limits{MaxStdoutBytes: 1 << 20}, Launcher: l}
+	return harness.RunRequest{Workspace: workspace(t), Brief: brief, Settings: json.RawMessage(`{"model":"model-a"}`), Boundary: harness.BoundaryHandle{URL: gateway.url, Token: gateway.token, Models: []string{"model-a"}, Protocol: gateway.protocol}, Limits: harness.Limits{MaxStdoutBytes: 1 << 20}, Launcher: l}
 }
 func collect(t *testing.T, a *Adapter, h harness.RunHandle) []harness.Event {
 	t.Helper()
@@ -459,7 +459,7 @@ func TestGatewayCredentialAbsentFromChildWorkspaceAndJournals(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer b.Close(context.Background())
-	h, err := a.Start(context.Background(), harness.RunRequest{Workspace: w, Brief: "print-token", Boundary: harness.BoundaryHandle{URL: "http://" + b.Addr(), Token: token, Models: []string{"model-a"}, Protocol: "chat_completions"}, Launcher: l, Limits: harness.Limits{MaxStdoutBytes: 1 << 20}})
+	h, err := a.Start(context.Background(), harness.RunRequest{Workspace: w, Brief: "print-token", Settings: json.RawMessage(`{"model":"model-a"}`), Boundary: harness.BoundaryHandle{URL: "http://" + b.Addr(), Token: token, Models: []string{"model-a"}, Protocol: "chat_completions"}, Launcher: l, Limits: harness.Limits{MaxStdoutBytes: 1 << 20}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -774,6 +774,25 @@ func TestRetainedRunsBoundConcurrentAdmissionAndReleasePreservesGate(t *testing.
 		}
 		if len(a.runs) != 0 || a.starting != 0 {
 			t.Fatal("completed runs accumulated after release")
+		}
+	}
+}
+
+func TestDirectSettingsArePinnedAndClosed(t *testing.T) {
+	for _, tc := range []struct{ raw, reason string }{
+		{`{}`, "malformed_settings"},
+		{`{"model":"other"}`, "settings_model_mismatch"},
+		{`{"model":"model-a","plugin":"other"}`, "malformed_settings"},
+		{`{"model":"model-a","model":"model-a"}`, "malformed_settings"},
+		{`{"model":"model-a","variant":"high"}`, "unsupported_variant"},
+	} {
+		if err := ValidateSettings(json.RawMessage(tc.raw), "model-a"); !errors.Is(err, ErrRun) || !strings.Contains(err.Error(), tc.reason) {
+			t.Fatalf("%s: %v", tc.raw, err)
+		}
+	}
+	for _, raw := range []string{`{"model":"model-a"}`, `{"model":"model-a","variant":""}`} {
+		if err := ValidateSettings(json.RawMessage(raw), "model-a"); err != nil {
+			t.Fatal(err)
 		}
 	}
 }

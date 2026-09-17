@@ -40,6 +40,11 @@ file or symlink is refused), outside the candidate:
 The token value is not written to configuration. Arbitrary adapter settings,
 additional providers, plugins, endpoints or model fallback are not accepted.
 The route's first target is the selected model and must be in the boundary scope.
+Direct settings must contain `{"model":"<that exact model>"}`. Missing model,
+unknown/duplicate/null fields and a different model are refused. Optional empty
+`variant` is tolerated; a nonempty variant is unsupported and refused, not silently
+ignored. The supervisor validates this before acknowledgement, returning
+`local_policy_denied` with a local reason; the adapter repeats the check at Start.
 
 The exact argv is:
 

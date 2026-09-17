@@ -21,6 +21,7 @@ import (
 	w "github.com/korallis/letmecook/internal/execwire"
 	h "github.com/korallis/letmecook/internal/harness"
 	"github.com/korallis/letmecook/internal/harness/fake"
+	"github.com/korallis/letmecook/internal/harness/opencode"
 	"github.com/korallis/letmecook/internal/inference"
 	"github.com/korallis/letmecook/internal/isolation"
 	"github.com/korallis/letmecook/internal/repositories"
@@ -379,12 +380,19 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 	if policyErr == nil {
 		policyErr = repo.Select(d.Facts.Repository)
 	}
+	if policyErr == nil && input.Harness == "opencode" {
+		if len(d.Decision.Selected.Targets) == 0 {
+			policyErr = runner.ErrPolicy
+		} else {
+			policyErr = opencode.ValidateSettings(input.Settings, d.Decision.Selected.Targets[0].Model)
+		}
+	}
 	if policyErr != nil || d.Facts.Repository.RunnerRoot.Root != s.cfg.RepositoryRoot || d.Facts.Repository.RunnerRoot.RunnerID != s.session.RunnerID {
 		refusal := p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "refuse", Identity: d.Assignment.Identity, InReplyTo: d.Assignment.MessageID, Reason: p.LocalPolicyDenied}
 		if _, err := s.message(ctx, r, d.ID, refusal, nil, nil, nil); err != nil {
 			return err
 		}
-		return runner.ErrPolicy
+		return errors.Join(runner.ErrPolicy, policyErr)
 	}
 	accepted, running, launchAttempted, stopHandled, jobFinished := false, false, false, false, false
 	phase, revision := p.Assigned, int64(1)
