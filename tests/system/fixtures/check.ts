@@ -11,7 +11,7 @@ import { createHash } from 'node:crypto';
 
 const here = (p: string): string => new URL(p, import.meta.url).pathname;
 const REPOS = ['greeting', 'calc', 'notes'] as const;
-const OUTCOMES = ['succeeded', 'failed_verification', 'rejected', 'stopped', 'retry_then_succeeded', 'approval_blocked'] as const;
+const OUTCOMES = ['succeeded', 'failed_verification', 'failed', 'stopped', 'retry_then_succeeded', 'approval_blocked'] as const;
 const OPERATIONS = ['edit', 'create', 'delete', 'rename'] as const;
 // Fake modes defined by the fake-harness contract; edit-applying modes plus
 // fault modes. crash_after_edit is an alias contract extension kept permissive.
@@ -91,8 +91,8 @@ function validateVerification(v: Row, repo: string, taskId: string, repoChecks: 
   cmds.forEach((c, i) => {
     assert.deepEqual(Object.keys(c).sort(), ['expect', 'index'], `${taskId}: command keys`);
     assert.equal(c.index, i, `${taskId}: command index must be dense`);
-    if (c.expect === 'pass' || c.expect === 'fail') return;
-    assert.fail(`${taskId}: expect must be pass or fail`);
+    if (c.expect === 'pass' || c.expect === 'fail' || c.expect === 'not_run') return;
+    assert.fail(`${taskId}: expect must be pass, fail or not_run`);
   });
 }
 
@@ -141,7 +141,10 @@ function validateCorpus(raw: string): void {
     if (outcome === 'retry_then_succeeded') assert(attempts.length >= 2 && attempts[0]!.mode === 'crash', `${id}: retry_then_succeeded needs crash first attempt`);
     if (outcome === 'stopped') assert(attempts.length === 1 && attempts[0]!.mode === 'hang', `${id}: stopped needs a single hang attempt`);
     if (outcome === 'approval_blocked') assert(attempts.length === 1 && attempts[0]!.mode === 'approval', `${id}: approval_blocked needs approval mode`);
-    if (outcome === 'rejected') assert(attempts.length === 1 && attempts[0]!.mode === 'huge_output', `${id}: rejected row must be the spool-cap case`);
+    if (outcome === 'failed') {
+      assert(attempts.length === 1 && attempts[0]!.mode === 'huge_output', `${id}: failed row must be the spool-cap case`);
+      assert(((t.verification as Row).commands as Row[]).every(c => c.expect === 'not_run'), `${id}: failed row runs no verification`);
+    }
     if (outcome === 'failed_verification') {
       const v = t.verification as Row;
       assert((v.commands as Row[]).some(c => c.expect === 'fail'), `${id}: failed_verification must expect a failing check`);

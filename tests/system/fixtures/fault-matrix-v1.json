@@ -70,7 +70,7 @@
       "task_state": "reconciling",
       "reservation_released": true,
       "remote_work": "quiescent",
-      "receipt": "failed manifest (no custody receipt)",
+      "receipt": "retained failed manifest (custody evidence only, never a head)",
       "expected": "The spool reserves its last 8 KiB for one terminal normalized status record spool_full; promised native bytes are never silently dropped. The supervisor requests stop and packs a failed manifest; the attempt finalizes failed and releases.",
       "assertions": [
         "invariants",

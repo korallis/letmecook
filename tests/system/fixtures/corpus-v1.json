@@ -13,10 +13,10 @@
   "outcome_semantics": {
     "succeeded": "Attempt finalized succeeded, trusted checks passed, local acceptance recorded.",
     "failed_verification": "Artifact failed the repository's trusted checks; the operator then rejects locally.",
-    "rejected": "No acceptable artifact existed (for example a failed manifest); the operator rejects without a verification pass.",
     "stopped": "Operator stop mid-run; attempt cancelled and reservation released; no retry within this run.",
     "retry_then_succeeded": "First attempt failed (crash), released, then a retry within budget succeeded.",
-    "approval_blocked": "Harness requested an approval that was never granted; the attempt failed and the task is blocked pending an operator decision."
+    "approval_blocked": "Harness requested an approval that was never granted; the attempt failed and the task is blocked pending an operator decision.",
+    "failed": "Attempt finalized failed with a retained failed manifest (custody evidence, no head); no candidate exists to verify or review, so the task stays reconciling until the operator retries or stops it."
   },
   "repos": {
     "greeting": {
@@ -539,7 +539,7 @@
       "criteria": [
         {
           "id": "t10-spool-cap",
-          "text": "The attempt terminates with a terminal spool_full status record and a failed manifest; the task is rejected without a usable artifact"
+          "text": "The attempt terminates with a terminal spool_full status record and a retained failed manifest; no candidate exists, so verification does not run and review is refused"
         }
       ],
       "paths": [
@@ -565,21 +565,21 @@
           }
         ]
       },
-      "expected_outcome": "rejected",
+      "expected_outcome": "failed",
       "verification": {
         "profile": "calc-go-v1",
         "commands": [
           {
             "index": 0,
-            "expect": "pass"
+            "expect": "not_run"
           },
           {
             "index": 1,
-            "expect": "pass"
+            "expect": "not_run"
           }
         ]
       },
-      "notes": "huge_output spool case: 8 MiB of output exceeds the 4 MiB spool, the last 8 KiB are reserved for the terminal normalized spool_full status record, the supervisor stops the job and packs a failed manifest. The operator rejects the task - rejected, distinct from failed_verification."
+      "notes": "huge_output spool case: 8 MiB of output exceeds the 4 MiB spool, the last 8 KiB are reserved for the terminal normalized spool_full status record, the supervisor stops the job and packs a failed manifest. The attempt finalizes failed and the failed manifest is retained as custody evidence only (execution contract §3); with no head there is nothing to review, so the task remains reconciling."
     },
     {
       "id": "task-11",
