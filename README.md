@@ -55,6 +55,8 @@ See [operator-selected deployment](docs/spec.md#12-operator-selected-deployment)
 | [Astra playbook](docs/astra-playbook.md) | How GPT-6 Astra should execute an issue |
 | [Contributing](CONTRIBUTING.md) | One issue, one branch, one pull request |
 
+M1 development system proof: [checkpoint evidence](docs/evidence/m1-acceptance.md) records unresolved system failures, not supported-runtime or downstream acceptance.
+
 ## Read the HTML documentation
 
 Clone or download the repository and open `docs/index.html` locally. GitHub's file
