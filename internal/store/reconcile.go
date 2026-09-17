@@ -109,6 +109,7 @@ type ReconciliationInputs struct {
 	LastSession         SessionRecord        `json:"last_session,omitzero"`
 	Journal             execwire.Journal     `json:"journal,omitzero"`
 	JournalFound        bool                 `json:"journal_found"`
+	RunnerRestarted     bool                 `json:"runner_restarted"`
 	Latched             bool                 `json:"latched"`
 	GrantRefusal        string               `json:"grant_refusal,omitempty"`
 	Paused              bool                 `json:"paused"`
@@ -408,11 +409,30 @@ func rcGrantRefusal(ctx context.Context, tx *sql.Tx, request g.Request, now int6
 	return "", err
 }
 
+// SelectJournal is the one rule for reading a hello's journal entries about a
+// dispatch: within a hello a corrupt entry wins over any intact one for the
+// same dispatch, otherwise the last entry stands. Reconcile applies it to the
+// hello it is processing and the store applies it to the retained hello, so
+// both paths agree; across hellos the latest hello wins (rcLatestJournal).
+func SelectJournal(journals []execwire.Journal, dispatchID string) (execwire.Journal, bool) {
+	var chosen execwire.Journal
+	found := false
+	for _, j := range journals {
+		if j.DispatchID != dispatchID {
+			continue
+		}
+		if !found || j.Corrupt || !chosen.Corrupt {
+			chosen, found = j, true
+		}
+	}
+	return chosen, found
+}
+
 // rcLatestJournal is the runner's most recent hello journal entry for a dispatch,
 // read from runner_sessions.hello: the durable record of what the supervisor
-// last said about the attempt, including that its journal is corrupt. A later
-// hello for the same dispatch supersedes an earlier one; that is the only
-// repair evidence the store accepts.
+// last said about the attempt, including that its journal is corrupt. The
+// latest hello that mentions the dispatch wins, read with SelectJournal; a later
+// hello from the same runner is the only repair evidence the store accepts.
 func rcLatestJournal(ctx context.Context, tx *sql.Tx, runnerID, dispatchID string) (execwire.Journal, bool, error) {
 	rows, err := tx.QueryContext(ctx, "SELECT hello FROM runner_sessions WHERE runner_id=? ORDER BY created_ms DESC,rowid DESC", runnerID)
 	if err != nil {
@@ -430,13 +450,22 @@ func rcLatestJournal(ctx context.Context, tx *sql.Tx, runnerID, dispatchID strin
 		if json.Unmarshal([]byte(hello), &h) != nil {
 			continue
 		}
-		for _, j := range h.Journals {
-			if j.DispatchID == dispatchID {
-				return j, true, rows.Close()
-			}
+		if j, found := SelectJournal(h.Journals, dispatchID); found {
+			return j, true, rows.Close()
 		}
 	}
 	return execwire.Journal{}, false, rows.Err()
+}
+
+// rcRunnerRestarted reports whether the runner has run under any boot other
+// than the one that executed the dispatch since the dispatch was admitted.
+// Restart history is monotonic: once another boot has been seen, evidence from
+// the executing incarnation is non-current for good, whatever boot a later
+// hello claims, so a replayed original-boot hello cannot restore currency.
+func rcRunnerRestarted(ctx context.Context, tx *sql.Tx, d Dispatch) (bool, error) {
+	var restarted bool
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM runner_sessions s, dispatches d WHERE d.id=? AND s.runner_id=? AND s.runner_boot<>? AND s.created_ms>=d.created_ms)`, d.ID, d.Facts.Repository.RunnerRoot.RunnerID, d.Facts.RunnerBoot).Scan(&restarted)
+	return restarted, err
 }
 
 // rcJournalCorrupt reports whether the runner's latest hello journal for the
@@ -572,6 +601,9 @@ func (s *Store) ReconciliationInputs(ctx context.Context, attemptID string) (Rec
 		return ReconciliationInputs{}, err
 	}
 	if v.Journal, v.JournalFound, err = rcLatestJournal(ctx, tx, d.Facts.Repository.RunnerRoot.RunnerID, d.ID); err != nil {
+		return ReconciliationInputs{}, err
+	}
+	if v.RunnerRestarted, err = rcRunnerRestarted(ctx, tx, d); err != nil {
 		return ReconciliationInputs{}, err
 	}
 	if v.Latched, err = rcTaskLatched(ctx, tx, identity.TaskID, d.Request.GrantID); err != nil {
@@ -794,11 +826,11 @@ func (s *Store) rcTerminationCheck(ctx context.Context, tx *sql.Tx, d Dispatch, 
 	if cause == "lease_expired" {
 		to = p.Expired
 	}
-	session, err := rcLastSession(ctx, tx, d.Facts.Repository.RunnerRoot.RunnerID)
+	restarted, err := rcRunnerRestarted(ctx, tx, d)
 	if err != nil {
 		return "", "", err
 	}
-	if retained || m.DaemonBoot != s.meta.DaemonBoot || (session.SessionID != "" && session.RunnerBoot != d.Facts.RunnerBoot) {
+	if retained || m.DaemonBoot != s.meta.DaemonBoot || restarted {
 		expired, err := controlExpiry(ctx, tx, identity.AttemptID, s.controlStamp())
 		if err != nil {
 			return "", "", err
@@ -955,7 +987,10 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 		// A restarted supervisor can never lease this attempt (its boot no longer
 		// matches the eligibility boot), so with no lease ever issued the launch
 		// capability is provably absent.
-		restarted := session.SessionID != "" && session.RunnerBoot != d.Facts.RunnerBoot
+		restarted, err := rcRunnerRestarted(ctx, tx, d)
+		if err != nil {
+			return ReleaseOutcome{}, err
+		}
 		if !(state == p.Unknown || restarted || !d.Acknowledged && (target || latched || refusal != "")) {
 			return ReleaseOutcome{}, g.Deny("reconciliation_required", "outbox")
 		}
@@ -1256,7 +1291,16 @@ func rcQuiescenceProof(rows []RuntimeObservation, receiptID string, exit *Runtim
 			continue
 		}
 		cpl := *v.Completion
-		if cpl.ReceiptID == receiptID && cpl.Version == execwire.Version && rcSettledBoundary(cpl.Boundary) && cpl.Boundary.Reservations >= receipts && cpl.Stream.Through == exit.StreamThrough && cpl.Stream.Digest == digest && cpl.Exit == want {
+		// An attestation is bound to the incarnation that ran the attempt and to
+		// the attempt's own receipt; a foreign one refuses rather than being
+		// skipped in favour of a weaker proof.
+		if row.RunnerBoot != runnerBoot {
+			return BoundaryState{}, "", p.BootMismatch
+		}
+		if cpl.ReceiptID != receiptID {
+			return BoundaryState{}, "", p.IdentityConflict
+		}
+		if cpl.Version == execwire.Version && rcSettledBoundary(cpl.Boundary) && cpl.Boundary.Reservations >= receipts && cpl.Stream.Through == exit.StreamThrough && cpl.Stream.Digest == digest && cpl.Exit == want {
 			return cpl.Boundary, QuiescenceRunnerAttestation, nil
 		}
 	}
@@ -1680,7 +1724,12 @@ func (s *Store) RetryInputs(ctx context.Context, taskID string) (RetryInputs, er
 	if v.Last, err = loadDispatch(ctx, tx, last.DispatchID); err != nil {
 		return RetryInputs{}, err
 	}
+	// Ceilings are the head grant's: a retry request narrows its own envelope to
+	// the predecessor's epoch, so the last request's budgets understate them.
 	v.Ceiling = v.Last.Request.Envelope.Budgets
+	if v.Grant.ID != "" {
+		v.Ceiling = v.Grant.Envelope.Budgets
+	}
 	if v.Cause, err = rcTerminalCause(ctx, tx, v.Last, last.State, s.meta.DaemonBoot); err != nil {
 		return RetryInputs{}, err
 	}

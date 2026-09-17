@@ -85,8 +85,21 @@ func TestReconciliationInputsSnapshot(t *testing.T) {
 	if !reflect.DeepEqual(kinds, map[string]int{"launch_intent": 1, "launched": 1, "exit": 1, "stop": 1, "terminated": 1}) {
 		t.Fatal(kinds)
 	}
-	if !in.Latched || in.GrantRefusal != "" || in.Paused || in.Generation != x.s.meta.Generation || in.DaemonBoot != x.s.meta.DaemonBoot || in.LastSession.SessionID != x.session.SessionID {
+	if !in.Latched || in.GrantRefusal != "" || in.Paused || in.Generation != x.s.meta.Generation || in.DaemonBoot != x.s.meta.DaemonBoot || in.LastSession.SessionID != x.session.SessionID || in.RunnerRestarted {
 		t.Fatalf("%+v", in)
+	}
+	// Restart evidence is monotonic: one hello under another boot marks the
+	// runner restarted for this attempt even after the original boot is reasserted.
+	restarted := helloFor(x.dispatchFixture)
+	restarted.RunnerBoot = newID()
+	if _, err := x.s.RunnerSession(ctx, x.runner, restarted); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := x.s.RunnerSession(ctx, x.runner, helloFor(x.dispatchFixture)); err != nil {
+		t.Fatal(err)
+	}
+	if in, err = x.s.ReconciliationInputs(ctx, attempt); err != nil || !in.RunnerRestarted || in.LastSession.RunnerBoot != x.facts.RunnerBoot {
+		t.Fatalf("restart history regressed: %+v %v", in.RunnerRestarted, err)
 	}
 	// After a reopen the attempt is unknown and the barrier restarts on the new
 	// clock domain; only the injected clock advances it.
@@ -640,6 +653,117 @@ func TestReconcileReportsAndClearances(t *testing.T) {
 	rowCount(t, x.s, "reconcile_reports", 3)
 	if _, err := x.s.ReconcileReport(ctx, "latch-cleared:"+stop.ID); err == nil {
 		t.Fatal("clearing record readable as a report")
+	}
+}
+
+// A retained finalize attestation is bound to the incarnation that ran the
+// attempt and to the attempt's own receipt: a foreign boot is boot_mismatch, a
+// foreign receipt identity_conflict, and neither falls through to the weaker
+// fake-harness proof that would otherwise stand.
+func TestAttestationBoundToDispatchBootAndReceipt(t *testing.T) {
+	foreignBoot := executionFixtureFor(t, nil)
+	foreignBoot.rcRunFake(t, "only")
+	_, custody := foreignBoot.upload(t, "succeeded", map[string]string{"greeting.txt": "hello\n"})
+	attempt := foreignBoot.d.Assignment.Identity.AttemptID
+	digest, err := foreignBoot.s.Streams().Digest(attempt, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cpl := Completion{Version: execwire.Version, MessageID: newID(), ReceiptID: custody.Receipt.ReceiptID, Stream: StreamWatermark{Through: 1, Digest: digest}, Exit: ExitRecord{Code: 0, PGID: 101, ObservedUnixNS: exitEvidence(0).ObservedUnixNS}, Boundary: BoundaryState{Quiescent: true}}
+	body, err := json.Marshal(rcRuntimeRecord{MessageID: cpl.MessageID, Completion: &cpl})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(body)
+	if _, err := foreignBoot.s.db.Exec("INSERT INTO runtime_observations VALUES(?,?,?,?,?,?,?)", attempt, hex.EncodeToString(sum[:]), "attestation", newID(), foreignBoot.s.meta.DaemonBoot, string(body), time.Now().UnixMilli()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := foreignBoot.s.CompleteFinalization(ctx, attempt, nil); !errors.Is(err, p.BootMismatch) {
+		t.Fatal("foreign-boot attestation not refused", err)
+	}
+	rcReleases(t, foreignBoot.s, 0)
+	foreignReceipt := executionFixtureFor(t, nil)
+	foreignReceipt.rcRunFake(t, "only")
+	foreignReceipt.upload(t, "succeeded", map[string]string{"greeting.txt": "hello\n"})
+	foreignReceipt.rcAttest(t, newID(), 1, BoundaryState{Quiescent: true})
+	if _, err := foreignReceipt.s.CompleteFinalization(ctx, foreignReceipt.d.Assignment.Identity.AttemptID, nil); !errors.Is(err, p.IdentityConflict) {
+		t.Fatal("foreign-receipt attestation not refused", err)
+	}
+	rcReleases(t, foreignReceipt.s, 0)
+	// Retained evidence is immutable, so a foreign attestation cannot be edited
+	// into a valid one either.
+	for _, query := range []string{"UPDATE runtime_observations SET runner_boot='x' WHERE kind='attestation'", "DELETE FROM runtime_observations WHERE kind='attestation'"} {
+		if _, err := foreignBoot.s.db.Exec(query); err == nil {
+			t.Fatal("runtime observations mutable", query)
+		}
+	}
+	// A bound attestation is accepted.
+	bound := executionFixtureFor(t, nil)
+	bound.rcRunFake(t, "only")
+	_, boundCustody := bound.upload(t, "succeeded", map[string]string{"greeting.txt": "hello\n"})
+	bound.rcAttest(t, boundCustody.Receipt.ReceiptID, 1, BoundaryState{Quiescent: true})
+	if reply, err := bound.s.CompleteFinalization(ctx, bound.d.Assignment.Identity.AttemptID, nil); err != nil || reply.Outcome != "succeeded" {
+		t.Fatal(reply, err)
+	}
+	var proof string
+	if err := bound.s.db.QueryRow("SELECT body FROM runtime_observations WHERE attempt_id=? AND kind='completion'", bound.d.Assignment.Identity.AttemptID).Scan(&proof); err != nil || !strings.Contains(proof, QuiescenceRunnerAttestation) {
+		t.Fatal("attestation proof source not retained", proof, err)
+	}
+}
+
+// SelectJournal: within one hello a corrupt entry for a dispatch wins whatever
+// its position; entries for other dispatches are ignored; the latest hello
+// mentioning the dispatch wins across hellos (rcLatestJournal).
+func TestSelectJournalOrdering(t *testing.T) {
+	intact := execwire.Journal{DispatchID: "d1", State: p.Running}
+	corrupt := intact
+	corrupt.Corrupt = true
+	other := execwire.Journal{DispatchID: "d2", Corrupt: true}
+	for _, order := range [][]execwire.Journal{{intact, corrupt}, {corrupt, intact}, {other, intact, corrupt, other}} {
+		if j, ok := SelectJournal(order, "d1"); !ok || !j.Corrupt {
+			t.Fatalf("corrupt did not win in %+v: %+v %v", order, j, ok)
+		}
+	}
+	if j, ok := SelectJournal([]execwire.Journal{other, intact}, "d1"); !ok || j.Corrupt {
+		t.Fatal(j, ok)
+	}
+	if _, ok := SelectJournal([]execwire.Journal{other}, "d1"); ok {
+		t.Fatal("foreign dispatch matched")
+	}
+	x := executionFixtureFor(t, nil)
+	x.run(t)
+	hello := func(js ...execwire.Journal) {
+		t.Helper()
+		h := helloFor(x.dispatchFixture)
+		h.Journals = nil
+		for _, j := range js {
+			raw, _ := json.Marshal(j)
+			h.Journals = append(h.Journals, raw)
+		}
+		if _, err := x.s.RunnerSession(ctx, x.runner, h); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entry := execwire.Journal{DispatchID: x.d.ID, Identity: x.d.Assignment.Identity, RunnerBoot: x.facts.RunnerBoot, DaemonBoot: x.s.meta.DaemonBoot, State: p.Running}
+	bad := entry
+	bad.Corrupt = true
+	attempt := x.d.Assignment.Identity.AttemptID
+	hello(entry, bad)
+	if in, err := x.s.ReconciliationInputs(ctx, attempt); err != nil || !in.JournalFound || !in.Journal.Corrupt {
+		t.Fatalf("[intact,corrupt] not corrupt: %+v %v", in.Journal, err)
+	}
+	hello(entry)
+	if in, err := x.s.ReconciliationInputs(ctx, attempt); err != nil || !in.JournalFound || in.Journal.Corrupt {
+		t.Fatalf("later intact hello did not repair: %+v %v", in.Journal, err)
+	}
+	hello(bad, entry)
+	if in, err := x.s.ReconciliationInputs(ctx, attempt); err != nil || !in.Journal.Corrupt {
+		t.Fatalf("[corrupt,intact] not corrupt: %+v %v", in.Journal, err)
+	}
+	// A later hello that omits the dispatch leaves the last statement standing.
+	hello()
+	if in, err := x.s.ReconciliationInputs(ctx, attempt); err != nil || !in.Journal.Corrupt {
+		t.Fatalf("omitted journal cleared corruption: %+v %v", in.Journal, err)
 	}
 }
 

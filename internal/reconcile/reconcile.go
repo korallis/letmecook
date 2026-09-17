@@ -169,16 +169,20 @@ func Startup(ctx context.Context, d Deps) (Report, error) {
 	return run(ctx, d, "startup", "", nil)
 }
 
-// OnHello runs inside POST /x/v1/session after the session row is durable: the
-// runner's journals mark corrupt attempts and confirm preserved results, and the
-// runner's non-terminal attempts are classified. The report is always retained.
+// OnHello runs inside POST /x/v1/session after the session row is durable. Every
+// non-terminal attempt is classified (so a hello's outcome shares one key with a
+// sweep's), and the hello's journals, read with store.SelectJournal (corrupt
+// wins), apply only to the calling runner's own dispatches. The report is
+// retained when the outcome differs from the last retained one of this boot.
 func OnHello(ctx context.Context, d Deps, runnerID string, h execwire.Hello) (Report, error) {
 	if d.Store == nil {
 		return Report{}, nil
 	}
 	journals := map[string]execwire.Journal{}
 	for _, j := range h.Journals {
-		journals[j.DispatchID] = j
+		if chosen, ok := store.SelectJournal(h.Journals, j.DispatchID); ok {
+			journals[j.DispatchID] = chosen
+		}
 	}
 	return run(ctx, d, "hello", runnerID, journals)
 }
@@ -259,11 +263,10 @@ func run(ctx context.Context, d Deps, trigger, runnerID string, journals map[str
 		if err != nil {
 			return Report{}, err
 		}
-		if runnerID != "" && in.Dispatch.ID != "" && in.Dispatch.Facts.Repository.RunnerRoot.RunnerID != runnerID {
-			continue
-		}
+		// A hello's journals speak only for the calling runner's own dispatches;
+		// another runner can neither corrupt-mark nor repair them.
 		var journal *execwire.Journal
-		if j, ok := journals[in.Dispatch.ID]; ok && in.Dispatch.ID != "" {
+		if j, ok := journals[in.Dispatch.ID]; ok && in.Dispatch.ID != "" && in.Dispatch.Facts.Repository.RunnerRoot.RunnerID == runnerID {
 			journal = &j
 		}
 		dec := classify(in, journal, generation)
@@ -580,11 +583,11 @@ func classify(in store.ReconciliationInputs, journal *execwire.Journal, generati
 	}
 	_, exited := hasRuntime(in, "exit")
 	hinted := journal != nil && (journal.State == p.ResultPending || journal.ReceiptID != "") || in.JournalFound && (in.Journal.State == p.ResultPending || in.Journal.ReceiptID != "")
-	if exited || hinted {
+	if exited {
 		dec.entry.Classification = ResultPendingRemote
 		// Only the daemon's own exit observation moves state; a journal is a hint
 		// the store re-validates, never proof on its own.
-		if exited && in.State == p.Unknown && len(in.StopTargets) == 0 && !in.Latched && in.GrantRefusal == "" && !in.Paused {
+		if in.State == p.Unknown && len(in.StopTargets) == 0 && !in.Latched && in.GrantRefusal == "" && !in.Paused {
 			dec.entry.Detail = "process exit observed and result preserved by the runner; restoring result_pending for upload"
 			dec.act = actRecoverResultPending
 			if journal != nil {
@@ -592,13 +595,17 @@ func classify(in store.ReconciliationInputs, journal *execwire.Journal, generati
 			}
 			return dec
 		}
-		if !exited {
-			return wait(ResultPendingRemote, "runner journal reports a preserved result but the daemon holds no exit observation; awaiting the runner's exit evidence")
-		}
 		return wait(ResultPendingRemote, "process exited; awaiting the runner's upload and finalize")
 	}
+	// Without the daemon's exit observation a journal hint changes nothing below:
+	// the lease and barrier rules apply exactly as if the runner had said nothing,
+	// so a hint can never suppress fencing.
+	hint := ""
+	if hinted {
+		hint = "; the runner's journal claims a preserved result but the daemon holds no exit observation"
+	}
 	if in.LeaseCount == 0 {
-		restarted := in.LastSession.SessionID != "" && in.LastSession.RunnerBoot != in.Dispatch.Facts.RunnerBoot
+		restarted := in.RunnerRestarted
 		if in.State == p.Unknown || restarted {
 			if cause == "" {
 				cause = CauseDaemonRestart
@@ -610,15 +617,15 @@ func classify(in store.ReconciliationInputs, journal *execwire.Journal, generati
 			dec.act, dec.basis = actRelease, store.ReleaseBasis{Kind: store.BasisNotStarted, StopID: stopID, Cause: cause, Actor: actor}
 			return dec
 		}
-		return wait(AwaitingEvidence, "accepted; awaiting the runner's lease request")
+		return wait(AwaitingEvidence, "accepted; awaiting the runner's lease request"+hint)
 	}
 	if in.LeaseBarrierPassed {
 		dec.entry.Classification, dec.entry.Cause, dec.entry.ActionRequired = LeaseLapsedUnconfirmed, CauseLeaseExpired, true
-		dec.entry.Detail = "every lease lapsed past the replacement barrier without termination evidence; fenced to stopping, reservation held until a supervisor report or owner release"
+		dec.entry.Detail = "every lease lapsed past the replacement barrier without termination evidence; fenced to stopping, reservation held until a supervisor report or owner release" + hint
 		dec.act = actFence
 		return dec
 	}
-	return wait(AwaitingEvidence, fmt.Sprintf("%s under lease %s; replacement barrier pending", in.State, in.LastLease.Request.Nonce))
+	return wait(AwaitingEvidence, fmt.Sprintf("%s under lease %s; replacement barrier pending%s", in.State, in.LastLease.Request.Nonce, hint))
 }
 
 // apply performs the decided action and records its outcome on the entry.
@@ -751,6 +758,7 @@ func plan(ctx context.Context, d Deps, taskID string) (store.DispatchRequest, st
 	envelope := in.Grant.Envelope
 	if in.Grant.ID == in.Last.Request.GrantID {
 		envelope = in.Last.Request.Envelope
+		envelope.Budgets = in.Grant.Envelope.Budgets
 	} else {
 		routes := []g.Route{}
 		for _, route := range in.Grant.Envelope.Routes {
@@ -760,6 +768,15 @@ func plan(ctx context.Context, d Deps, taskID string) (store.DispatchRequest, st
 		}
 		envelope.Routes = routes
 	}
+	// Compare-and-dispatch: the request's own attempt ceilings are narrowed to
+	// exactly the predecessor's epoch, so store.Dispatch admits it only while
+	// that attempt is still the task's last one; an attempt admitted in between
+	// makes the dispatch count exceed the ceiling and Dispatch refuses
+	// attempt_ceiling inside its own transaction. The grant's ceilings still
+	// bound it from above.
+	last := in.Attempts[len(in.Attempts)-1]
+	envelope.Budgets.Attempts = min(envelope.Budgets.Attempts, last.Identity.Epoch+1)
+	envelope.Budgets.Retries = min(envelope.Budgets.Retries, last.Identity.Epoch)
 	request := store.DispatchRequest{ID: newID(), Request: g.Request{GrantID: in.Grant.ID, TaskID: taskID, GrantRevision: in.Grant.Revision, Action: "execute", Envelope: envelope}, Decision: in.Last.Decision, Allowance: in.Last.Allowance}
 	return request, in.Cause, in, nil
 }
@@ -805,6 +822,23 @@ func autoRetryAfter(ctx context.Context, d Deps, taskID, attemptID, cause string
 		return entry, nil
 	}
 	entry.AttemptID, entry.Epoch, entry.Cause = last.Identity.AttemptID, last.Identity.Epoch, planned
+	// One intent key per predecessor: a second automatic retry of the same
+	// released attempt replays the first dispatch instead of admitting another.
+	request.ID = retryIntent(last.Identity.AttemptID)
+	if _, err := d.Store.Assignment(ctx, request.ID); err == nil {
+		entry.Detail = "retry refused: this attempt was already retried automatically"
+		return entry, nil
+	} else if !errors.Is(err, sql.ErrNoRows) && !refusal(err) {
+		return Entry{}, err
+	}
+	// Re-read immediately before admission; the narrowed ceilings in the request
+	// make store.Dispatch's own transaction the final check.
+	if again, err := d.Store.RetryInputs(ctx, taskID); err != nil {
+		return Entry{}, err
+	} else if len(again.Attempts) == 0 || again.Attempts[len(again.Attempts)-1].Identity.AttemptID != last.Identity.AttemptID || !again.Last.Released || again.Cause != planned {
+		entry.Detail = fmt.Sprintf("retry refused: released attempt %s is no longer the task's last released attempt with cause %q", last.Identity.AttemptID, planned)
+		return entry, nil
+	}
 	dispatched, err := d.Store.Dispatch(ctx, request)
 	if err != nil {
 		if !refusal(err) {
@@ -812,6 +846,9 @@ func autoRetryAfter(ctx context.Context, d Deps, taskID, attemptID, cause string
 		}
 		entry.State, entry.Detail = last.State, "auto-retry refused by admission: "+err.Error()
 		return entry, nil
+	}
+	if dispatched.Assignment.Identity.Epoch != last.Identity.Epoch+1 {
+		return Entry{}, fmt.Errorf("reconcile: auto-retry admitted epoch %d after predecessor epoch %d", dispatched.Assignment.Identity.Epoch, last.Identity.Epoch)
 	}
 	next := dispatched.Assignment.Identity
 	entry.AttemptID, entry.Epoch, entry.State, entry.Classification = next.AttemptID, next.Epoch, p.Assigned, RetryDispatched
@@ -821,6 +858,15 @@ func autoRetryAfter(ctx context.Context, d Deps, taskID, attemptID, cause string
 
 func terminal(state p.AttemptState) bool {
 	return state == p.Succeeded || state == p.Failed || state == p.Cancelled || state == p.Expired
+}
+
+// retryIntent is the stable dispatch intent key of the automatic retry after one
+// released attempt (UUIDv4 shape over SHA-256(attempt:auto-retry)).
+func retryIntent(attemptID string) string {
+	b := sha256.Sum256([]byte(attemptID + ":auto-retry"))
+	b[6] = b[6]&15 | 64
+	b[8] = b[8]&63 | 128
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }
 
 // newID mints a UUIDv4 report or intent key; crypto/rand.Read either fills the

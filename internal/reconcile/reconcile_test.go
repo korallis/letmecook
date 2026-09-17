@@ -452,17 +452,25 @@ func TestOnHelloJournalsScopeAndCorruption(t *testing.T) {
 	if e := entryFor(t, report, k.id().AttemptID); e.Classification != JournalCorrupt || !e.ActionRequired || e.Released || report.Trigger != "hello" || report.RunnerID != f.runnerID {
 		t.Fatalf("%+v", report)
 	}
-	if other, err := OnHello(ctx, f.deps(), uuid(), hello); err != nil || len(other.Entries) != 0 {
-		t.Fatal("another runner's hello classified this runner's attempt", other, err)
+	// Every hello classifies every attempt (one outcome key shared with sweeps),
+	// but another runner's journals never speak for this runner's dispatch: the
+	// corrupt entry in a foreign hello neither marks nor repairs it.
+	other, err := OnHello(ctx, f.deps(), uuid(), hello)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if e := entryFor(t, other, k.id().AttemptID); e.Classification == JournalCorrupt || e.Released {
+		t.Fatalf("foreign runner's journal applied: %+v", e)
 	}
 	// Without corruption, a journal that says result_pending is a hint only: the
-	// daemon never observed the exit, so the attempt stays unknown and waits.
+	// daemon never observed the exit, so the attempt stays unknown under the
+	// ordinary lease rules (barrier pending here) with the hint on the detail.
 	hello.Journals[0].Corrupt, hello.Journals[0].State = false, p.ResultPending
 	report, err = OnHello(ctx, f.deps(), f.runnerID, hello)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if e := entryFor(t, report, k.id().AttemptID); e.Classification != ResultPendingRemote || e.State != p.Unknown || e.Released || e.ActionRequired {
+	if e := entryFor(t, report, k.id().AttemptID); e.Classification != AwaitingEvidence || e.State != p.Unknown || e.Released || e.ActionRequired || !strings.Contains(e.Detail, "journal claims") {
 		t.Fatalf("%+v", e)
 	}
 	// A corrupt journal persisted through the session row blocks later sweeps
