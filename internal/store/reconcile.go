@@ -384,14 +384,13 @@ func rcLeaseNonces(ctx context.Context, tx *sql.Tx, attemptID string) ([]string,
 // latches that have not been cleared. It mirrors control.go's controlSuppressed
 // plus the clearing record this file writes.
 func rcTaskLatched(ctx context.Context, tx *sql.Tx, taskID, grantID string) (bool, error) {
+	if stopped, err := dispatchStopped(ctx, tx, taskID); err != nil || stopped {
+		return stopped, err
+	}
 	var latched bool
-	// The sticky dispatch_stops flag StopDispatch writes follows the pause_task
-	// latch it writes in the same transaction (dispatchID(task, "legacy-stop")):
-	// clearing that latch resumes the task.
-	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=? AND NOT EXISTS(SELECT 1 FROM reconcile_reports r WHERE r.id=?))
- OR EXISTS(SELECT 1 FROM control_stops s WHERE `+rcActiveStopFilter+` AND (kind='global_stop' OR
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM control_stops s WHERE `+rcActiveStopFilter+` AND (kind='global_stop' OR
  (kind IN ('pause_task','cancel_attempt') AND task_id=?) OR
- (kind='authority_supersession' AND (grant_id=? OR (task_id=? AND EXISTS(SELECT 1 FROM control_targets t WHERE t.stop_id=s.id))))))`, taskID, latchClearedPrefix+dispatchID(taskID, "legacy-stop"), taskID, grantID, taskID).Scan(&latched)
+ (kind='authority_supersession' AND (grant_id=? OR (task_id=? AND EXISTS(SELECT 1 FROM control_targets t WHERE t.stop_id=s.id))))))`, taskID, grantID, taskID).Scan(&latched)
 	return latched, err
 }
 

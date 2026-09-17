@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	c "github.com/korallis/letmecook/internal/control"
 	"github.com/korallis/letmecook/internal/jobs"
 	"github.com/korallis/letmecook/internal/review"
 	"github.com/korallis/letmecook/internal/runstream"
@@ -395,4 +396,46 @@ func TestOwnerHTTPSLargeStreamByteBoundedWindow(t *testing.T) {
 	if !bytes.Contains(raw, []byte(`"error":"store_unavailable"`)) {
 		t.Fatal(string(raw))
 	}
+}
+
+func TestOwnerHTTPSStopResumeAfterForeignPauseClearance(t *testing.T) {
+	f := newOwnerFixture(t)
+	ctx := context.Background()
+	streams := &fixtureSinkReader{}
+	endpoint, client := f.serve(t, streams)
+	defer client.CloseIdleConnections()
+	create := taskBody(f, "stop-cycles-create")
+	taskID := create["message_id"].(string)
+	postWorkflow(t, client, endpoint, "/api/v1/tasks", create, 201)
+	proposal, err := workflow.BuildGrant(ctx, f.s, taskID, f.facts.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	approve := commandBody("stop-cycles-approve")
+	approve["eligibility_id"] = f.facts.ID
+	approve["expected_grant_id"] = ""
+	approve["proposal_digest"] = proposal.Digests["proposal"]
+	approve["allow_development_isolation"] = true
+	postWorkflow(t, client, endpoint, "/api/v1/tasks/"+taskID+"/approve", approve, 201)
+	// An independently retained pause was cleared before the first sticky stop.
+	if _, err := f.s.RequestStop(ctx, f.owner, c.Request{ID: v.ID(), Kind: c.PauseTask, TaskID: taskID, Cause: "operator"}); err != nil {
+		t.Fatal(err)
+	}
+	postWorkflow(t, client, endpoint, "/api/v1/tasks/"+taskID+"/resume", commandBody("foreign-resume"), 200)
+	for cycle := range 2 {
+		// Exercise production HTTP ordering: RequestStop(intent) then StopDispatch.
+		postWorkflow(t, client, endpoint, "/api/v1/tasks/"+taskID+"/stop", commandBody("cycle-stop-"+strconv.Itoa(cycle)), 202)
+		in, err := f.s.RetryInputs(ctx, taskID)
+		if err != nil || !in.Latched {
+			t.Fatalf("stop not effective: %+v %v", in, err)
+		}
+		postWorkflow(t, client, endpoint, "/api/v1/tasks/"+taskID+"/resume", commandBody("cycle-resume-"+strconv.Itoa(cycle)), 200)
+		in, err = f.s.RetryInputs(ctx, taskID)
+		if err != nil || in.Latched {
+			t.Fatalf("resume left sticky suppression: %t %v", in.Latched, err)
+		}
+	}
+	dispatch := commandBody("cycles-dispatch")
+	dispatch["grant_id"], dispatch["grant_revision"], dispatch["attempt_ms"] = approve["message_id"], int64(1), int64(60000)
+	postWorkflow(t, client, endpoint, "/api/v1/tasks/"+taskID+"/dispatch", dispatch, 201)
 }

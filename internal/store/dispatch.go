@@ -364,10 +364,42 @@ func dispatchAllowed(ctx context.Context, tx *sql.Tx, request g.Request, now int
 // dispatchStopped retains legacy stop history while honouring the same immutable
 // owner clearance as its pause_task marker. Admission and runtime fencing agree.
 func dispatchStopped(ctx context.Context, tx *sql.Tx, taskID string) (bool, error) {
-	var stopped bool
-	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=?
- AND NOT EXISTS(SELECT 1 FROM reconcile_reports WHERE id=?))`, taskID, latchClearedPrefix+dispatchID(taskID, "legacy-stop")).Scan(&stopped)
-	return stopped, err
+	var sticky bool
+	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=?)", taskID).Scan(&sticky); err != nil || !sticky {
+		return sticky, err
+	}
+	// The sticky row was created with the first retained legacy marker, whose
+	// generation may already be nonzero after unrelated pause clearances. Each
+	// generation counts cleared pauses, so it is bounded by retained pause rows.
+	// Later generations remain independently enforced by active control latches.
+	rows, err := tx.QueryContext(ctx, `SELECT s.id,EXISTS(SELECT 1 FROM reconcile_reports r WHERE r.id=?||s.id) FROM control_stops s WHERE s.kind='pause_task' AND s.task_id=?`, latchClearedPrefix, taskID)
+	if err != nil {
+		return false, err
+	}
+	markers := map[string]bool{}
+	for rows.Next() {
+		var id string
+		var cleared bool
+		if err := rows.Scan(&id, &cleared); err != nil {
+			rows.Close()
+			return false, err
+		}
+		markers[id] = cleared
+	}
+	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
+		return false, err
+	}
+	for generation := 0; generation <= len(markers); generation++ {
+		key := "legacy-stop"
+		if generation > 0 {
+			key = fmt.Sprintf("legacy-stop:%d", generation)
+		}
+		if cleared, found := markers[dispatchID(taskID, key)]; found {
+			return !cleared, nil
+		}
+	}
+	// A historical row with no recoverable marker is still a stop, not resume.
+	return true, nil
 }
 
 func placement(ctx context.Context, tx *sql.Tx, facts sc.Eligibility) error {
