@@ -24,6 +24,14 @@ selects an eligible named route and does not add an account or quota router.
 | Billing envelope | Every reachable connection/fallback must fit reviewed policy | Every reachable connection/fallback must be reviewed as subscription billing; paid or unclassified overflow rejects |
 | Remote uncertainty | Retain reservation; no replacement or drain completion until quiescence is proved | Identical; local limits do not prove remote stop |
 
+A third profile, `gateway-local-bounds-v1`, exists for the M1 development path
+([decision 0002](../decisions/0002-m1-end-to-end-integration.md) §6): a configured
+model gateway endpoint owns accounts and billing, every target is classified
+`gateway-managed` (a billing value invalid under either profile above), Gaffer
+enforces only the same mandatory local controls, and neither provider cap is
+available. It is never auto-selected and grants no provider cost or output
+guarantee; historical grant JSON is unchanged.
+
 The pinned native Codex experiment observed removal of configured output-token
 fields before the original backend send. The
 [retained evidence](../evidence/router-authority-extension.md#remaining-gates)

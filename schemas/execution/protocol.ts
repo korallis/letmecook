@@ -8,7 +8,7 @@ export type Refusal = 'ok' | 'duplicate' | 'malformed' | 'oversized' | 'unknown_
   | 'invalid_transition' | 'nonce_mismatch' | 'boot_mismatch' | 'delayed_reply' | 'ack_not_durable' | 'reconciliation_required';
 export type Identity = { generation: string; task_id: string; attempt_id: string; epoch: number };
 export type Route = { route_ref: string; decision_digest: string; policy_digest: string;
-  limits_profile: 'strict-provider-output-v1' | 'native-subscription-local-v1' };
+  limits_profile: 'strict-provider-output-v1' | 'native-subscription-local-v1' | 'gateway-local-bounds-v1' };
 export type Manifest = { manifest_id: string; sha256: string; bytes: number };
 export type AttemptState = 'assigned' | 'starting' | 'running' | 'stopping' | 'result_pending'
   | 'succeeded' | 'failed' | 'cancelled' | 'expired' | 'unknown';
@@ -88,7 +88,7 @@ function validate(v: unknown): asserts v is Message {
       fields(m.route, ['route_ref', 'decision_digest', 'policy_digest', 'limits_profile']);
       require(typeof m.route.route_ref === 'string' && /^[a-z][a-z0-9_-]{0,63}$/.exec(m.route.route_ref)?.[0] === m.route.route_ref);
       digest(m.route.decision_digest); digest(m.route.policy_digest);
-      require(['strict-provider-output-v1', 'native-subscription-local-v1'].includes(m.route.limits_profile)); break;
+      require(['strict-provider-output-v1', 'native-subscription-local-v1', 'gateway-local-bounds-v1'].includes(m.route.limits_profile)); break;
     case 'lease_request': case 'lease_reply':
       id(m.nonce); id(m.runner_boot); id(m.daemon_boot);
       if (m.kind === 'lease_request') integer(m.sent_ms); else integer(m.validity_ms, 1, 30000); break;
