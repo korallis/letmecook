@@ -20,15 +20,20 @@ live conformance, baseline evidence and fresh Opus review remain open. No worker
 or verifier runtime is supported yet.
 See the [inference boundary proof](docs/evidence/inference-boundary.md),
 [passive status experiment](experiments/router-status/README.md),
-[Linux isolation proof](docs/evidence/linux-profile.md), and the
-[9Router integration contract](docs/contracts/9router.md).
+[Linux isolation proof](docs/evidence/linux-profile.md), the generic
+[model gateway contract](docs/contracts/model-gateway.md), and the historical
+[9Router gateway profile](docs/contracts/9router.md).
 
-All worker, planner and reviewer model calls go through **9Router**. It owns provider
-authentication, multiple subscriptions from the same provider, account rotation and
-request fallback. Gaffer owns task authority, execution, recovery and review.
+All worker, planner and reviewer model calls go through the operator-configured
+**model gateway**, currently CLIProxyAPI. Gaffer receives an HTTPS base URL and a
+credential reference, never a credential value. The gateway owns provider
+credentials, accounts and subscriptions, rotation, cooldown and request fallback;
+Gaffer owns task authority, execution, recovery and review and does not duplicate
+account routing or quota accounting.
 
 Gaffer is designed for installation on infrastructure **you choose**. The daemon,
-runners and 9Router may share a suitable host or run on separate configured hosts.
+runners and model gateway may share a suitable host or run on separate
+configured hosts.
 No maintainer machine, hostname, account or private network is a product dependency.
 The released app must support installation and the complete execution workflow,
 including workers, without requiring Docker. Docker is optional for testing.
@@ -36,9 +41,10 @@ Supported unattended execution still requires an independently proven OS/native
 or dedicated VM confinement profile; unavailable profiles block execution.
 This is a product requirement, not a claim that a Docker-free runner or installer
 has already been validated.
-Connect an existing 9Router instance or set up your own; supported migration can
-preserve router configuration without bringing provider credentials into Gaffer.
-See [operator-selected deployment](docs/spec.md#12-operator-selected-deployment).
+Configure an operator-selected model gateway endpoint and protected credential
+reference. Gateway-specific setup or migration stays outside Gaffer and never brings
+provider credentials into its store. See the [model gateway contract](docs/contracts/model-gateway.md)
+and [operator-selected deployment](docs/spec.md#12-operator-selected-deployment).
 
 | Start here | Purpose |
 | --- | --- |

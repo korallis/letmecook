@@ -244,8 +244,9 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--oxide);outline-offs
 <li class="lvl3"><a href="#evaluation-what-has-been-removed-as-a-release-promise">What has been removed as a release promise</a></li>
 <li class="lvl2"><a href="#evaluation-3-build-or-reuse-before-building">3. Build or reuse before building</a></li>
 <li class="lvl2"><a href="#evaluation-4-provider-and-gateway-feasibility">4. Provider and gateway feasibility</a></li>
-<li class="lvl3"><a href="#evaluation-9router-is-the-model-access-foundation">9Router is the model-access foundation</a></li>
-<li class="lvl3"><a href="#evaluation-a-thin-integration-with-one-source-of-account-configuration">A thin integration, with one source of account configuration</a></li>
+<li class="lvl3"><a href="#evaluation-current-configured-gateway-requirement">Current configured gateway requirement</a></li>
+<li class="lvl3"><a href="#evaluation-historical-9router-gateway-profile">Historical 9Router gateway profile</a></li>
+<li class="lvl3"><a href="#evaluation-historical-thin-integration-with-one-source-of-account-configuration">Historical thin integration, with one source of account configuration</a></li>
 <li class="lvl3"><a href="#evaluation-concrete-integration-boundaries-from-source">Concrete integration boundaries from source</a></li>
 <li class="lvl3"><a href="#evaluation-harness-and-provider-compatibility">Harness and provider compatibility</a></li>
 <li class="lvl3"><a href="#evaluation-failure-and-budget-responsibilities">Failure and budget responsibilities</a></li>
@@ -296,7 +297,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--oxide);outline-offs
 <li class="lvl3"><a href="#spec-63-verification-and-acceptance">6.3 Verification and acceptance</a></li>
 <li class="lvl3"><a href="#spec-64-external-effects">6.4 External effects</a></li>
 <li class="lvl2"><a href="#spec-7-memory-and-context">7. Memory and context</a></li>
-<li class="lvl2"><a href="#spec-8-9router-integration-and-task-capacity">8. 9Router integration and task capacity</a></li>
+<li class="lvl2"><a href="#spec-8-model-gateway-integration-and-task-capacity">8. Model gateway integration and task capacity</a></li>
 <li class="lvl3"><a href="#spec-81-ownership-and-connection-model">8.1 Ownership and connection model</a></li>
 <li class="lvl3"><a href="#spec-82-inference-and-management-contract">8.2 Inference and management contract</a></li>
 <li class="lvl3"><a href="#spec-83-availability-and-spending">8.3 Availability and spending</a></li>
@@ -317,19 +318,24 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--oxide);outline-offs
 <li class="lvl2"><a href="#roadmap-m5-recurring-work">M5 — Recurring work</a></li>
 <li class="lvl2"><a href="#roadmap-m6-external-usability-and-v1">M6 — External usability and v1</a></li>
 <li class="lvl2"><a href="#roadmap-later-experiments-and-entry-conditions">Later experiments and entry conditions</a></li>
-<li class="lvl2"><a href="#roadmap-traceability-from-the-original-plan">Traceability from the original plan</a></li></ul></section></nav>
+<li class="lvl2"><a href="#roadmap-traceability-from-the-original-plan">Traceability from the original plan</a></li></ul></section>
+<section class="navdoc" data-doc="model-gateway"><a class="navtitle" href="#model-gateway">Model gateway<em>Endpoint, credentials and inference boundary</em></a><ul class="navlist"><li class="lvl2"><a href="#model-gateway-configuration">Configuration</a></li>
+<li class="lvl2"><a href="#model-gateway-ownership-and-inference-boundary">Ownership and inference boundary</a></li>
+<li class="lvl2"><a href="#model-gateway-status-usage-and-conformance">Status, usage and conformance</a></li>
+<li class="lvl2"><a href="#model-gateway-current-cliproxyapi-observation">Current CLIProxyAPI observation</a></li>
+<li class="lvl2"><a href="#model-gateway-9router-mapping">9Router mapping</a></li></ul></section></nav>
   </aside>
   <main class="main">
     <header class="hero">
       <h1>Keep the intent.<br>Deliver the work.</h1>
       <p>Capture an idea. Agree what done means. Keep authorised work moving on your machines, and return to verified changes you can review.</p>
-      <p>A self-hosted coding-agent coordinator, with 9Router managing model access and multiple subscriptions across the whole crew.</p>
+      <p>A self-hosted coding-agent coordinator, with an operator-configured model gateway owning provider access across the whole crew.</p>
       <div class="capture" aria-label="Illustrative capture and brief">
         <span class="cbox">tidy up the auth module</span>
         <span class="carrow" aria-hidden="true">→</span>
         <span class="cbrief"><b>proposed brief</b> remove dead code, pass lint, preserve behaviour<br><b>confirm</b> server auth only <em>· awaiting your approval</em></span>
       </div>
-      <div class="meta">Five documents · evidence, requirements, design and delivery gates<br>Proposed features, not implemented behaviour</div>
+      <div class="meta">Six documents · evidence, requirements, design and delivery gates<br>Proposed features, not implemented behaviour</div>
     </header>
     <article class="doc" id="readme" data-doc="readme"><h1 id="readme-gaffer">Gaffer</h1>
 <p><strong>Turn an idea into reviewed software, and keep the work moving on machines you own.</strong></p>
@@ -338,14 +344,17 @@ idea from your phone or laptop, correct a brief that states the intended outcome
 and approve a bounded plan. Gaffer runs that work through supported agent harnesses,
 retains decisions and progress, and returns changes with verification evidence.
 An always-on machine holds the project when your laptop is closed.</p>
-<p><strong>9Router is the shared model-access control plane from the first release.</strong> All
-agent harnesses and Gaffer&#39;s own planning calls route through it. Provider accounts,
-multiple subscriptions from the same provider, account rotation and model fallback
-are configured once in 9Router; Gaffer coordinates tasks above that layer.</p>
-<p>The alpha design includes <strong>task-aware route selection</strong>. Gaffer assesses the
-actual work, filters routes by permission and verified capabilities, and explains
-which eligible route fits. Operator preferences guide the choice; the full fallback
-chain remains in 9Router. See the <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md">selection contract</a>
+<p><strong>An operator-configured model gateway is the shared model-access boundary from
+the first release; the current selection is CLIProxyAPI.</strong> All agent harnesses and
+Gaffer&#39;s own planning calls route through its configured HTTPS base URL. The gateway
+owns provider credentials, accounts and subscriptions, rotation, cooldown and
+request fallback; Gaffer coordinates tasks above that layer without becoming a
+second account router or quota ledger. See the <a href="#model-gateway">model gateway contract</a>.</p>
+<p>The alpha design includes <strong>task-aware model selection</strong>. Gaffer assesses the
+actual work, filters gateway model IDs or aliases by permission and verified
+capabilities, and explains which eligible target fits. Operator preferences guide
+the choice; request fallback remains in the configured gateway. See the
+<a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md">selection contract</a>
 for bounded assessment, uncertainty, override and independent review requirements.</p>
 <p>The thing worth building is continuity between <strong>what you meant, what you authorised,
 what ran, and what you accepted</strong>. More agents and more tokens are means to that end.</p>
@@ -353,7 +362,7 @@ what ran, and what you accepted</strong>. More agents and more tokens are means 
 <p>Gaffer means the foreman on a building site. The name is provisional.</p>
 </blockquote>
 <h2 id="readme-status-and-reading-order">Status and reading order</h2>
-<p><strong>Revised planning baseline v0.4 · 14 September 2026.</strong></p>
+<p><strong>Revised planning baseline v0.4 · 17 September 2026.</strong></p>
 <p>For current implementation status, see the
 <a href="https://github.com/korallis/letmecook/blob/main/README.md">project README</a>.</p>
 <p>These documents describe intended behaviour, not implemented or verified features.
@@ -383,8 +392,12 @@ challenged and why.</p>
 <td><a href="#roadmap">Roadmap</a></td>
 <td>Dependency-ordered milestones and tests that determine whether to continue</td>
 </tr>
+<tr>
+<td><a href="#model-gateway">Model gateway contract</a></td>
+<td>Generic endpoint, credential-reference and inference-boundary requirements</td>
+</tr>
 </tbody></table></div>
-<p>Open <a href="#top">the documentation reader</a> for all five documents. Markdown is the
+<p>Open <a href="#top">the documentation reader</a> for all six documents. Markdown is the
 source of truth; the HTML is generated from it. Maintainers can rebuild and verify
 it with Node.js 24 or newer:</p>
 <pre><code class="language-sh">npm --prefix docs ci
@@ -403,26 +416,28 @@ to navigate dependencies, and the
 for issue execution instructions.</p>
 <h2 id="readme-what-you-own">What you own</h2>
 <p>You own the orchestration process, task records, context files, execution machines
-and the 9Router instance that connects your model accounts. Several subscriptions
-from one provider are separate connections in that router, available to all eligible
-agents through named routes. Gaffer does not duplicate provider login, refresh,
-account selection or request-level fallback.</p>
-<p>You choose the hosts for the daemon, each runner and 9Router. They can share a
+and the configured model gateway. Gaffer stores its endpoint and a protected credential
+reference, not provider or gateway credential values. The gateway owns provider
+login, accounts and subscriptions, refresh, rotation, cooldown and request-level
+fallback; Gaffer does not duplicate those functions.</p>
+<p>You choose the hosts for the daemon, each runner and model gateway. They can share a
 suitable machine or use separate machines. Register and explicitly enable eligible
 runners, then choose which projects they may execute; discovery of a machine never
 enrolls it or grants execution authority. A maintainer&#39;s test machine is only one
 optional environment, with no built-in hostname, address or account dependency.</p>
-<p>Connect an existing 9Router instance, set up a fresh one, or perform an
-operator-directed migration supported by that router version. Router credentials
+<p>Configure an operator-selected HTTPS model gateway endpoint, the protocols and
+model IDs or aliases it may serve, and a credential reference. Gateway credentials
 and provider sessions stay inside its own trust boundary and are never bundled
-with Gaffer. Tailscale is one optional private networking choice; deployments may
+with Gaffer. Gateway-specific setup and migration remain operator concerns. Tailscale
+is one optional private networking choice; deployments may
 use another tested transport satisfying the same authentication and TLS contract.
 See <a href="#spec-12-operator-selected-deployment">deployment choices and migration boundaries</a>.</p>
-<p>Cloud harnesses still send prompts, code and tool results to their model provider.
-Self-hosted orchestration does not mean local inference, air-gapped operation or
-independence from provider policy. Provider credentials stay with 9Router; agents
-receive access to the configured router endpoint. Subscription and paid-API routes
-have explicit billing policies in that shared configuration.</p>
+<p>Cloud harnesses still send prompts, code and tool results through the configured
+gateway to model providers. Self-hosted orchestration does not mean local inference,
+air-gapped operation or independence from provider policy. Workers never receive
+the gateway credential: a trusted per-attempt boundary injects it and pins permitted
+protocols and models. Subscription and paid-API routing policy stays with the gateway; missing status
+or usage signals remain explicit unknowns in Gaffer.</p>
 <h2 id="readme-why-build-this">Why build this</h2>
 <p>Persistent coordination, specifications and quota-aware tools already exist.
 <a href="https://cursor.com/blog/projects">Cursor Projects</a> describes persistent coordination;
@@ -432,19 +447,22 @@ place through the complete operator workflow, rather than a claim that these ide
 are new. The <a href="#evaluation-3-build-or-reuse-before-building">comparison and reuse gate</a>
 comes before substantial infrastructure work.</p>
 <p>The test is practical: does Gaffer deliver more accepted work with less of your
-attention than a well-configured standalone harness using the same 9Router routes,
-with a good brief and progress notes?</p>
+attention than a well-configured standalone harness using the same model gateway,
+model targets, good brief and progress notes?</p>
 <h2 id="readme-first-useful-release">First useful release</h2>
 <p>One operator, one repository, one explicitly enabled runner, one supported coding
-harness, and sequential tasks, using 9Router from day one. The integration proves
-two subscriptions from the same provider before alpha. A responsive web application provides capture,
+harness, and sequential tasks, using the configured model gateway from day one.
+The current selection is CLIProxyAPI; gateway-specific account and fallback
+behaviour must be proven before Gaffer relies on it. A responsive web application
+provides capture,
 brief-and-plan approval, status, review evidence and stop. The foundation includes
 durable attempts, bounded retries, local memory files and explicit publication.</p>
 <p>A runner may share the always-on machine with the daemon, but project code runs in
 an isolated execution environment. Client and production hosts are excluded from
 the initial supported deployment.</p>
 <p>The later product adds a second harness, multiple eligible machines, bounded
-parallelism, task scheduling informed by 9Router and recurring work. Automated memory
+parallelism, task scheduling informed by gateway observations where available
+and recurring work. Automated memory
 curation and auto-merge must prove value before becoming release
 requirements.</p>
 <h2 id="readme-shape-of-the-system">Shape of the system</h2>
@@ -459,8 +477,8 @@ Git context: reviewed knowledge and decision history
 Runner journal: active attempts, unsent output and recoverable local work
 
 All model calls: planner / reviewer / worker harness
-  → 9Router named route → provider connections (including multiple subscriptions)
-9Router: provider authentication, account selection, quotas and request fallback
+  → trusted per-attempt inference boundary → configured gateway model ID or alias
+Model gateway: provider credentials, accounts/subscriptions, rotation, cooldown, fallback
 Gaffer: task dependencies, runner placement, authority, task budgets and recovery
 </code></pre>
 <h2 id="readme-product-commitments">Product commitments</h2>
@@ -485,10 +503,12 @@ to the <a href="#prd">PRD</a>, <a href="#spec">specification</a> and <a href="#r
 contained planning documents, not an application implementation. Research verifies
 what primary sources document; it does not establish that a competitor, harness or
 security mechanism works as advertised in Gaffer&#39;s intended environment.</p>
-<p><strong>v0.4 clarification:</strong> 9Router is an intentional foundation: one shared place to
-manage model access and multiple subscriptions from the same provider. The v0.3
-recommendation to defer it was an overcorrection and is superseded. Gaffer builds
-the work orchestration above 9Router, without duplicating its account router.</p>
+<p><strong>17 September 2026 clarification:</strong> the product requirement is one
+operator-configured model gateway, currently CLIProxyAPI, not 9Router specifically.
+The gateway owns provider credentials, accounts/subscriptions, rotation, cooldown
+and request fallback. Gaffer builds work orchestration above that boundary without
+duplicating account routing or quota accounting. The v0.4 9Router decision and its
+source evidence remain historical gateway-specific material.</p>
 <h2 id="evaluation-1-overall-judgment">1. Overall judgment</h2>
 <p>The product intent is coherent: you want to describe work naturally, retain the
 agreement and progress over time, run agents on explicitly chosen machines, and
@@ -501,12 +521,13 @@ curator, a review editor and an integration platform. Several absolute promises
 are stronger than the architecture can provide.</p>
 <p><strong>Recommendation:</strong> prove a complete durable single-worker workflow first. Keep
 local ownership, intent, permissioned placement, portable memory, coding harnesses
-and shared model access through 9Router. Delay sophistication until a measured operator problem requires it.</p>
+and shared model access through the configured gateway. Delay sophistication until a measured operator problem requires it.</p>
 <p>The differentiator to test is continuity from intention through accepted change.
 There is no evidence yet that this requires multiple agents, a separate strong
 coordinator model, automatic curation or mandatory TOON. These can be useful options
-without defining the product&#39;s first release. 9Router is different: it is the chosen
-provider/account-routing foundation that reduces what Gaffer has to build.</p>
+without defining the product&#39;s first release. The model gateway boundary is
+different: it is the chosen provider/account-routing foundation that reduces what
+Gaffer has to build. CLIProxyAPI is the current operator selection.</p>
 <h2 id="evaluation-2-findings-and-resulting-changes">2. Findings and resulting changes</h2>
 <p>Priority describes implementation dependency, not a claim of an exploitable bug
 in software that does not yet exist.</p>
@@ -566,7 +587,7 @@ in software that does not yet exist.</p>
 <tr>
 <td>P1</td>
 <td>Account routing and task scheduling were conflated</td>
-<td>Keep account login, multiple subscriptions, connection selection and request fallback in 9Router. Gaffer consumes named routes and availability, and owns task admission/recovery. Verify concrete interface gaps early; unknown quota stays unknown.</td>
+<td>Keep provider credentials, accounts/subscriptions, rotation, cooldown and request fallback in the configured model gateway. Gaffer consumes allowed model IDs or aliases and safe availability observations, and owns task admission/recovery. Verify concrete interface gaps early; missing status and quota stay unknown.</td>
 </tr>
 <tr>
 <td>P1</td>
@@ -602,7 +623,7 @@ in software that does not yet exist.</p>
 <h3 id="evaluation-what-remains-central">What remains central</h3>
 <p>The local control plane, an always-on home for projects, capture from a phone,
 versioned briefs, a coordinator that plans rather than edits code, opt-in placement,
-9Router-based account access, multiple subscriptions per provider, portable context,
+gateway-owned provider/account access, portable context,
 explicit paid opt-in and review
 before delivery all remain. The revision changes how to prove and deliver them.</p>
 <h3 id="evaluation-what-has-been-removed-as-a-release-promise">What has been removed as a release promise</h3>
@@ -667,7 +688,7 @@ All sources were checked on 14 September 2026.</p>
 </tbody></table></div>
 <p>Do not infer “missing” from an absent README paragraph. Mark a property unknown
 until documentation, code inspection or a controlled test establishes it.</p>
-<p><strong>M0 comparison rubric:</strong> integration with the selected 9Router model-access layer; local state ownership/export;
+<p><strong>M0 comparison rubric:</strong> integration with the configured model gateway; local state ownership/export;
 phone capture and correction; scope-bound authority; runner-local policy; tested
 isolation; leases/reconciliation; exact-artifact review/publication; dependency
 integration; backup/restore; licence and dependency compatibility; maintenance and
@@ -684,17 +705,28 @@ Go build, preserving 9Router ownership. It challenges the strongest alternative,
 extending Claudexor&#39;s existing lifecycle, and records licence/dependency limits,
 control gaps, costs, first adapter target and provisional-slice disposition.
 This is a decision record, not a completed measured comparison or locked M0 exit.
+Its 9Router selection is historical and does not establish CLIProxyAPI conformance.
 Neither candidate was executed; paired workflow/effort results remain unknown.
 Fresh Opus review, Docker-free #89 proof, live #6/#7/#8 acceptance and real #1
 baseline evidence remain blocked. The failed live attempt remains failed; no
 retry is authorized by the decision. Historical shortlist findings above retain
 their 14 September source-only scope.</p>
 <h2 id="evaluation-4-provider-and-gateway-feasibility">4. Provider and gateway feasibility</h2>
-<h3 id="evaluation-9router-is-the-model-access-foundation">9Router is the model-access foundation</h3>
-<p>The user selected 9Router to centralize every agent&#39;s model access and support
-several subscriptions from the same provider. That requirement is part of the
-architecture, not an optional optimisation. It simplifies Gaffer: one endpoint and
-named routes replace per-agent provider authentication and a new account router.</p>
+<h3 id="evaluation-current-configured-gateway-requirement">Current configured gateway requirement</h3>
+<p>Gaffer now expects an operator-selected HTTPS model gateway endpoint, a protected
+credential reference, one or more supported protocols and an exact model-ID/alias
+allowlist. The current selection is CLIProxyAPI. On 17 September 2026, the
+operator-configured endpoint answered <code>POST /v1/chat/completions</code>,
+<code>POST /v1/responses</code>, <code>POST /v1/messages</code> and <code>GET /v1/models</code>. The host, URL and
+credential are operator configuration and are not recorded. These observations do
+not establish streaming, tools, structured output, fallback, cancellation,
+status/usage or account behavior. See the <a href="#model-gateway">generic gateway contract</a>.</p>
+<h3 id="evaluation-historical-9router-gateway-profile">Historical 9Router gateway profile</h3>
+<p>The v0.4 baseline selected 9Router to centralize every agent&#39;s model access and
+support several subscriptions from the same provider. At that time the requirement
+was part of the architecture, not an optional optimisation. It simplified Gaffer:
+one endpoint and named routes replaced per-agent provider authentication and a new
+account router. That choice is no longer a generic product requirement.</p>
 <p>A source inspection of the referenced fork at commit
 <code>69724d86d4486fa5d722e63ebb6c9700e71aebff</code> confirms two separate implemented mechanisms:</p>
 <ul>
@@ -708,19 +740,21 @@ combo name as the requested model. This is distinct from choosing among accounts
 for one provider. <a href="https://github.com/rickicode/9router/blob/69724d86d4486fa5d722e63ebb6c9700e71aebff/open-sse/services/combo.js">Combo implementation</a></li>
 </ul>
 <p>This is stronger evidence than a README feature claim, but it is still source
-inspection, not an end-to-end test of the user&#39;s installed instance. M0 tests one
-real harness through a named route backed by two subscriptions from one provider.
-It establishes stream/tool behaviour and verifies fallback without Gaffer creating
-a duplicate task attempt.</p>
-<h3 id="evaluation-a-thin-integration-with-one-source-of-account-configuration">A thin integration, with one source of account configuration</h3>
-<p>The fork implements Chat Completions, Messages and Responses-compatible inference
-paths. Model discovery includes combos, but can return models without an active
+inspection, not an end-to-end test of the user&#39;s installed instance. The historical
+M0 profile called for one real harness through a named route backed by two
+subscriptions from one provider. That test would establish stream/tool behaviour
+and verify fallback without Gaffer creating a duplicate task attempt.</p>
+<h3 id="evaluation-historical-thin-integration-with-one-source-of-account-configuration">Historical thin integration, with one source of account configuration</h3>
+<p>The inspected 9Router fork implements Chat Completions, Messages and
+Responses-compatible inference paths. Model discovery includes combos, but can
+return models without an active
 connection; discovery alone is not readiness. Use a bounded real request to probe
 the selected route. <a href="https://github.com/rickicode/9router/blob/69724d86d4486fa5d722e63ebb6c9700e71aebff/src/app/api/v1/models/route.js">Model discovery</a></p>
-<p>Gaffer keeps router/route references, task-linked usage and read-only status views.
-9Router remains authoritative for account credentials, configuration, rotation,
-provider cooldowns and model fallback. Link to its management UI for account changes.
-Do not build competing login, subscription balancing or refresh logic in Gaffer.</p>
+<p>That historical design kept router/route references, task-linked usage and read-only
+status views. For that profile, 9Router was authoritative for account credentials,
+configuration, rotation, provider cooldowns and model fallback. Its management UI
+owned account changes. Do not build competing login, subscription balancing or
+refresh logic in Gaffer.</p>
 <p>The dashboard routes provide concrete integration points, not a stable public
 management contract. Pin their version and project only allowlisted status fields.
 Per-connection usage retrieval can refresh credentials/update state; distinguish
@@ -729,7 +763,7 @@ snapshot reads from active refresh rather than polling everything indiscriminate
 <p>The original hard-coded SQLite path should still be removed: the referenced
 <a href="https://github.com/rickicode/9router">README</a> describes a different storage layout,
 and private storage is not the right API contract regardless of backend. This is a
-reason to integrate through an adapter, not a reason to defer 9Router.</p>
+reason the historical profile integrated through an adapter, not through private storage.</p>
 <h3 id="evaluation-concrete-integration-boundaries-from-source">Concrete integration boundaries from source</h3>
 <p>The inspected inference handler makes API-key enforcement configurable and does
 not implement per-key combo/model scope. Enable authentication and use a narrow
@@ -751,15 +785,18 @@ the deployed build. <a href="https://github.com/rickicode/9router/blob/69724d86d
 <a href="https://github.com/rickicode/9router/blob/69724d86d4486fa5d722e63ebb6c9700e71aebff/src/dashboardGuard.js">dashboard guard</a></p>
 <h3 id="evaluation-harness-and-provider-compatibility">Harness and provider compatibility</h3>
 <p>Keep the documented harness execution interfaces: Codex structured events/resume
-and Claude print/streaming modes. Configure their inference endpoints to 9Router
-explicitly, and test the full protocol path. Gaffer&#39;s planner calls a named route
-directly through the compatible API; it does not need a separate native login.
+and Claude print/streaming modes. Configure their inference endpoints through the
+trusted boundary to the selected gateway, and test the full protocol path. Gaffer&#39;s
+planner calls an allowed model ID or alias through the compatible API; workers and
+planners receive neither a gateway credential nor a separate native provider login.
 <a href="https://learn.chatgpt.com/docs/non-interactive-mode">Codex noninteractive mode</a>,
 <a href="https://code.claude.com/docs/en/headless">Claude programmatic execution</a></p>
 <p>Technical compatibility and provider authentication/billing terms remain separate
-facts. 9Router owns the configured connections; Gaffer does not collect provider
-credentials. Verify each selected route against its current provider agreement
-without building that provider&#39;s auth lifecycle again in Gaffer.
+facts. The configured gateway owns provider credentials, accounts/subscriptions,
+rotation, cooldown and request fallback; Gaffer does not collect those credentials.
+Verify each selected model target against its current provider agreement without
+building that provider&#39;s auth lifecycle again in Gaffer. The retained 9Router
+findings apply only when that historical gateway profile is selected.
 <a href="https://learn.chatgpt.com/docs/auth">Codex authentication</a>,
 <a href="https://code.claude.com/docs/en/legal-and-compliance">Claude credential guidance</a></p>
 <p>The earlier research correction still applies: Claude&#39;s plan article has a June 15
@@ -767,15 +804,18 @@ update pausing the announced SDK-credit change, while lower sections preserve th
 superseded proposal. Do not hard-code that old credit model into usage estimates.
 <a href="https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan">Claude plan update</a></p>
 <h3 id="evaluation-failure-and-budget-responsibilities">Failure and budget responsibilities</h3>
-<p>9Router handles connection selection and request fallback within the authorised
-provider/model/billing set. If it succeeds, the Gaffer attempt continues. If all
-connections/routes are exhausted or a partial stream cannot safely recover, Gaffer
-preserves work, parks or reconciles the attempt and applies its task retry policy.
-Router downtime must not silently switch agents back to direct provider access.</p>
-<p>Unknown headroom remains unknown, but it does not require rebuilding the quota
-system. Use router observations, bounded task admission and explicit paid fallback
-policy. Keep request retries and task retries separately bounded. The integration
-contract and owner table are in <a href="#spec-8-9router-integration-and-task-capacity">spec section 8</a>.</p>
+<p>The configured gateway handles provider-account selection, rotation, cooldown and
+request fallback within the authorised provider/model/billing set. If it succeeds,
+the Gaffer attempt continues. If the model target or gateway is unavailable, or a
+partial stream cannot safely recover, Gaffer preserves work, parks or reconciles the
+attempt and applies its task retry policy. Gateway downtime must not silently switch
+agents back to direct provider access.</p>
+<p>Unknown headroom remains unknown, but it does not require rebuilding a quota system.
+Use safe gateway observations where available, bounded task admission and explicit
+paid fallback policy. Keep gateway request retries and Gaffer task retries separately
+bounded. The integration contract and owner table are in
+<a href="#spec-8-model-gateway-integration-and-task-capacity">spec section 8</a>. The retained
+9Router source evidence demonstrates only that historical gateway profile.</p>
 <h2 id="evaluation-5-engineering-evidence-and-its-limits">5. Engineering evidence and its limits</h2>
 <h3 id="evaluation-persistence-is-explicit-state-not-one-immortal-conversation">Persistence is explicit state, not one immortal conversation</h3>
 <p>Anthropic&#39;s long-running-agent engineering describes incremental sessions and
@@ -845,7 +885,7 @@ features, dependency changes and multi-step migrations.</p>
 </tr>
 </thead>
 <tbody><tr>
-<td>Standalone harness with the same 9Router routes and good brief/progress notes vs. Gaffer single worker</td>
+<td>Standalone harness with the same configured gateway model targets and good brief/progress notes vs. Gaffer single worker</td>
 <td>Does the operator workflow itself add value?</td>
 </tr>
 <tr>
@@ -865,7 +905,7 @@ features, dependency changes and multi-step migrations.</p>
 <td>Do format changes improve total task efficiency without reducing correctness?</td>
 </tr>
 </tbody></table></div>
-<p>Alternate/randomise execution order and repeat where practical. Keep the 9Router build/routes, models,
+<p>Alternate/randomise execution order and repeat where practical. Keep the gateway build, protocols/model targets,
 permissions, repository fixtures and task classes comparable; record any difference
 instead of attributing it to Gaffer. Use human criteria review and objective checks;
 a model grader cannot be the only judge of the central intent claim.</p>
@@ -925,8 +965,8 @@ a reliable measure of its remaining allowance.</p>
 </tr>
 <tr>
 <td>Model routing</td>
-<td>9Router is required from M0; all agents share routes and multiple subscriptions per provider</td>
-<td>Validate the pinned integration; extend only the necessary status/policy interface</td>
+<td>One operator-configured model gateway is required from M0; current selection CLIProxyAPI; all roles use its scoped boundary</td>
+<td>Validate exact protocol/model paths and extend only necessary status/policy interfaces; never add account routing or a quota ledger to Gaffer</td>
 </tr>
 <tr>
 <td>Fleet</td>
@@ -944,12 +984,13 @@ a reliable measure of its remaining allowance.</p>
 <td>M0 yields observed implementation effort</td>
 </tr>
 </tbody></table></div>
-<p>Unknowns remain real: which Docker-free harness/9Router/isolation combination
-passes on your hardware, the measured cost of extending either candidate versus
+<p>Unknowns remain real: which Docker-free harness/configured-gateway/isolation
+combination passes on your hardware, the measured cost of extending either candidate versus
 the selected narrow build, how much the brief workflow improves your work, and
 what level of concurrency your actual accounts sustain.
-The choice of shared routing through 9Router is settled; these are integration and
-product-value experiments around that foundation.</p>
+The choice of one shared model gateway is settled; CLIProxyAPI is the current
+selection. Its deeper conformance remains an integration experiment, while 9Router
+contracts and observations remain historical gateway-specific evidence.</p>
 <h2 id="evaluation-8-documentation-maintenance">8. Documentation maintenance</h2>
 <p>All 28 original story IDs are retained with revised acceptance and release scope.
 The README now distinguishes ownership from inference; the PRD states observable
@@ -962,7 +1003,7 @@ test, a model&#39;s self-report or a marketing page must not silently become a c
 of verified end-to-end product behaviour.</p>
 </article>
 <article class="doc" id="prd" data-doc="prd"><h1 id="prd-gaffer-product-requirements">Gaffer — Product Requirements</h1>
-<p><strong>Status:</strong> proposed baseline v0.4 · <strong>Owner:</strong> solo maintainer · <strong>Updated:</strong> 14 September 2026</p>
+<p><strong>Status:</strong> proposed baseline v0.4 · <strong>Owner:</strong> solo maintainer · <strong>Updated:</strong> 17 September 2026</p>
 <p>This revision follows the <a href="#evaluation">evaluation</a>. Requirements below are
 prospective. Story IDs from the original plan are retained; their release assignment
 now distinguishes the first useful product from later capability.</p>
@@ -972,12 +1013,13 @@ across sessions, and returns verified changes for the operator to accept.</p>
 <p>The primary hypothesis is that explicit intent, durable progress and a coherent
 review flow reduce operator effort on work spanning multiple sessions. Neither a
 large fleet nor fully automated memory is required to test that hypothesis.</p>
-<p>9Router is a required shared model-access layer, even with one harness. It owns
-provider connections, multiple subscriptions per provider and request routing.
-Gaffer owns the work, assesses each task&#39;s requirements and selects an eligible
-named route rather than individual account credentials. An operator&#39;s preference
-matrix seeds that choice; task evidence, verified capabilities and constraints
-determine suitability. A coordinator
+<p>An operator-configured model gateway is the required shared model-access boundary,
+even with one harness; the current selection is CLIProxyAPI. The gateway owns
+provider credentials, accounts and subscriptions, rotation, cooldown and request
+fallback. Gaffer owns the work, assesses each task&#39;s requirements and selects an
+eligible gateway model ID or alias rather than an account credential. An operator&#39;s
+preference matrix seeds that choice; task evidence, verified capabilities and
+constraints determine suitability. A coordinator
 is a logical role that plans and reports; it is not necessarily an always-running
 model conversation. Models wake for useful work, then stop consuming quota.</p>
 <h2 id="prd-2-audience-and-boundaries">2. Audience and boundaries</h2>
@@ -1000,7 +1042,7 @@ would require a complete separately tested deployment profile.</p>
 <li><strong>Spend attention proportionally.</strong> Small work gets one combined brief-and-plan approval. Reuse existing authority without repeated prompts; ask when a material uncertainty or change exceeds it.</li>
 <li><strong>Treat clarification as a budget, not a ceiling on understanding.</strong> Default to at most three questions per round, with options and free text. Never guess a consequential answer merely to meet that target.</li>
 <li><strong>Current instructions win.</strong> Remember scoped preferences, but reconfirm when context changes. A preference is not permission.</li>
-<li><strong>One model-access control plane.</strong> All agents use 9Router. Configure provider accounts, subscriptions, routing and fallback there once; Gaffer consumes those capabilities and owns task orchestration. Configured providers may receive code.</li>
+<li><strong>One model-access boundary.</strong> All agents use the operator-configured model gateway, currently CLIProxyAPI. Configure provider credentials, accounts/subscriptions, rotation, cooldown and fallback there; Gaffer consumes allowed model targets and owns task orchestration without a second account router or quota ledger. Configured providers may receive code.</li>
 <li><strong>Separate planning from execution.</strong> A model can propose work. Deterministic policy decides what can run, where, and with what authority.</li>
 <li><strong>Protect continuity before increasing concurrency.</strong> Persist attempts, preserve partial work, bound retries and reconcile uncertain outcomes.</li>
 <li><strong>Use simple memory first.</strong> Reviewed files and explicit progress precede learned idioms, embeddings and automatic curation.</li>
@@ -1017,12 +1059,12 @@ would require a complete separately tested deployment profile.</p>
 </thead>
 <tbody><tr>
 <td>Private alpha, after M2</td>
-<td>One operator/repository/runner/harness through 9Router; multiple subscriptions from one provider; named model routes and router-owned fallback; sequential tasks; responsive capture and approval; durable recovery; stop; explicit memory; verified artifact review and authorised PR publication</td>
+<td>One operator/repository/runner/harness through the configured model gateway; exact protocols and allowed model IDs or aliases; gateway-owned provider access and request fallback; sequential tasks; responsive capture and approval; durable recovery; stop; explicit memory; verified artifact review and authorised PR publication</td>
 <td>Parallel writers, auto-merge, chat, offline capture, automated curation</td>
 </tr>
 <tr>
 <td>Beta, after M4</td>
-<td>Second harness on the same 9Router instance; explicit multi-runner placement; bounded parallelism; integration before acceptance; task scheduling informed by router availability; manual context retrieval</td>
+<td>Second harness on the same configured gateway; explicit multi-runner placement; bounded parallelism; integration before acceptance; task scheduling informed by gateway availability where exposed; manual context retrieval</td>
 <td>Inferred quota precision, multi-user team pools</td>
 </tr>
 <tr>
@@ -1041,10 +1083,10 @@ implies those capabilities have been built.</p>
 <h2 id="prd-5-end-to-end-journey">5. End-to-end journey</h2>
 <h3 id="prd-phase-a-set-up-an-explicitly-permitted-workspace">Phase A — Set up an explicitly permitted workspace</h3>
 <h4 id="prd-us-a1-get-to-a-first-useful-result">US-A1 — Get to a first useful result</h4>
-<p><strong>Alpha.</strong> The operator connects the daemon to 9Router, connects a runner, verifies a harness,
-and sees one concrete next action.</p>
+<p><strong>Alpha.</strong> The operator connects the daemon to a configured model gateway, connects
+a runner, verifies a harness, and sees one concrete next action.</p>
 <ul>
-<li><input disabled="" type="checkbox"> <code>gaffer up</code> creates private state and prints the local setup URL; a diagnostic explains missing git, 9Router connectivity, harness, authentication or isolation support.</li>
+<li><input disabled="" type="checkbox"> <code>gaffer up</code> creates private state and prints the local setup URL; a diagnostic explains missing git, gateway connectivity, harness, authentication or isolation support.</li>
 <li><input disabled="" type="checkbox"> A packaged daemon serves its UI without a separately installed UI runtime. The runner may require the documented isolation runtime and provider CLI.</li>
 <li><input disabled="" type="checkbox"> First-run setup shows where state, execution files and provider credentials live.</li>
 <li><input disabled="" type="checkbox"> Uninstall stops services and removes program files; context and recovery artifacts are preserved unless the operator chooses to delete them.</li>
@@ -1068,19 +1110,19 @@ can reserve a runner to exact repositories/projects.</p>
 <li><input disabled="" type="checkbox"> Weakening a reservation requires an operator action on that host; refusals appear with a reason in the audit view.</li>
 <li><input disabled="" type="checkbox"> Reservation is described as placement control, not as process or data isolation.</li>
 </ul>
-<h4 id="prd-us-a4-manage-all-subscriptions-through-one-router">US-A4 — Manage all subscriptions through one router</h4>
-<p><strong>Alpha: 9Router with multiple subscriptions from the same provider.</strong> See
+<h4 id="prd-us-a4-use-one-configured-model-gateway">US-A4 — Use one configured model gateway</h4>
+<p><strong>Alpha: operator-selected gateway, currently CLIProxyAPI.</strong> See the
+<a href="#model-gateway">model gateway contract</a> and
 <a href="#evaluation-4-provider-and-gateway-feasibility">integration findings</a>.</p>
 <ul>
-<li><input disabled="" type="checkbox"> Connect one 9Router instance with an endpoint and router credential reference; select named routes for planning, coding and review.</li>
-<li><input disabled="" type="checkbox"> Alpha assesses concrete tasks and scoped steps before choosing among approved named routes; a fixed role-to-model matrix alone is insufficient. Separate mandatory capabilities, data/billing limits and uncertainty from preference ranking.</li>
+<li><input disabled="" type="checkbox"> Configure one gateway with a stable ID, operator-selected HTTPS base URL, protected credential reference, supported protocol set and exact allowed model IDs or aliases. Never store a credential value in Gaffer.</li>
+<li><input disabled="" type="checkbox"> Alpha assesses concrete tasks and scoped steps before choosing among approved gateway model targets; a fixed role-to-model matrix alone is insufficient. Separate mandatory capabilities, data/billing limits and uncertainty from preference ranking.</li>
 <li><input disabled="" type="checkbox"> Explain the proposed choice, relevant evidence/unknowns and eligible alternatives; support an operator override or standing automatic-selection policy within the permitted envelope.</li>
-<li><input disabled="" type="checkbox"> Bound any model-assisted assessment through a configured 9Router bootstrap route. Record selection and evidence versions; revalidate at dispatch and preserve the selected route throughout an attempt.</li>
-<li><input disabled="" type="checkbox"> Provider login, credential refresh, connection priority, account rotation and fallback are managed in 9Router. Gaffer links to its management surface and shows relevant read-only status.</li>
-<li><input disabled="" type="checkbox"> Two distinct subscriptions from one provider can serve the same route. Exhausting or disabling one allows 9Router to use the other without editing every agent&#39;s configuration.</li>
-<li><input disabled="" type="checkbox"> Separate subscriptions keep separate capacity; aliases for the same account do not create extra allowance. Shared organisation limits are respected where applicable.</li>
-<li><input disabled="" type="checkbox"> A probe verifies the exact harness→9Router→model path, including streaming/tool calls. Agents receive router access, never the underlying provider credentials.</li>
-<li><input disabled="" type="checkbox"> Usage observations name their source and freshness. Unknown headroom/reset stays unknown. Paid fallback is enabled explicitly in the route&#39;s billing policy.</li>
+<li><input disabled="" type="checkbox"> Bound any model-assisted assessment through an allowed bootstrap model. Record selection and evidence versions; revalidate at dispatch and preserve the selected target throughout an attempt.</li>
+<li><input disabled="" type="checkbox"> Provider login, credentials, accounts/subscriptions, rotation, cooldown and request fallback are managed in the gateway. Gaffer does not expose parallel account controls or a quota ledger.</li>
+<li><input disabled="" type="checkbox"> Where multiple accounts or subscriptions back one target, gateway-owned rotation or fallback does not require changing agent configuration or redispatching the Gaffer task. Do not claim this behavior without gateway-specific evidence.</li>
+<li><input disabled="" type="checkbox"> A probe verifies the exact harness→boundary→gateway→model path, including required streaming/tool behavior. Workers receive only attempt-scoped boundary access; the boundary injects the gateway credential and pins permitted protocols and models.</li>
+<li><input disabled="" type="checkbox"> Usage and status observations name their source and freshness. Missing management APIs, headroom, reset, resolved account or fallback details stay unknown. Paid fallback must be explicit in the gateway policy and proven enforceable where required.</li>
 </ul>
 <p>The <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md">task-routing contract</a> defines the optional
 operator preference example, hard eligibility, assessment budget, fresh review
@@ -1154,7 +1196,7 @@ expected verification, permitted execution and budget.</p>
 <p><strong>Alpha.</strong> The board distinguishes queued, running, reconciling, blocked,
 awaiting review, accepted, published, merged, failed and cancelled.</p>
 <ul>
-<li><input disabled="" type="checkbox"> Show current attempt, runner, harness, requested 9Router route, resolved model/connection when available, activity age, limits and next action.</li>
+<li><input disabled="" type="checkbox"> Show current attempt, runner, harness, requested gateway model ID or alias, resolved provider/model/account when available, activity age, limits and next action.</li>
 <li><input disabled="" type="checkbox"> Reconnecting or refreshing recovers stored events and indicates any log gap.</li>
 <li><input disabled="" type="checkbox"> Pause stops new dispatch. Cancel requests active termination; the UI shows whether termination was acknowledged.</li>
 <li><input disabled="" type="checkbox"> Re-run creates a new attempt with a reason and bounded retry allowance.</li>
@@ -1186,25 +1228,25 @@ work, verification failures, stopped attempts and resource blocks.</p>
 <li><input disabled="" type="checkbox"> Sending to a chat channel is a later integration with separately configured authority.</li>
 </ul>
 <h4 id="prd-us-c2-respond-to-capacity-limits">US-C2 — Respond to capacity limits</h4>
-<p><strong>Alpha task-aware route selection and caps; beta capacity-aware task scheduling.</strong>
-Gaffer selects an eligible named route for the work; 9Router selects models and
-provider connections within that route&#39;s approved fallback definition.</p>
+<p><strong>Alpha task-aware gateway-model selection and caps; beta capacity-aware task scheduling.</strong>
+Gaffer selects an eligible gateway model ID or alias for the work; the configured
+gateway owns provider accounts/subscriptions, rotation, cooldown and request fallback.</p>
 <ul>
-<li><input disabled="" type="checkbox"> Account exhaustion, cooldown and rotation stay in 9Router. A successful router fallback continues the current attempt without Gaffer redispatching the task.</li>
-<li><input disabled="" type="checkbox"> Distinct subscriptions from the same provider can supply the route; Gaffer consumes aggregate availability rather than maintaining competing per-account balances.</li>
-<li><input disabled="" type="checkbox"> When the whole route is unavailable, preserve the attempt and work. A replacement attempt starts only after the prior execution is fenced and its artifacts reconciled.</li>
-<li><input disabled="" type="checkbox"> Allowed providers, model capabilities and billing classes constrain the complete fallback route. No cross-provider transcript portability is assumed.</li>
-<li><input disabled="" type="checkbox"> Show router-reported reset/next probe time, or “unknown”; use bounded task-level backoff without thrashing.</li>
+<li><input disabled="" type="checkbox"> A successful gateway-owned rotation or fallback continues the current attempt without Gaffer redispatching the task.</li>
+<li><input disabled="" type="checkbox"> Gaffer consumes safe aggregate availability where exposed rather than maintaining competing per-account balances; missing account/subscription observations stay unknown.</li>
+<li><input disabled="" type="checkbox"> When the whole model target or gateway is unavailable, preserve the attempt and work. A replacement attempt starts only after the prior execution is fenced and its artifacts reconciled.</li>
+<li><input disabled="" type="checkbox"> Allowed providers, model capabilities and billing classes constrain the complete known fallback envelope. No cross-provider transcript portability is assumed; an uninspectable envelope blocks policies that require proof.</li>
+<li><input disabled="" type="checkbox"> Show gateway-reported reset/next probe time where available, otherwise “unknown”; use bounded task-level backoff without thrashing.</li>
 <li><input disabled="" type="checkbox"> Concurrency, duration, attempts, daily work and enforceable spend caps apply to discovery, planning, coding and verification.</li>
 </ul>
 <h4 id="prd-us-c3-recover-from-provider-outages">US-C3 — Recover from provider outages</h4>
-<p><strong>Alpha through 9Router.</strong> Request-level account/provider fallback is part of the
-router integration; Gaffer handles only failures that escape that layer.</p>
+<p><strong>Alpha through the configured model gateway.</strong> Request-level account/provider
+fallback belongs to the gateway; Gaffer handles only failures that escape that layer.</p>
 <ul>
-<li><input disabled="" type="checkbox"> Use the same named routes across agents; manage connection priorities and model fallback centrally in 9Router.</li>
-<li><input disabled="" type="checkbox"> Distinguish one connection failing, a route exhausted and the router itself unavailable. Router downtime parks inference-dependent work without bypassing to direct provider credentials.</li>
-<li><input disabled="" type="checkbox"> Test request fallback before output and during streaming. Where continuation is unsafe, surface the failure and reconcile the attempt rather than replaying tool effects.</li>
-<li><input disabled="" type="checkbox"> Surface router health and supported usage/error signals in Gaffer. Missing management APIs become scoped integration work, not a second account router.</li>
+<li><input disabled="" type="checkbox"> Use approved model IDs or aliases across agents; keep provider account priority, rotation, cooldown and request fallback in the gateway.</li>
+<li><input disabled="" type="checkbox"> Distinguish a provider/account observation where exposed, a model target failure and the gateway itself being unavailable. Gateway downtime parks inference-dependent work without direct-provider bypass.</li>
+<li><input disabled="" type="checkbox"> Test any claimed request fallback before output and during streaming. Where continuation is unsafe, surface the failure and reconcile the attempt rather than replaying tool effects.</li>
+<li><input disabled="" type="checkbox"> Surface gateway health and supported usage/error signals where a safe interface exists. Missing management APIs stay explicit unknowns or scoped integration work, not a second account router.</li>
 </ul>
 <h4 id="prd-us-c4-start-recurring-work">US-C4 — Start recurring work</h4>
 <p><strong>v1.</strong> Begin with schedules and outbound GitHub polling. Public webhook and chat
@@ -1368,15 +1410,15 @@ without claiming equivalence from a small sample. See <a href="#evaluation-6-how
 <h2 id="prd-7-decisions-still-requiring-evidence">7. Decisions still requiring evidence</h2>
 <ol>
 <li><strong>Build or reuse:</strong> compare the closest existing tools using the same acceptance checklist before M1.</li>
-<li><strong>First harness:</strong> select the best proven harness/9Router/isolation combination in M0; verify multiple subscriptions from one provider.</li>
-<li><strong>Coordinator implementation:</strong> call a named 9Router route through its compatible API with structured output and typed tools. A model receives no general shell in the planner role.</li>
+<li><strong>First harness:</strong> select the best proven harness/configured-gateway/isolation combination in M0; verify each required protocol/model path and any gateway behavior the product will rely on.</li>
+<li><strong>Coordinator implementation:</strong> call an allowed gateway model ID or alias through its compatible API and trusted inference boundary with structured output and typed tools. A model receives no general shell or gateway credential in the planner role.</li>
 <li><strong>Parallelism:</strong> retain sequential execution when delegation increases operator effort or defects.</li>
 <li><strong>Packaging:</strong> keep the proposed Go core, but prove process supervision, SQLite and distribution on target systems before treating “one binary” as solved.</li>
-<li><strong>Advanced memory:</strong> add it only after measured pain justifies the maintenance cost. Central routing through 9Router is already an architectural decision.</li>
+<li><strong>Advanced memory:</strong> add it only after measured pain justifies the maintenance cost. One operator-configured model gateway is already an architectural decision; CLIProxyAPI is the current selection, not a mandatory product dependency.</li>
 </ol>
 </article>
 <article class="doc" id="spec" data-doc="spec"><h1 id="spec-gaffer-technical-specification">Gaffer — Technical Specification</h1>
-<p><strong>Status:</strong> proposed baseline v0.4 · <strong>Updated:</strong> 15 September 2026</p>
+<p><strong>Status:</strong> proposed baseline v0.4 · <strong>Updated:</strong> 17 September 2026</p>
 <p>Companions: <a href="#prd">product requirements</a>, <a href="#evaluation">evaluation</a>,
 <a href="#roadmap">delivery sequence</a>. This is a design to implement and test, not a
 statement that the security or durability properties already exist. The
@@ -1389,10 +1431,11 @@ original downstream work.</p>
 and independently supervised runners. The daemon owns workflow truth; each runner
 owns enough durable execution state to survive a disconnect. Runners are replaceable
 only after local work has been acknowledged or explicitly abandoned.</p>
-<p>9Router is the single shared model-access control plane. It owns provider
-connections, multiple subscriptions per provider, credential refresh, account
-selection, model combinations and request-level fallback. Gaffer owns tasks,
-authority, placement and recovery; it does not implement those router functions.</p>
+<p>The operator-configured model gateway is the single shared model-access boundary;
+the current selection is CLIProxyAPI. The gateway owns provider credentials,
+accounts and subscriptions, rotation, cooldown and request fallback. Gaffer owns
+tasks, authority, gateway-model eligibility, placement and recovery; it does not
+implement those gateway functions or maintain a second quota ledger.</p>
 <pre><code class="language-text">Private HTTPS UI / CLI
         |
         v
@@ -1412,9 +1455,9 @@ Runner supervisor + durable attempt journal + lease watchdog
         +-- delivery role: approved artifact → scoped GitHub action
 
 Every model call from planner / reviewer / harness
-        → authenticated route boundary → 9Router
-        → named combo → provider A: subscription 1 / subscription 2 / ...
-                     → permitted fallback models/providers
+        → trusted per-attempt inference boundary
+        → configured gateway protocol + permitted model ID or alias
+        → gateway-owned provider account/subscription and request fallback
 </code></pre>
 <p>Roles are permission boundaries, not necessarily separate binaries. One machine
 can host several roles, but project-controlled processes cannot read supervisor
@@ -1423,22 +1466,24 @@ state, change placement policy or acquire delivery credentials.</p>
 content-addressed files for artifacts, runner journal for unacknowledged local work,
 and GitHub for remote branch, check, PR and merge state. Indexes and summaries are
 derived. No model transcript is the authoritative task state.</p>
-<p>9Router is authoritative for provider connection configuration, selection,
-cooldowns and observed account usage. Gaffer stores route references and task-linked
-observations, not a second provider credential database or account router.</p>
+<p>The configured model gateway is authoritative for provider credentials, accounts
+and subscriptions, rotation, cooldown and request fallback. Gaffer stores gateway
+model references and task-linked observations, not credential values, a provider
+credential database, an account router or a quota ledger.</p>
 <p><strong>Network boundary:</strong> browsers and runners need a reachable authenticated daemon
 endpoint. Runners initiate connections; no public inbound endpoint is needed for
 the baseline. This does not eliminate incoming traffic on the private interface,
-nor outbound traffic from 9Router to model providers and from delivery to GitHub.</p>
+nor outbound traffic from the configured model gateway to model providers and from
+delivery to GitHub.</p>
 <h3 id="spec-11-initial-deployment">1.1 Initial deployment</h3>
-<p>One operator, one active daemon, one repository, one runner, one harness, one shared
-9Router instance and one code-writing attempt at a time. The alpha acceptance
-fixture uses two subscriptions from the same provider to prove central account
-management; the design also permits a single-connection installation, not yet
-validated. The decision target is Go 1.26.5 with SQLite, an embedded
-React/TypeScript/StyleX UI and the pinned OpenCode 1.18.30 adapter first.
-No supported worker/verifier runtime is established yet. Linux is the first intended unattended
-execution target; an exact Docker-free OS/native or dedicated VM confinement
+<p>One operator, one active daemon, one repository, one runner, one harness, one
+configured model gateway and one code-writing attempt at a time. The current gateway
+selection is CLIProxyAPI. Its required protocol/model paths and any claimed account,
+status or fallback behaviour remain gateway-specific conformance work. The decision
+target is Go 1.26.5 with SQLite, an embedded React/TypeScript/StyleX UI and the
+pinned OpenCode 1.18.30 adapter first. No supported worker/verifier runtime is
+established yet. Linux is the first intended unattended execution target; an exact
+Docker-free OS/native or dedicated VM confinement
 profile must be proven before it is supported. A Mac may host the daemon only
 within the validated support matrix. Worker execution from that installation
 requires an explicitly selected, proven Docker-free local or remote profile;
@@ -1446,66 +1491,67 @@ native macOS and Windows execution each require their own evidence.</p>
 <p>The released app must install and complete every supported product execution
 path without requiring Docker, including workers and verification. Docker is
 optional for development and testing; normal product execution does not become
-a test because it invokes a worker. Git, the harness, language/build tools,
-9Router and a proven Docker-free isolation runtime may still be prerequisites.
+a test because it invokes a worker. Git, the harness, language/build tools, a
+configured model gateway and a proven Docker-free isolation runtime may still be
+prerequisites.
 Record exact versions and capabilities; an unavailable or unsupported profile
 blocks execution. No automatic work is placed on client/production hosts.</p>
 <h3 id="spec-12-operator-selected-deployment">1.2 Operator-selected deployment</h3>
 <p>Gaffer is intended to be downloadable and self-hosted on the operator&#39;s own
 infrastructure. There is no mandatory maintainer host, hostname, IP address,
-Tailscale network, router instance or provider account. An environment used to
+Tailscale network, gateway product or provider account. An environment used to
 collect development evidence is a test fixture, not an application dependency.
 Exact tested versions belong in the compatibility/evidence matrix; capability
 requirements and explicitly selected isolation profiles govern supported execution.
 The complete supported topology must have a Docker-free setup and operating path
-for the daemon, runner supervisor, scoped inference boundary, 9Router and any
-required execution VM. This includes fresh setup, update and recovery. An operator
-may reuse a compatible Docker-hosted router, but Docker cannot be a prerequisite
-for supported use. Matilda remains an optional configured machine, with no
-mandatory hostname, Tailscale endpoint or maintainer access.</p>
+for the daemon, runner supervisor, scoped inference boundary, configured model
+gateway and any required execution VM. This includes fresh setup, update and
+recovery. An operator may reuse a compatible Docker-hosted gateway, but Docker
+cannot be a prerequisite for supported use. Matilda remains an optional configured
+machine, with no mandatory hostname, Tailscale endpoint or maintainer access.</p>
 <ul>
 <li><strong>Daemon:</strong> choose its host, local state/artifact directories and authenticated
 private endpoint. One active daemon owns authoritative state.</li>
 <li><strong>Runner:</strong> enroll a host and configure repository identities/roots, allowed
 projects, runtime profile and enablement. It starts disabled and executes only
 within both project grants and runner-local policy.</li>
-<li><strong>9Router:</strong> supply an existing or fresh router origin, deployment identity,
-protected credential references and named routes. It owns provider credentials,
-subscriptions, account selection and fallback.</li>
+<li><strong>Model gateway:</strong> configure a stable <code>gateway_id</code>, operator-selected HTTPS
+<code>base_url</code>, protected <code>credential_ref</code>, non-empty protocol set, exact model-ID or
+alias allowlist and optional read-only status endpoint. The current selection is
+CLIProxyAPI. The gateway owns provider credentials, accounts/subscriptions,
+rotation, cooldown and request fallback.</li>
 <li><strong>Private transport:</strong> supply reachable authenticated endpoints and the supported
 TLS/private-access profile. Tailscale is optional; another verified VPN, private
 network or authenticated tunnel may satisfy the contract.</li>
 </ul>
-<p>A single-host installation may colocate daemon, runner supervisor and router while
-keeping their state, credentials and process permissions separate. Repository code
-still runs in the supported containment profile. A split-host installation supplies
-the corresponding endpoints explicitly; runner connections are outbound to the
-daemon, and inference travels through the scoped route boundary. Being reachable
-does not make a host eligible. Losing a selected host blocks or reconciles work
-under its existing authority; it never silently selects an unapproved machine.</p>
-<p>Setup must offer <strong>connect existing 9Router</strong> and <strong>configure a fresh 9Router</strong>
-paths, with compatibility/authentication checks and actionable diagnostics. An
-existing router does not need new provider logins merely because Gaffer connects
-to it. Configure named worker/planner/reviewer routes in that router and validate
-their actual capabilities and permitted provider/billing envelope. Credentials are
-supplied through protected local references, never command-line flags, checked-in
-examples or shipped defaults. Unknown compatibility is reported before execution.</p>
-<p>Reusing an existing instance and moving it are different operations. Optional
-operator-directed migration uses the selected router version&#39;s verified
-backup/export/restore procedure. Check whether its configuration, encryption keys
-and provider sessions are portable; do not promise that every provider session
-can move without reauthentication. Transfer only between operator-approved router
-hosts over an authenticated encrypted channel with restrictive storage permissions.
-Protect the source and recovery copy, validate the destination&#39;s identity, routes,
-authentication and policy before cutover, and reconcile/drain active requests before
-changing Gaffer&#39;s endpoint or route grants. Preserve a tested rollback path.</p>
-<p>Router backups remain separate from Gaffer&#39;s workflow/artifact backups. Gaffer
-must never collect provider secrets into its database, repositories, worker
-sandboxes, logs, browser downloads or release packages. Shipped examples use
+<p>A single-host installation may colocate daemon, runner supervisor and model gateway
+while keeping their state, credentials and process permissions separate. Repository
+code still runs in the supported containment profile. A split-host installation
+supplies the corresponding endpoints explicitly; runner connections are outbound
+to the daemon, and inference travels through the scoped per-attempt boundary. Being
+reachable does not make a host eligible. Losing a selected host blocks or reconciles
+work under its existing authority; it never silently selects an unapproved machine.</p>
+<p>Setup connects to an operator-configured gateway endpoint and checks HTTPS,
+authentication, protocol availability and allowed model IDs or aliases. Gaffer
+accepts only a protected credential reference, never a credential value in a flag,
+checked-in example, document or shipped default. A trusted boundary outside the
+worker sandbox resolves that reference, injects it upstream and pins each attempt&#39;s
+permitted protocols and models. Workers cannot reach gateway management, the raw
+gateway credential or direct provider endpoints. Unknown compatibility is reported
+before execution.</p>
+<p>Gateway provisioning, configuration backup and migration are gateway-specific
+operator concerns. Do not promise portable provider sessions or configuration
+unless the selected gateway has a separately verified procedure. The existing
+<a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/9router-migration.md">9Router migration contract</a>
+remains historical optional guidance for operators who select that gateway; it is
+not a CLIProxyAPI or generic product guarantee.</p>
+<p>Gateway backups remain separate from Gaffer&#39;s workflow/artifact backups. Gaffer
+must never collect gateway or provider secrets into its database, repositories,
+worker sandboxes, logs, browser downloads or release packages. Shipped examples use
 placeholders. Clean-machine install tests must work with independently supplied
-hosts and fresh credentials, without access to a maintainer&#39;s private resources.
-These are implementation requirements, not claims of an existing installer or
-already-tested router migration.</p>
+hosts and fresh credential references, without access to a maintainer&#39;s private
+resources. These are implementation requirements, not claims of an existing
+installer or already-qualified gateway integration.</p>
 <h2 id="spec-2-authority-and-intent">2. Authority and intent</h2>
 <h3 id="spec-21-capture-and-bounded-discovery">2.1 Capture and bounded discovery</h3>
 <p>Persist a capture before analysing it. The client supplies an idempotency key;
@@ -1513,7 +1559,7 @@ retransmission returns the same capture. Retain original wording as provenance.
 Models and workers can see the raw capture alongside the approved brief, clearly
 labelled so an obsolete suggestion cannot override the agreement.</p>
 <p>Project setup can grant a bounded discovery allowance for an exact repository and
-approved provider route. Discovery reads files and repository metadata only. It
+approved gateway model target. Discovery reads files and repository metadata only. It
 cannot run dependency installation, build scripts, tests, Git hooks or arbitrary
 repository tools. If the chosen harness cannot enforce read-only discovery without
 such execution, use a trusted reader to provide excerpts or require a different
@@ -1568,7 +1614,8 @@ promise instantaneous reversal of external effects.</p>
 <h2 id="spec-3-durable-execution-model">3. Durable execution model</h2>
 <h3 id="spec-31-task-versus-attempt">3.1 Task versus attempt</h3>
 <p>A <strong>task</strong> describes the desired result and criterion mapping. An <strong>attempt</strong> is
-one concrete execution with immutable input, identity and route. Retries create
+one concrete execution with immutable input, identity and gateway model target.
+Retries create
 new attempts. Reconnects and retransmission do not.</p>
 <pre><code class="language-text">Task:
  draft → ready → active → verifying → awaiting_review → accepted
@@ -1592,7 +1639,7 @@ merged requires an observed GitHub merge for the corresponding PR/head.</p>
 an attempt with a monotonically increasing task epoch, and add an assignment to
 the transactional outbox. Commit before sending.</li>
 <li>The runner validates authenticated assignment identity and execution generation, repository mapping,
-current local policy, route availability and isolation support. It durably
+current local policy, gateway-model availability and isolation support. It durably
 journals acceptance before acknowledging. Duplicate assignment IDs return the
 existing attempt status rather than launching again.</li>
 <li>Starting the process consumes a current execution lease. The runner supervisor
@@ -1659,16 +1706,16 @@ process state or undo side effects.</p>
 <td>Deadline then process-tree termination; bounded retry only after reconciliation</td>
 </tr>
 <tr>
-<td>Provider connection auth/limit failure</td>
-<td>9Router handles connection cooldown/selection; continue the same attempt if it returns a successful response</td>
+<td>Provider account auth/limit failure</td>
+<td>The gateway handles account cooldown/selection and request fallback; continue the same attempt if it returns a successful response</td>
 </tr>
 <tr>
-<td>Entire route unavailable</td>
-<td>Consume router status, preserve partial work and apply bounded task-level backoff</td>
+<td>Entire gateway model target unavailable</td>
+<td>Consume gateway status where available, preserve partial work and apply bounded task-level backoff</td>
 </tr>
 <tr>
-<td>9Router unavailable or router credential rejected</td>
-<td>Park model-dependent work and report the connection issue; never silently bypass 9Router</td>
+<td>Gateway unavailable or credential rejected</td>
+<td>Park model-dependent work and report the connection issue; never silently bypass the configured gateway</td>
 </tr>
 <tr>
 <td>Invalid structured result</td>
@@ -1701,13 +1748,14 @@ it changes the acceptance criteria; it is not an automatic recovery trick.</p>
 <h3 id="spec-41-eligibility">4.1 Eligibility</h3>
 <p>Runner-local policy is authoritative for what that host permits. Record enabled
 state, allowed repository identities and roots, reserved project IDs, capabilities,
-route references, permitted egress, isolation profiles and policy revision.</p>
+gateway model references, permitted egress, isolation profiles and policy revision.</p>
 <p>The scheduler chooses from the intersection of:</p>
 <ol>
 <li>Project&#39;s explicit runner list and current grant.</li>
 <li>Runner-local repository/project permissions.</li>
 <li>Required OS, tool, isolation and environment capabilities.</li>
-<li>Harness compatibility with an approved 9Router route, and authenticated access to its inference boundary from that runner.</li>
+<li>Harness compatibility with an approved gateway protocol and model ID or alias,
+and authenticated access to its inference boundary from that runner.</li>
 <li>Available capacity, resource budget and non-expired lease eligibility.</li>
 </ol>
 <p>An empty intersection blocks with the limiting facts. “Default runner” is only a
@@ -1742,15 +1790,16 @@ synthetic experiment that does not prove native Linux, macOS, Windows or another
 containment. Shell denylists are not a containment mechanism for arbitrary scripts.
 Repository hooks, build systems, dependency installation, skills and tool plugins
 are executable untrusted input and run inside the same boundary.</p>
-<p>Provider credentials remain in 9Router&#39;s separate trust boundary. The harness uses
-router access rather than provider account credentials. Keep 9Router&#39;s database,
-admin credentials and unrestricted inference key outside project code. Where the
-selected 9Router build lacks scoped inference keys, a thin trusted forwarding
-boundary binds the caller to its authorised route and enforces request/resource
-limits. It never chooses accounts, refreshes provider tokens or retries provider
-requests; those remain 9Router responsibilities. Deny direct network access to the
-unrestricted router/admin endpoint so a worker cannot bypass the boundary. Router
-access still permits consuming model capacity; test that exposure and bound it.</p>
+<p>Gateway and provider credentials remain in the configured gateway&#39;s separate trust
+boundary. The harness uses attempt-scoped inference access rather than either
+credential. Keep gateway state, management credentials and unrestricted inference
+access outside project code. A trusted forwarding boundary binds the caller to its
+authorised protocol and exact model ID or alias, injects the gateway credential and
+enforces request/resource limits. It never chooses accounts, refreshes provider
+tokens or retries provider requests; those remain gateway responsibilities. Deny
+direct network access to the unrestricted gateway and management endpoints so a
+worker cannot bypass the boundary. Gateway access still permits consuming model
+capacity; test that exposure and bound it.</p>
 <p>M0 must test actual auth/config/sandbox behaviour for each supported profile.
 A compromised runner can expose the data and credentials it can access. A compromised
 daemon can misuse its existing grants; local restrictions reduce this blast radius
@@ -1771,26 +1820,30 @@ redaction; protect storage and provide controlled export/deletion.</p>
 <p>The durable scheduler is deterministic code. The coordinator is an event-driven
 model invocation that proposes a plan, summarises evidence or requests clarification.
 Do not keep one model generating indefinitely per project.</p>
-<p>The planner calls a named 9Router route through the compatible API using an immutable
-evidence packet, schema-validated output and explicitly registered typed tools.
-The daemon validates proposals and performs authorised actions; the model has no
+<p>The planner calls an allowed model ID or alias through the configured gateway&#39;s
+compatible API using an immutable evidence packet, schema-validated output and
+explicitly registered typed tools. The daemon validates proposals and performs
+authorised actions; the model has no
 general shell-backed access to daemon state. Coding workers use harness adapters,
-but their inference goes through the same router. A separate harness process is not
-required merely to make a planning call.</p>
-<p>Define role routes such as <code>gaffer-planner</code>, <code>gaffer-worker</code> and <code>gaffer-reviewer</code>
-(illustrative user-configured combo names). These are starting profiles, not a
-complete selection algorithm. The alpha coordinator assesses each task or scoped
+but their inference goes through the same gateway boundary. A separate harness
+process is not required merely to make a planning call.</p>
+<p>Define role targets such as <code>gaffer-planner</code>, <code>gaffer-worker</code> and <code>gaffer-reviewer</code>
+(illustrative operator-configured gateway model IDs or aliases). These are starting
+profiles, not a complete selection algorithm. The alpha coordinator assesses each
+task or scoped
 step using the approved brief, authorised evidence, complexity/uncertainty,
 modality, tools, context and budget requirements. Deterministic eligibility filters
-the operator-approved route set before task-fit ranking. Show the proposed choice,
+the operator-approved gateway model set before task-fit ranking. Show the proposed choice,
 reason, unknowns and eligible alternatives; an operator can override within the
 same authority envelope. See the <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md">task-routing contract</a>
 for assessment bounds, evidence, immutable decisions and evaluation.</p>
-<p>Routes can use different models while
-sharing the same underlying provider connections. All intent, planning, coding,
-model-assisted review and later curation usage is attributed to tasks/projects.
-Embeddings are absent initially; any future model integration must use an explicitly
-supported route or a separately documented local embedding implementation.</p>
+<p>Gateway model targets can use different models while sharing gateway-owned provider
+accounts or subscriptions. Attribute available intent, planning, coding,
+model-assisted review and later curation usage to tasks/projects only with proven
+correlation. Keep uncorrelated observations separate and missing usage or attribution
+unknown. Embeddings are absent initially; any future model integration must use an
+explicitly supported gateway model target or a separately documented local embedding
+implementation.</p>
 <p>Future typed model tools can include plan.propose, task.inspect, context.query,
 context.propose and human.ask. A schedule or authority change is a proposal awaiting
 operator/policy approval. The CLI calls the same typed API for humans or workers
@@ -1808,9 +1861,10 @@ provides structured output. The abstract contract remains small:</p>
     Cancel(ctx context.Context, h RunHandle) (CancelResult, error)
 }
 </code></pre>
-<p>The descriptor declares supported harness versions, 9Router protocol/endpoint modes, structured-output,
-approval, resume, sandbox, model-settings and usage capabilities. RunRequest contains
-attempt ID/epoch, input/base/context hashes, role, workspace, route reference,
+<p>The descriptor declares supported harness versions, gateway protocol/endpoint
+modes, structured-output, approval, resume, sandbox, model-settings and usage
+capabilities. RunRequest contains attempt ID/epoch, input/base/context hashes, role,
+workspace, gateway model reference,
 policy, adapter-specific model settings and limits. Never invent a universal effort
 enum; reject unsupported settings. Probe has a read-only configuration phase and an
 explicit bounded execution phase.</p>
@@ -1829,12 +1883,12 @@ must block safely; do not bypass it to maintain unattended operation.</p>
 <tbody><tr>
 <td>Codex</td>
 <td>Noninteractive <code>exec</code>, JSONL events, schema-constrained final output, explicit session resume</td>
-<td>Pinned harness→9Router Responses path, structured/tool events, sandbox/approval behaviour, cancellation and usage attribution</td>
+<td>Pinned harness→gateway Responses path, structured/tool events, sandbox/approval behaviour, cancellation and usage attribution</td>
 </tr>
 <tr>
 <td>Claude Code</td>
 <td>Noninteractive print mode, JSON/streaming output</td>
-<td>Pinned harness→9Router Messages path, ambient hooks/MCP loading, containment, process-tree stop and usage attribution</td>
+<td>Pinned harness→gateway Messages path, ambient hooks/MCP loading, containment, process-tree stop and usage attribution</td>
 </tr>
 <tr>
 <td>Later harnesses</td>
@@ -1844,9 +1898,10 @@ must block safely; do not bypass it to maintain unattended operation.</p>
 </tbody></table></div>
 <p>Sources: <a href="https://learn.chatgpt.com/docs/non-interactive-mode">Codex noninteractive mode</a>,
 <a href="https://code.claude.com/docs/en/headless">Claude programmatic execution</a>.
-Configure the harness endpoint and router credential explicitly; do not inherit a
-direct provider login as an unnoticed fallback. Claude&#39;s bare mode changes ambient
-configuration/auth behaviour, so verify it with the chosen router endpoint. Record
+Configure the harness endpoint explicitly and provide only attempt-scoped boundary
+access; do not expose the gateway credential or inherit a direct provider login as
+an unnoticed fallback. Claude&#39;s bare mode changes ambient configuration/auth
+behaviour, so verify it with the chosen gateway endpoint. Record
 and test each launch profile instead of copying flags between harnesses.</p>
 <p>Built-in Go adapters require a new binary. Later external adapters are separately
 installed executables speaking a versioned stdio protocol, with timeouts and pinned
@@ -1947,12 +2002,16 @@ never auto-stash, overwrite or resolve conflicts without preserving them.</p>
 if held-out retrieval trials show better task outcomes or lower rediscovery effort.
 Flag a sourced command failure for review with its cause; network/fixture failures
 do not automatically invalidate the command. A pinned note can still be stale.</p>
-<h2 id="spec-8-9router-integration-and-task-capacity">8. 9Router integration and task capacity</h2>
+<h2 id="spec-8-model-gateway-integration-and-task-capacity">8. Model gateway integration and task capacity</h2>
+<p>The <a href="#model-gateway">model gateway contract</a> is normative for every
+installation. The current operator selection is CLIProxyAPI. 9Router remains one
+optional implementation; its existing contract and evidence are the historical
+9Router gateway profile, not a product requirement.</p>
 <h3 id="spec-81-ownership-and-connection-model">8.1 Ownership and connection model</h3>
-<p>9Router is required from the first working slice. One operator-managed instance
-serves every harness and Gaffer&#39;s own model calls. Its documented multi-account and
-combo mechanisms are the foundation, not functions Gaffer needs to recreate.
-<a href="https://github.com/rickicode/9router">9Router</a></p>
+<p>A configured model gateway is required from the first working slice. One
+operator-managed HTTPS base URL serves every harness and Gaffer&#39;s own model calls
+through one or more supported OpenAI Chat Completions, OpenAI Responses and
+Anthropic Messages protocols. Gaffer stores a credential reference, never a value.</p>
 <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table"><table>
 <thead>
 <tr>
@@ -1963,23 +2022,23 @@ combo mechanisms are the foundation, not functions Gaffer needs to recreate.
 </thead>
 <tbody><tr>
 <td>Provider login, credentials and refresh</td>
-<td>9Router</td>
-<td>Router credential reference only; no provider tokens</td>
+<td>Configured model gateway</td>
+<td>Gateway credential reference only; no provider or gateway credential values</td>
 </tr>
 <tr>
-<td>Multiple subscriptions per provider</td>
-<td>9Router connection records</td>
-<td>Read-only connection identity/status where exposed</td>
+<td>Provider accounts and subscriptions</td>
+<td>Configured model gateway</td>
+<td>Read-only opaque identity/status where safely exposed</td>
 </tr>
 <tr>
-<td>Connection priority, rotation and cooldown</td>
-<td>9Router</td>
-<td>Consume outcome/availability; never choose an individual token</td>
+<td>Account priority, rotation and cooldown</td>
+<td>Configured model gateway</td>
+<td>Consume outcome/availability; never choose an individual account or token</td>
 </tr>
 <tr>
-<td>Named model combos and request fallback</td>
-<td>9Router</td>
-<td>Select an authorised combo/model route by task role</td>
+<td>Model aliases and request fallback</td>
+<td>Configured model gateway</td>
+<td>Select an authorised gateway model ID or alias by task role</td>
 </tr>
 <tr>
 <td>Task dependencies, placement and execution leases</td>
@@ -1989,156 +2048,167 @@ combo mechanisms are the foundation, not functions Gaffer needs to recreate.
 <tr>
 <td>Task/project concurrency, attempts and budget</td>
 <td>Gaffer</td>
-<td>Reserve work and enforce request limits at the route boundary</td>
+<td>Reserve work and enforce request limits at the inference boundary</td>
 </tr>
 <tr>
 <td>Workflow/usage visibility</td>
-<td>Gaffer consuming 9Router</td>
-<td>Task-correlated observations and links to router management</td>
+<td>Gaffer consuming gateway observations</td>
+<td>Task-correlated observations where available; explicit unknowns otherwise</td>
 </tr>
 </tbody></table></div>
-<p>A <strong>connection</strong> identifies one provider account/subscription in 9Router. A
-<strong>route</strong> identifies a model or combo exposed to callers. Multiple connections from
-the same provider can serve one route. Distinct subscriptions retain independent
-capacity unless the provider imposes a shared limit; duplicate aliases for the same
-account never imply additional quota. Do not collapse all subscriptions merely
-because they have the same provider name.</p>
-<p>Illustrative flow: two Claude subscriptions back the coding route; a Codex route
-can back review. If the first coding subscription becomes unavailable, 9Router
-selects the second according to its configured strategy. The worker keeps its
-current task and router endpoint. It does not need a new Gaffer account profile.</p>
+<p>A <strong>gateway model target</strong> is an exact ID or alias permitted by configuration. The
+gateway may resolve that target through one or more provider accounts,
+subscriptions or fallback models. Those are gateway-owned details. Every possible
+fallback still has to fit the operator-approved provider/model/billing envelope;
+where that cannot be established, Gaffer records the capability as unknown and
+blocks policies that require proof. Duplicate aliases never imply extra capacity.</p>
+<p>The worker keeps its current attempt and boundary endpoint while the gateway handles
+an allowed account rotation or request fallback. It never receives a new Gaffer
+account profile because Gaffer has no such profile. A terminal gateway failure is
+handled at the task boundary, not by a second Gaffer request-fallback loop.</p>
 <h3 id="spec-82-inference-and-management-contract">8.2 Inference and management contract</h3>
-<p>Configure router identity, pinned version, private endpoint, credential reference,
-authorised model/combos, permitted provider/billing set and a route configuration
-fingerprint where the integration can obtain one. A separate read-only status
-adapter consumes management data. Gaffer is the work surface; 9Router remains the
-single place to configure accounts and fallback. Do not build parallel login or
-account-rotation settings into Gaffer.</p>
-<p>The inspected fork implements <code>/v1/chat/completions</code>, <code>/v1/messages</code>,
-<code>/v1/responses</code> and model discovery including combos. Its dashboard has combo,
-provider, availability and usage routes. Treat those management routes as a
-version-pinned implementation interface, not an assumed stable public SDK. The
-adapter returns a minimal normalized view and excludes provider credential fields.
-Never read the router&#39;s private database or expose a broad management credential to
-agents. Missing signals are explicit unknowns or a small upstream/integration task.</p>
-<p>Use field allowlists rather than forwarding/redacting whole responses: the inspected
-build can expose nested provider tokens and raw router keys in usage aggregates.
-Protect management paths independently of the dashboard login, and distinguish
-passive status retrieval from usage endpoints that actively refresh credentials.
-The pinned source evidence is in <a href="#evaluation-concrete-integration-boundaries-from-source">the integration review</a>.</p>
-<p>The configured role route is recorded in each attempt. Capture actual provider,
-model, connection, usage and fallback events when available, with source/freshness
-and request/attempt correlation. Do not invent per-task attribution if the pinned
-router cannot supply a correlation signal; record harness totals and unattributed
-router observations separately until that integration gap is closed.</p>
-<p>9Router connection selection can legitimately change during an attempt. The
-approved provider/model/billing envelope must remain valid throughout. If per-key
-route scopes or immutable route versions are absent in the chosen build, the
-trusted forwarding boundary fixes/validates the requested model and checks allowed
-configuration, with direct unrestricted inference access denied to workers. This
-boundary enforces Gaffer authority only; routing and account selection stay in
-9Router. Changes that widen an authorised route require updated authority.</p>
-<p>A preflight configuration fingerprint alone cannot prevent a concurrent combo edit.
-Freeze the authorised provider/model/billing definition while affected requests are
-active, or drain them before changing it and issuing fresh grants. Enforce that
-through the router&#39;s configuration-write boundary or an upstream versioning feature;
-if the chosen build cannot support it, record an unresolved integration gap for
-policies requiring that guarantee. Normal account rotation, credential refresh and
-cooldowns continue within the approved definition.</p>
+<p>Configure <code>gateway_id</code>, operator-selected HTTPS <code>base_url</code>, protected
+<code>credential_ref</code>, non-empty protocol set, exact model-ID/alias allowlist and an
+optional read-only status endpoint. Record gateway/build identity and a configuration
+fingerprint where the integration can obtain one. The configured model target is
+recorded in each attempt.</p>
+<p>A trusted per-attempt inference boundary outside the worker sandbox resolves the
+credential reference and injects it upstream. It exposes only the granted protocol
+paths and exact model IDs or aliases, and denies unrestricted discovery, management,
+alternate models, direct gateway access and direct provider access. Planner,
+reviewer and coordinator calls use the same boundary with their own scoped
+identities. A gateway credential, provider token or management credential never
+enters a worker sandbox, model prompt, subprocess command line, log or durable event.</p>
+<p>CLIProxyAPI was verified on 17 September 2026 at the operator-configured endpoint to
+answer <code>POST /v1/chat/completions</code>, <code>POST /v1/responses</code>, <code>POST /v1/messages</code> and
+<code>GET /v1/models</code>. The host, URL and key are operator configuration and are not
+recorded. These observations establish only that the paths answered. Authentication
+semantics, scoped model enforcement, streaming, tools, structured output, status
+and usage APIs, provider/account behavior, rotation, cooldown, fallback,
+cancellation and limits remain unverified or unknown until separately recorded.</p>
+<p><strong>Historical 9Router gateway profile.</strong> The previously inspected 9Router fork
+implemented <code>/v1/chat/completions</code>, <code>/v1/messages</code>, <code>/v1/responses</code> and model
+discovery including combos. Its dashboard exposed combo, provider, availability
+and usage routes. Those are version-pinned source observations, not generic gateway
+APIs and not CLIProxyAPI evidence. The historical adapter projected a minimal
+allowlisted view because raw management responses could contain nested provider
+tokens and router keys, and it distinguished passive status retrieval from usage
+reads that actively refreshed credentials. The retained
+<a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/9router.md">9Router contract</a>
+owns that profile&#39;s exact findings, status schema, freeze-and-drain rules and
+conformance corpus.</p>
+<p>Record the selected model target in every attempt. Record available upstream
+provider/model/account, usage and fallback observations against that attempt only
+with proven gateway correlation, including source and freshness. Do not invent
+per-task attribution. Harness totals and unattributed gateway observations remain
+separate when correlation is absent.</p>
+<p>A gateway can legitimately rotate accounts or apply request fallback during an
+attempt. The approved provider/model/billing envelope must remain valid throughout.
+Where the configured gateway cannot scope credentials to models, the trusted
+boundary fixes and validates the requested model and denies unrestricted access.
+The boundary enforces Gaffer authority only; account selection, credential refresh,
+cooldown and request fallback stay in the gateway.</p>
+<p>A preflight fingerprint alone cannot prevent concurrent gateway policy edits. For
+policies that require an immutable fallback envelope, use a gateway-specific
+versioning or freeze-and-drain mechanism proven for the selected implementation.
+If none is available, record an unresolved integration gap and do not claim that
+guarantee. Normal gateway-owned credential refresh, account rotation and cooldown
+continue only inside the approved definition.</p>
 <h3 id="spec-83-availability-and-spending">8.3 Availability and spending</h3>
-<p>Use 9Router&#39;s connection/route status, cooldown and usage signals first. Token
-consumption may not reveal remaining subscription allowance, and other clients can
-consume the same subscriptions. Gaffer does not decrement its own guessed account
-balances or run a competing reset scheduler. It may keep a short-lived observation
-cache and task-level admission limits:</p>
-<pre><code class="language-text">route_observation:
-  router_id, route_id, source, observed_at, validity_until
+<p>Use gateway status, cooldown and usage signals where a safe configured interface
+provides them. Token consumption may not reveal remaining subscription allowance,
+and other clients can consume the same accounts. Gaffer does not decrement guessed
+account balances or run a competing reset scheduler. It may keep a short-lived
+observation cache and task-level admission limits:</p>
+<pre><code class="language-text">gateway_observation:
+  gateway_id, model_target, source, observed_at, validity_until
   state: available | degraded | exhausted | unknown
-  eligible_connections?, remaining?, reset_at?, retry_after?
+  account_observations?, remaining?, reset_at?, retry_after?
 </code></pre>
-<p>Task admission order: authority/data policy → runner/harness/route compatibility →
-task budget and concurrency reservation → router-reported route availability →
-priority/fairness. Unknown quota does not mean zero or unlimited capacity; begin
-with bounded concurrency and react to observed availability/errors.</p>
-<p>Task-fit selection uses the <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md">versioned route decision</a>
-from the approved plan or standing policy. Revalidate its requirements, complete
-fallback graph and current eligibility during atomic dispatch. A preferred route
-cannot override a mandatory capability, data/billing restriction or resource cap.
-An attempt&#39;s route stays immutable; ranked alternatives are not a Gaffer request
-fallback loop. Bootstrap assessment itself uses an explicitly permitted 9Router
-route and bounded allowance. The initial alpha supports semantic task assessment;
-beta adds richer availability/fairness and measured preference calibration.</p>
-<p>Account rotation and model fallback live in 9Router. Gaffer permits only routes
-whose complete provider/model/billing set fits project policy. A subscription-only
-route excludes paid fallthrough; paid fallback is an explicit choice configured
-centrally. Verify that the selected router build enforces the configured policy.</p>
+<p>Task admission order: authority/data policy → runner/harness/protocol/model
+compatibility → task budget and concurrency reservation → gateway-reported
+availability where present → priority/fairness. Missing, stale or unavailable
+signals are unknown, not zero, healthy or unlimited. Begin with bounded concurrency
+and react to observed availability and errors.</p>
+<p>Task-fit selection uses the <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md">versioned gateway model decision</a>
+from the approved plan or standing policy. Revalidate requirements, the complete
+gateway-owned fallback envelope where known, and current eligibility during atomic
+dispatch. A preferred model cannot override a mandatory capability, data/billing
+restriction or resource cap. An attempt&#39;s gateway model target stays immutable;
+ranked alternatives are not a Gaffer request-fallback loop. Bootstrap assessment
+uses an explicitly permitted gateway model and bounded allowance.</p>
+<p>Account rotation, cooldown and request fallback live in the configured gateway.
+Gaffer permits only model targets whose complete known provider/model/billing set
+fits project policy. A subscription-only target excludes paid fallthrough; paid
+fallback is explicit gateway policy. If the gateway cannot expose or constrain that
+envelope, hard policies requiring it remain blocked rather than guessed.</p>
 <p>Track wall time, attempts, concurrent processes, daily work and metered-spend limits
 at task/project/global level. Where a hard monetary ceiling is required, enforce it
-using bounded requests, in-flight reservations and router/provider-side limits. If
-request cost or hidden fallback cannot be bounded, show advisory spend and block
-that route only under hard-cap policy. Cancellation cannot refund already processed
-requests. Include planning, coding, model review, retries and summaries in accounting;
-report marginal cash separately from allocated subscription/hardware cost.</p>
-<p>Each grant binds an explicit versioned limits profile together with exact router
-build, complete route graph, protocol/harness/settings, capability evidence and
-authority. <code>strict-provider-output-v1</code> is the default and interpretation of existing
-grants: a positive finite provider output-token cap must be preserved and enforced
-on every approved path. The operator-approved optional
+using bounded requests, in-flight reservations and independently verified
+gateway/provider controls. If request cost or hidden fallback cannot be bounded,
+show advisory spend and block that model target under hard-cap policy. Cancellation
+cannot refund already processed requests. Include planning, coding, model review,
+retries and summaries in accounting; report marginal cash separately from allocated
+subscription/hardware cost.</p>
+<p>Each grant binds an explicit versioned limits profile together with exact gateway
+identity, permitted model/fallback envelope where knowable, protocol/harness/settings,
+capability evidence and authority. <code>strict-provider-output-v1</code> remains the default:
+a positive finite provider output-token cap must be preserved and enforced on every
+approved path. The existing
 <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/native-subscription-limits.md"><code>native-subscription-local-v1</code> contract</a>
-requires explicit authorization and finite enforced local bytes, concurrency,
-request/subattempt/retry counts and deadlines. It declares provider output-token
-and monetary bounds unavailable and rejects tasks requiring either hard bound.
-Every reachable connection/fallback must have reviewed subscription classification
-and required compatibility. A profile change needs a new policy/grant identity
-and freeze/drain; no automatic downgrade is allowed. The approved bounded evaluation
-envelope is separate from public installation defaults and is not live evidence.</p>
+is a historical 9Router-specific optional profile; it is not CLIProxyAPI conformance
+and cannot be applied to another gateway without new evidence and authority. A
+profile change needs a new policy/grant identity and any required gateway-specific
+freeze/drain procedure; no automatic downgrade is allowed.</p>
 <h3 id="spec-84-failure-boundary-and-conformance">8.4 Failure boundary and conformance</h3>
-<p>A connection rate limit or pre-output request failure that 9Router successfully
-handles is not a Gaffer task failure. Keep the same attempt. Gaffer only backs off
-or reconciles/retries when the router returns a terminal failure or the harness
-cannot continue. Bound retry/time budgets across router, harness and task layers
-so nested retries do not multiply without limit.</p>
+<p>A provider account rate limit or pre-output request failure that the configured
+gateway successfully handles is not a Gaffer task failure. Keep the same attempt.
+Gaffer backs off, parks or reconciles only when the gateway returns a terminal
+failure or the harness cannot continue. Bound retry/time budgets across gateway,
+harness and task layers so nested retries do not multiply without limit.</p>
 <p>Test tool calls, structured output, streaming, model settings, cancellation and
-continuation through each selected harness/protocol path. In particular, force a
-connection failure before output and during a partial stream. Do not replay a
-partially executed tool action merely because another subscription is available;
-if the router/harness cannot safely continue, preserve the artifact and reconcile
-at the task boundary. Model fallback must satisfy required capabilities.</p>
+continuation through every selected harness/protocol/model path. Force failure
+before output and during a partial stream. Do not replay a partially executed tool
+action merely because another account or model is available; if the gateway/harness
+cannot safely continue, preserve the artifact and reconcile at the task boundary.
+Any gateway fallback must satisfy the required capabilities and policy envelope.</p>
 <p>Local timeout, process exit and transport EOF never establish provider cancellation
-acknowledgement or refund. Unknown remote work retains its reservation and blocks
+acknowledgment or refund. Unknown remote work retains its reservation and blocks
 replacement and policy-drain completion. A trustworthy original terminal can prove
 that an individual request ended without proving a configurable provider-token or
 monetary cap. Quiescent failed/incomplete requests remain failures; successful
 final/tool release still requires schema validation, original completion, scoped
 authority, lease/fence checks and durable decisions.</p>
-<p>Router downtime parks inference-dependent work with a visible reason. Capture,
+<p>Gateway downtime parks inference-dependent work with a visible reason. Capture,
 review of stored artifacts and stop remain available. There is no silent direct
-provider bypass. Deployment documentation includes 9Router health, credentials,
-configuration backup and restore; Gaffer backup references the corresponding router
-configuration identity without copying provider secrets into its own store.</p>
-<p>M0 must prove the actual single-provider, two-subscription route and the first
-harness path. Alpha includes this integration; advanced task admission based on
-richer router observations can mature at M4.</p>
+provider bypass. Deployment documentation covers gateway health where available,
+credential references and gateway-specific backup/restore. Gaffer backup records
+only safe configuration identity and never copies gateway or provider credentials.</p>
+<p>M0 must prove one bounded real harness path through the currently configured gateway
+and record exact gateway identity, protocol, model target and observed behavior.
+Any claimed account rotation, fallback, status, usage, cancellation or limits
+capability needs its own positive and failure-path evidence before Gaffer relies on
+it. Advanced task admission based on richer gateway observations can mature at M4.</p>
 <h2 id="spec-9-storage-api-and-operations">9. Storage, API and operations</h2>
 <h3 id="spec-91-logical-data-model">9.1 Logical data model</h3>
 <p>This is an entity/constraint sketch, not executable migration SQL:</p>
 <pre><code class="language-text">daemon_generation(id, created_at, reason, reconciled_at)
 repository(id, canonical_remote, allowed_roots, default_branch, policy_revision)
 project(id, repository_id, state, context_path, current_brief, current_plan)
-capture(id, client_request_id UNIQUE, raw_text, source, route, created_at)
+capture(id, client_request_id UNIQUE, raw_text, source, gateway_model_id, created_at)
 brief_revision(id, project_id, revision, hash, content, state)
 plan_revision(id, brief_revision_id, hash, content, state)
 authority_grant(id, actor, scope, revisions, limits, expires_at, revoked_at)
 task(id, project_id, criterion_ids, dependencies, state, version, current_epoch)
-attempt(id, generation_id, task_id, epoch, runner_id, route_id, input_hash, state, lease_id)
+attempt(id, generation_id, task_id, epoch, runner_id, gateway_model_id, input_hash, state, lease_id)
 lease(id, generation_id, attempt_id, epoch, renewal_nonce, expiry, revoked_at)
 runner(id, identity, policy_hash, capabilities, availability, last_seen)
 project_runner(project_id, runner_id)
-router(id, base_url, inference_credential_ref, status_credential_ref, version, health)
-model_route(id, router_id, combo_or_model, protocol, policy, configuration_hash)
-runner_route(runner_id, adapter, route_id, probe_version, probe_result)
-route_observation(id, route_id, values, source, observed_at, validity_until)
-model_usage(id, attempt_id, route_id, request_id, resolved_connection_id,
+model_gateway(id, base_url, credential_ref, protocols, status_endpoint, version, health)
+gateway_model(id, gateway_id, model_id_or_alias, protocol, policy, configuration_hash)
+runner_gateway_model(runner_id, adapter, gateway_model_id, probe_version, probe_result)
+gateway_observation(id, gateway_model_id, values, source, observed_at, validity_until)
+model_usage(id, attempt_id, gateway_model_id, request_id, resolved_account_ref,
             model, usage, source, attribution_quality)
 budget_reservation(id, attempt_id, scope, resource, amount, state)
 artifact(digest PRIMARY KEY, size, kind, path, state, retained_until)
@@ -2263,7 +2333,7 @@ team execution pool is required for the solo product.</p>
 </tr>
 <tr>
 <td>Model interface</td>
-<td>Harness structured events plus 9Router inference APIs; direct API planner through the same router</td>
+<td>Harness structured events plus the configured gateway protocols; direct API planner through the same boundary</td>
 <td>Need for a tested richer protocol</td>
 </tr>
 <tr>
@@ -2272,9 +2342,9 @@ team execution pool is required for the solo product.</p>
 <td>Accuracy/latency/cost results for real payloads</td>
 </tr>
 <tr>
-<td>Model-access control plane</td>
-<td>9Router from M0; multiple subscriptions per provider, named routes and account fallback</td>
-<td>Validate the pinned integration and fill specific API gaps; do not rebuild account routing in Gaffer</td>
+<td>Model-access boundary</td>
+<td>Operator-configured HTTPS gateway from M0, currently CLIProxyAPI; credential reference, protocol set and model allowlist</td>
+<td>Validate each selected path and fill specific status/policy gaps; never rebuild account routing or quota accounting in Gaffer</td>
 </tr>
 <tr>
 <td>Auto-merge</td>
@@ -2299,15 +2369,16 @@ owns message semantics and reconciliation obligations.</p>
 failed with unknown remote work, #89 has no newly measured Docker-free profile,
 and real baseline/candidate workflow measurements and fresh Opus review remain
 pending. No first supported execution runtime or retry authority follows from
-this design choice. Provider credential handling and account/request routing
-remain delegated to 9Router.</p>
+this design choice. Provider credentials, accounts/subscriptions, rotation,
+cooldown and request fallback remain delegated to the configured model gateway.</p>
 </article>
 <article class="doc" id="roadmap" data-doc="roadmap"><h1 id="roadmap-gaffer-roadmap">Gaffer — Roadmap</h1>
-<p><strong>Status:</strong> proposed baseline v0.4; foundation decision recorded, not locked · <strong>Updated:</strong> 15 September 2026</p>
+<p><strong>Status:</strong> proposed baseline v0.4; foundation decision recorded, not locked · <strong>Updated:</strong> 17 September 2026</p>
 <p>Companions: <a href="#prd">PRD</a>, <a href="#spec">specification</a>, <a href="#evaluation">evaluation</a>.</p>
-<p>This is a sequence of evidence gates for a solo maintainer. 9Router is the selected
-shared model-access layer from M0, including multiple subscriptions per provider.
-The gates validate that integration rather than deciding whether to include it.
+<p>This is a sequence of evidence gates for a solo maintainer. An operator-configured
+model gateway is the shared model-access boundary from M0; the current selection is
+CLIProxyAPI. The gates validate the selected gateway/protocol/model paths rather
+than choosing provider credentials, accounts or fallback inside Gaffer.
 This plan replaces the original
 rough 29-week plan, whose ordering delayed essential controls until after parallel
 execution. No calendar commitment is credible while isolation, live and reuse gates remain
@@ -2318,7 +2389,7 @@ owns observed M0 activity and conditional M1/M2 estimates. Those planning ranges
 apply after entry gates and exclude unknown M0 remediation and operator waits;
 they are not a release date.</p>
 <h2 id="roadmap-release-sequence">Release sequence</h2>
-<pre><code class="language-text">M0  Evidence and feasibility        prove 9Router integration; decide Gaffer reuse
+<pre><code class="language-text">M0  Evidence and feasibility        prove configured gateway path; decide Gaffer reuse
 M1  Durable bounded execution       one task, one runner, recoverable artifact
 M2  Intent and operator workflow    first useful private alpha
 M3  Portable knowledge              explicit memory with measured retrieval
@@ -2337,30 +2408,30 @@ pending required measurements and fresh Opus review. Failing a gate can narrow
 scope or favour reuse; it need not produce another subsystem.</p>
 <h2 id="roadmap-m0-evidence-and-feasibility">M0 — Evidence and feasibility</h2>
 <p><strong>Question:</strong> can the intended workflow run through a containable harness and the
-shared 9Router instance, and is a new Gaffer foundation justified?</p>
+configured model gateway, and is a new Gaffer foundation justified?</p>
 <p><strong>Work</strong></p>
 <ul>
-<li>Record the operator&#39;s first three real use cases and a standalone-harness baseline using the same 9Router routes.</li>
+<li>Record the operator&#39;s first three real use cases and a standalone-harness baseline using the same configured gateway model targets.</li>
 <li>Evaluate the closest reuse candidates using <a href="#evaluation-3-build-or-reuse-before-building">the comparison rubric</a>, including licence, maintenance and integration cost.</li>
-<li>Connect a pinned 9Router build and named routes for the first worker and API planner. Configure two distinct subscriptions from the same provider in 9Router.</li>
-<li>Prototype one bounded task in an isolated disposable repository through harness→9Router; prove structured planning through the same router&#39;s API and bounded discovery.</li>
+<li>Connect a pinned gateway deployment for the first worker and API planner using an operator-selected HTTPS base URL, credential reference, required protocols and exact model-ID/alias allowlist. The current selection is CLIProxyAPI.</li>
+<li>Prototype one bounded task in an isolated disposable repository through harness→trusted boundary→gateway; prove structured planning through the same gateway boundary and bounded discovery.</li>
 <li>Validate tool calls, streaming, structured output, ambient config/hooks, private endpoint access and billing policy on the intended runtime.</li>
-<li>Implement a small authenticated route boundary and sanitized status adapter where the selected router lacks scoped keys or safe stable status APIs. Keep all provider/account selection and refresh in 9Router.</li>
+<li>Implement a small authenticated per-attempt boundary that injects the gateway credential and pins permitted protocols/models. Add a sanitized status adapter only where the selected gateway exposes a safe stable interface. Keep provider credentials, accounts/subscriptions, rotation, cooldown and request fallback in the gateway.</li>
 <li>Define the verification fixture and prepare captures/tasks with expected outcomes before tuning prompts.</li>
-<li>Specify task-aware route assessment, hard eligibility, operator preferences, bounded bootstrap and decision evidence; preserve 9Router&#39;s ownership of request fallback and accounts. Keep desired model labels separate from verified settings/capabilities.</li>
+<li>Specify task-aware gateway-model assessment, hard eligibility, operator preferences, bounded bootstrap and decision evidence; preserve the gateway&#39;s ownership of provider accounts and request fallback. Keep desired model labels separate from verified IDs, settings and capabilities.</li>
 </ul>
 <p><strong>Exit evidence</strong></p>
 <ul>
 <li><input disabled="" type="checkbox"> A written build/adopt/extend decision compares at least two plausible foundations with the same required workflow; untested properties stay unknown.</li>
-<li><input disabled="" type="checkbox"> One real task through 9Router returns a complete reviewable artifact with recorded harness/router version, base SHA, route and usage observations.</li>
-<li><input disabled="" type="checkbox"> Two subscriptions from one provider serve the configured route. Disabling/exhausting one causes router-owned selection of the other before response output or on the next request, without changing agent configuration or redispatching the Gaffer task. Partial-stream failure follows the separate reconciliation test.</li>
-<li><input disabled="" type="checkbox"> Provider credentials remain inside 9Router. Worker inference access cannot reach its management APIs or select an unauthorised route. Status projection excludes nested credentials and raw API-key fields.</li>
+<li><input disabled="" type="checkbox"> One real task through the configured gateway returns a complete reviewable artifact with recorded harness/gateway version, base SHA, protocol, model target and available usage observations.</li>
+<li><input disabled="" type="checkbox"> Every gateway behavior Gaffer will rely on is proven separately. If account rotation or request fallback is configured, failure before output and partial-stream handling are tested without changing agent configuration or redispatching the Gaffer task.</li>
+<li><input disabled="" type="checkbox"> Gateway and provider credentials remain outside workers. Worker inference access cannot reach gateway management, the unrestricted endpoint, direct providers or an unauthorised model. Any status projection excludes credential fields.</li>
 <li><input disabled="" type="checkbox"> A worker cannot write outside the execution boundary or modify runner policy; adversarial fixtures cover symlinks, hooks and child processes.</li>
 <li><input disabled="" type="checkbox"> Planner/discovery probes cannot execute repository code or gain delivery permissions.</li>
 <li><input disabled="" type="checkbox"> Cancellation terminates the test process tree; failure is a blocker for unattended work.</li>
-<li><input disabled="" type="checkbox"> Model discovery is distinguished from readiness by a real bounded probe; the route&#39;s paid-overflow policy and request/partial-stream fallback behaviour are established.</li>
+<li><input disabled="" type="checkbox"> Model discovery is distinguished from readiness by a real bounded probe; the model target&#39;s paid-overflow policy and request/partial-stream fallback behaviour are established.</li>
 <li><input disabled="" type="checkbox"> Baseline task results, operator minutes and total overhead are recorded with a repeatable test method.</li>
-<li><input disabled="" type="checkbox"> The task-routing contract and development counterexamples are reviewed; alpha implementation and a separate static-versus-task-aware comparison are tracked without changing the identical-route whole-product baseline.</li>
+<li><input disabled="" type="checkbox"> The task-routing contract and development counterexamples are reviewed; alpha implementation and a separate static-versus-task-aware comparison are tracked without changing the identical-target whole-product baseline.</li>
 </ul>
 <p><strong>Recorded choice:</strong> build a narrow Go core, retaining SQLite, an embedded
 React/TypeScript/StyleX UI and OpenCode 1.18.30 as the first adapter target. The
@@ -2372,17 +2443,19 @@ open. The failed one-send live trial grants no retry. Original dependency edges
 remain; only the approved provisional slices have an ordering exception.</p>
 <p>Revisit adopt/extend if a maintained project proves the critical boundaries with
 less owned maintenance than the narrow core. Do not count provisional sunk effort
-in that comparison. Gaffer&#39;s account-routing layer
-is already delegated to 9Router. Fix or document specific adapter/protocol gaps;
-do not turn them into a competing native-account manager or silently bypass the
-shared router. API-backed connections can also be configured in 9Router when chosen.</p>
+in that comparison. Gaffer&#39;s provider-account and request-routing layer is
+delegated to the configured model gateway. Fix or document specific adapter/protocol
+gaps; do not turn them into a competing native-account manager or silently bypass
+the configured gateway. The historical 9Router evidence remains a gateway-specific
+profile; it does not qualify CLIProxyAPI or transfer prior live-probe authority to
+the current selection.</p>
 <h2 id="roadmap-m1-durable-bounded-execution">M1 — Durable bounded execution</h2>
 <p><strong>Question:</strong> can one approved task execute, fail, recover and produce one accepted
 artifact without losing state or repeating external effects?</p>
 <p><strong>Build</strong></p>
 <ul>
 <li>Daemon state, authority, task/attempt identities, transactional outbox and resource reservations.</li>
-<li>Deterministic validation and persistence of an approved route decision with the task&#39;s requirements and policy versions; M1 accepts operator-supplied assessments and does not depend on the M2 semantic planner.</li>
+<li>Deterministic validation and persistence of an approved gateway model decision with the task&#39;s requirements and policy versions; M1 accepts operator-supplied assessments and does not depend on the M2 semantic planner.</li>
 <li>Runner enrollment disabled by default, local repository policy and one supported containment profile.</li>
 <li>Runner journal, renewable lease/watchdog, stream sequencing, artifact upload/acknowledgment and retry classification.</li>
 <li>Basic CLI for create/approve/inspect/pause/cancel/stop; a fake harness for deterministic fault tests plus the real M0 adapter.</li>
@@ -2395,9 +2468,9 @@ artifact without losing state or repeating external effects?</p>
 <li><input disabled="" type="checkbox"> Fault injection covers assignment before/after commit, duplicate delivery, lost acknowledgment, daemon restart, runner restart and a live network partition.</li>
 <li><input disabled="" type="checkbox"> A partition or delayed fresh lease renewal cannot cause overlapping valid execution leases; stale results cannot become current or publish. A restore-generation change fences surviving old-generation messages before resume.</li>
 <li><input disabled="" type="checkbox"> Connected stop acknowledgment targets five seconds; lease-expiry termination of disconnected runs meets the documented bound.</li>
-<li><input disabled="" type="checkbox"> An unlisted repository, unavailable route or changed local policy produces a named refusal without widening placement.</li>
-<li><input disabled="" type="checkbox"> Retry/duration/concurrency limits work even with unknown provider quota; router/harness/task retries have a bounded combined deadline.</li>
-<li><input disabled="" type="checkbox"> Router downtime parks model calls while capture, stored review and stop remain usable; reconnect resumes under current task authority without direct-provider bypass.</li>
+<li><input disabled="" type="checkbox"> An unlisted repository, unavailable model target or changed local policy produces a named refusal without widening placement.</li>
+<li><input disabled="" type="checkbox"> Retry/duration/concurrency limits work even with unknown provider quota; gateway/harness/task retries have a bounded combined deadline.</li>
+<li><input disabled="" type="checkbox"> Gateway downtime parks model calls while capture, stored review and stop remain usable; reconnect resumes under current task authority without direct-provider bypass.</li>
 <li><input disabled="" type="checkbox"> A crash during artifact promotion leaves either a recoverable orphan or a valid durable reference; never an acknowledged missing artifact.</li>
 <li><input disabled="" type="checkbox"> Backup restore begins paused, validates manifests and reconciles attempts; disk-full and corrupt-checkout fixtures preserve the only available work.</li>
 <li><input disabled="" type="checkbox"> Safe recovery p95 is under 60 seconds for the specified 100-task fixture, excluding provider wait; all failures and timings are reported.</li>
@@ -2410,7 +2483,7 @@ This is the <strong>private alpha</strong>, limited to one repository and sequen
 <p><strong>Build</strong></p>
 <ul>
 <li>Authenticated private HTTPS web application: capture, routing correction, brief/plan editing, combined approval, task status, evidence review and stop.</li>
-<li>Task-aware selection among approved 9Router profiles: bounded semantic assessment, capability filtering, explainable ranking, uncertainty and eligible overrides for worker/planner/reviewer steps. Fixed role defaults are the comparator, not the completed feature.</li>
+<li>Task-aware selection among approved gateway model IDs or aliases: bounded semantic assessment, capability filtering, explainable ranking, uncertainty and eligible overrides for worker/planner/reviewer steps. Fixed role defaults are the comparator, not the completed feature.</li>
 <li>Bounded discovery and structured intent/planning with criterion IDs and assumptions.</li>
 <li>Revocation on material intent changes; current instructions override stored preferences.</li>
 <li>Minimal Markdown context: charter, progress, verified commands and decisions, with human-approved writes.</li>
@@ -2426,8 +2499,8 @@ This is the <strong>private alpha</strong>, limited to one repository and sequen
 <li><input disabled="" type="checkbox"> Refresh and disconnect restore status; stale approvals and duplicate submissions cannot act on a newer candidate.</li>
 <li><input disabled="" type="checkbox"> Review shows the exact candidate, checks and limitations. Accept, publish and merge are distinguishable; no default-branch push occurs.</li>
 <li><input disabled="" type="checkbox"> Lost push/PR response is reconciled by remote branch/head/PR identity before retry; moved remote refs block instead of overwriting.</li>
-<li><input disabled="" type="checkbox"> Ten paired tasks compare Gaffer with a standalone harness using the same 9Router routes, a good brief and progress notes; include all planning, review and recovery effort.</li>
-<li><input disabled="" type="checkbox"> A separately registered selector comparison checks suitability, uncertainty, overrides and zero hard-constraint violations against static role defaults, counting assessment and failed-run overhead. Here route choice varies while the available route set, fallback definitions, budgets and harness remain fixed; do not combine it with the identical-route product comparison.</li>
+<li><input disabled="" type="checkbox"> Ten paired tasks compare Gaffer with a standalone harness using the same configured gateway and model targets, a good brief and progress notes; include all planning, review and recovery effort.</li>
+<li><input disabled="" type="checkbox"> A separately registered selector comparison checks suitability, uncertainty, overrides and zero hard-constraint violations against static role defaults, counting assessment and failed-run overhead. Here model-target choice varies while the available target set, fallback definitions, budgets and harness remain fixed; do not combine it with the identical-target product comparison.</li>
 <li><input disabled="" type="checkbox"> Seven consecutive days of bounded dogfood have no lost acknowledged result or unauthorised publication. Blocking is allowed and reported.</li>
 </ul>
 <p><strong>Decision:</strong> if intent clarification does not reduce correction effort, simplify
@@ -2458,27 +2531,27 @@ Embeddings and automatic promotion remain experiments, not prerequisites for bet
 throughput without increasing rework, cost or data exposure? This produces <strong>beta</strong>.</p>
 <p><strong>Build</strong></p>
 <ul>
-<li>Second harness sharing the same 9Router instance, adapter conformance suite and version support matrix.</li>
-<li>Multi-runner allowlists/reservations; selection over eligible runner/harness/route tuples.</li>
-<li>Router-sourced availability and usage observations, task admission/backoff and fairness; no duplicate provider-account quota ledger.</li>
+<li>Second harness sharing the same configured model gateway, adapter conformance suite and version support matrix.</li>
+<li>Multi-runner allowlists/reservations; selection over eligible runner/harness/gateway-model tuples.</li>
+<li>Gateway-sourced availability and usage observations where safely exposed, task admission/backoff and fairness; explicit unknowns otherwise and no duplicate provider-account quota ledger.</li>
 <li>Parallel independent tasks in isolated clones; ordered dependency composition and serial integration.</li>
 <li>Budget/queue/review-backlog visibility. Start with low configurable concurrency.</li>
 </ul>
 <p><strong>Exit evidence</strong></p>
 <ul>
-<li><input disabled="" type="checkbox"> Both adapters pass configuration/isolation, approval-blocking, cancellation, structured-output, crash and router-failure tests on the supported matrix.</li>
+<li><input disabled="" type="checkbox"> Both adapters pass configuration/isolation, approval-blocking, cancellation, structured-output, crash and gateway-failure tests on the supported matrix.</li>
 <li><input disabled="" type="checkbox"> Removing an eligible runner never redirects work to an unlisted machine; a locally reserved runner rejects a relabelled wrong repository.</li>
-<li><input disabled="" type="checkbox"> Both harnesses use the same centrally managed subscription connections. Separate subscriptions remain separate capacity; duplicate aliases do not create extra capacity; unsupported headroom/reset displays unknown.</li>
-<li><input disabled="" type="checkbox"> Router-managed provider/account fallback stays within the approved route. Gaffer retries only terminal task failures, after reconciling the prior attempt.</li>
+<li><input disabled="" type="checkbox"> Both harnesses use the same centrally managed gateway. Account/subscription details remain gateway-owned; duplicate aliases do not create extra capacity and unsupported headroom/reset displays unknown.</li>
+<li><input disabled="" type="checkbox"> Gateway-managed provider/account fallback, where configured and proven, stays within the approved envelope. Gaffer retries only terminal task failures, after reconciling the prior attempt.</li>
 <li><input disabled="" type="checkbox"> Dependent tasks receive exact prerequisite artifacts; rejecting/changing a predecessor invalidates downstream candidates.</li>
 <li><input disabled="" type="checkbox"> Deliberately overlapping and semantically conflicting patches are caught during integration/verification; clean application alone never passes the gate.</li>
 <li><input disabled="" type="checkbox"> Twenty paired tasks compare whole-product value with the standalone-harness baseline; separately compare parallel Gaffer with sequential Gaffer on suitable task cases. Count capture, planning, approvals and failed-run effort. Target median operator effort is at least 20% lower than the standalone baseline; parallel mode must improve on sequential mode for its enabled task classes. Apply the predeclared PRD defect gate (zero critical defects and no more major defects than the comparator over seven days), and report spread and sample limitations.</li>
 </ul>
 <p><strong>Decision:</strong> parallelism stays optional if its measured benefit is limited to
 specific task classes. Keep sequential mode as a first-class execution policy.
-9Router and same-provider multi-subscription support are already alpha foundations.
-Beta improves task admission using its signals; it does not promise exact quota
-forecasting across every provider.</p>
+The configured model gateway is already an alpha foundation. Beta improves task
+admission using its safe signals where available; it does not promise exact quota
+forecasting across every gateway, account or provider.</p>
 <h2 id="roadmap-m5-recurring-work">M5 — Recurring work</h2>
 <p><strong>Question:</strong> can standing authority safely turn selected events into useful work?</p>
 <p><strong>Build</strong></p>
@@ -2589,7 +2662,7 @@ of every idea in the original PRD.</p>
 </tr>
 <tr>
 <td>M4 gateway and quota economics</td>
-<td>9Router, named routes and same-provider multi-subscription proof in M0; caps/recovery in M1; richer task admission in M4</td>
+<td>Configured gateway path and any relied-on fallback/status behavior in M0; caps/recovery in M1; richer task admission in M4</td>
 </tr>
 <tr>
 <td>M5 cron/webhook/chat</td>
@@ -2607,6 +2680,88 @@ of every idea in the original PRD.</p>
 <p>Story IDs US-A1 through US-E3 remain in the PRD with explicit release labels. Old
 numeric story references have been removed. Decisions and metrics are now shared
 across the documents rather than separately implied by each milestone.</p>
+</article>
+<article class="doc" id="model-gateway" data-doc="model-gateway"><h1 id="model-gateway-model-gateway-contract-v1">Model gateway contract v1</h1>
+<p><strong>Status:</strong> proposed generic product requirement · <strong>Current selection:</strong> CLIProxyAPI ·
+<strong>Updated:</strong> 17 September 2026</p>
+<p>This contract defines Gaffer&#39;s model-access boundary. A gateway selection is
+operator configuration, not a product dependency. The configured gateway must expose
+an operator-selected HTTPS base URL and serve at least one supported protocol. Gaffer
+never stores a gateway credential value or provider credential.</p>
+<h2 id="model-gateway-configuration">Configuration</h2>
+<pre><code class="language-text">model_gateway:
+  gateway_id: stable local identifier
+  base_url: operator-selected HTTPS base URL
+  credential_ref: protected file path or secret reference; never a value
+  protocols[]: chat_completions | responses | messages
+  models[]: exact permitted gateway model IDs or aliases
+  status_endpoint?: optional operator-configured read-only endpoint
+</code></pre>
+<p><code>protocols</code> and <code>models</code> are non-empty allowlists. <code>chat_completions</code>, <code>responses</code>
+and <code>messages</code> mean OpenAI Chat Completions, OpenAI Responses and Anthropic Messages.
+Discovery can inform setup but does not add an allowed model or prove readiness. The
+configured base URL, credential reference and optional status endpoint are trusted
+operator inputs; request content,
+repository text and model output cannot change them. Do not put endpoint-specific
+secrets, credential values or maintainer hosts in documentation, fixtures, logs,
+command lines, prompts or browser payloads.</p>
+<p>Changing the gateway, protocol set, model allowlist or credential reference
+invalidates incompatible conformance evidence and requires current authority before
+new attempts are admitted. Gateway-specific setup, backup and migration stay outside
+Gaffer&#39;s workflow store.</p>
+<h2 id="model-gateway-ownership-and-inference-boundary">Ownership and inference boundary</h2>
+<p>The gateway exclusively owns provider credentials, accounts and subscriptions,
+credential rotation, cooldown and request fallback. Gaffer never becomes a second
+account router, subscription balancer, refresh service or quota ledger. Gaffer owns
+task authority, gateway-model eligibility, attempt identity, execution, recovery and
+bounded task-level retries.</p>
+<p>Workers never receive the gateway credential. A trusted per-attempt inference
+boundary outside the worker sandbox resolves <code>credential_ref</code>, injects the credential
+upstream and exposes only the attempt&#39;s permitted protocol paths and exact model IDs
+or aliases. It denies gateway management, unrestricted discovery, alternate models,
+direct provider access and direct gateway access. Planner, reviewer and coordinator
+calls use the same boundary with their own scoped attempt identities.</p>
+<p>Each admitted request is bound to the current grant, attempt, lease/fence identity,
+protocol, model target, limits and expiry. Gateway-owned fallback may continue the
+same request only inside the operator-approved provider/model/billing envelope.
+Gaffer does not try its ranked models as a second request-fallback loop. Partial
+output, unknown upstream work, cancellation uncertainty and terminal gateway failure
+remain task-boundary reconciliation cases; no direct-provider bypass is allowed.</p>
+<h2 id="model-gateway-status-usage-and-conformance">Status, usage and conformance</h2>
+<p>Gaffer consumes gateway status and usage observations where the configured gateway
+exposes a safe, authenticated interface. Project only explicit allowlisted fields,
+record source and freshness, and keep management credentials outside workers.
+Missing status, usage, headroom, resolved-account, reset, fallback or correlation
+data is <code>unknown</code>, not zero, healthy, exhausted or attributable. Gaffer does not
+infer account balances, reset schedules, selected accounts or exact cost from an
+absent endpoint, missing field or stale observation.</p>
+<p>Endpoint presence and model listing do not prove streaming, tool calls, structured
+output, fallback, cancellation, output limits, usage attribution or readiness.
+Qualify each supported gateway/protocol/model/harness/settings path with bounded
+positive and failure-path probes before relying on those capabilities.</p>
+<h2 id="model-gateway-current-cliproxyapi-observation">Current CLIProxyAPI observation</h2>
+<p>On 17 September 2026, the operator-configured CLIProxyAPI endpoint was verified to
+answer:</p>
+<ul>
+<li><code>POST /v1/chat/completions</code></li>
+<li><code>POST /v1/responses</code></li>
+<li><code>POST /v1/messages</code></li>
+<li><code>GET /v1/models</code></li>
+</ul>
+<p>The endpoint URL and credential are operator configuration and are not recorded here.
+These observations establish only that the listed paths answered. Authentication
+semantics, scoped model enforcement, streaming, tools, structured output, status and
+usage interfaces, account/subscription behavior, rotation, cooldown, fallback,
+cancellation and limits remain unverified or unknown until separately recorded.</p>
+<h2 id="model-gateway-9router-mapping">9Router mapping</h2>
+<p>9Router remains one optional gateway implementation and its existing contract and
+evidence remain a historical gateway-specific profile. For a 9Router deployment,
+<code>base_url</code> maps to its operator-configured origin, <code>credential_ref</code> to its inference
+key reference, <code>protocols</code> to the enabled compatible paths, and <code>models</code> to approved
+model or combo names. Its status adapter, account/connection observations,
+freeze-and-drain requirements, migration procedure and conformance corpus apply only
+when the operator selects that profile. See the
+<a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/9router.md">historical 9Router contract</a>.</p>
 </article>
   </main>
 </div>

@@ -237,13 +237,13 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--oxide);outline-offs
     <header class="hero">
       <h1>Keep the intent.<br>Deliver the work.</h1>
       <p>Capture an idea. Agree what done means. Keep authorised work moving on your machines, and return to verified changes you can review.</p>
-      <p>A self-hosted coding-agent coordinator, with 9Router managing model access and multiple subscriptions across the whole crew.</p>
+      <p>A self-hosted coding-agent coordinator, with an operator-configured model gateway owning provider access across the whole crew.</p>
       <div class="capture" aria-label="Illustrative capture and brief">
         <span class="cbox">tidy up the auth module</span>
         <span class="carrow" aria-hidden="true">→</span>
         <span class="cbrief"><b>proposed brief</b> remove dead code, pass lint, preserve behaviour<br><b>confirm</b> server auth only <em>· awaiting your approval</em></span>
       </div>
-      <div class="meta">Five documents · evidence, requirements, design and delivery gates<br>Proposed features, not implemented behaviour</div>
+      <div class="meta">Six documents · evidence, requirements, design and delivery gates<br>Proposed features, not implemented behaviour</div>
     </header>
     {{ARTICLES}}
   </main>

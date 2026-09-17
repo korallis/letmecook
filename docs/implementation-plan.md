@@ -7,12 +7,15 @@ Created **14 September 2026** from the reviewed v0.4 plan. The initial backlog d
 The initial 63-issue index is supplemented by
 [#66 operator-selected deployment](https://github.com/korallis/letmecook/issues/66)
 and [#71 task-aware route selection](https://github.com/korallis/letmecook/issues/71).
-Daemon, runner and 9Router locations are operator configuration; no maintainer
-machine or private network is a product prerequisite. The affected setup,
-placement and packaging issues retain their milestone dependencies.
+Daemon, runner and model-gateway locations are operator configuration; no maintainer
+machine or private network is a product prerequisite. The affected setup, placement
+and packaging issues retain their milestone dependencies.
 
 The [task-routing contract](contracts/task-routing.md) separates task assessment
-and eligible named-route ranking in Gaffer from 9Router's model/account fallback.
+and eligible gateway-model ranking in Gaffer from the configured gateway's
+model/account fallback. Older issue titles below retain their historical 9Router
+wording; the [generic model-gateway contract](contracts/model-gateway.md) owns the
+current product requirement.
 M1 records and enforces immutable decisions; M2 implements semantic assessment and
 operator controls for the first alpha. M4 adds capacity and calibration evidence.
 
@@ -33,7 +36,8 @@ The [foundation decision record](decisions/0001-execution-foundation.md) selects
 narrow Go build with explicit unresolved gates; #9 remains open and original
 implementation dependencies do not change. Application paths below identify
 proposed owners, not permission to scaffold them. The coding agent is Astra;
-runtime model routes remain a separate product choice, always through 9Router.
+runtime model targets remain a separate product choice, always through the
+operator-configured model gateway.
 
 When a prerequisite lands, review its evidence and update dependent readiness labels. Cancelled or failed-capability issues cannot unblock a dependent implementation by being closed. Long-running gates require actual observations; fixes discovered by a gate get their own focused issue and PR.
 
@@ -45,9 +49,10 @@ and [bounded M1 package plan](decisions/0001-execution-foundation.md#bounded-m1-
 Use those boundaries when applying the navigation hints below.
 
 Affected GitHub issue-body navigation hints were updated and read back on
-15 September 2026 as follows; outcomes, dependencies, acceptance criteria and
-9Router ownership stay unchanged. No comments, assignees or issue states changed. Avoid creating separate
-packages merely to reproduce the old path list.
+15 September 2026 as follows; outcomes, dependencies, acceptance criteria and the
+then-current 9Router ownership text were unchanged. No comments, assignees or issue
+states changed. Avoid creating separate packages merely to reproduce the old path
+list.
 
 | Issue | Updated navigation hint |
 | --- | --- |

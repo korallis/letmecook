@@ -37,7 +37,7 @@ verification and fixes. Keep the PR within this issue's scope. If a material
 contract is missing, explain it with evidence and continue independent work.
 
 Use local Astra subagents for independent work or review when it helps; keep one
-writer per branch/worktree. Preserve the 9Router ownership boundary and the
+writer per branch/worktree. Preserve the model-gateway ownership boundary and the
 authority, isolation and durability requirements relevant to this issue.
 
 Open or update the PR with Closes #<number>, criterion coverage, observed check
@@ -65,10 +65,11 @@ are the initial design baseline, not an immutable implementation API. If the iss
 and accepted specification disagree materially, resolve that discrepancy explicitly
 and update the affected issue/docs before building incompatible behaviour.
 
-The coding model is GPT-6 Astra. Runtime model routes are a separate product concern:
-all application inference still goes through 9Router. Integration probes must verify
-the deployed model's actual protocol and tool capabilities; using Astra to build the
-repository does not prove that every router/harness combination supports it.
+The coding model is GPT-6 Astra. Runtime model targets are a separate product concern:
+all application inference still goes through the operator-configured model gateway.
+Integration probes must verify the deployed model's actual protocol and tool
+capabilities; using Astra to build the repository does not prove that every
+gateway/harness combination supports it.
 
 Later experiments in the roadmap require a separate decision and scoped issue.
 They are not implicit scope in a nearby v1 ticket.
