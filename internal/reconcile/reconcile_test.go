@@ -544,6 +544,137 @@ func TestLatchClearingAfterCancelAndNotForPause(t *testing.T) {
 	}
 }
 
+// Task pauses and global stops are owner latches: reconcile never clears them,
+// but once the owner's resume writes the clearing record every read of latch
+// state (TaskLatched, RetryInputs, PlanRetry's stop_latched) treats them as
+// lifted, exactly like a cleared cancel latch.
+func TestOwnerClearedPauseAndGlobalLatchesLiftBlocking(t *testing.T) {
+	for _, kind := range []c.Kind{c.PauseTask, c.GlobalStop} {
+		t.Run(string(kind), func(t *testing.T) {
+			f := newFixture(t)
+			k := f.newTask(t)
+			k.dispatch(t)
+			stop := c.Request{ID: uuid(), Kind: kind, Cause: "operator"}
+			if kind == c.PauseTask {
+				stop.TaskID = k.id().TaskID
+			}
+			if _, err := f.s.RequestStop(ctx, f.owner, stop); err != nil {
+				t.Fatal(err)
+			}
+			report := f.sweep(t, true)
+			if e := entryFor(t, report, k.id().AttemptID); e.Classification != AssignedUndelivered || !e.Released || e.State != p.Cancelled {
+				t.Fatalf("%+v", e)
+			}
+			for pass := range 2 {
+				if !f.latched(t, k.id().TaskID) {
+					t.Fatalf("pass %d: owner latch lifted without the owner", pass)
+				}
+				if _, err := PlanRetry(ctx, f.deps(), k.id().TaskID); err == nil || !strings.Contains(err.Error(), "stop_latched") {
+					t.Fatalf("pass %d: retry planned under an owner latch: %v", pass, err)
+				}
+				if cleared := entriesOf(f.sweep(t, true), LatchCleared); len(cleared) != 0 {
+					t.Fatalf("pass %d: reconcile cleared an owner latch: %+v", pass, cleared)
+				}
+			}
+			in, err := f.s.RetryInputs(ctx, k.id().TaskID)
+			if err != nil || !in.Latched {
+				t.Fatal(in.Latched, err)
+			}
+			f.ownerClears(t, stop, k.id().AttemptID)
+			if f.latched(t, k.id().TaskID) {
+				t.Fatal("cleared owner latch still blocks")
+			}
+			if in, err = f.s.RetryInputs(ctx, k.id().TaskID); err != nil || in.Latched {
+				t.Fatal(in.Latched, err)
+			}
+			request, err := PlanRetry(ctx, f.deps(), k.id().TaskID)
+			if err != nil || request.Request.TaskID != k.id().TaskID {
+				t.Fatal(request, err)
+			}
+			cleared, err := f.s.LatchClearances(ctx, "")
+			if err != nil || len(cleared) != 1 || cleared[0].StopID != stop.ID || cleared[0].Kind != kind {
+				t.Fatal(cleared, err)
+			}
+		})
+	}
+}
+
+// `task stop` (StopDispatch) writes the sticky dispatch_stops flag and a
+// pause_task marker dispatchID(task, "legacy-stop"); `task resume` clears that
+// marker. Both the marker and the flag then count as lifted, so the retry is
+// planned; nothing lifts before the owner's clearing record.
+func TestTaskStopThenOwnerResumeAdmitsRetry(t *testing.T) {
+	f := newFixture(t)
+	k := f.newTask(t)
+	k.dispatch(t)
+	if err := f.s.StopDispatch(ctx, f.owner, k.id().TaskID); err != nil {
+		t.Fatal(err)
+	}
+	report := f.sweep(t, true)
+	if e := entryFor(t, report, k.id().AttemptID); e.Classification != AssignedUndelivered || !e.Released || e.State != p.Cancelled || len(entriesOf(report, LatchCleared)) != 0 {
+		t.Fatalf("%+v", report.Entries)
+	}
+	if !f.latched(t, k.id().TaskID) {
+		t.Fatal("task stop not latched")
+	}
+	if _, err := PlanRetry(ctx, f.deps(), k.id().TaskID); err == nil || !strings.Contains(err.Error(), "stop_latched") {
+		t.Fatal("retry planned under task stop", err)
+	}
+	legacy := c.Request{ID: derive(k.id().TaskID, "legacy-stop"), Kind: c.PauseTask, TaskID: k.id().TaskID, Cause: "operator"}
+	if _, err := f.s.StopStatus(ctx, legacy.ID, k.id().AttemptID); err != nil {
+		t.Fatal("legacy pause marker not found where StopDispatch writes it", err)
+	}
+	f.ownerClears(t, legacy, k.id().AttemptID)
+	if f.latched(t, k.id().TaskID) {
+		t.Fatal("task resume did not lift task stop")
+	}
+	in, err := f.s.RetryInputs(ctx, k.id().TaskID)
+	if err != nil || in.Latched {
+		t.Fatal(in.Latched, err)
+	}
+	if _, err := PlanRetry(ctx, f.deps(), k.id().TaskID); err != nil {
+		t.Fatal("retry refused after task resume", err)
+	}
+}
+
+// An owner clearing record for a pause latch does not touch a cancel latch on
+// the same task: that latch lifts only when its attempt is terminal and released.
+func TestOwnerClearingLeavesCancelLatchInForce(t *testing.T) {
+	f := newFixture(t)
+	k := f.newTask(t)
+	k.start(t)
+	cancel := k.cancel(t)
+	pause := c.Request{ID: uuid(), Kind: c.PauseTask, TaskID: k.id().TaskID, Cause: "operator"}
+	if _, err := f.s.RequestStop(ctx, f.owner, pause); err != nil {
+		t.Fatal(err)
+	}
+	f.ownerClears(t, pause, k.id().AttemptID)
+	if !f.latched(t, k.id().TaskID) {
+		t.Fatal("pause clearing lifted the cancel latch")
+	}
+	if cleared, err := f.s.ClearLatches(ctx, ""); err != nil || len(cleared) != 0 {
+		t.Fatal("cancel latch cleared while the attempt is live", cleared, err)
+	}
+	k.propose(t, p.Stopping, store.RuntimeEvidence{Kind: "stop"})
+	if reply := k.report(t, k.terminated(cancel.ID, "terminated", "quiescent"), quiescent()); !reply.Released {
+		t.Fatal(reply)
+	}
+	if !f.latched(t, k.id().TaskID) {
+		t.Fatal("cancel latch lifted before its clearing record")
+	}
+	cleared, err := f.s.ClearLatches(ctx, "")
+	if err != nil || len(cleared) != 1 || cleared[0].StopID != cancel.ID || cleared[0].Kind != c.CancelAttempt {
+		t.Fatal(cleared, err)
+	}
+	if f.latched(t, k.id().TaskID) {
+		t.Fatal("task still latched after both clearings")
+	}
+	all, err := f.s.LatchClearances(ctx, k.id().TaskID)
+	if err != nil || len(all) != 2 {
+		t.Fatal(all, err)
+	}
+}
+
 // PlanRetry honours attempt ceilings, grant invalidation and the released
 // reservation; store.Dispatch enforces the same ceilings independently.
 func TestPlanRetryCeilingsAndAuthority(t *testing.T) {

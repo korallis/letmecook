@@ -643,6 +643,51 @@ func TestReconcileReportsAndClearances(t *testing.T) {
 	}
 }
 
+// Every kind of latch lifts through the same clearing record, including the
+// sticky dispatch_stops flag behind StopDispatch's legacy pause latch and an
+// authority supersession; reconcile only ever writes it for cancel_attempt.
+func TestTaskLatchedHonoursClearingForEveryKind(t *testing.T) {
+	f := dispatchFixtureFor(t, nil)
+	d := admitted(t, f)
+	task := d.Request.TaskID
+	clear := func(stopID string) {
+		t.Helper()
+		if _, err := f.s.db.Exec("INSERT INTO reconcile_reports VALUES(?,?,?,?)", latchClearedPrefix+stopID, f.s.meta.DaemonBoot, time.Now().UnixMilli(), `{"stop_id":"`+stopID+`"}`); err != nil {
+			t.Fatal(err)
+		}
+	}
+	latched := func(want bool, what string) {
+		t.Helper()
+		got, err := f.s.TaskLatched(ctx, task)
+		if err != nil || got != want {
+			t.Fatalf("%s: latched=%v want %v (%v)", what, got, want, err)
+		}
+	}
+	latched(false, "fresh")
+	if err := f.s.StopDispatch(ctx, f.owner, task); err != nil {
+		t.Fatal(err)
+	}
+	latched(true, "task stop")
+	if cleared, err := f.s.ClearLatches(ctx, ""); err != nil || len(cleared) != 0 {
+		t.Fatal("reconcile cleared an owner latch", cleared, err)
+	}
+	clear(dispatchID(task, "legacy-stop"))
+	latched(false, "task stop cleared")
+	global := c.Request{ID: newID(), Kind: c.GlobalStop, Cause: "operator"}
+	if _, err := f.s.RequestStop(ctx, f.owner, global); err != nil {
+		t.Fatal(err)
+	}
+	latched(true, "global stop")
+	clear(global.ID)
+	latched(false, "global stop cleared")
+	if err := f.s.InvalidateExecution(ctx, task, d.Request.GrantID, f.owner, "revoked"); err != nil {
+		t.Fatal(err)
+	}
+	latched(true, "supersession")
+	clear(dispatchID(d.Request.GrantID, "authority-stop"))
+	latched(false, "supersession cleared")
+}
+
 // RetryInputs derives the last attempt's cause from retained records.
 func TestRetryInputsCauses(t *testing.T) {
 	x := executionFixtureFor(t, nil)

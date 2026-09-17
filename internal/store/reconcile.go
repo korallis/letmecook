@@ -37,10 +37,18 @@ import (
 const (
 	maxReconcileReport      = 1048576
 	maxReconcileRuntimeBody = 16384
-	// latchClearedPrefix keys the immutable clearing record of one cancel_attempt
-	// stop in reconcile_reports: id = latchClearedPrefix + stop_id. control.go's
-	// admission check consults exactly this key; history is never deleted.
+	// latchClearedPrefix keys the immutable clearing record of one control stop in
+	// reconcile_reports: id = latchClearedPrefix + control_stops.id, body shaped
+	// as LatchClearance. Reconcile writes it for released cancel_attempt stops;
+	// the owner's resume commands write it for pause_task and global_stop stops.
+	// control.go's admission check consults exactly this key; history is never
+	// deleted.
 	latchClearedPrefix = "latch-cleared:"
+	// rcActiveStopFilter is the one SQL predicate, over control_stops aliased s,
+	// that decides whether a latch is still in force: it is until its clearing
+	// record exists, whatever its kind. Every read of clearing state in this file
+	// uses it, and controlSuppressed can reuse it verbatim.
+	rcActiveStopFilter = "NOT EXISTS(SELECT 1 FROM reconcile_reports r WHERE r.id='" + latchClearedPrefix + "'||s.id)"
 	rcLeaseClockActor  = "lease-clock"
 	// Release bases ReleaseAttempt verifies. Each names the retained evidence the
 	// store re-checks before it releases a reservation.
@@ -375,10 +383,13 @@ func rcLeaseNonces(ctx context.Context, tx *sql.Tx, attemptID string) ([]string,
 // plus the clearing record this file writes.
 func rcTaskLatched(ctx context.Context, tx *sql.Tx, taskID, grantID string) (bool, error) {
 	var latched bool
-	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=?) OR EXISTS(SELECT 1 FROM control_stops s WHERE kind='global_stop' OR
- (kind='pause_task' AND task_id=?) OR
- (kind='cancel_attempt' AND task_id=? AND NOT EXISTS(SELECT 1 FROM reconcile_reports r WHERE r.id=?||s.id)) OR
- (kind='authority_supersession' AND (grant_id=? OR (task_id=? AND EXISTS(SELECT 1 FROM control_targets t WHERE t.stop_id=s.id)))))`, taskID, taskID, taskID, latchClearedPrefix, grantID, taskID).Scan(&latched)
+	// The sticky dispatch_stops flag StopDispatch writes follows the pause_task
+	// latch it writes in the same transaction (dispatchID(task, "legacy-stop")):
+	// clearing that latch resumes the task.
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=? AND NOT EXISTS(SELECT 1 FROM reconcile_reports r WHERE r.id=?))
+ OR EXISTS(SELECT 1 FROM control_stops s WHERE `+rcActiveStopFilter+` AND (kind='global_stop' OR
+ (kind IN ('pause_task','cancel_attempt') AND task_id=?) OR
+ (kind='authority_supersession' AND (grant_id=? OR (task_id=? AND EXISTS(SELECT 1 FROM control_targets t WHERE t.stop_id=s.id))))))`, taskID, latchClearedPrefix+dispatchID(taskID, "legacy-stop"), taskID, grantID, taskID).Scan(&latched)
 	return latched, err
 }
 
@@ -807,7 +818,7 @@ func rcClearLatches(ctx context.Context, tx *sql.Tx, taskID, attemptID, daemonBo
 	rows, err := tx.QueryContext(ctx, `SELECT s.id,s.task_id,s.attempt_id,s.body,a.state FROM control_stops s JOIN attempts a ON a.id=s.attempt_id JOIN dispatches d ON d.attempt_id=a.id
  WHERE s.kind='cancel_attempt' AND (?='' OR s.task_id=?) AND (?='' OR s.attempt_id=?)
  AND a.state IN ('succeeded','failed','cancelled','expired') AND EXISTS(SELECT 1 FROM dispatch_releases r WHERE r.dispatch_id=d.id)
- AND NOT EXISTS(SELECT 1 FROM reconcile_reports r WHERE r.id=?||s.id) ORDER BY s.rowid`, taskID, taskID, attemptID, attemptID, latchClearedPrefix)
+ AND `+rcActiveStopFilter+` ORDER BY s.rowid`, taskID, taskID, attemptID, attemptID)
 	if err != nil {
 		return nil, err
 	}

@@ -115,13 +115,21 @@ retries a later attempt that ended otherwise.
 
 A `cancel_attempt` latch suppresses admission for its task until the attempt is
 terminal and its reservation released. Reconcile then appends a clearing record
-(`reconcile_reports.id = "latch-cleared:" + stop_id`); the stop, its targets and
-observations are never deleted. `store.TaskLatched` and `PlanRetry` honour the
-clearing. `pause_task` (`gaffer task stop`, `StopDispatch`), `global_stop` and
-`authority_supersession` are never cleared automatically. The admission check in
-`internal/store/control.go` (`controlSuppressed`) must consult the same record
-for `store.Dispatch` to admit the retry; until it does, a retry after a
-same-boot cancel is refused `stop_latched` while `PlanRetry` succeeds.
+(`reconcile_reports.id = "latch-cleared:" + stop_id`, body `LatchClearance`);
+the stop, its targets and observations are never deleted. `pause_task` (`gaffer
+task stop`, `StopDispatch`), `global_stop` and `authority_supersession` are never
+cleared by reconcile: the owner's `gaffer task resume` and `gaffer daemon resume`
+append the same record for them. One predicate decides whether any latch is
+still in force, whatever its kind (`rcActiveStopFilter` in
+`internal/store/reconcile.go`, over `control_stops s`): `store.TaskLatched`,
+`ClearLatches`, `RetryInputs.Latched`, `PlanRetry`'s `stop_latched` refusal and
+every classification that treats a task-level or global latch as blocking use
+it, and the sticky `dispatch_stops` flag follows its own `pause_task` latch
+(`dispatchID(task, "legacy-stop")`). The admission check in
+`internal/store/control.go` (`controlSuppressed`) must consult the same
+predicate for `store.Dispatch` to admit work again; until it does, a retry after
+a same-boot cancel or an owner resume is refused `stop_latched` while
+`PlanRetry` succeeds.
 
 ## Retry
 

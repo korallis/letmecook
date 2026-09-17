@@ -510,6 +510,37 @@ func (f *fixture) seedUnresolved(t *testing.T, n int) []string {
 	return attempts
 }
 
+// ownerClears writes the owner's clearing record for a pause_task or global_stop
+// latch the way the owner API's resume commands do: a reconcile_reports row
+// keyed latch-cleared:<stop_id> with a LatchClearance body, through a second
+// connection while the store is open (those commands are not on this base).
+// Reconcile itself never writes such a record for these kinds.
+func (f *fixture) ownerClears(t *testing.T, stop c.Request, attemptID string) {
+	t.Helper()
+	body, err := json.Marshal(store.LatchClearance{StopID: stop.ID, TaskID: stop.TaskID, AttemptID: attemptID, Kind: stop.Kind, Cause: stop.Cause, Actor: f.owner, DaemonBoot: f.boot, ClearedMS: time.Now().UnixMilli()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	u := url.URL{Scheme: "file", Path: filepath.Join(f.dir, "state.db"), RawQuery: "_pragma=busy_timeout(5000)"}
+	db, err := sql.Open("sqlite", u.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec("INSERT INTO reconcile_reports VALUES(?,?,?,?)", "latch-cleared:"+stop.ID, f.boot, time.Now().UnixMilli(), string(body)); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func (f *fixture) latched(t *testing.T, taskID string) bool {
+	t.Helper()
+	latched, err := f.s.TaskLatched(ctx, taskID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return latched
+}
+
 // reopen simulates a daemon restart: close and open the same state directory.
 // The new store gets a fresh boot and a fresh control clock domain.
 func (f *fixture) reopen(t *testing.T) {
