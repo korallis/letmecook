@@ -771,6 +771,17 @@ func rcReleaseActor(ctx context.Context, tx *sql.Tx, d Dispatch, preferred strin
 	return fingerprint, err
 }
 
+// runnerLocalStopCause recognizes only the deterministic ID for this attempt
+// and the shared closed set of causes; a random stop ID conveys no authority.
+func runnerLocalStopCause(attemptID, stopID string) string {
+	for _, cause := range c.LocalStopCauses {
+		if execwire.LocalStopID(attemptID, cause) == stopID {
+			return cause
+		}
+	}
+	return ""
+}
+
 // rcTerminationCheck verifies one terminated report against the dispatch and the
 // retained control records: exact session, a latched target or the attempt's own
 // lease-expiry stop id, a confirmed process outcome, quiescent remote work, a
@@ -827,6 +838,14 @@ func (s *Store) rcTerminationCheck(ctx context.Context, tx *sql.Tx, d Dispatch, 
 		cause = stop.Request.Cause
 	} else if expiry {
 		cause = "lease_expired"
+	} else if local := runnerLocalStopCause(identity.AttemptID, m.StopID); local != "" {
+		// A supervisor can die before sending its stopping proposal. Retained
+		// guardian termination then supplies the same derived local cancel;
+		// its old-boot barrier and quiescence requirements still apply below.
+		cause = local
+		if _, err := latchStop(ctx, tx, "runner-local", c.Request{ID: m.StopID, Kind: c.CancelAttempt, TaskID: identity.TaskID, AttemptID: identity.AttemptID, Cause: cause}, s.controlStamp()); err != nil {
+			return "", "", err
+		}
 	} else {
 		return "", "", g.Deny("reconciliation_required", "stop_id")
 	}

@@ -1456,10 +1456,8 @@ func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, sel
 	if err == nil && m.StopID == execwire.ExpiryStopID(lease.Request.Nonce) {
 		derived.Cause, actor = "lease_expired", "lease-clock"
 	}
-	for _, cause := range execwire.LocalStopCauses {
-		if m.StopID == execwire.LocalStopID(identity.AttemptID, cause) {
-			derived.Cause, actor = cause, "runner-local"
-		}
+	if cause := runnerLocalStopCause(identity.AttemptID, m.StopID); cause != "" {
+		derived.Cause, actor = cause, "runner-local"
 	}
 	if actor != "" {
 		var latched bool
@@ -1553,6 +1551,28 @@ func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, sel
 		return TerminationReply{}, err
 	}
 	released := d.Released
+	if !released && state == p.Running && actor == "runner-local" && m.ConfirmedProcess == "terminated" && m.RemoteWork == "quiescent" && boundary.settled() {
+		// A confirmed local stop can arrive without the stopping proposal (for
+		// example supervisor EOF). Require the recorded launched process, then
+		// fence and release in this transaction; unconfirmed/remote-unknown
+		// evidence never takes this edge. Old boots take reconciliation above.
+		rows, err := rcRuntimeRows(ctx, tx, identity.AttemptID)
+		if err != nil {
+			return TerminationReply{}, err
+		}
+		launched := false
+		for _, row := range rows {
+			if v, ok := rcDecodeRuntime(row.Body); ok && row.Kind == "launched" && v.Evidence != nil && v.Evidence.Kind == "launched" && v.Evidence.PGID > 0 && v.Evidence.PID > 0 && v.Evidence.StartUnixNS > 0 {
+				launched = true
+			}
+		}
+		if launched {
+			if _, revision, err = rcFence(ctx, tx, identity, state, revision, m.StopID); err != nil {
+				return TerminationReply{}, err
+			}
+			state = p.Stopping
+		}
+	}
 	if !released && boundary.settled() && m.RemoteWork == "quiescent" && (m.ConfirmedProcess == "terminated" || m.ConfirmedProcess == "not_started") && (state == p.Stopping || state == p.Unknown) {
 		stop, err := loadStop(ctx, tx, m.StopID)
 		if err != nil {
