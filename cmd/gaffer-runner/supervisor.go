@@ -362,11 +362,20 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 		}
 		return runner.ErrPolicy
 	}
-	accepted, running, launchAttempted := false, false, false
+	accepted, running, launchAttempted, stopHandled := false, false, false, false
 	phase, revision := p.Assigned, int64(1)
 	defer func() {
-		if result != nil && accepted && !running {
-			result = errors.Join(result, s.failedLocal(r, d, phase, revision, launchAttempted, result))
+		if result != nil && accepted && !stopHandled && (!running || ctx.Err() != nil) {
+			cause := "launch_failed"
+			if ctx.Err() != nil {
+				cause = "runner_shutdown"
+			}
+			stopErr := s.failedLocal(r, d, phase, revision, launchAttempted, cause, result)
+			if ctx.Err() != nil && stopErr == nil {
+				result = nil
+			} else {
+				result = errors.Join(result, stopErr)
+			}
 		}
 	}()
 	ack, err := r.Accept(s.options().Session, d)
@@ -437,6 +446,7 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 		return err
 	}
 	running = true
+	phase, revision = p.Running, 3
 	spool, err := runstream.CreateSpool(filepath.Join(dir, "spool"), d.Assignment.Identity, s.cfg.SpoolLimit)
 	if err != nil {
 		return err
@@ -528,6 +538,7 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 		return nil
 	}
 	cancelAndDrain := func(cancel p.Message, cause string) error {
+		stopHandled = true
 		stopProducer()
 		err := s.cancelAttempt(context.Background(), r, d, p.Running, 3, spool, cancel, cause, drain)
 		if err != nil {
@@ -736,6 +747,7 @@ func (s *supervisor) cancelAttempt(ctx context.Context, r *runner.Runner, d stor
 	if err := r.Enqueue("cancel", cancel.MessageID, cancel); err != nil {
 		return err
 	}
+	r.StopGuardian() // durable cancel must stop locally even if the daemon is unavailable
 	_, err := s.transition(ctx, r, d, phase, p.Stopping, revision, w.Evidence{Kind: "stop", Nonce: lastNonce(r)}, cancel.StopID)
 	if err != nil && !execclient.IsFence(err) {
 		return err
@@ -765,7 +777,7 @@ func (s *supervisor) cancelAttempt(ctx context.Context, r *runner.Runner, d stor
 		return err
 	}
 	var evidence cEvidence
-	if terminationErr == nil && rec.Terminated != nil {
+	if terminationErr == nil && rec.Terminated != nil && (!report.Escalated || rec.Measurement.Escalated) {
 		evidence = cEvidence{*rec.Terminated, rec.Measurement}
 	} else {
 		ev, e := r.GuardianEvidence(cancel)
@@ -791,17 +803,36 @@ type cEvidence struct {
 
 // A failed local preparation/start is not permission to wait silently for lease
 // lapse. Retain and send stop evidence using the daemon-validated local stop ID.
-func (s *supervisor) failedLocal(r *runner.Runner, d store.Dispatch, phase p.AttemptState, revision int64, launchAttempted bool, cause error) error {
+func (s *supervisor) failedLocal(r *runner.Runner, d store.Dispatch, phase p.AttemptState, revision int64, launchAttempted bool, stopCause string, cause error) error {
 	ctx, cancelContext := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancelContext()
-	cancel := s.localCancel(d, "launch_failed")
+	cancel := s.localCancel(d, stopCause)
 	if err := r.Enqueue("local_failure", cancel.MessageID+"/failure", map[string]any{"cause": cause.Error(), "launch_attempted": launchAttempted}); err != nil {
 		return err
 	}
 	if err := r.Enqueue("cancel", cancel.MessageID, cancel); err != nil {
 		return err
 	}
-	_, transitionErr := s.transition(ctx, r, d, phase, p.Stopping, revision, w.Evidence{Kind: "stop", Nonce: lastNonce(r)}, cancel.StopID)
+	if launchAttempted {
+		r.StopGuardian()
+	}
+	// Cancellation may interrupt the response after a transition committed. Read
+	// the authenticated state before proposing its stop; never guess the revision.
+	alreadyStopping := false
+	if stopCause == "runner_shutdown" {
+		current, stateErr := s.client.State(ctx, d.ID)
+		if stateErr == nil {
+			if current.Released {
+				return nil
+			} // pending finalization still replays from its journal
+			phase, revision = current.AttemptState, current.Revision
+			alreadyStopping = phase == p.Stopping || phase == p.Unknown
+		}
+	}
+	var transitionErr error
+	if !alreadyStopping {
+		_, transitionErr = s.transition(ctx, r, d, phase, p.Stopping, revision, w.Evidence{Kind: "stop", Nonce: lastNonce(r)}, cancel.StopID)
+	}
 	now := time.Now().UTC()
 	measurement := c.Measurement{RequestedAt: now, AcknowledgedAt: now}
 	confirmed := "not_started"
@@ -826,6 +857,9 @@ func (s *supervisor) failedLocal(r *runner.Runner, d store.Dispatch, phase p.Att
 	}
 	boundary := r.CloseBoundary(ctx)
 	_, err := s.containment(ctx, r, d, cancel, confirmed, boundary, measurement, report, cause.Error())
+	if confirmed == "unknown" {
+		return errors.Join(runner.ErrTerminationUnconfirmed, transitionErr, err)
+	}
 	return errors.Join(transitionErr, err)
 }
 func (s *supervisor) containment(ctx context.Context, r *runner.Runner, d store.Dispatch, cancel p.Message, confirmed string, boundary inference.State, measurement c.Measurement, report runner.GuardianReport, cause string) (execclient.MessageReply, error) {

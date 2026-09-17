@@ -89,6 +89,7 @@ func certFiles(t *testing.T, dir, name string) (string, string, string) {
 }
 
 type fakeDaemon struct {
+	runningAckLost                  bool
 	t                               *testing.T
 	mu                              sync.Mutex
 	session                         w.Session
@@ -203,7 +204,7 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 		}
 		send(in)
 	case "/x/v1/state":
-		send(w.State{AttemptState: d.state, Revision: d.revision, ReceiptID: d.receipt.Receipt.ReceiptID, StopTargets: []cTarget{}, Stream: w.StreamAck{}})
+		send(w.State{AttemptState: d.state, Revision: d.revision, Released: d.released, Acknowledged: d.dispatch.Acknowledged, ReceiptID: d.receipt.Receipt.ReceiptID, StopTargets: []cTarget{}, Stream: w.StreamAck{}})
 	case "/x/v1/messages":
 		var m w.MessageEnvelope
 		if w.Decode(body, &m) != nil {
@@ -273,6 +274,16 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 			d.revision++
 			d.calls = append(d.calls, string(d.state))
 			reply.Message = &m.Message
+			if m.Message.To == p.Running && d.runningAckLost {
+				select {
+				case d.runningWaiting <- struct{}{}:
+				default:
+				}
+				d.mu.Unlock()
+				<-req.Context().Done()
+				d.mu.Lock()
+				return
+			}
 		case "terminated":
 			if m.Measurement == nil || m.Boundary == nil || m.Measurement.Validate(m.Message.ConfirmedProcess != "unknown") != nil {
 				errorReply(400, "malformed")
@@ -719,6 +730,14 @@ func TestLeaseLapseAndIgnoreTermCancel(t *testing.T) {
 			waitState(t, f, p.Running)
 			start := time.Now()
 			if mode == "ignore_term" {
+				// Started is emitted only after this synthetic mode installs SIG_IGN.
+				deadline := time.Now().Add(3 * time.Second)
+				for f.d.sink.Acknowledged() == 0 {
+					if time.Now().After(deadline) {
+						t.Fatal("ignore-term handler not ready")
+					}
+					time.Sleep(5 * time.Millisecond)
+				}
 				cancel := p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: f.dispatch.Assignment.Identity, StopID: uuid(), RunnerBoot: f.s.boot, DaemonBoot: f.s.session.DaemonBoot}
 				f.sendCancel(cancel)
 			}
@@ -1623,5 +1642,37 @@ func TestRecoverUnknownContainmentRetainsObservation(t *testing.T) {
 	}
 	if !journalHas(journal, "outbox_ack", f.d.termination.MessageID) {
 		t.Fatal("unknown observation not acknowledged durably")
+	}
+}
+
+func TestShutdownDuringRunningAcknowledgementGap(t *testing.T) {
+	for _, committed := range []bool{false, true} {
+		t.Run(fmt.Sprintf("running_committed=%v", committed), func(t *testing.T) {
+			f := newFixture(t, "hang")
+			f.d.blockRunning = !committed
+			f.d.runningAckLost = committed
+			f.d.runningWaiting = make(chan struct{}, 1)
+			done := make(chan error, 1)
+			go func() { done <- f.s.attempt(f.ctx, f.dispatch) }()
+			select {
+			case <-f.d.runningWaiting:
+			case <-time.After(8 * time.Second):
+				t.Fatal("running gap not reached")
+			}
+			f.cancel()
+			select {
+			case err := <-done:
+				if err != nil {
+					t.Fatal(err)
+				}
+			case <-time.After(8 * time.Second):
+				t.Fatal("shutdown gap timeout")
+			}
+			f.d.mu.Lock()
+			defer f.d.mu.Unlock()
+			if f.d.termination == nil || f.d.termination.Message.StopID != w.LocalStopID(f.dispatch.Assignment.Identity.AttemptID, "runner_shutdown") || !f.d.released {
+				t.Fatal("running acknowledgement gap lost shutdown evidence", f.d.calls)
+			}
+		})
 	}
 }
