@@ -20,9 +20,14 @@ import (
 )
 
 var (
-	ErrStopped           = errors.New("runner_reconciliation_required")
-	ErrPolicy            = errors.New("local_policy_denied")
-	ErrExecutionDisabled = errors.New("runner_execution_unqualified")
+	ErrStopped              = errors.New("runner_reconciliation_required")
+	ErrPolicy               = errors.New("local_policy_denied")
+	ErrExecutionDisabled    = errors.New("runner_execution_unqualified")
+	ErrLeaseExpired         = fmt.Errorf("lease_expired: %w", ErrStopped)
+	ErrPolicyChanged        = fmt.Errorf("local_policy_changed: %w: %w", ErrPolicy, ErrStopped)
+	ErrGrantExpired         = fmt.Errorf("grant_expired: %w: %w", ErrPolicy, ErrStopped)
+	ErrAttemptBudgetExpired = fmt.Errorf("attempt_budget_expired: %w", ErrStopped)
+	ErrClockInvalid         = fmt.Errorf("clock_invalid: %w", ErrStopped)
 )
 
 // Session comes from authenticated control-plane reconciliation, never a wire
@@ -395,24 +400,40 @@ func (r *Runner) session(s Session) error {
 	}
 	return nil
 }
-func (r *Runner) stop(at int64, reason string) error {
-	if r.state.Stopped {
+func stopError(reason string) error {
+	switch reason {
+	case "lease_expired":
+		return ErrLeaseExpired
+	case "local_policy_changed":
+		return ErrPolicyChanged
+	case "grant_expired":
+		return ErrGrantExpired
+	case "attempt_budget_expired":
+		return ErrAttemptBudgetExpired
+	case "clock_invalid":
+		return ErrClockInvalid
+	default:
 		return ErrStopped
 	}
-	if at < 0 || at > p.MaxInteger {
+}
+func (r *Runner) stop(at int64, reason string) error {
+	if r.state.Stopped {
+		return stopError(r.state.Reason)
+	}
+	if at < r.state.Last || at > p.MaxInteger {
 		at = r.state.Last
 	}
 	if err := r.commit(event{Kind: "stop", At: at, Reason: reason}); err != nil {
 		return err
 	}
-	return ErrStopped
+	return stopError(r.state.Reason)
 }
 func (r *Runner) check() (int64, error) {
 	if r.failed || r.log == nil {
 		return 0, j.ErrUnavailable
 	}
 	if r.state.Stopped {
-		return 0, ErrStopped
+		return 0, stopError(r.state.Reason)
 	}
 	if err := r.log.Check(); err != nil {
 		r.failed = true
@@ -421,6 +442,9 @@ func (r *Runner) check() (int64, error) {
 	now := r.options.MonotonicMS()
 	if now < r.state.Last || now < 0 || now > p.MaxInteger {
 		return now, r.stop(now, "clock_invalid")
+	}
+	if r.state.AttemptBy != nil && now >= *r.state.AttemptBy {
+		return now, r.stop(now, "attempt_budget_expired")
 	}
 	if r.state.StopBy != nil && now >= *r.state.StopBy {
 		return now, r.stop(now, "lease_expired")
@@ -434,9 +458,6 @@ func (r *Runner) check() (int64, error) {
 		wall := r.options.WallTime().UnixMilli()
 		if r.state.Input == nil || wall < r.state.Input.Request.Envelope.NotBeforeMS || wall >= r.state.Input.Request.Envelope.ExpiresMS {
 			return now, r.stop(now, "grant_expired")
-		}
-		if r.state.AttemptBy != nil && now >= *r.state.AttemptBy {
-			return now, r.stop(now, "attempt_budget_expired")
 		}
 	}
 	r.state.Last = now

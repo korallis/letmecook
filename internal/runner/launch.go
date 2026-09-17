@@ -48,6 +48,7 @@ type OutboxEntry struct {
 	Key, Kind    string
 	Body         json.RawMessage
 	Acknowledged bool
+	Refused      string `json:"refused,omitempty"`
 }
 type preparedLaunch struct {
 	req              LaunchRequest
@@ -62,7 +63,7 @@ type preparedLaunch struct {
 
 func reduceRuntime(s state, e event) (bool, state, error) {
 	switch e.Kind {
-	case "launch_intent", "starting_ack", "launched", "guardian_observed", "outbox", "outbox_ack", "fenced":
+	case "launch_intent", "starting_ack", "launched", "guardian_observed", "outbox", "outbox_ack", "outbox_refused", "fenced":
 		if e.At < s.Last {
 			return true, s, p.DelayedReply
 		}
@@ -101,11 +102,21 @@ func reduceRuntime(s state, e event) (bool, state, error) {
 			}
 		}
 		s.Outbox = append(s.Outbox, *e.Outbox)
-	case "outbox_ack":
+	case "outbox_ack", "outbox_refused":
 		found := false
 		for i := range s.Outbox {
 			if s.Outbox[i].Key == e.Key {
-				s.Outbox[i].Acknowledged = true
+				if e.Kind == "outbox_ack" {
+					if s.Outbox[i].Refused != "" {
+						return true, s, p.IdentityConflict
+					}
+					s.Outbox[i].Acknowledged = true
+				} else {
+					if e.Reason == "" || s.Outbox[i].Acknowledged {
+						return true, s, p.IdentityConflict
+					}
+					s.Outbox[i].Refused = e.Reason
+				}
 				found = true
 			}
 		}
@@ -122,6 +133,17 @@ func reduceRuntime(s state, e event) (bool, state, error) {
 	s.Last = e.At
 	return true, s, nil
 }
+
+// Evidence bookkeeping must remain durable after clock invalidation. This does
+// not restore execution authority or extend a deadline; it preserves log order.
+func (r *Runner) evidenceTime() int64 {
+	now := r.options.MonotonicMS()
+	if r.state.Stopped && (now < r.state.Last || now > p.MaxInteger) {
+		return r.state.Last
+	}
+	return now
+}
+
 func (r *Runner) Enqueue(kind, key string, body any) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -129,12 +151,19 @@ func (r *Runner) Enqueue(kind, key string, body any) error {
 	if err != nil {
 		return err
 	}
-	return r.commit(event{Kind: "outbox", At: r.options.MonotonicMS(), Outbox: &OutboxEntry{Key: key, Kind: kind, Body: b}})
+	return r.commit(event{Kind: "outbox", At: r.evidenceTime(), Outbox: &OutboxEntry{Key: key, Kind: kind, Body: b}})
 }
 func (r *Runner) Acknowledge(key string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.commit(event{Kind: "outbox_ack", At: r.options.MonotonicMS(), Key: key})
+	return r.commit(event{Kind: "outbox_ack", At: r.evidenceTime(), Key: key})
+}
+
+// Refuse retains the exact request bytes and a terminal refusal, never an ACK.
+func (r *Runner) Refuse(key, reason string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.commit(event{Kind: "outbox_refused", At: r.evidenceTime(), Key: key, Reason: reason})
 }
 func (r *Runner) Outbox() []OutboxEntry {
 	r.mu.Lock()
@@ -144,12 +173,12 @@ func (r *Runner) Outbox() []OutboxEntry {
 func (r *Runner) Fence(reason string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.commit(event{Kind: "fenced", At: r.options.MonotonicMS(), Reason: reason})
+	return r.commit(event{Kind: "fenced", At: r.evidenceTime(), Reason: reason})
 }
 func (r *Runner) StartingAcknowledged(m p.Message) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return r.commit(event{Kind: "starting_ack", At: r.options.MonotonicMS(), Message: &m})
+	return r.commit(event{Kind: "starting_ack", At: r.evidenceTime(), Message: &m})
 }
 
 // PrepareLaunch starts the credential boundary but does not launch repository code.
@@ -236,7 +265,7 @@ func (r *Runner) PrepareLaunch(ctx context.Context, req LaunchRequest) (LaunchRe
 		}
 	}
 	rec := LaunchRecord{BoundaryPort: port, Workspace: w, ReceiptPath: filepath.Join(req.RecoveryDir, "guardian.json"), Profile: req.Profile.ID(), Qualification: req.Profile.Qualification(), Supported: false, Observation: launcher.Observation()}
-	if err = r.commit(event{Kind: "launch_intent", At: r.options.MonotonicMS(), Runtime: &rec}); err != nil {
+	if err = r.commit(event{Kind: "launch_intent", At: r.evidenceTime(), Runtime: &rec}); err != nil {
 		launcher.Cleanup()
 		return LaunchRecord{}, err
 	}
@@ -264,9 +293,16 @@ func (r *Runner) Launch(ctx context.Context, req LaunchRequest) error {
 		r.mu.Unlock()
 		return ErrPolicy
 	}
-	remaining := *r.state.StopBy - r.options.MonotonicMS()
+	deadline := func() int64 {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		if r.state.Stopped || r.state.StopBy == nil {
+			return 0
+		}
+		return *r.state.StopBy - r.options.MonotonicMS()
+	}
 	limits := ResourceLimits{OpenFiles: 1024, FileBytes: 64 << 20, CPUSeconds: uint64((r.state.Input.Allowance.AttemptMS+999)/1000) + 5}
-	gl := &guardianLauncher{inner: prep.launcher, executable: prep.req.Executable, receipt: prep.record.ReceiptPath, deadline: func() int64 { return remaining }, limits: limits}
+	gl := &guardianLauncher{inner: prep.launcher, executable: prep.req.Executable, receipt: prep.record.ReceiptPath, deadline: deadline, limits: limits}
 	r.guardian = gl
 	in := r.state.Input
 	assignment := *r.state.Assignment
@@ -296,7 +332,7 @@ func (r *Runner) Launch(ctx context.Context, req LaunchRequest) error {
 	if started.BoundedResources {
 		rec.Observation.Controls = append(rec.Observation.Controls, "bounded-resources")
 	}
-	if err = r.commit(event{Kind: "launched", At: r.options.MonotonicMS(), Runtime: &rec}); err != nil {
+	if err = r.commit(event{Kind: "launched", At: r.evidenceTime(), Runtime: &rec}); err != nil {
 		gl.CloseInput()
 		return err
 	}
@@ -359,14 +395,17 @@ func (r *Runner) WaitGuardian(ctx context.Context) (GuardianReport, error) {
 		return GuardianReport{}, ctx.Err()
 	case <-g.done:
 	}
-	g.mu.Lock()
-	rep := g.report
-	g.mu.Unlock()
-	if rep.PID <= 1 {
-		return rep, ErrTerminationUnconfirmed
+	r.mu.Lock()
+	rec := clone(r.state.Runtime)
+	r.mu.Unlock()
+	// The pipe is only a wakeup. Only the fsynced, sandbox-protected receipt,
+	// bound to this launch identity, can become durable termination evidence.
+	rep, err := readGuardianReceipt(rec)
+	if err != nil {
+		return GuardianReport{}, err
 	}
 	r.mu.Lock()
-	err := r.commit(event{Kind: "guardian_observed", At: r.options.MonotonicMS(), Guardian: &rep})
+	err = r.commit(event{Kind: "guardian_observed", At: r.evidenceTime(), Guardian: &rep})
 	r.mu.Unlock()
 	return rep, err
 }
@@ -385,9 +424,8 @@ func (r *Runner) recoverLaunch() error {
 	rec := r.state.Runtime
 	deadline := time.Now().Add(6 * time.Second)
 	for {
-		b, err := os.ReadFile(rec.ReceiptPath)
-		var rep GuardianReport
-		if err == nil && closedjson.Decode(b, &rep, 65536, nil) == nil && rep.PID > 1 && (rec.PID == 0 || rep.PID == rec.PID && rep.StartUnixNS == rec.StartUnixNS) {
+		rep, err := readGuardianReceipt(rec)
+		if err == nil {
 			return r.commit(event{Kind: "guardian_observed", At: max(r.state.Last, r.options.MonotonicMS()), Guardian: &rep})
 		}
 		if !time.Now().Before(deadline) {
@@ -401,6 +439,28 @@ func (r *Runner) recoverLaunch() error {
 	}
 	return nil
 }
+
+// readGuardianReceipt never consumes a pipe frame as evidence. The state directory
+// is outside every worker write/read allowance. Reject links and mismatched runs.
+func readGuardianReceipt(rec *LaunchRecord) (GuardianReport, error) {
+	var rep GuardianReport
+	if rec == nil {
+		return rep, ErrTerminationUnconfirmed
+	}
+	info, err := os.Lstat(rec.ReceiptPath)
+	if err != nil || !info.Mode().IsRegular() || info.Size() > 65536 {
+		return rep, ErrTerminationUnconfirmed
+	}
+	b, err := os.ReadFile(rec.ReceiptPath)
+	if err != nil || closedjson.Decode(b, &rep, 65536, nil) != nil || rep.PID <= 1 || rep.PGID != rep.PID || rep.StartUnixNS <= 0 || rep.ObservedUnixNS < rep.StartUnixNS || rep.StopUnixNS < rep.StartUnixNS || rep.StopToObservedNS < 0 {
+		return GuardianReport{}, ErrTerminationUnconfirmed
+	}
+	if rec.PID != 0 && (rep.PID != rec.PID || rep.PGID != rec.PGID || rep.StartUnixNS != rec.StartUnixNS || rep.StartToken != rec.StartToken) {
+		return GuardianReport{}, ErrTerminationUnconfirmed
+	}
+	return rep, nil
+}
+
 func (r *Runner) GuardianEvidence(cancel p.Message) (c.Evidence, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/korallis/letmecook/internal/isolation"
 	"os"
 	"os/exec"
@@ -615,5 +616,177 @@ func TestGuardianFailedStartClosesParentPipes(t *testing.T) {
 	case <-l.done:
 	default:
 		t.Fatal("failed Start still awaiting nonexistent guardian")
+	}
+}
+
+func TestTickRetainsDistinctStopErrors(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		want   error
+		mutate func(*fixture)
+	}{
+		{"lease_expired", ErrLeaseExpired, func(f *fixture) { f.now = *f.r.state.StopBy }},
+		{"local_policy_changed", ErrPolicyChanged, func(f *fixture) { f.local.Enabled = false }},
+		{"grant_expired", ErrGrantExpired, func(f *fixture) { f.r.state.Input.Request.Envelope.ExpiresMS = 99999 }},
+		{"attempt_budget_expired", ErrAttemptBudgetExpired, func(f *fixture) { f.now = *f.r.state.AttemptBy }},
+		{"clock_invalid", ErrClockInvalid, func(f *fixture) { f.now = -1 }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := setup(t)
+			accept(t, f)
+			req, err := f.r.RequestLease(f.o.Session)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = apply(f.r, f.o.Session, reply(req)); err != nil {
+				t.Fatal(err)
+			}
+			tc.mutate(f)
+			for range 2 {
+				status, err := f.r.Tick()
+				if !errors.Is(err, tc.want) || !status.StopRequired || status.Reason != tc.name {
+					t.Fatalf("want %v, got %v %+v", tc.want, err, status)
+				}
+			}
+		})
+	}
+}
+
+func TestWaitGuardianRequiresPrivateMatchingReceipt(t *testing.T) {
+	f := setup(t)
+	now := time.Now().UnixNano()
+	rec := &LaunchRecord{ReceiptPath: filepath.Join(t.TempDir(), "guardian.json"), PID: 42, PGID: 42, StartUnixNS: now, StartToken: "unique"}
+	rep := GuardianReport{GuardianStarted: GuardianStarted{PID: 42, PGID: 42, StartUnixNS: now, StartToken: "unique"}, ObservedUnixNS: now + 1000, StopUnixNS: now + 1, StopToObservedNS: 999, PGIDEmpty: true}
+	f.r.state.Runtime = rec
+	f.r.guardian = &guardianLauncher{done: make(chan struct{}), report: rep}
+	close(f.r.guardian.done)
+	if _, err := f.r.WaitGuardian(context.Background()); !errors.Is(err, ErrTerminationUnconfirmed) {
+		t.Fatal("pipe alone trusted", err)
+	}
+	wrong := rep
+	wrong.StartUnixNS++
+	if err := DurableFile(rec.ReceiptPath, wrong); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.r.WaitGuardian(context.Background()); !errors.Is(err, ErrTerminationUnconfirmed) {
+		t.Fatal("wrong launch receipt trusted", err)
+	}
+	if err := DurableFile(rec.ReceiptPath, rep); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := f.r.WaitGuardian(context.Background()); err != nil || got != rep {
+		t.Fatalf("private receipt ignored: %+v %v", got, err)
+	}
+}
+
+func TestGuardianDeadlineRecomputedAfterAdapterStart(t *testing.T) {
+	remaining := int64(1000)
+	l := &guardianLauncher{inner: guardianTestLauncher{}, executable: "/usr/bin/true", receipt: filepath.Join(t.TempDir(), "receipt"), deadline: func() int64 { return remaining }}
+	cmd := exec.Command("/bin/sleep", "60")
+	cmd.Dir = t.TempDir()
+	cmd.Env = []string{"PATH=/usr/bin:/bin"}
+	if err := l.Wrap(cmd); err != nil {
+		t.Fatal(err)
+	}
+	inputFD, _ := syscall.Dup(int(l.childInput.Fd()))
+	controlFD, _ := syscall.Dup(int(l.childControl.Fd()))
+	input := os.NewFile(uintptr(inputFD), "input")
+	control := os.NewFile(uintptr(controlFD), "control")
+	defer input.Close()
+	defer control.Close()
+	defer l.CloseInput()
+	remaining = 100 // model time spent in Harness.Start after Wrap
+	got := make(chan LaunchSpec, 1)
+	go func() {
+		var spec LaunchSpec
+		json.NewDecoder(input).Decode(&spec)
+		got <- spec
+		json.NewEncoder(control).Encode(GuardianStarted{PID: 42, PGID: 42})
+		control.Close()
+	}()
+	if _, err := l.startedHandle(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	spec := <-got
+	if spec.DeadlineMS != 100 || time.Until(time.Unix(0, spec.CutoffUnixNS)) > 100*time.Millisecond {
+		t.Fatalf("startup latency extended deadline: %+v", spec)
+	}
+	<-l.done
+}
+
+func TestOutboxRefusalPersistsWithoutAcknowledging(t *testing.T) {
+	f := setup(t)
+	if err := f.r.Enqueue("message", "request", map[string]string{"value": "retained"}); err != nil {
+		t.Fatal(err)
+	}
+	original := f.r.Outbox()[0].Body
+	if err := f.r.Refuse("request", "409 revision_conflict"); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.r.Acknowledge("request"); err == nil {
+		t.Fatal("refusal became ACK")
+	}
+	f.r.Close()
+	r, err := Open(f.path, f.o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	e := r.Outbox()[0]
+	if e.Acknowledged || e.Refused != "409 revision_conflict" || !reflect.DeepEqual(e.Body, original) {
+		t.Fatalf("refusal changed bytes/outcome: %+v", e)
+	}
+}
+
+func TestGuardianControlRejectsUnknownFields(t *testing.T) {
+	l := &guardianLauncher{inner: guardianTestLauncher{}, executable: "/usr/bin/true", receipt: filepath.Join(t.TempDir(), "receipt"), deadline: func() int64 { return 1000 }}
+	cmd := exec.Command("/bin/sleep", "60")
+	cmd.Dir = t.TempDir()
+	cmd.Env = []string{"PATH=/usr/bin:/bin"}
+	if err := l.Wrap(cmd); err != nil {
+		t.Fatal(err)
+	}
+	inputFD, _ := syscall.Dup(int(l.childInput.Fd()))
+	controlFD, _ := syscall.Dup(int(l.childControl.Fd()))
+	input := os.NewFile(uintptr(inputFD), "input")
+	control := os.NewFile(uintptr(controlFD), "control")
+	defer input.Close()
+	defer control.Close()
+	defer l.CloseInput()
+	go func() {
+		var spec LaunchSpec
+		json.NewDecoder(input).Decode(&spec)
+		control.Write([]byte("{\"pid\":42,\"pgid\":42,\"untrusted\":true}\n"))
+		control.Close()
+	}()
+	if _, err := l.startedHandle(context.Background()); err == nil {
+		t.Fatal("unknown control field accepted")
+	}
+	<-l.done
+}
+
+func TestStoppedClockStillRetainsTerminalEvidence(t *testing.T) {
+	for _, now := range []int64{-1, 1, p.MaxInteger + 1} {
+		t.Run(fmt.Sprint(now), func(t *testing.T) {
+			f := setup(t)
+			accept(t, f)
+			last := f.r.state.Last
+			f.now = now
+			if _, err := f.r.Tick(); !errors.Is(err, ErrClockInvalid) {
+				t.Fatal("clock did not stop authority", err)
+			}
+			if f.r.state.Last != last {
+				t.Fatal("invalid clock changed retained evidence time")
+			}
+			if err := f.r.Enqueue("termination", "after-stop", map[string]string{"cause": "clock_invalid"}); err != nil {
+				t.Fatal("stopped clock prevented terminal evidence", err)
+			}
+			if err := f.r.Acknowledge("after-stop"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := f.r.RequestLease(f.o.Session); !errors.Is(err, ErrClockInvalid) {
+				t.Fatal("evidence restored execution authority", err)
+			}
+		})
 	}
 }

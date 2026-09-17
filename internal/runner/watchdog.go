@@ -34,6 +34,7 @@ type LaunchSpec struct {
 	Cwd            string         `json:"cwd"`
 	SandboxProfile string         `json:"sandbox_profile"`
 	DeadlineMS     int64          `json:"deadline_ms"`
+	CutoffUnixNS   int64          `json:"cutoff_unix_ns,omitempty"`
 	GraceMS        int64          `json:"grace_ms"`
 	KillMS         int64          `json:"kill_ms"`
 	Rlimits        ResourceLimits `json:"rlimits"`
@@ -145,6 +146,21 @@ func applyLimits(l ResourceLimits) error {
 // Guardian runs in a separate session outside the sandbox. EOF, malformed renewal,
 // deadline or cancellation stops the group; EPERM never counts as disappearance.
 func Guardian(ctx context.Context, input io.Reader, control, stdout, stderr io.Writer) error {
+	// ExtraFiles deliberately arrives without CLOEXEC. It belongs to the guardian,
+	// never to the repository job (nor to ps). Close every inherited fd >= 3 on
+	// exec; os/exec duplicates only the explicitly supplied standard streams.
+	if f, ok := control.(*os.File); ok {
+		syscall.CloseOnExec(int(f.Fd()))
+	}
+	fds, err := os.ReadDir("/dev/fd")
+	if err != nil {
+		return err
+	}
+	for _, fd := range fds {
+		if n, e := strconv.Atoi(fd.Name()); e == nil && n >= 3 {
+			syscall.CloseOnExec(n)
+		}
+	}
 	scan := bufio.NewScanner(input)
 	scan.Buffer(make([]byte, 4096), 256<<10)
 	if !scan.Scan() {
@@ -165,7 +181,14 @@ func Guardian(ctx context.Context, input io.Reader, control, stdout, stderr io.W
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	startedAt := time.Now()
 	cutoff := startedAt.Add(time.Duration(spec.DeadlineMS) * time.Millisecond)
-	wallCutoff := startedAt.UnixMilli() + spec.DeadlineMS
+	if spec.CutoffUnixNS != 0 {
+		remaining := time.Until(time.Unix(0, spec.CutoffUnixNS))
+		if remaining <= 0 {
+			return ErrStopped
+		}
+		cutoff = startedAt.Add(min(time.Duration(spec.DeadlineMS)*time.Millisecond, remaining))
+	}
+	wallCutoff := cutoff.UnixMilli()
 	if err := cmd.Start(); err != nil {
 		return err
 	}
@@ -366,8 +389,15 @@ func (l *guardianLauncher) startedHandle(ctx context.Context) (GuardianStarted, 
 	if d, ok := ctx.Deadline(); ok && d.Before(deadline) {
 		deadline = d
 	}
+	l.spec.DeadlineMS = l.deadline() // Harness.Start may have taken most of the lease.
+	l.spec.CutoffUnixNS = time.Now().Add(time.Duration(l.spec.DeadlineMS) * time.Millisecond).UnixNano()
 	_ = l.pipe.SetWriteDeadline(deadline)
-	err := json.NewEncoder(l.pipe).Encode(l.spec)
+	var err error
+	if l.spec.DeadlineMS <= 0 {
+		err = ErrStopped
+	} else {
+		err = json.NewEncoder(l.pipe).Encode(l.spec)
+	}
 	l.specSent = err == nil
 	l.mu.Unlock()
 	if err != nil {
@@ -383,6 +413,7 @@ func (l *guardianLauncher) startedHandle(ctx context.Context) (GuardianStarted, 
 	go func() {
 		defer l.control.Close()
 		dec := json.NewDecoder(l.control)
+		dec.DisallowUnknownFields()
 		var s GuardianStarted
 		err := dec.Decode(&s)
 		ch <- result{s, err}
