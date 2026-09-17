@@ -117,7 +117,7 @@ func TestWorkflowJobsAndPauseReceipts(t *testing.T) {
 		t.Fatal(err)
 	}
 	again, err := s.SetPaused(ctx, owner, id, true, "maintenance", false)
-	if err != nil || again != paused {
+	if err != nil || !reflect.DeepEqual(again, paused) {
 		t.Fatal("pause replay", again, err)
 	}
 	_, err = s.SetPaused(ctx, owner, id, false, "maintenance", false)

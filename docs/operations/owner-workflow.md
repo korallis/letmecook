@@ -50,7 +50,17 @@ replay; interrupted running jobs fail `daemon_restart` on startup.
 
 Stop/cancel receipts mean the intent is durable, not that termination was observed.
 Read the stop view and reconciliation report for process and remote-work evidence.
-Pause blocks admission but does not kill processes. Resume after restore requires
+Pause blocks admission but does not kill processes. `POST /api/v1/tasks/{id}/resume`
+(`gaffer task resume UUID`, mutation key `task.resume`) appends clearing markers
+for that task's pause latches only. `daemon resume` clears global stop latches in
+the same transaction that unpauses. Markers use the reconciliation contract
+`reconcile_reports.id = "latch-cleared:" + stop_id`; stop history stays immutable.
+The domain receipt freezes the cleared list across retries, including a lost HTTP
+receipt followed by a newer stop. Neither resume clears `cancel_attempt`, proves
+termination, releases a reservation, or grants execution authority. Cancel clearance
+belongs to reconciliation. The store/reconciler suppression readers must honor
+these markers before post-resume admission is available (integration-owned).
+Resume after restore requires
 `--confirm-source-fenced`; generation changes alone stop nothing. Retry delegates
 to the reconciler and remains grant-, budget-, release- and stop-gated.
 

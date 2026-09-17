@@ -63,7 +63,7 @@ After restore, replay of a receipt from the old generation returns
 | Identity | `invite --fingerprint SHA256`, `enroll --token-file FILE` (0600; prefer over `--token TOKEN`), `update --id UUID --revision N --action enable\|disable\|revoke\|rotate [--fingerprint SHA256]` |
 | Repository | `register\|validate --profile FILE --expected-revision N [--wait]`; `show ID` |
 | Runner | `facts import --file FILE --expected-revision N`; `facts show [ELIGIBILITY]` |
-| Task | `create`, `approve UUID --eligibility ID`, `dispatch UUID --grant-id UUID --grant-revision N --attempt-ms N`, `inspect\|watch\|stop\|retry UUID`, `list [--after UUID --limit N]` |
+| Task | `create`, `approve UUID --eligibility ID`, `dispatch UUID --grant-id UUID --grant-revision N --attempt-ms N`, `inspect\|watch\|stop\|resume\|retry UUID`, `list [--after UUID --limit N]` |
 | Attempt | `inspect\|cancel\|stream\|artifacts UUID`; stream takes `--after N --limit N` |
 | Verification | `run UUID [--expected-selection UUID --wait]`, `show REPORT_UUID` |
 | Review | `accept\|reject UUID [--verification-id UUID --coverage-file FILE --notes TEXT]`; `show UUID` |
@@ -93,8 +93,15 @@ unresolved attempt cannot be bypassed with a retry. After `attempt cancel`, retr
 is admitted only once `reconcile status` shows the attempt released and its cancel
 latch cleared. Task stop is a sticky task pause; attempt cancel and global stop
 leave assigned-to-stopping transitions to the runner/reconcile path.
-Pause is an admission gate, not
-process termination. Restored stores require explicit source-fenced confirmation.
+`task resume UUID` clears only that task's pause latches, including the legacy
+stop-dispatch latch. `daemon resume` atomically unpauses and clears global stops.
+Both append `latch-cleared:<stop_id>` records and return the cleared IDs; neither
+deletes stop history, clears `cancel_attempt`, releases unresolved attempts, nor
+grants new authority. Replaying the same intent returns the original cleared IDs
+and does not clear newer stops. Cancel clearance remains reconciliation-owned.
+Pause is an admission gate, not process termination. Restored stores require
+explicit source-fenced confirmation. Admission after resume requires integration
+of the matching store/reconciler suppression readers.
 
 ## Exact task input and owner approval
 

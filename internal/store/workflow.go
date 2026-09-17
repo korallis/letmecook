@@ -23,6 +23,7 @@ import (
 
 	g "github.com/korallis/letmecook/internal/authority"
 	"github.com/korallis/letmecook/internal/closedjson"
+	c "github.com/korallis/letmecook/internal/control"
 	i "github.com/korallis/letmecook/internal/identity"
 	"github.com/korallis/letmecook/internal/workflow"
 	a "github.com/korallis/letmecook/schemas/readapi"
@@ -81,9 +82,10 @@ type Task struct {
 
 // DaemonState mirrors the daemon_state singleton.
 type DaemonState struct {
-	Paused    bool   `json:"paused"`
-	Reason    string `json:"reason,omitempty"`
-	UpdatedMS int64  `json:"updated_ms"`
+	Paused         bool     `json:"paused"`
+	Reason         string   `json:"reason,omitempty"`
+	UpdatedMS      int64    `json:"updated_ms"`
+	ClearedLatches []string `json:"cleared_latches,omitempty"`
 }
 
 // Job mirrors one jobs row. State is queued|running|succeeded|failed; a job
@@ -466,6 +468,9 @@ func (s *Store) SetPaused(ctx context.Context, actor, messageID string, paused b
 		if old.PrincipalID != who.ID || old.RequestSHA256 != digest || old.Route != "daemon-state" {
 			return DaemonState{}, g.Deny("identity_conflict", "message_id")
 		}
+		if old.Generation != s.meta.Generation {
+			return DaemonState{}, g.Deny("stale_generation", "message_id")
+		}
 		var d DaemonState
 		err = json.Unmarshal(old.Response, &d)
 		return d, err
@@ -485,6 +490,12 @@ func (s *Store) SetPaused(ctx context.Context, actor, messageID string, paused b
 		return state, g.Deny("reconciliation_required", "confirm_source_fenced")
 	}
 	state = DaemonState{Paused: paused, Reason: reason, UpdatedMS: time.Now().UnixMilli()}
+	if !paused {
+		state.ClearedLatches, err = ownerClearLatchesTx(ctx, tx, "", s.meta.DaemonBoot, state.UpdatedMS)
+		if err != nil {
+			return DaemonState{}, err
+		}
+	}
 	if _, err = tx.ExecContext(ctx, "UPDATE daemon_state SET paused=?,reason=?,updated_ms=? WHERE singleton=1", state.Paused, state.Reason, state.UpdatedMS); err != nil {
 		return state, err
 	}
@@ -974,4 +985,120 @@ func BriefDigest(brief TaskBrief) string {
 func (s *Store) TaskBindings(ctx context.Context, id string) (int64, string, string, error) {
 	t, err := s.Task(ctx, id)
 	return t.Brief.Revision, t.Brief.BriefSHA256, t.Brief.PlanSHA256, err
+}
+
+// ownerLatchClearance uses S5's durable latch-cleared:<stop_id> contract. Actor
+// and Cause describe the retained stop; the owner command authenticates resume.
+// Empty Terminal is intentional: owner resume is NOT termination evidence.
+type ownerLatchClearance struct {
+	StopID     string         `json:"stop_id"`
+	TaskID     string         `json:"task_id"`
+	AttemptID  string         `json:"attempt_id"`
+	Kind       c.Kind         `json:"kind"`
+	Cause      string         `json:"cause"`
+	Actor      string         `json:"actor"`
+	Terminal   p.AttemptState `json:"terminal"`
+	DaemonBoot string         `json:"daemon_boot"`
+	ClearedMS  int64          `json:"cleared_ms"`
+}
+
+func ownerClearLatchesTx(ctx context.Context, tx *sql.Tx, taskID, boot string, now int64) ([]string, error) {
+	kind := c.GlobalStop
+	if taskID != "" {
+		kind = c.PauseTask
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT id FROM control_stops s WHERE kind=? AND task_id=? AND NOT EXISTS(SELECT 1 FROM reconcile_reports r WHERE r.id='latch-cleared:'||s.id) ORDER BY id`, kind, taskID)
+	if err != nil {
+		return nil, err
+	}
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err = rows.Scan(&id); err != nil {
+			rows.Close()
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err = errors.Join(rows.Err(), rows.Close()); err != nil {
+		return nil, err
+	}
+	for _, id := range ids {
+		stop, err := loadStop(ctx, tx, id)
+		if err != nil {
+			return nil, err
+		}
+		if stop.Request.Kind != kind || stop.Request.TaskID != taskID {
+			return nil, g.Deny("corrupt_record", "stop")
+		}
+		record := ownerLatchClearance{StopID: id, TaskID: taskID, Kind: kind, Cause: stop.Request.Cause, Actor: stop.Actor, DaemonBoot: boot, ClearedMS: now}
+		body, err := json.Marshal(record)
+		if err != nil {
+			return nil, err
+		}
+		if _, err = tx.ExecContext(ctx, "INSERT INTO reconcile_reports VALUES(?,?,?,?)", "latch-cleared:"+id, boot, now, string(body)); err != nil {
+			return nil, err
+		}
+	}
+	return ids, nil
+}
+
+// ResumeLatches clears only global stops (empty taskID) or this task's pauses.
+// A domain receipt in the same transaction freezes the cleared list even if the
+// HTTP receipt is lost and newer stops arrive before a retry. No attempt,
+// reservation, cancellation, authority or stop-history row is modified.
+func (s *Store) ResumeLatches(ctx context.Context, actor, taskID, messageID string) ([]string, error) {
+	if !p.ValidID(messageID) || taskID != "" && !p.ValidID(taskID) {
+		return nil, g.Deny("invalid_id", "resume")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	tx, err := s.grantTransaction(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	if err = owner(ctx, tx, actor); err != nil {
+		return nil, err
+	}
+	who, err := principal(ctx, tx, actor)
+	if err != nil {
+		return nil, err
+	}
+	id := dispatchID(messageID, "owner-resume")
+	digest, _ := sc.Digest(struct{ TaskID string }{taskID})
+	old, err := ownerCommandTx(ctx, tx, id)
+	if err == nil {
+		if old.PrincipalID != who.ID || old.RequestSHA256 != digest || old.Route != "owner-resume" {
+			return nil, g.Deny("identity_conflict", "message_id")
+		}
+		if old.Generation != s.meta.Generation {
+			return nil, g.Deny("stale_generation", "message_id")
+		}
+		var ids []string
+		err = json.Unmarshal(old.Response, &ids)
+		return ids, err
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return nil, err
+	}
+	if taskID != "" {
+		var exists int
+		if err = tx.QueryRowContext(ctx, "SELECT 1 FROM tasks WHERE id=?", taskID).Scan(&exists); err != nil {
+			return nil, err
+		}
+	}
+	now := time.Now().UnixMilli()
+	ids, err := ownerClearLatchesTx(ctx, tx, taskID, s.meta.DaemonBoot, now)
+	if err != nil {
+		return nil, err
+	}
+	body, _ := json.Marshal(ids)
+	if err = recordOwnerCommandTx(ctx, tx, OwnerCommand{MessageID: id, Generation: s.meta.Generation, PrincipalID: who.ID, Route: "owner-resume", RequestSHA256: digest, Status: 200, Response: body, CreatedMS: now}); err != nil {
+		return nil, err
+	}
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+	return ids, nil
 }

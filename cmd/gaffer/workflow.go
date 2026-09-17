@@ -296,7 +296,7 @@ func makeTaskInput(g globals, repo, base, briefFile, harness, settingsFile strin
 }
 func taskCommand(ctx context.Context, g globals, args []string) int {
 	if len(args) == 0 {
-		return usage(g, "task create|approve|dispatch|inspect|watch|stop|retry|list")
+		return usage(g, "task create|approve|dispatch|inspect|watch|stop|resume|retry|list")
 	}
 	f := flags("task " + args[0])
 	switch args[0] {
@@ -317,7 +317,7 @@ func taskCommand(ctx context.Context, g globals, args []string) int {
 			return usage(g, "task list [--after UUID] [--limit N]")
 		}
 		return request(ctx, g, "task.list", "GET", "/api/v1/tasks?after="+url.QueryEscape(*after)+"&limit="+strconv.Itoa(*limit), nil)
-	case "inspect", "stop", "retry":
+	case "inspect", "stop", "resume", "retry":
 		id, ok := parseID(f, args[1:])
 		if !ok {
 			return usage(g, "task "+args[0]+" UUID")

@@ -394,6 +394,10 @@ func workflowRoutes(d Deps) []Route {
 			out, err := d.Store.Dispatch(ctx, store.DispatchRequest{ID: request.ID, Request: request.Request, Decision: request.Decision, Allowance: request.Allowance})
 			return out, 201, err
 		})),
+		ownerRoute("POST", "/api/v1/tasks/{id}/resume", ownerMutation(d, "task.resume", func(ctx context.Context, a Actor, r Request, in commandHeader) (any, int, error) {
+			cleared, err := d.Store.ResumeLatches(ctx, a.Fingerprint, r.Path["id"], in.MessageID)
+			return map[string]any{"cleared_latches": cleared}, 200, err
+		})),
 		ownerRoute("POST", "/api/v1/tasks/{id}/retry", ownerMutation(d, "task.retry", func(ctx context.Context, a Actor, r Request, in commandHeader) (any, int, error) {
 			request, err := reconcile.PlanRetry(ctx, reconcile.Deps{Store: d.Store}, r.Path["id"])
 			if errors.Is(err, reconcile.ErrNotImplemented) {
