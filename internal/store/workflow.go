@@ -130,11 +130,15 @@ func (s *Store) Eligibility(ctx context.Context, id string) (sc.Eligibility, err
 	return sc.Eligibility{}, ErrNotImplemented
 }
 
-// SetPaused flips the daemon_state singleton. Durable point: the committed
-// update; while paused, Dispatch, Delivery, IssueLease, ProposeTransition and
-// FinalizeAttempt refuse paused. Resuming a restored store additionally requires
-// the caller's confirm_source_fenced acknowledgement.
-func (s *Store) SetPaused(ctx context.Context, actor string, paused bool, reason string) (DaemonState, error) {
+// SetPaused flips the daemon_state singleton for POST /api/v1/daemon/pause and
+// /resume. messageID is the owner intent key (replay returns the same state; a
+// different body under the same key is identity_conflict). Durable point: the
+// committed update; while paused, Dispatch, Delivery, IssueLease,
+// ProposeTransition and FinalizeAttempt refuse paused. Resuming a store whose
+// latest restore_history entry is newer than its last resume requires
+// confirmSourceFenced, the owner's acknowledgement that the source daemon is
+// stopped, every runner restarted and facts re-imported; otherwise refused.
+func (s *Store) SetPaused(ctx context.Context, actor, messageID string, paused bool, reason string, confirmSourceFenced bool) (DaemonState, error) {
 	return DaemonState{}, ErrNotImplemented
 }
 

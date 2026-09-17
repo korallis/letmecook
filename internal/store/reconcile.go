@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 
+	c "github.com/korallis/letmecook/internal/control"
 	p "github.com/korallis/letmecook/schemas/execution"
 )
 
@@ -20,6 +21,46 @@ type ReconcileReport struct {
 	DaemonBoot string          `json:"daemon_boot"`
 	CreatedMS  int64           `json:"created_ms"`
 	Body       json.RawMessage `json:"body,omitempty"`
+}
+
+// RuntimeObservation mirrors one runtime_observations row: transition evidence
+// retained with the boots it was reported under, so old-boot evidence stays
+// visible history rather than current confirmation.
+type RuntimeObservation struct {
+	AttemptID      string          `json:"attempt_id"`
+	EvidenceSHA256 string          `json:"evidence_sha256"`
+	Kind           string          `json:"kind"`
+	RunnerBoot     string          `json:"runner_boot"`
+	DaemonBoot     string          `json:"daemon_boot"`
+	Body           json.RawMessage `json:"body,omitempty"`
+	RecordedMS     int64           `json:"recorded_ms"`
+}
+
+// ReconciliationInputs is everything reconcile classifies one attempt from, read
+// in a single snapshot: the retained dispatch and whether it was acknowledged,
+// the latest lease and whether the old-lease barrier has passed, the cancel
+// targets and any termination observations, runtime observations, the custody
+// receipt (if any) and whether it is quarantined, the task's result head and the
+// runner's last session. Absent parts are omitted or zero values, never null; a
+// present Dispatch always carries validated, non-nil envelope sets.
+type ReconciliationInputs struct {
+	Dispatch            Dispatch             `json:"dispatch,omitzero"`
+	Acknowledged        bool                 `json:"acknowledged"`
+	LastLease           c.Lease              `json:"last_lease,omitzero"`
+	LeaseBarrierPassed  bool                 `json:"lease_barrier_passed"`
+	StopTargets         []c.Target           `json:"stop_targets,omitempty"`
+	Observations        []c.Evidence         `json:"observations,omitempty"`
+	RuntimeObservations []RuntimeObservation `json:"runtime_observations,omitempty"`
+	Receipt             p.Receipt            `json:"receipt,omitzero"`
+	Quarantined         bool                 `json:"quarantined"`
+	Head                ResultHead           `json:"head,omitzero"`
+	LastSession         SessionRecord        `json:"last_session,omitzero"`
+}
+
+// ReconciliationInputs reads the classification inputs for one attempt in one
+// read transaction. Durable point: none (read); reading never releases.
+func (s *Store) ReconciliationInputs(ctx context.Context, attemptID string) (ReconciliationInputs, error) {
+	return ReconciliationInputs{}, ErrNotImplemented
 }
 
 // FenceAttempt moves an assigned|starting|running|result_pending|unknown attempt to
