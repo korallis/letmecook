@@ -87,6 +87,64 @@ type uploadRow struct {
 
 func (s *Store) uploadDir(id string) string { return filepath.Join(s.artifacts, "upload", id) }
 
+// uploadRel is the staging directory of one upload relative to the artifacts root.
+func uploadRel(id string) string { return "upload/" + id }
+
+// artifactRoot opens the artifacts directory as an os.Root so every staging
+// operation is confined to it: a path component that resolves outside the root
+// is refused by the root itself, and stagingDir refuses symbolic links inside it.
+func (s *Store) artifactRoot() (*os.Root, error) {
+	return os.OpenRoot(s.artifacts)
+}
+
+// stagingDir requires upload/ and upload/<id> to be real directories owned by
+// this process, never symbolic links, before any byte is read or written there.
+func stagingDir(root *os.Root, id string) error {
+	for _, name := range []string{"upload", uploadRel(id)} {
+		info, err := root.Lstat(name)
+		if err != nil {
+			return err
+		}
+		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+			return g.Deny("corrupt_record", "upload_staging")
+		}
+	}
+	return nil
+}
+
+func syncRooted(root *os.Root, name string) error {
+	f, err := root.Open(name)
+	if err != nil {
+		return err
+	}
+	return errors.Join(f.Sync(), f.Close())
+}
+
+// verifyRooted re-hashes one staged blob through the root, refusing anything
+// but a regular file.
+func verifyRooted(root *os.Root, name string, want ArtifactBlob) error {
+	info, err := root.Lstat(name)
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("nonregular staged blob")
+	}
+	f, err := root.Open(name)
+	if err != nil {
+		return err
+	}
+	h := sha256.New()
+	n, copyErr := io.Copy(h, f)
+	if err := errors.Join(copyErr, f.Close()); err != nil {
+		return err
+	}
+	if n != want.Bytes || hex.EncodeToString(h.Sum(nil)) != want.SHA256 {
+		return fmt.Errorf("artifact corruption")
+	}
+	return nil
+}
+
 func loadUpload(ctx context.Context, tx *sql.Tx, id string) (uploadRow, error) {
 	var v uploadRow
 	var result string
@@ -279,14 +337,22 @@ func (s *Store) BeginUpload(ctx context.Context, fingerprint, session, attemptID
 		}
 		return uploadView(ctx, tx, row)
 	}
-	dir := s.uploadDir(id)
-	if err := os.RemoveAll(dir); err != nil {
+	root, err := s.artifactRoot()
+	if err != nil {
 		return UploadSession{}, err
 	}
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	defer root.Close()
+	rel := uploadRel(id)
+	if err := root.RemoveAll(rel); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return UploadSession{}, err
 	}
-	f, err := os.OpenFile(filepath.Join(dir, "manifest.json"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err := root.MkdirAll(rel, 0700); err != nil {
+		return UploadSession{}, err
+	}
+	if err := stagingDir(root, id); err != nil {
+		return UploadSession{}, err
+	}
+	f, err := root.OpenFile(rel+"/manifest.json", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return UploadSession{}, err
 	}
@@ -294,7 +360,7 @@ func (s *Store) BeginUpload(ctx context.Context, fingerprint, session, attemptID
 	if err = errors.Join(err, f.Sync(), f.Close()); err != nil {
 		return UploadSession{}, err
 	}
-	if err := errors.Join(syncDir(dir), syncDir(filepath.Dir(dir)), syncDir(s.artifacts)); err != nil {
+	if err := errors.Join(syncRooted(root, rel), syncRooted(root, "upload"), syncRooted(root, ".")); err != nil {
 		return UploadSession{}, err
 	}
 	if _, err := tx.ExecContext(ctx, "INSERT INTO upload_sessions VALUES(?,?,?,?,?,?,?,'open',0,?)", id, attemptID, who.ID, want.ManifestID, want.SHA256, want.Bytes, controlJSON(result), time.Now().UnixMilli()); err != nil {
@@ -351,7 +417,13 @@ func (s *Store) blobAdmit(ctx context.Context, fingerprint, session, uploadID, d
 		return uploadRow{}, 0, false, g.Deny("digest_mismatch", "length")
 	}
 	if state != "missing" {
-		if verifyBlob(filepath.Join(s.uploadDir(uploadID), digest), ArtifactBlob{SHA256: digest, Bytes: want}) == nil {
+		root, err := s.artifactRoot()
+		if err != nil {
+			return uploadRow{}, 0, false, err
+		}
+		verified := stagingDir(root, uploadID) == nil && verifyRooted(root, uploadRel(uploadID)+"/"+digest, ArtifactBlob{SHA256: digest, Bytes: want}) == nil
+		root.Close()
+		if verified {
 			return row, want, true, nil
 		}
 	}
@@ -369,10 +441,18 @@ func (s *Store) blobAdmit(ctx context.Context, fingerprint, session, uploadID, d
 // fsyncs, and only then renames the file to its digest name and fsyncs the
 // directory. A short, long or mismatching body removes the temp file.
 func (s *Store) stageBlob(uploadID, digest string, body io.Reader, want int64) error {
-	dir := s.uploadDir(uploadID)
-	final := filepath.Join(dir, digest)
+	root, err := s.artifactRoot()
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	if err := stagingDir(root, uploadID); err != nil {
+		return err
+	}
+	rel := uploadRel(uploadID)
+	final := rel + "/" + digest
 	tmp := final + ".part-" + newID()
-	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	f, err := root.OpenFile(tmp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
@@ -383,19 +463,19 @@ func (s *Store) stageBlob(uploadID, digest string, body io.Reader, want int64) e
 	err = errors.Join(f.Sync(), f.Close())
 	mismatch := copyErr != nil || n != want || !errors.Is(probeErr, io.EOF) || hex.EncodeToString(h.Sum(nil)) != digest
 	if err != nil || mismatch {
-		removeErr := os.Remove(tmp)
+		removeErr := root.Remove(tmp)
 		if err != nil {
 			return errors.Join(err, removeErr)
 		}
 		return g.Deny("digest_mismatch", "bytes")
 	}
 	if err := s.step("after_blob_fsync"); err != nil {
-		return errors.Join(err, os.Remove(tmp))
+		return errors.Join(err, root.Remove(tmp))
 	}
-	if err := os.Rename(tmp, final); err != nil {
-		return errors.Join(err, os.Remove(tmp))
+	if err := root.Rename(tmp, final); err != nil {
+		return errors.Join(err, root.Remove(tmp))
 	}
-	return syncDir(dir)
+	return syncRooted(root, rel)
 }
 
 // blobStaged marks a durably staged blob and charges its bytes to the attempt.
@@ -426,7 +506,12 @@ func (s *Store) blobStaged(ctx context.Context, fingerprint, session, uploadID, 
 		return false, err
 	}
 	if used+want > MaxUploadBytes {
-		return false, errors.Join(p.Oversized, os.Remove(filepath.Join(s.uploadDir(uploadID), digest)))
+		root, err := s.artifactRoot()
+		if err != nil {
+			return false, err
+		}
+		defer root.Close()
+		return false, errors.Join(p.Oversized, root.Remove(uploadRel(uploadID)+"/"+digest))
 	}
 	if _, err := tx.ExecContext(ctx, "UPDATE upload_blobs SET state='staged' WHERE upload_id=? AND digest=?", uploadID, digest); err != nil {
 		return false, err
@@ -488,15 +573,30 @@ func (s *Store) commitAdmit(ctx context.Context, fingerprint, session, uploadID 
 	if err != nil {
 		return uploadRow{}, nil, nil, nil, err
 	}
-	var receipt string
+	// Retained custody is matched by the full identity and the exact manifest
+	// tuple; a manifest id bound to another attempt can never replay its receipt.
+	identity := row.Result.Identity
+	var manifestID, manifestSHA, receipt string
+	var manifestBytes int64
 	var quarantined bool
-	err = tx.QueryRowContext(ctx, "SELECT receipt_id,quarantined FROM artifact_results WHERE manifest_id=?", row.ManifestID).Scan(&receipt, &quarantined)
+	err = tx.QueryRowContext(ctx, "SELECT manifest_id,manifest_sha256,manifest_bytes,receipt_id,quarantined FROM artifact_results WHERE generation=? AND task_id=? AND attempt_id=? AND epoch=?", identity.Generation, identity.TaskID, identity.AttemptID, identity.Epoch).Scan(&manifestID, &manifestSHA, &manifestBytes, &receipt, &quarantined)
 	if err == nil {
-		custody := custodyReply(row.Result, receipt, quarantined)
+		if manifestID != row.ManifestID || manifestSHA != row.ManifestSHA256 || manifestBytes != row.ManifestBytes || row.Result.Manifest == nil || *row.Result.Manifest != (p.Manifest{ManifestID: manifestID, SHA256: manifestSHA, Bytes: manifestBytes}) {
+			return uploadRow{}, nil, nil, nil, p.IdentityConflict
+		}
+		// As in CustodyResult, a receipt of a retired generation replays quarantined.
+		custody := custodyReply(row.Result, receipt, quarantined || identity.Generation != s.meta.Generation)
 		return row, &CommitReply{Ack: custody.Ack, Receipt: custody.Receipt, Quarantined: custody.Quarantined}, nil, nil, nil
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return uploadRow{}, nil, nil, nil, err
+	}
+	var bound bool
+	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM artifact_results WHERE manifest_id=?) OR EXISTS(SELECT 1 FROM artifact_manifests WHERE manifest_id=?)", row.ManifestID, row.ManifestID).Scan(&bound); err != nil {
+		return uploadRow{}, nil, nil, nil, err
+	}
+	if bound {
+		return uploadRow{}, nil, nil, nil, p.IdentityConflict
 	}
 	if row.State != "open" {
 		return uploadRow{}, nil, nil, nil, p.ReconciliationRequired
@@ -600,10 +700,18 @@ func (s *Store) CommitUpload(ctx context.Context, fingerprint, session, uploadID
 	if len(missing) > 0 {
 		return CommitReply{}, incomplete(missing)
 	}
-	dir := s.uploadDir(uploadID)
+	root, err := s.artifactRoot()
+	if err != nil {
+		return CommitReply{}, err
+	}
+	defer root.Close()
+	if err := stagingDir(root, uploadID); err != nil {
+		return CommitReply{}, err
+	}
+	rel := uploadRel(uploadID)
 	var broken []string
 	for _, b := range staged {
-		if err := verifyBlob(filepath.Join(dir, b.SHA256), b); err != nil {
+		if err := verifyRooted(root, rel+"/"+b.SHA256, b); err != nil {
 			broken = append(broken, b.SHA256)
 		}
 	}
@@ -613,10 +721,18 @@ func (s *Store) CommitUpload(ctx context.Context, fingerprint, session, uploadID
 		}
 		return CommitReply{}, incomplete(broken)
 	}
-	manifest, err := os.ReadFile(filepath.Join(dir, "manifest.json"))
+	info, err := root.Lstat(rel + "/manifest.json")
 	if err != nil {
 		return CommitReply{}, err
 	}
+	if !info.Mode().IsRegular() {
+		return CommitReply{}, g.Deny("corrupt_record", "upload_manifest")
+	}
+	manifest, err := root.ReadFile(rel + "/manifest.json")
+	if err != nil {
+		return CommitReply{}, err
+	}
+	dir := s.uploadDir(uploadID)
 	sum := sha256.Sum256(manifest)
 	if hex.EncodeToString(sum[:]) != row.ManifestSHA256 || int64(len(manifest)) != row.ManifestBytes {
 		return CommitReply{}, g.Deny("corrupt_record", "upload_manifest")
@@ -641,6 +757,6 @@ func (s *Store) CommitUpload(ctx context.Context, fingerprint, session, uploadID
 	}
 	// Custody holds verified copies and the receipt replays from metadata, so
 	// the staging directory is disposable; its removal is best effort.
-	_ = os.RemoveAll(dir)
+	_ = root.RemoveAll(rel)
 	return CommitReply{Ack: custody.Ack, Receipt: custody.Receipt, Quarantined: custody.Quarantined}, nil
 }
