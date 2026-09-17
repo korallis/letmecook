@@ -395,6 +395,9 @@ func workflowRoutes(d Deps) []Route {
 		})),
 		ownerRoute("POST", "/api/v1/tasks/{id}/retry", ownerMutation(d, "task.retry", func(ctx context.Context, a Actor, r Request, in commandHeader) (any, int, error) {
 			request, err := reconcile.PlanRetry(ctx, reconcile.Deps{Store: d.Store}, r.Path["id"])
+			if errors.Is(err, reconcile.ErrNotImplemented) {
+				return nil, 0, g.Deny("retry_unavailable", "reconcile")
+			}
 			if err != nil {
 				return nil, 0, err
 			}

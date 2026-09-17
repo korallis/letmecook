@@ -89,11 +89,15 @@ func decodeReply(raw []byte, value any) error {
 	})
 }
 func call(ctx context.Context, g globals, method, path string, input any) (json.RawMessage, *cliError) {
-	client, err := ownerClient(g)
-	if err != nil {
-		return nil, &cliError{0, "invalid_configuration", "explicit HTTPS endpoint, client certificate/key and daemon fingerprint are required"}
+	client := g.client
+	var err error
+	if client == nil {
+		client, err = ownerClient(g)
+		if err != nil {
+			return nil, &cliError{0, "invalid_configuration", "explicit HTTPS endpoint, client certificate/key and daemon fingerprint are required"}
+		}
+		defer client.CloseIdleConnections()
 	}
-	defer client.CloseIdleConnections()
 	var body []byte
 	if input != nil {
 		body, err = json.Marshal(input)
@@ -411,6 +415,15 @@ func pausePoll(ctx context.Context) bool {
 	}
 }
 func watchTask(ctx context.Context, g globals, id, until string) (json.RawMessage, *cliError) {
+	if g.client == nil {
+		client, err := ownerClient(g)
+		if err != nil {
+			return nil, &cliError{0, "invalid_configuration", "explicit pinned owner TLS configuration is required"}
+		}
+		g.client = client
+		defer client.CloseIdleConnections()
+	}
+
 	for {
 		raw, e := call(ctx, g, "GET", "/api/v1/tasks/"+id, nil)
 		if e != nil {
@@ -435,6 +448,15 @@ func watchTask(ctx context.Context, g globals, id, until string) (json.RawMessag
 	}
 }
 func waitJob(ctx context.Context, g globals, submitted json.RawMessage) (json.RawMessage, *cliError) {
+	if g.client == nil {
+		client, err := ownerClient(g)
+		if err != nil {
+			return nil, &cliError{0, "invalid_configuration", "explicit pinned owner TLS configuration is required"}
+		}
+		g.client = client
+		defer client.CloseIdleConnections()
+	}
+
 	var ref struct {
 		ID string `json:"job_id"`
 	}
@@ -549,22 +571,20 @@ func reviewRequest(ctx context.Context, g globals, id, action, reportID, overrid
 	if e != nil {
 		return nil, e
 	}
-	var report v.Report
-	if reportID == "" {
-		raw, e := call(ctx, g, "GET", "/api/v1/tasks/"+id+"/verification", nil)
-		if e != nil {
-			return nil, e
-		}
-		var result struct {
-			Report v.Report `json:"report"`
-			Status v.Status `json:"status"`
-		}
-		if decodeReply(raw, &result) != nil {
-			return nil, &cliError{0, "invalid_response", "invalid verification"}
-		}
-		report = result.Report
-	} else {
-		raw, e := call(ctx, g, "GET", "/api/v1/verifications/"+reportID, nil)
+	raw, e := call(ctx, g, "GET", "/api/v1/tasks/"+id+"/verification", nil)
+	if e != nil {
+		return nil, e
+	}
+	var current struct {
+		Report v.Report `json:"report"`
+		Status v.Status `json:"status"`
+	}
+	if decodeReply(raw, &current) != nil {
+		return nil, &cliError{0, "invalid_response", "invalid current verification"}
+	}
+	report := current.Report
+	if reportID != "" && reportID != report.ID {
+		raw, e = call(ctx, g, "GET", "/api/v1/verifications/"+reportID, nil)
 		if e != nil {
 			return nil, e
 		}
@@ -572,7 +592,9 @@ func reviewRequest(ctx context.Context, g globals, id, action, reportID, overrid
 			return nil, &cliError{0, "invalid_response", "invalid verification"}
 		}
 	}
-	status := v.Evaluate(report, report.Candidate)
+	// Only the server knows the live generation, selection and artifact custody.
+	status := current.Status
+	status.Verified = status.Verified && report.ID == current.Report.ID && report.Candidate == current.Report.Candidate
 	if action == "accept" && !status.Verified && override == "" {
 		return nil, &cliError{422, "verification_required", "accept requires verified evidence; an override request cannot bypass the service gate"}
 	}
@@ -695,9 +717,17 @@ func identityWorkflow(ctx context.Context, g globals, args []string) int {
 			Fingerprint string `json:"fingerprint"`
 		}{header{i.Version, g.MessageID}, *fingerprint})
 	case "enroll":
-		token := f.String("token", "", "one-use invitation token")
-		if f.Parse(args[1:]) != nil || f.NArg() != 0 || *token == "" {
-			return usage(g, "identity enroll --token TOKEN")
+		token := f.String("token", "", "one-use invitation token (visible in process arguments; prefer --token-file)")
+		tokenFile := f.String("token-file", "", "private 0600 file containing a one-use invitation token")
+		if f.Parse(args[1:]) != nil || f.NArg() != 0 || (*token == "") == (*tokenFile == "") {
+			return usage(g, "identity enroll --token-file FILE (0600), or --token TOKEN")
+		}
+		if *tokenFile != "" {
+			value, err := enrollmentToken(*tokenFile)
+			if err != nil {
+				return usage(g, "token file must be a bounded regular file with mode 0600")
+			}
+			*token = value
 		}
 		return request(ctx, g, "identity.enroll", "POST", "/api/v1/identity/enroll", struct {
 			header
@@ -720,4 +750,28 @@ func identityWorkflow(ctx context.Context, g globals, args []string) int {
 		}{header{i.Version, g.MessageID}, *id, *revision, *action, *fingerprint})
 	}
 	return usage(g, "unknown identity subcommand")
+}
+
+// enrollmentToken never prints the token or returns it in an error. Validate the
+// opened inode too, so replacing a checked path cannot bypass the private mode.
+func enrollmentToken(path string) (string, error) {
+	before, err := os.Lstat(path)
+	if err != nil || !before.Mode().IsRegular() || before.Mode().Perm() != 0600 {
+		return "", fmt.Errorf("invalid token file")
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	after, err := f.Stat()
+	if err != nil || !os.SameFile(before, after) || !after.Mode().IsRegular() || after.Mode().Perm() != 0600 {
+		return "", fmt.Errorf("invalid token file")
+	}
+	b, err := io.ReadAll(io.LimitReader(f, 1025))
+	value := strings.TrimSpace(string(b))
+	if err != nil || len(b) > 1024 || value == "" || strings.ContainsAny(value, " \t\r\n\x00") {
+		return "", fmt.Errorf("invalid token file")
+	}
+	return value, nil
 }

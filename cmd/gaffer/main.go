@@ -36,6 +36,7 @@ const cliVersion = "gaffer-cli-v1"
 const maxReply = 1 << 20
 
 type globals struct {
+	client                                            *http.Client
 	Endpoint, Cert, Key, DaemonFingerprint, MessageID string
 	JSON                                              bool
 	Timeout                                           time.Duration

@@ -44,16 +44,23 @@ Success is one stdout envelope; errors go only to stderr:
 | 4 | Reconciliation required; no second valid attempt is implied |
 
 Local configuration/transport failures use status 0; only received HTTP refusals
-carry an HTTP status. An omitted UUID is generated once per invocation. Retrying a mutation requires the
+carry an HTTP status.
+
+## Idempotency
+
+An omitted UUID is generated once per invocation. Retrying a mutation requires the
 **same `--message-id` and body**. Receipt replay carries `Idempotent-Replay: true`;
 reusing a retained UUID for another request is `409 identity_conflict`. Domain work
 commits before its response receipt. Never use a fresh UUID to bypass a refusal.
+
+After restore, replay of a receipt from the old generation returns
+`409 stale_generation`; it never reauthorizes the old intent.
 
 ## Commands
 
 | Family | Commands and important inputs |
 | --- | --- |
-| Identity | `invite --fingerprint SHA256`, `enroll --token TOKEN`, `update --id UUID --revision N --action enable\|disable\|revoke\|rotate [--fingerprint SHA256]` |
+| Identity | `invite --fingerprint SHA256`, `enroll --token-file FILE` (0600; prefer over `--token TOKEN`), `update --id UUID --revision N --action enable\|disable\|revoke\|rotate [--fingerprint SHA256]` |
 | Repository | `register\|validate --profile FILE --expected-revision N [--wait]`; `show ID` |
 | Runner | `facts import --file FILE --expected-revision N`; `facts show [ELIGIBILITY]` |
 | Task | `create`, `approve UUID --eligibility ID`, `dispatch UUID --grant-id UUID --grant-revision N --attempt-ms N`, `inspect\|watch\|stop\|retry UUID`, `list [--after UUID --limit N]` |
@@ -63,6 +70,15 @@ commits before its response receipt. Never use a fresh UUID to bypass a refusal.
 | Daemon | `status`, `pause\|resume [--reason TEXT]`, `resume --confirm-source-fenced`, `stop-all` |
 | Reconcile | `status`, `release ATTEMPT_UUID --proof FILE` |
 | Backup | `create --destination DIR`, `verify --backup DIR` (S6 service); offline `restore` is S6-owned |
+
+The standalone `gafferd` on this branch does **not yet compose the jobs worker**.
+Until coordinator integration lands, repository job routes and verification job
+routes return `503 store_unavailable`; `repo register --wait` and `verify run --wait`
+therefore cannot run against that binary. The in-process HTTPS tests explicitly
+compose the real worker.
+
+Keep enrollment tokens out of process arguments and shell history: prefer a private
+0600 `--token-file`. The legacy `--token` flag remains available for compatibility.
 
 Repository work and verification are durable jobs. `--wait` polls; a timeout does
 not cancel the job. `GET /api/v1/jobs/{id}` exposes queued/running/succeeded/failed,
@@ -159,6 +175,7 @@ an unconfigured route. Full accepted flow requires integrated S1/S2 execution an
 S5 reconciliation; this branch alone cannot supply those implementations.
 
 The daemon must compose `httpapi.WorkflowJobHandlers` and `jobs.NewWorker`, and
-integrate the owner transaction/decision and paused-dispatch hooks. The tagged
-`ownercommit` store tests intentionally fail until those out-of-lane patches land.
+integrate the owner/decision transaction hooks. The paused dispatch gate is now
+in the seams base. The tagged `ownercommit` store tests still require those
+owner/decision transaction hooks.
 See [owner workflow operations](../../docs/operations/owner-workflow.md).

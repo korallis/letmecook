@@ -207,7 +207,7 @@ func flowCommand(ctx context.Context, g globals, args []string) int {
 	}
 	state := string(completed.Attempts[len(completed.Attempts)-1].State)
 	if !slices.Contains([]string{"succeeded", "failed"}, state) {
-		return fail(g, 409, "reconciliation_required", "attempt did not produce a candidate")
+		return fail(g, 422, "candidate_unavailable", "terminal attempt did not produce a candidate")
 	}
 	verifyID := workflow.IntentID(*flowID, "verify")
 	verification := struct {
