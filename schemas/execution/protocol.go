@@ -36,6 +36,9 @@ const (
 	DelayedReply           Refusal = "delayed_reply"
 	AckNotDurable          Refusal = "ack_not_durable"
 	ReconciliationRequired Refusal = "reconciliation_required"
+	// LocalPolicyDenied: the runner's own policy refuses an otherwise valid
+	// assignment; sent before acceptance, never after a launch.
+	LocalPolicyDenied Refusal = "local_policy_denied"
 )
 
 type Identity struct {
@@ -248,14 +251,14 @@ func Decode(data []byte) (Message, error) {
 			valid = valid && matches(m["stop_id"], uuid)
 		}
 		if kind == "terminated" {
-			valid = valid && in(m["confirmed_process"], any("not_started"), any("terminated")) &&
+			valid = valid && in(m["confirmed_process"], any("not_started"), any("terminated"), any("unknown")) &&
 				in(m["remote_work"], any("quiescent"), any("unknown")) && matches(m["evidence_digest"], hash)
 		}
 	case "refuse":
 		reason, ok := m["reason"].(string)
 		valid = ok && matches(m["in_reply_to"], uuid) && in(Refusal(reason), Malformed, Oversized, UnknownVersion,
 			StaleGeneration, StaleAttempt, IdentityConflict, RevisionConflict, InvalidTransition,
-			NonceMismatch, BootMismatch, DelayedReply, AckNotDurable, ReconciliationRequired)
+			NonceMismatch, BootMismatch, DelayedReply, AckNotDurable, ReconciliationRequired, LocalPolicyDenied)
 	}
 	if !valid {
 		return Message{}, Malformed

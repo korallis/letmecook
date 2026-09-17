@@ -5,7 +5,8 @@ export const FENCED_VERSION = 'execution-provisional-v2' as const;
 export const MAX_BYTES = 8192;
 export type Refusal = 'ok' | 'duplicate' | 'malformed' | 'oversized' | 'unknown_version'
   | 'stale_generation' | 'stale_attempt' | 'identity_conflict' | 'revision_conflict'
-  | 'invalid_transition' | 'nonce_mismatch' | 'boot_mismatch' | 'delayed_reply' | 'ack_not_durable' | 'reconciliation_required';
+  | 'invalid_transition' | 'nonce_mismatch' | 'boot_mismatch' | 'delayed_reply' | 'ack_not_durable' | 'reconciliation_required'
+  | 'local_policy_denied';
 export type Identity = { generation: string; task_id: string; attempt_id: string; epoch: number };
 export type Route = { route_ref: string; decision_digest: string; policy_digest: string;
   limits_profile: 'strict-provider-output-v1' | 'native-subscription-local-v1' | 'gateway-local-bounds-v1' };
@@ -27,7 +28,7 @@ export type Accept = FencedEnvelope & Boots & { kind: 'accept'; assignment_id: s
 export type Refuse = FencedEnvelope & { kind: 'refuse'; in_reply_to: string; reason: Exclude<Refusal, 'ok' | 'duplicate'> };
 export type Cancel = FencedEnvelope & Boots & { kind: 'cancel'; stop_id: string };
 export type Terminated = FencedEnvelope & Boots & { kind: 'terminated'; stop_id: string;
-  confirmed_process: 'not_started' | 'terminated'; remote_work: 'quiescent' | 'unknown'; evidence_digest: string };
+  confirmed_process: 'not_started' | 'terminated' | 'unknown'; remote_work: 'quiescent' | 'unknown'; evidence_digest: string };
 export type Message = Assignment | LeaseRequest | LeaseReply | Transition | Result | ResultAck | Accept | Refuse | Cancel | Terminated;
 export type Timing = { received_ms: number; drift_ms: number; termination_ms: number;
   runner_boot: string; daemon_boot: string; prior_stop_by_ms: number | null; nonce_active: boolean };
@@ -98,7 +99,7 @@ function validate(v: unknown): asserts v is Message {
       id(m.runner_boot); id(m.daemon_boot);
       if (m.kind === 'accept') id(m.assignment_id); else id(m.stop_id);
       if (m.kind === 'terminated') {
-        require(['not_started', 'terminated'].includes(m.confirmed_process) && ['quiescent', 'unknown'].includes(m.remote_work));
+        require(['not_started', 'terminated', 'unknown'].includes(m.confirmed_process) && ['quiescent', 'unknown'].includes(m.remote_work));
         digest(m.evidence_digest);
       }
       break;
@@ -106,7 +107,7 @@ function validate(v: unknown): asserts v is Message {
       id(m.in_reply_to);
       require(['malformed', 'oversized', 'unknown_version', 'stale_generation', 'stale_attempt', 'identity_conflict',
         'revision_conflict', 'invalid_transition', 'nonce_mismatch', 'boot_mismatch', 'delayed_reply',
-        'ack_not_durable', 'reconciliation_required'].includes(m.reason)); break;
+        'ack_not_durable', 'reconciliation_required', 'local_policy_denied'].includes(m.reason)); break;
   }
 }
 

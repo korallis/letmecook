@@ -95,7 +95,7 @@ revalidates input; static Go/TypeScript types convey no trust.
 | `lease_reply` | daemon to runner | Existing matching `nonce`, both boots, `validity_ms` in 1..30000. |
 | `transition` | runner proposal to daemon | Existing `expected_revision`, `from`, `to`. Daemon validates evidence and durably applies CAS; this message alone is not an acknowledgement. |
 | `cancel` | daemon to runner | `stop_id`, both boots. Revocation/stop is sticky for this attempt, regardless of phase revision. |
-| `terminated` | runner supervisor to daemon | `stop_id`, both boots, `confirmed_process` (`not_started` or `terminated`), `remote_work` (`quiescent` or `unknown`), `evidence_digest`. |
+| `terminated` | runner supervisor to daemon | `stop_id`, both boots, `confirmed_process` (`not_started`, `terminated` or `unknown`; unknown never releases), `remote_work` (`quiescent` or `unknown`), `evidence_digest`. |
 | `result` | runner to daemon | Existing `manifest = {manifest_id, sha256, bytes}`. |
 | `result_ack` | daemon to runner | Existing same manifest plus stable `receipt_id`. Custody acknowledgement only. |
 
