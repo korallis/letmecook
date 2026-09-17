@@ -73,7 +73,7 @@ export function validateProfile(value: unknown): Profile {
     else if (key !== 'controllerNamespaces') exactText(val);
   }
   assert.equal(p.identity.architecture, 'x64');
-  assert.match(p.identity.kernelRelease, /^6\.12\.[0-9]+[-.a-zA-Z0-9]*$/);
+  assert.match(p.identity.kernelRelease, /^6\.12\.[0-9]+[-+.a-zA-Z0-9]*$/);
   assert.match(p.identity.systemdVersion, /^systemd 257[ .(]/);
   assert.match(p.identity.nodeVersion, /^v(2[4-9]|[3-9][0-9])\.\d+\.\d+$/);
   assert.match(p.identity.bootId, /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/);
@@ -135,16 +135,11 @@ export function exclusive(path: string, body: string) {
 }
 type RecordValue = { kind: 'genesis' | 'intent' | 'failed' | 'completed' | 'resolution'; runId: string; profileHash: string; bootId: string; detail: unknown };
 type JournalRow = RecordValue & { sequence: number; previous: string; digest: string };
-function assertResolution(detail: unknown, failedRecord: JournalRow) {
-  const value = detail as Record<string, unknown>;
-  keys(value, ['failedRecordDigest', 'replayAllowed', 'cleanupVerified', 'resources']);
-  assert.equal(value.failedRecordDigest, failedRecord.digest, 'resolution failure identity mismatch');
-  assert.equal(value.replayAllowed, false); assert.equal(value.cleanupVerified, true);
-  assert.ok(Array.isArray(value.resources) && value.resources.length > 0, 'resolution needs cleanup observations');
-  for (const resource of value.resources) {
-    assert.equal(resource.populated, 0); assert.deepEqual(resource.processes, []);
-    assert.ok(['inactive', 'failed', 'not-found'].includes(resource.active), 'resolution resource remains active');
-  }
+function assertResolution(_detail: unknown, _failedRecord: JournalRow): never {
+  // No measured post-loss observation format exists yet. Generic empty-process
+  // arrays cannot prove coverage/ownership of every recorded or uncertain unit.
+  // Retain quarantine until a separately reviewed reconciler can establish it.
+  throw new Error('quarantine resolution unavailable: verified resource reconciliation required');
 }
 // Append only, bounded journal. A torn append is corrupt, never permission to retry.
 export class Journal {
@@ -263,12 +258,13 @@ function controllerCharge(p: Profile) {
   assert.ok(current <= p.headroom.controllerBytes, 'controller charged memory exceeds frozen budget');
   return { current, stat: read(`${CONTROLLER_GROUP}/memory.stat`), events: read(`${CONTROLLER_GROUP}/memory.events`) };
 }
-export function rootfsDigest(root: string): string {
+export function rootfsDigest(root: string, owner = 0): string {
   const rows: unknown[] = [];
   const visit = (path: string) => {
     for (const name of fs.readdirSync(path).sort()) {
       const full = join(path, name), relative = full.slice(root.length), s = fs.lstatSync(full);
-      assert.ok(rows.length < 8192); assert.equal(s.uid, 0); assert.equal(s.mode & 0o6022, 0);
+      assert.ok(rows.length < 8192); assert.equal(s.uid, owner);
+      if (!s.isSymbolicLink()) assert.equal(s.mode & 0o6022, 0);
       assert.ok(s.isDirectory() || s.isFile() || s.isSymbolicLink(), 'device/socket in staged root');
       const mountTarget = s.isDirectory() && ['/dev/shm', '/dev/pts', '/sys/fs', '/sys/fs/cgroup'].includes(relative);
       assert.ok(mountTarget || !/^\/(root|home|run|var|work|tmp|sys|proc|dev)\/.+/.test(relative), 'host data in staged root');

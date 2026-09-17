@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { createServer, request } from 'node:http';
 import { retireMockInstance } from './probe.ts';
 import { fileURLToPath } from 'node:url';
-import { admission, validateProfile, CONTROLS, PROCEDURE, BASE, hash, Journal, exclusive, assertEffective, assertOwned, prepare, main, json } from './run.ts';
+import { admission, validateProfile, CONTROLS, PROCEDURE, BASE, hash, Journal, exclusive, assertEffective, assertOwned, prepare, main, json, rootfsDigest } from './run.ts';
 
 // Deliberately synthetic objects for pure logic. No host inventory, native entrypoint,
 // system service, namespace, mount, network socket or pressure operation runs here.
@@ -108,10 +108,11 @@ test('failed receipts remain exclusive and hash-bound; resolution never replays 
   assert.equal(hash(fs.readFileSync(receipt)), hash(body));
   assert.throws(() => journal.assertLaunch(identity.profileHash, nextId), /unresolved/);
   const failure = journal.read().at(-1)!;
-  journal.append({ ...identity, kind: 'resolution', runId, detail: { failedRecordDigest: failure.digest, replayAllowed: false,
-    cleanupVerified: true, resources: [{ populated: 0, processes: [], active: 'inactive' }] } });
-  assert.throws(() => journal.assertLaunch(identity.profileHash, runId), /replayed/);
-  journal.assertLaunch(identity.profileHash, nextId); assert.equal(fs.readFileSync(receipt, 'utf8'), body);
+  assert.throws(() => journal.append({ ...identity, kind: 'resolution', runId, detail: { failedRecordDigest: failure.digest, replayAllowed: false,
+    cleanupVerified: true, resources: [{ populated: 0, processes: [], active: 'inactive' }] } }), /verified resource reconciliation required/);
+  assert.throws(() => journal.assertLaunch(identity.profileHash, runId));
+  assert.throws(() => journal.assertLaunch(identity.profileHash, nextId));
+  assert.equal(fs.readFileSync(receipt, 'utf8'), body);
 }));
 test('journal supports bounded full case campaign without a sixteen-run/file-count shortcut', () => temporary(directory => {
   const journal = initialized(directory);
@@ -139,6 +140,7 @@ test('prepare emits bounded argv data, refuses injection; no native execution', 
 
 test('reloaded quarantine resolutions require complete cleanup evidence even with valid hashes', () => {
   for (const corrupt of [
+    (_detail: any) => {}, // Even plausible generic observations do not identify owned resources.
     (detail: any) => { detail.failedRecordDigest = hash('different failed run'); },
     (detail: any) => { detail.replayAllowed = true; },
     (detail: any) => { detail.cleanupVerified = false; },
@@ -192,4 +194,20 @@ test('synthetic mock retires its actual UDS listener before restarting at the sa
     for (const server of [first, second]) if (server.listening) await new Promise<void>(done => server.close(() => done()));
     fs.rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test('rootfs inventory accepts confined relative symlinks and rejects escape/writable targets', () => temporary(directory => {
+  fs.mkdirSync(join(directory, 'usr')); fs.mkdirSync(join(directory, 'usr', 'bin'));
+  const tool = join(directory, 'usr', 'bin', 'tool'); fs.writeFileSync(tool, 'synthetic tool', { mode: 0o555 });
+  const link = join(directory, 'bin'); fs.symlinkSync('usr/bin', link);
+  const digest = rootfsDigest(directory, process.getuid!()); assert.match(digest, /^[a-f0-9]{64}$/);
+  fs.chmodSync(tool, 0o777); assert.throws(() => rootfsDigest(directory, process.getuid!())); fs.chmodSync(tool, 0o555);
+  fs.unlinkSync(link); fs.symlinkSync('../escape', link); assert.throws(() => rootfsDigest(directory, process.getuid!()), /confined/);
+  fs.unlinkSync(link); fs.symlinkSync('/usr/bin', link); assert.throws(() => rootfsDigest(directory, process.getuid!()), /confined/);
+}));
+test('Debian kernel plus suffix remains exact-pinned rather than a wildcard', () => {
+  const p = synthetic(); p.identity.kernelRelease = '6.12.107+deb13-amd64';
+  const bytes = JSON.stringify(p); assert.equal(admission(p, 'linux', hash(bytes), bytes).identity.kernelRelease, p.identity.kernelRelease);
+  const changed = JSON.stringify({ ...p, identity: { ...p.identity, kernelRelease: '6.12.108+deb13-amd64' } });
+  assert.throws(() => admission(JSON.parse(changed), 'linux', hash(bytes), changed), /digest mismatch/);
 });

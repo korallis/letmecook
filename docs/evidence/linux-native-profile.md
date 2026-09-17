@@ -7,8 +7,8 @@ Fresh satisfied procedure review: `opus89-v2-review.md`, SHA256
 `9027887408ebb52e7067e600f813e3917484126caddb14ac74b5874d59c539bf`.
 The lock authorizes no host selection, setup or execution.
 
-**No Linux host selected or measured. Every native proof criterion is NOT RUN and
-unproven.** Offline tests below validate source logic using synthetic objects and
+**A dedicated local Debian 13 amd64 VM has now been selected and provisioning is
+in progress. Every native proof criterion remains NOT RUN and unproven.** Offline tests below validate source logic using synthetic objects and
 task-owned temporary files on macOS. They establish no Linux enforcement, native
 compatibility, successful confinement, installation or unattended support.
 
@@ -199,8 +199,14 @@ Raw observations are incrementally written and fsynced on disk outside worker
 mounts. Final receipt is exclusive-create, mode0400, content-hash named and hash-bound
 from the journal. Failure/quarantine must be durable before reporting failure.
 Failure-writing errors leave unresolved intent rather than manufacturing acceptance.
-Resolution appends evidence referring to the failed record; it cannot rewrite that
-receipt, replay its run ID or turn failure into pass.
+Resolution is disabled in this source: generic empty-process observations cannot
+prove coverage of every owned or uncertain resource. A future reviewed reconciler
+must bind the full resource inventory before permitting any new launch: each
+recorded worker and mock unit, invocation ID, cgroup path/device/inode, and an
+independent complete-tree observation; uncertain launches also need positively
+identified absence/no-launch evidence. Missing, duplicate or unrelated unit
+observations must not satisfy coverage. This capability is not implemented here. It must
+retain failed receipts and cannot replay a failed run or turn failure into pass.
 
 Before stop or `cgroup.kill`, controller checks unit invocation, cgroup path and
 device/inode identity. Cleanup requires inactive/failed unit state, populated0 (or
@@ -242,7 +248,7 @@ From repository root, ordinary macOS user:
 node --test experiments/isolation-native/run.test.ts
 ```
 
-Ten behavioral checks cover absent/malformed/default/non-Linux admission,
+Twelve behavioral checks cover absent/malformed/default/non-Linux admission,
 missing effective limits before a simulated sentinel, exact cleanup ownership,
 missing/corrupt/torn/symlinked journals, durable unresolved intent, competing stale
 admission, immutable failed receipts and non-replayable resolution, journal bounds,
@@ -267,9 +273,11 @@ checks on Linux and macOS. Its Linux runner is not a selected confinement target
 passing CI provides no native runtime evidence.
 
 Source refresh on **17 September 2026** preserves the reviewed procedure and the
-unmeasured default profile. Journal resolution details are validated both when
-appended and when replayed after restart; a valid hash alone cannot clear
-quarantine without a matching failed record and empty, inactive resources.
+unmeasured default profile. Journal resolution is refused both on append and replay after restart until a
+reviewed observation format can bind all owned and uncertain resources. Even a
+correctly hashed generic cleanup assertion cannot clear quarantine. Inventory
+tests also cover confined relative symlinks, and the kernel validator permits the
+normal Debian plus suffix while requiring an unchanged exact profile digest.
 
 This evidence document is not an input to `docs/build-reader.ts`; no reader source,
 layout or generated `docs/index.html` changed. Fresh independent exact-head source
