@@ -141,3 +141,79 @@ func TestExecutionListenerCloseInterruptsHandshake(t *testing.T) {
 		t.Fatal("Close left a stalled handshake")
 	}
 }
+
+func TestExecutionListenerConcurrentHandshakeAndCloseWrite(t *testing.T) {
+	serverCert, certFile, keyFile := certificate(t, true)
+	clientCert, _, _ := certificate(t, false)
+	cfg, err := i.ExecutionTLS(certFile, keyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	listener := ExecutionListener(raw, cfg, 10*time.Second).(*executionListener)
+	defer listener.Close()
+	stalled, err := net.Dial("tcp", listener.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stalled.Close()
+	// Wait until the idle peer actually owns a handshake slot.
+	deadline := time.Now().Add(time.Second)
+	for {
+		listener.mu.Lock()
+		pending := len(listener.pending)
+		listener.mu.Unlock()
+		if pending == 1 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("stalled peer was not accepted")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	accepted := make(chan net.Conn, 1)
+	go func() { c, _ := listener.Accept(); accepted <- c }()
+	roots := x509.NewCertPool()
+	roots.AddCert(serverCert.Leaf)
+	client, err := tls.DialWithDialer(&net.Dialer{Timeout: 2 * time.Second}, "tcp", listener.Addr().String(), &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: roots, Certificates: []tls.Certificate{clientCert}, NextProtos: []string{p.FencedVersion}})
+	if err != nil {
+		t.Fatal("healthy peer blocked behind stalled handshake:", err)
+	}
+	defer client.Close()
+	var conn net.Conn
+	select {
+	case conn = <-accepted:
+		if conn == nil {
+			t.Fatal("valid connection refused")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("healthy handshake not delivered")
+	}
+	defer conn.Close()
+	// The opaque connection must retain TLS half-close, not close the TCP reader.
+	if err := conn.(*execConn).CloseWrite(); err != nil {
+		t.Fatal(err)
+	}
+	client.SetDeadline(time.Now().Add(time.Second))
+	var b [1]byte
+	if _, err := client.Read(b[:]); err != io.EOF {
+		t.Fatalf("missing TLS close_notify: %v", err)
+	}
+	if _, err := client.Write([]byte("x")); err != nil {
+		t.Fatal(err)
+	}
+	conn.SetReadDeadline(time.Now().Add(time.Second))
+	if _, err := io.ReadFull(conn, b[:]); err != nil || b[0] != 'x' {
+		t.Fatalf("half-close lost read side: %q %v", b, err)
+	}
+	listener.Close()
+	stalled.SetReadDeadline(time.Now().Add(time.Second))
+	if _, err := stalled.Read(b[:]); err == nil {
+		t.Fatal("Close left pending peer open")
+	} else if e, ok := err.(net.Error); ok && e.Timeout() {
+		t.Fatal("Close did not interrupt pending peer")
+	}
+}
