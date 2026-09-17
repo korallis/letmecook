@@ -18,7 +18,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/korallis/letmecook/internal/closedjson"
@@ -29,9 +31,19 @@ func mockGateway(ctx context.Context, args []string, out io.Writer) error {
 	listen := f.String("listen", "127.0.0.1:0", "loopback only")
 	keyFile := f.String("key-file", "", "0600 mock bearer credential")
 	models := f.String("models", "gpt-6-astra", "comma separated synthetic model IDs")
+	hang := f.String("hang-after", "", "test-only: respond to n model requests, then hold responses until shutdown")
 	if err := f.Parse(args); err != nil {
 		return err
 	}
+	var hangAfter uint64
+	if *hang != "" {
+		var err error
+		hangAfter, err = strconv.ParseUint(*hang, 10, 63)
+		if err != nil {
+			return errors.New("hang-after requires a nonnegative integer")
+		}
+	}
+	var modelRequests atomic.Uint64
 	host, _, err := net.SplitHostPort(*listen)
 	if err != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
 		return errors.New("mock gateway requires loopback IP")
@@ -97,6 +109,15 @@ func mockGateway(ctx context.Context, args []string, out io.Writer) error {
 			if err != nil || closedjson.Decode(body, &req, 65536, nil) != nil || req.Model == "" || len(req.Messages) == 0 || req.Stream {
 				http.Error(w, "malformed", 400)
 				return
+			}
+			if *hang != "" && modelRequests.Add(1) > hangAfter {
+				// The normal five-second write timeout must not turn this fault
+				// into a response. Only mock shutdown releases accepted requests.
+				if err := http.NewResponseController(w).SetWriteDeadline(time.Time{}); err != nil {
+					return
+				}
+				<-ctx.Done()
+				panic(http.ErrAbortHandler) // never synthesize a successful empty response
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{"id": "test-only", "object": "chat.completion", "choices": []any{map[string]any{"index": 0, "message": map[string]string{"role": "assistant", "content": "synthetic mock response"}, "finish_reason": "stop"}}, "usage": map[string]int{"prompt_tokens": 1, "completion_tokens": 1}})
 			return

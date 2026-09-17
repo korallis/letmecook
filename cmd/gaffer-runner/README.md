@@ -94,7 +94,14 @@ This **test-only** command refuses non-loopback binds and prints JSON containing
 key as `<key-file>.ca.crt`; the TLS private key stays in memory. A
 `gateway-config-v1` referencing that URL and synthetic key can be probed with
 `facts --gateway-ca <ca_file>`. Only authenticated models and canned
-`/v1/chat/completions` routes exist. It is not a replacement model gateway.
+`/v1/chat/completions` routes exist. For fault-injection test support,
+`--hang-after n` answers the first `n` valid authenticated model requests normally,
+then accepts and holds all later model requests without a response until mock
+shutdown. `n=0` hangs from the first model request; omitting the flag preserves
+normal behavior. Model discovery and rejected authentication do not consume the
+counter. Loopback-only binding and constant-time bearer authentication remain
+mandatory. This is test support for a non-quiescent inference boundary, not a
+replacement model gateway.
 
 ## Durable sequence and failure behavior
 
