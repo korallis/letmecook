@@ -308,6 +308,8 @@ func (s *Store) Dispatch(ctx context.Context, request DispatchRequest) (Dispatch
 	if err != nil {
 		return Dispatch{}, err
 	}
+	// This bound relies on M1's globally single unresolved-attempt reservation.
+	// Multi-attempt inbox delivery must re-derive the complete wrapper/batch bound.
 	if len(wire) > execwire.MaxBytes-execwire.InboxWrapperBytes {
 		return Dispatch{}, g.Deny("oversized", "dispatch_record")
 	}

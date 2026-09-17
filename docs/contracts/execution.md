@@ -229,6 +229,10 @@ boots, integer bounds, nonce state and the prior runner cutoff under
 runner boot's monotonic domain, not the daemon's wall clock. A renewal whose
 `sent_ms` is at or past that prior cutoff is refused and fenced. The runner
 separately enforces the delayed-reply cutoff using its actual local receive time.
+Monotonic, non-regressing `sent_ms` within a runner boot remains the runner's
+responsibility on this provisional wire. The daemon does not introduce a new
+regression-refusal code: nonce replay and independent daemon issuance/barrier
+bounds remain enforced, and a runner timestamp is never process-quiescence proof.
 Issuance records the daemon's own wall/boot-elapsed stamp, full validity deadline
 and 7 s margin; daemon expiry latches and reconcile barriers use that separate
 clock. The same nonce replays the retained reply and original issuance without
