@@ -39,9 +39,10 @@ and explicit limitations. Construct it with
 private state directory owns `verification-canary`; each probe is cleaned up.
 There is no HOME fallback or write into the real HOME outside configured state.
 Canary roots inside verification workspaces or system-temp exceptions (`/tmp`,
-`/private/tmp`, `/var/folders`, `/private/var/folders`) are refused. Measured profile limitations (including writable system temp and
-unproven escaped-session termination) are retained in each report. Escape/drift
-is retained as unqualified refusal evidence.
+`/private/tmp`, `/var/folders`, `/private/var/folders`) are refused. Measured
+launcher limitations are retained in each report, including the current
+allow-default profile's open mach/keychain IPC and unproven escaped-session
+termination. Escape/drift is retained as unqualified refusal evidence.
 No evidence here establishes a supported unattended runtime.
 
 Task create has a 65,536-byte **total encoded JSON envelope** ceiling, including
