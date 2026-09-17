@@ -798,7 +798,7 @@ func TestDispatchSchemaFiveMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer r.Close()
-	if r.meta.SchemaVersion != 6 {
+	if r.meta.SchemaVersion != 7 {
 		t.Fatal(r.meta)
 	}
 	view := snapshot(t, r)

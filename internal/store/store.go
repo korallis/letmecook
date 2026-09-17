@@ -22,12 +22,13 @@ import (
 )
 
 type Store struct {
-	mu      sync.Mutex
-	db      *sql.DB
-	lock    *os.File
-	dir     string
-	meta    a.Metadata
-	fixture bool
+	mu        sync.Mutex
+	db        *sql.DB
+	lock      *os.File
+	dir       string
+	artifacts string
+	meta      a.Metadata
+	fixture   bool
 }
 
 func newID() string {
@@ -91,7 +92,12 @@ func Open(ctx context.Context, dir, artifactsDir string) (*Store, error) {
 	if err = errors.Join(artifacts.Sync(), artifacts.Close()); err != nil {
 		return nil, err
 	}
-	return openStore(ctx, dir, false)
+	s, err := openStore(ctx, dir, false)
+	if err != nil {
+		return nil, err
+	}
+	s.artifacts = artifactsDir
+	return s, nil
 }
 
 func openStore(ctx context.Context, dir string, fixture bool) (_ *Store, err error) {
@@ -221,7 +227,7 @@ func (s *Store) migrate(ctx context.Context) error {
 			}
 		}
 		version = 1
-	} else if version != 1 && (s.fixture || version != 2 && version != 3 && version != 4 && version != 5 && version != 6) {
+	} else if version != 1 && (s.fixture || version != 2 && version != 3 && version != 4 && version != 5 && version != 6 && version != 7) {
 		return fmt.Errorf("unsupported schema version")
 	}
 	mode := "fixture-only"
@@ -259,6 +265,12 @@ PRAGMA user_version=2;`); err != nil {
 				return err
 			}
 			version = 6
+		}
+		if version == 6 {
+			if _, err = tx.ExecContext(ctx, artifactSchema); err != nil {
+				return err
+			}
+			version = 7
 		}
 		if err = expireGrants(ctx, tx, time.Now().UnixMilli()); err != nil {
 			return err
