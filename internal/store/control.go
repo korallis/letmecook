@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"reflect"
 	"time"
 
 	g "github.com/korallis/letmecook/internal/authority"
@@ -444,105 +443,15 @@ func (s *Store) RecordControlLease(ctx context.Context, actor, dispatchKey, sele
 	if err := owner(ctx, tx, actor); err != nil {
 		return c.Lease{}, err
 	}
-	d, err := loadDispatch(ctx, tx, dispatchKey)
-	if err != nil {
+	v, err := s.issueLeaseTx(ctx, tx, actor, dispatchKey, selected, request, reply, margin)
+	if !leaseCommitted(err) {
 		return c.Lease{}, err
 	}
-	for _, m := range []p.Message{request, reply} {
-		if r := p.CheckSession(m, d.Assignment.Identity, selected); r != p.OK {
-			return c.Lease{}, r
-		}
+	// Issuance, exact replay and fenced refusals are durable before they are reported.
+	if commitErr := tx.Commit(); commitErr != nil {
+		return c.Lease{}, commitErr
 	}
-	if request.Kind != "lease_request" || reply.Kind != "lease_reply" || request.Nonce != reply.Nonce || margin <= 0 || margin > time.Minute {
-		return c.Lease{}, p.Malformed
-	}
-	if request.DaemonBoot != s.meta.DaemonBoot || reply.DaemonBoot != request.DaemonBoot || request.RunnerBoot != d.Facts.RunnerBoot || reply.RunnerBoot != request.RunnerBoot {
-		if err := controlFence(ctx, tx, request, "boot_mismatch"); err != nil {
-			return c.Lease{}, err
-		}
-		if err := tx.Commit(); err != nil {
-			return c.Lease{}, err
-		}
-		return c.Lease{}, p.BootMismatch
-	}
-	if err := expireGrants(ctx, tx, time.Now().UnixMilli()); err != nil {
-		return c.Lease{}, err
-	}
-	now := s.controlStamp()
-	decision := dispatchAllowed(ctx, tx, d.Request, now.Wall.UnixMilli())
-	if decision != nil {
-		var refusal *g.Refusal
-		if !errors.As(decision, &refusal) {
-			return c.Lease{}, decision
-		}
-	}
-	prior, priorErr := lastControlLease(ctx, tx, request.Identity.AttemptID)
-	if priorErr != nil && !errors.Is(priorErr, sql.ErrNoRows) {
-		return c.Lease{}, priorErr
-	}
-	if priorErr == nil && (prior.Issued.Boot != now.Boot || now.ElapsedNS < prior.Issued.ElapsedNS || now.ElapsedNS >= prior.DeadlineNS) {
-		stop := c.Request{ID: dispatchID(prior.Request.Nonce, "expired"), Kind: c.CancelAttempt, TaskID: request.Identity.TaskID, AttemptID: request.Identity.AttemptID, Cause: "lease_expired"}
-		if _, err := latchStop(ctx, tx, "lease-clock", stop, now); err != nil {
-			return c.Lease{}, err
-		}
-		decision = c.ErrFenced
-	}
-	if decision != nil {
-		if err := controlFence(ctx, tx, request, "revoked_or_expired"); err != nil {
-			return c.Lease{}, err
-		}
-		if err := tx.Commit(); err != nil {
-			return c.Lease{}, err
-		}
-		return c.Lease{}, c.ErrFenced
-	}
-	var body string
-	err = tx.QueryRowContext(ctx, "SELECT body FROM control_leases WHERE nonce=?", request.Nonce).Scan(&body)
-	if err == nil {
-		var old c.Lease
-		if err := decodeControl(body, &old); err != nil {
-			return c.Lease{}, err
-		}
-		if !validControlLease(old) {
-			return c.Lease{}, g.Deny("corrupt_record", "lease")
-		}
-		if old.DispatchID != dispatchKey || !reflect.DeepEqual(old.Request, request) || !reflect.DeepEqual(old.Reply, reply) || old.MarginNS != int64(margin) {
-			return c.Lease{}, p.IdentityConflict
-		}
-		if err := tx.Commit(); err != nil {
-			return c.Lease{}, err
-		}
-		return old, nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return c.Lease{}, err
-	}
-	if !d.Acknowledged || d.Released {
-		return c.Lease{}, p.ReconciliationRequired
-	}
-	var state p.AttemptState
-	if err := tx.QueryRowContext(ctx, "SELECT state FROM attempts WHERE id=?", request.Identity.AttemptID).Scan(&state); err != nil {
-		return c.Lease{}, err
-	}
-	if state != p.Assigned && state != p.Starting && state != p.Running {
-		return c.Lease{}, p.ReconciliationRequired
-	}
-	v := c.Lease{DispatchID: dispatchKey, Request: request, Reply: reply, Issued: now, DeadlineNS: now.ElapsedNS + *reply.ValidityMS*int64(time.Millisecond), MarginNS: int64(margin)}
-	if !validControlLease(v) {
-		return c.Lease{}, p.ReconciliationRequired
-	}
-	for _, m := range []p.Message{request, reply} {
-		if err := controlMessage(ctx, tx, m); err != nil {
-			return c.Lease{}, err
-		}
-	}
-	if _, err := tx.ExecContext(ctx, "INSERT INTO control_leases VALUES(?,?,?)", request.Nonce, request.Identity.AttemptID, controlJSON(v)); err != nil {
-		return c.Lease{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return c.Lease{}, err
-	}
-	return v, nil
+	return v, err
 }
 
 // FenceControlMessage retains late result/renewal metadata before returning a
@@ -724,44 +633,7 @@ func (s *Store) ObserveTermination(ctx context.Context, actor, selected string, 
 	if err := owner(ctx, tx, actor); err != nil {
 		return err
 	}
-	m := evidence.Terminated
-	if m.Kind != "terminated" || evidence.Measurement.Validate(true) != nil {
-		return p.Malformed
-	}
-	var body string
-	if err := tx.QueryRowContext(ctx, "SELECT body FROM control_targets WHERE stop_id=? AND attempt_id=?", m.StopID, m.Identity.AttemptID).Scan(&body); err != nil {
-		return err
-	}
-	var target c.Target
-	if err := decodeControl(body, &target); err != nil {
-		return err
-	}
-	if r := p.CheckSession(m, target.Cancel.Identity, selected); r != p.OK {
-		return r
-	}
-	if m.Identity.Generation != s.meta.Generation {
-		return p.StaleGeneration
-	}
-	if m.RunnerBoot != target.Cancel.RunnerBoot || m.DaemonBoot != target.Cancel.DaemonBoot || m.DaemonBoot != s.meta.DaemonBoot {
-		return p.BootMismatch
-	}
-	if !validControlEvidence(evidence, target) {
-		return p.Malformed
-	}
-	if err := controlMessage(ctx, tx, m); err != nil {
-		return err
-	}
-	err = tx.QueryRowContext(ctx, "SELECT body FROM control_observations WHERE stop_id=? AND attempt_id=?", m.StopID, m.Identity.AttemptID).Scan(&body)
-	if err == nil {
-		if body != controlJSON(evidence) {
-			return p.IdentityConflict
-		}
-		return nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return err
-	}
-	if _, err := tx.ExecContext(ctx, "INSERT INTO control_observations VALUES(?,?,?)", m.StopID, m.Identity.AttemptID, controlJSON(evidence)); err != nil {
+	if _, err := s.observeTerminationTx(ctx, tx, selected, evidence); err != nil {
 		return err
 	}
 	return tx.Commit()

@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 	"time"
 
 	g "github.com/korallis/letmecook/internal/authority"
@@ -728,11 +727,9 @@ type Reconciliation struct {
 func (s *Store) ReconcileDispatch(ctx context.Context, actor string, proof Reconciliation) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if !p.ValidID(proof.DispatchID) || (proof.To != p.Cancelled && proof.To != p.Expired) || !proof.LaunchFenced || !proof.ArtifactsPreserved || proof.RemoteWork != "quiescent" || (proof.ConfirmedProcess != "not_started" && proof.ConfirmedProcess != "terminated") || len(proof.EvidenceDigest) != 64 || strings.Trim(proof.EvidenceDigest, "0123456789abcdef") != "" {
-		return g.Deny("reconciliation_required", "evidence")
+	if err := validReconciliation(proof); err != nil {
+		return err
 	}
-	// Protocol validation below also validates full identity and numeric bounds.
-	m := p.Message{Version: p.FencedVersion, Kind: "transition", MessageID: dispatchID(proof.DispatchID, "terminal"), Identity: proof.Identity, ExpectedRevision: &proof.ExpectedRevision, To: proof.To}
 	tx, err := s.grantTransaction(ctx)
 	if err != nil {
 		return err
@@ -741,46 +738,7 @@ func (s *Store) ReconcileDispatch(ctx context.Context, actor string, proof Recon
 	if err := owner(ctx, tx, actor); err != nil {
 		return err
 	}
-	v, err := loadDispatch(ctx, tx, proof.DispatchID)
-	if err != nil {
-		return err
-	}
-	if proof.Identity != v.Assignment.Identity || proof.Identity.Generation != s.meta.Generation {
-		return p.StaleAttempt
-	}
-	body, err := json.Marshal(proof)
-	if err != nil {
-		return err
-	}
-	var old string
-	err = tx.QueryRowContext(ctx, "SELECT body FROM dispatch_releases WHERE dispatch_id=?", proof.DispatchID).Scan(&old)
-	if err == nil {
-		if old != string(body) {
-			return p.IdentityConflict
-		}
-		return nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return err
-	}
-	var revision int64
-	if err := tx.QueryRowContext(ctx, "SELECT state,revision FROM attempts WHERE id=?", proof.Identity.AttemptID).Scan(&m.From, &revision); err != nil {
-		return err
-	}
-	if r := p.CheckTransition(m, proof.Identity, m.From, revision); r != p.OK {
-		return r
-	}
-	if _, err := tx.ExecContext(ctx, "UPDATE attempts SET state=?,revision=revision+1 WHERE id=? AND revision=?", proof.To, proof.Identity.AttemptID, revision); err != nil {
-		return err
-	}
-	if err := record(ctx, tx, m, revision+1); err != nil {
-		return err
-	}
-	who, err := principal(ctx, tx, actor)
-	if err != nil {
-		return err
-	}
-	if _, err := tx.ExecContext(ctx, "INSERT INTO dispatch_releases VALUES(?,?,?)", proof.DispatchID, string(body), who.ID); err != nil {
+	if err := s.releaseDispatchTx(ctx, tx, actor, proof); err != nil {
 		return err
 	}
 	return tx.Commit()
