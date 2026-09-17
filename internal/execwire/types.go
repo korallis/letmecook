@@ -98,17 +98,21 @@ type Inbox struct {
 
 // Evidence binds a runtime observation to the proposal. Required fields depend
 // on Kind and are checked by the store, never inferred from zero values here.
+// Evidence mirrors store.RuntimeEvidence field for field. Every numeric and
+// boolean field is always emitted, including zero values, so a receiver can
+// distinguish observed zero evidence from absent evidence.
 type Evidence struct {
 	Kind           string `json:"kind"`
 	Workspace      string `json:"workspace,omitempty"`
-	BoundaryPort   int    `json:"boundary_port,omitempty"`
-	GuardianPID    int    `json:"guardian_pid,omitempty"`
+	BoundaryPort   int    `json:"boundary_port"`
+	GuardianPID    int    `json:"guardian_pid"`
 	Nonce          string `json:"nonce,omitempty"`
-	PID            int    `json:"pid,omitempty"`
-	PGID           int    `json:"pgid,omitempty"`
-	StartUnixNS    int64  `json:"start_unix_ns,omitempty"`
+	PID            int    `json:"pid"`
+	PGID           int    `json:"pgid"`
+	StartUnixNS    int64  `json:"start_unix_ns"`
 	Code           int    `json:"code"`
-	ObservedUnixNS int64  `json:"observed_unix_ns,omitempty"`
+	PGIDEmpty      bool   `json:"pgid_empty"`
+	ObservedUnixNS int64  `json:"observed_unix_ns"`
 	StreamThrough  int64  `json:"stream_through"`
 }
 type MessageEnvelope struct {
