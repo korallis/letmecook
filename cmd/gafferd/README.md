@@ -95,6 +95,9 @@ Follow it for local owner commands, HTTPS configuration and runner enrollment.
 
 HTTPS installs now also require `--execution-listen IP:port`. Startup retains its
 existing owner line and prints `execution https://<ip>:<port>/x/v1` on a second line.
+Choose an explicit IP that the runner can dial. A wildcard bind (`0.0.0.0` or `::`)
+prints an undialable wildcard endpoint; it does not discover or advertise a usable
+runner address. The actual dialed IP must also be covered by the daemon certificate.
 The second listener uses the same client pins with **only** ALPN
 `execution-provisional-v2`, then serves HTTP/1.1 through an opaque, pre-authenticated
 TLS connection. Ordinary `http/1.1`, h2 and missing-ALPN clients never reach a request
