@@ -370,7 +370,11 @@ func routeHandler(d Deps, route Route, execution bool) http.Handler {
 		var b []byte
 		if status != 204 && stream == nil {
 			b, err = json.Marshal(result)
-			if err != nil || len(b) > a.MaxBytes {
+			maxReply := a.MaxBytes
+			if execution {
+				maxReply = execwire.MaxBytes
+			}
+			if err != nil || len(b) > maxReply {
 				fail(503, "store_unavailable")
 				return
 			}

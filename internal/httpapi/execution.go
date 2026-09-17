@@ -38,15 +38,17 @@ const InboxKey = "execution.inbox"
 
 const (
 	maxInboxWaitMS   = 25000
-	inboxPollAfterMS = 500
+	inboxPollAfterMS = execwire.InboxPollAfterMS
 	inboxPage        = 128
 	// inboxByteBudget bounds the encoded assignments of one inbox reply so the
 	// whole reply stays under execwire.MaxBytes for the runner's closed decoder.
 	inboxByteBudget = 48 * 1024
 )
 
-// withinInboxBudget admits the next assignment when it fits the byte budget;
-// the first assignment is always offered so a large one is never starved.
+// withinInboxBudget applies a batching budget, not the single-record wire bound.
+// Admission sizes the exact first dispatch plus the inbox wrapper to MaxBytes,
+// so it can always be offered without starvation. The execution reply guard
+// refuses residual overflow (including legacy oversized rows) with 503.
 func withinInboxBudget(used, next, count int) bool {
 	return count == 0 || used+next <= inboxByteBudget
 }
@@ -239,7 +241,7 @@ func (x executionAPI) input(ctx context.Context, a Actor, r Request) (any, *Erro
 }
 
 func wireDispatch(d store.Dispatch) execwire.Dispatch {
-	return execwire.Dispatch{DispatchRequest: execwire.DispatchRequest{ID: d.ID, Request: d.Request, Decision: d.Decision, Allowance: d.Allowance}, Facts: d.Facts, Assignment: d.Assignment, Acknowledged: d.Acknowledged, Released: d.Released}
+	return d.Wire()
 }
 
 // readInbox composes one durable read: deliverable assignments for this runner

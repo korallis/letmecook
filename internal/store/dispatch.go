@@ -12,6 +12,7 @@ import (
 
 	g "github.com/korallis/letmecook/internal/authority"
 	c "github.com/korallis/letmecook/internal/control"
+	"github.com/korallis/letmecook/internal/execwire"
 	sc "github.com/korallis/letmecook/internal/scheduler"
 	p "github.com/korallis/letmecook/schemas/execution"
 )
@@ -190,6 +191,12 @@ type Dispatch struct {
 	Released     bool           `json:"released"`
 }
 
+// Wire is the exact inbox representation used both for admission sizing and
+// delivery. It is data only; converting it grants no execution authority.
+func (d Dispatch) Wire() execwire.Dispatch {
+	return execwire.Dispatch{DispatchRequest: execwire.DispatchRequest{ID: d.ID, Request: d.Request, Decision: d.Decision, Allowance: d.Allowance}, Facts: d.Facts, Assignment: d.Assignment, Acknowledged: d.Acknowledged, Released: d.Released}
+}
+
 type dispatchInput struct {
 	DispatchRequest
 	Facts sc.Eligibility `json:"facts"`
@@ -296,6 +303,14 @@ func (s *Store) Dispatch(ctx context.Context, request DispatchRequest) (Dispatch
 	if r := p.CheckCurrent(m, m.Identity); r != p.OK {
 		return Dispatch{}, r
 	}
+	dispatch := Dispatch{DispatchRequest: request, Facts: facts, Assignment: m}
+	wire, err := json.Marshal(dispatch.Wire())
+	if err != nil {
+		return Dispatch{}, err
+	}
+	if len(wire) > execwire.MaxBytes-execwire.InboxWrapperBytes {
+		return Dispatch{}, g.Deny("oversized", "dispatch_record")
+	}
 	if _, err := tx.ExecContext(ctx, "INSERT INTO tasks VALUES(?,'ready') ON CONFLICT(id) DO UPDATE SET state='ready'", m.Identity.TaskID); err != nil {
 		return Dispatch{}, err
 	}
@@ -315,7 +330,7 @@ func (s *Store) Dispatch(ctx context.Context, request DispatchRequest) (Dispatch
 	if err := tx.Commit(); err != nil {
 		return Dispatch{}, err
 	}
-	return Dispatch{DispatchRequest: request, Facts: facts, Assignment: m}, nil
+	return dispatch, nil
 }
 
 func dispatchAllowed(ctx context.Context, tx *sql.Tx, request g.Request, now int64) error {

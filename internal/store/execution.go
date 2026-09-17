@@ -1363,9 +1363,16 @@ func (s *Store) IssueLease(ctx context.Context, fingerprint, session, dispatchKe
 // an unconfirmed report (confirmed_process unknown) is retained without a
 // control observation or release, leaving the cancel pending.
 func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, selected string, evidence c.Evidence, boundary BoundaryState) (TerminationReply, error) {
+	m := evidence.Terminated
+	if !p.ValidID(m.Identity.AttemptID) {
+		return TerminationReply{}, p.Malformed
+	}
+	// Join append/finalize's attempt-lock -> store-lock order. A previously
+	// admitted append must be durable before release makes backup pinning legal.
+	unlock := s.sinks().Serialize(m.Identity.AttemptID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	m := evidence.Terminated
 	// An unconfirmed containment report carries no observation timestamp; every
 	// confirmed one must.
 	unconfirmed := m.ConfirmedProcess == "unknown"

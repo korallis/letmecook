@@ -686,6 +686,13 @@ func rcCurrentEvent(ctx context.Context, tx *sql.Tx, attemptID string, revision 
 // the attempt stopping is returned (the retained one on replay). It never
 // releases the reservation.
 func (s *Store) FenceAttempt(ctx context.Context, attemptID, cause string) (p.Message, error) {
+	if !p.ValidID(attemptID) {
+		return p.Message{}, p.Malformed
+	}
+	// Serialize the fence behind admitted appends without holding the store
+	// mutex while waiting on sink I/O, matching termination/finalization order.
+	unlock := s.sinks().Serialize(attemptID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if cause != "lease_expired" && cause != "operator" {
