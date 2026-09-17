@@ -9,32 +9,12 @@ import (
 
 // Every unimplemented M1 seam refuses with the sentinel until its owning slice
 // lands; nothing here may be mistaken for an empty success. The execution,
-// upload and finalize seams are implemented (S1) and covered by their own tests.
+// upload and finalize seams (S1), backup and restore (S6) and the owner workflow
+// API (S4) are implemented and covered by their own tests.
 func TestSeamStubsRefuseUntilImplemented(t *testing.T) {
 	s, _ := persistent(t)
 	var errs []error
-	_, err := s.CreateTask(ctx, "", TaskBrief{})
-	errs = append(errs, err)
-	_, err = s.Task(ctx, "")
-	errs = append(errs, err)
-	_, err = s.Tasks(ctx, "", 1)
-	errs = append(errs, err)
-	_, err = s.Eligibility(ctx, "")
-	errs = append(errs, err)
-	_, err = s.SetPaused(ctx, "", "", true, "", false)
-	errs = append(errs, err)
-	_, err = s.Paused(ctx)
-	errs = append(errs, err)
-	_, err = s.Job(ctx, "")
-	errs = append(errs, err)
-	_, err = s.PutJob(ctx, Job{})
-	errs = append(errs, err)
-	errs = append(errs, s.RecordOwnerCommand(ctx, OwnerCommand{}))
-	_, err = s.OwnerCommand(ctx, "")
-	errs = append(errs, err)
-	_, err = s.PutGatewayProfile(ctx, "", nil)
-	errs = append(errs, err)
-	_, err = s.FenceAttempt(ctx, "", "")
+	_, err := s.FenceAttempt(ctx, "", "")
 	errs = append(errs, err)
 	_, err = s.NonTerminalAttempts(ctx)
 	errs = append(errs, err)
@@ -43,7 +23,7 @@ func TestSeamStubsRefuseUntilImplemented(t *testing.T) {
 	errs = append(errs, s.PutReconcileReport(ctx, ReconcileReport{}))
 	_, err = s.ReconciliationInputs(ctx, "")
 	errs = append(errs, err)
-	if len(errs) != 16 {
+	if len(errs) != 5 {
 		t.Fatalf("stub inventory drifted: %d", len(errs))
 	}
 	for i, err := range errs {

@@ -2,27 +2,38 @@ package verification
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
+	"slices"
 	"sort"
 	"time"
+
+	g "github.com/korallis/letmecook/internal/authority"
+	"github.com/korallis/letmecook/internal/repositories"
 )
 
 // Profile is sealed: product callers cannot inject an executor. Only Unqualified
-// is implemented in product builds; the unconfined executor lives in _test.go.
+// refuses by default; the explicit development constructor measures confinement.
+// The unconfined executor lives only in _test.go.
 type Profile interface {
 	id() string
 	run(context.Context, string, Check) outcome
 }
 type outcome struct {
-	exit           *int
-	stdout, stderr Stream
-	environment    Environment
-	refusal        *Refusal
-	failure        string
+	exit                                        *int
+	stdout, stderr                              Stream
+	environment                                 Environment
+	refusal                                     *Refusal
+	failure                                     string
+	qualification, profileDigest, runtimeDigest string
+	profileID                                   string
+	limitations                                 []string
 }
 type Unqualified struct {
 	ExpectedConfinement string
@@ -62,6 +73,9 @@ type Journal interface {
 	SaveVerification(context.Context, Report) error
 }
 type Request struct {
+	ReportID                             string
+	Envelope                             *g.Envelope
+	RepositoryProfile                    *repositories.Profile
 	Candidate                            Candidate
 	TrustedRepo, PrivateParent, Verifier string
 	Checks                               TrustedChecks
@@ -81,7 +95,28 @@ func Run(ctx context.Context, source Source, journal Journal, profile Profile, r
 		return Report{}, err
 	}
 	// Freeze slices/maps before passing them to the check runner or persistence.
-	r := Report{ID: ID(), Candidate: request.Candidate, Checks: request.Checks, Suggestions: request.Suggestions, Evidence: []Evidence{}, Limitations: []string{ContentLimitation, "provisional library: no execution, acceptance, publication or merge authority"}}
+	reportID := request.ReportID
+	if reportID == "" {
+		reportID = ID()
+	}
+	if saved, ok := journal.(interface {
+		Verification(context.Context, string) (Report, error)
+	}); ok && request.ReportID != "" {
+		old, err := saved.Verification(ctx, reportID)
+		if err == nil {
+			if old.Candidate != request.Candidate || !reflect.DeepEqual(old.Checks, request.Checks) {
+				return Report{}, fmt.Errorf("verification identity conflict")
+			}
+			return old, nil
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return Report{}, err
+		}
+	}
+	r := Report{ID: reportID, Candidate: request.Candidate, Checks: request.Checks, Suggestions: request.Suggestions, Evidence: []Evidence{}, Limitations: []string{ContentLimitation, "provisional library: no execution, acceptance, publication or merge authority"}}
+	if profile.id() == "macos-sandbox-exec-dev" {
+		r.Limitations = append(r.Limitations, DevelopmentLimitation)
+	}
 	raw, err := json.Marshal(r)
 	if err != nil {
 		return Report{}, err
@@ -95,14 +130,34 @@ func Run(ctx context.Context, source Source, journal Journal, profile Profile, r
 			r.RecreationFailure = recreateErr.Error()
 			break
 		}
+		if request.Envelope != nil {
+			changed, err := checkEnvelope(ctx, root, request.TrustedRepo, request.Candidate.BaseCommit, *request.Envelope)
+			if err == nil && request.RepositoryProfile != nil {
+				err = request.RepositoryProfile.CheckChanges(changed)
+			}
+			if err != nil {
+				r.RecreationFailure = "envelope_violation"
+				os.RemoveAll(root)
+				break
+			}
+		}
 		start := time.Now().UTC()
 		o := profile.run(ctx, root, check)
+		for _, limitation := range o.limitations {
+			if !slices.Contains(r.Limitations, limitation) {
+				r.Limitations = append(r.Limitations, limitation)
+			}
+		}
+		evidenceProfile := profile.id()
+		if o.profileID != "" {
+			evidenceProfile = o.profileID
+		}
 		end := time.Now().UTC()
 		cleanupErr := os.RemoveAll(root)
 		if cleanupErr != nil {
 			o.failure = "private directory cleanup: " + cleanupErr.Error()
 		}
-		r.Evidence = append(r.Evidence, Evidence{ID: ID(), CandidateDigest: r.Candidate.Manifest.SHA256, BaseCommit: r.Candidate.BaseCommit, ProfileID: profile.id(), CheckName: check.Name, Argv: check.Argv, EnvKeys: envKeys(check.Env), CWD: check.CWD, ExitCode: o.exit, Stdout: o.stdout, Stderr: o.stderr, Started: start, Ended: end, Duration: end.Sub(start), Verifier: request.Verifier, Environment: o.environment, Refusal: o.refusal, Failure: o.failure})
+		r.Evidence = append(r.Evidence, Evidence{ID: ID(), CandidateDigest: r.Candidate.Manifest.SHA256, BaseCommit: r.Candidate.BaseCommit, ProfileID: evidenceProfile, Qualification: o.qualification, ProfileDigest: o.profileDigest, RuntimeDigest: o.runtimeDigest, CheckName: check.Name, Argv: check.Argv, EnvKeys: envKeys(check.Env), CWD: check.CWD, ExitCode: o.exit, Stdout: o.stdout, Stderr: o.stderr, Started: start, Ended: end, Duration: end.Sub(start), Verifier: request.Verifier, Environment: o.environment, Refusal: o.refusal, Failure: o.failure})
 	}
 	if err = r.Validate(); err != nil {
 		return Report{}, err

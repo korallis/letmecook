@@ -10,6 +10,7 @@ import (
 	"slices"
 
 	g "github.com/korallis/letmecook/internal/authority"
+	"github.com/korallis/letmecook/internal/isolation"
 	r "github.com/korallis/letmecook/internal/repositories"
 	p "github.com/korallis/letmecook/schemas/execution"
 )
@@ -173,6 +174,9 @@ func (v Eligibility) Validate() error {
 	// An explicitly unqualified, development or test-only profile is never a
 	// supported unattended runtime; only an empty (historical) qualification may
 	// accompany Supported == true.
+	if iso.ID == isolation.DevelopmentProfileID && (iso.Qualification != "development" || iso.Supported) {
+		return g.Deny("malformed", "isolation_qualification")
+	}
 	if iso.Supported && iso.Qualification != "" {
 		return g.Deny("malformed", "isolation_qualification")
 	}

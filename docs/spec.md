@@ -450,6 +450,14 @@ checks, uncertainty or divergent results to make the transcript look clean.
 
 ### 5.2 Versioned adapter contract
 
+The provisional owner workflow now persists the selected harness and its direct
+harness-specific settings with each task brief. The execution grant binds the
+canonical `{brief,criteria,paths,operations,harness,settings}` digest; model output
+cannot replace that input or approve wider scope. The
+[owner workflow notes](https://github.com/korallis/letmecook/blob/main/docs/operations/owner-workflow.md)
+distinguish the implemented CLI/API composition from integration hooks and the
+still-unqualified execution runtime.
+
 Use built-in adapters first. Do not parse human terminal screens where the harness
 provides structured output. The abstract contract remains small:
 
@@ -825,6 +833,15 @@ budget and capacity with assignments. Single daemon ownership uses an OS lock;
 refuse a second scheduler against the same live state directory.
 
 ### 9.2 Protocols
+
+The provisional owner API uses closed `workflow-provisional-v1` requests, owner
+mTLS, immutable message UUIDs, revision preconditions and durable response replay.
+Long operations are jobs; watches poll durable event cursors. A stop response
+acknowledges recorded intent, not observed process or remote-work termination.
+The [typed CLI](https://github.com/korallis/letmecook/blob/main/cmd/gaffer/README.md)
+documents exact output/exit codes, development-only isolation consent and the
+remaining transaction-level integration gates; these are not execution, local
+acceptance, publication or merge authority by themselves.
 
 Use TLS with revocable runner identities. A short-lived single-use bootstrap token
 is exchanged for a runner credential; it is not reused as a perpetual password.
