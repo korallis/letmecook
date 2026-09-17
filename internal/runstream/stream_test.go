@@ -3,14 +3,17 @@ package runstream
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
+	j "github.com/korallis/letmecook/internal/runnerjournal"
 	p "github.com/korallis/letmecook/schemas/execution"
 )
 
@@ -99,6 +102,9 @@ func TestReconnectResumesWithoutDuplicates(t *testing.T) {
 	defer sink.Close()
 	if spool.Acknowledged() != 3 || sink.Expected() != 4 {
 		t.Fatalf("watermarks lost: spool %d sink %d", spool.Acknowledged(), sink.Expected())
+	}
+	if sink.Stats().Acknowledged != sink.Acknowledged() {
+		t.Fatalf("reopened sink stats disagree with durable watermark: %+v", sink.Stats())
 	}
 	pending := spool.Pending()
 	if len(pending) != 2 || pending[0].Sequence != 4 {
@@ -363,6 +369,9 @@ func TestReceiverCrashRecoversDurableWatermark(t *testing.T) {
 	if sink.Acknowledged() != 2 || sink.Expected() != 3 {
 		t.Fatalf("durable watermark lost: %d", sink.Acknowledged())
 	}
+	if sink.Stats().Acknowledged != sink.Acknowledged() {
+		t.Fatalf("crash recovery lost acknowledged accounting: %+v", sink.Stats())
+	}
 	spool, err := OpenSpool(path+"-sender", id)
 	if err != nil {
 		t.Fatal(err)
@@ -381,5 +390,260 @@ func TestReceiverCrashRecoversDurableWatermark(t *testing.T) {
 	}
 	if len(sink.Records()) != 2 {
 		t.Fatal("crash replay duplicated logical records")
+	}
+}
+
+func assertFootprint(t *testing.T, path string, stats Stats) {
+	t.Helper()
+	info, err := os.Stat(filepath.Join(path, "journal.jsonl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stats.UsedBytes != info.Size() || info.Size() <= 0 || info.Size() > stats.LimitBytes {
+		t.Fatalf("retained bytes disagree with accounting or exceed cap: size=%d stats=%+v", info.Size(), stats)
+	}
+}
+
+// Exercise sequence-width changes and both delayed and per-record watermarks.
+// Every measurement includes the opening record, hash-chain envelopes and LF.
+func TestSmallChunksRespectFullSpoolFootprint(t *testing.T) {
+	for _, immediate := range []bool{false, true} {
+		t.Run(fmt.Sprintf("immediate_ack=%t", immediate), func(t *testing.T) {
+			id, path := identityFor(t), pathFor(t, "spool")
+			spool, err := CreateSpool(path, id, 4*MinLimit)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer func() { spool.Close() }()
+			assertFootprint(t, path, spool.Stats())
+			native := Native{Version: "v1", Kind: "delta", Data: []byte("x")}
+			normalized := Normalized{Stream: "stdout", Text: "<>&\n"}
+			var accepted int64
+			for {
+				before := spool.Stats()
+				_, err = spool.Append(native, normalized)
+				assertFootprint(t, path, spool.Stats())
+				if errors.Is(err, ErrSpoolFull) {
+					if spool.Stats() != before {
+						t.Fatal("refused append changed retained state")
+					}
+					break
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				accepted++
+				if immediate {
+					if err := spool.Acknowledge(accepted); err != nil {
+						t.Fatal(err)
+					}
+					assertFootprint(t, path, spool.Stats())
+				}
+			}
+			if accepted < 100 {
+				t.Fatalf("only %d small chunks exercised", accepted)
+			}
+			if !immediate {
+				if int64(len(spool.Pending())) != accepted {
+					t.Fatal("full spool lost pending work")
+				}
+				// Even one watermark per chunk must fit inside the total cap.
+				for through := int64(1); through <= accepted; through++ {
+					if err := spool.Acknowledge(through); err != nil {
+						t.Fatalf("reserved acknowledgement %d: %v", through, err)
+					}
+					assertFootprint(t, path, spool.Stats())
+				}
+			}
+			before := spool.Stats()
+			if err := spool.Acknowledge(accepted); err != nil || spool.Stats() != before {
+				t.Fatalf("duplicate acknowledgement changed footprint: %v", err)
+			}
+			if err := spool.Close(); err != nil {
+				t.Fatal(err)
+			}
+			spool, err = OpenSpool(path, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assertFootprint(t, path, spool.Stats())
+			if spool.Stats() != before {
+				t.Fatalf("reopen changed stats: before=%+v after=%+v", before, spool.Stats())
+			}
+			if _, err := spool.Append(native, normalized); !errors.Is(err, ErrSpoolFull) {
+				t.Fatalf("reopened full spool accepted output: %v", err)
+			}
+			assertFootprint(t, path, spool.Stats())
+		})
+	}
+}
+
+func TestSinkFootprintAndAcknowledgedAccounting(t *testing.T) {
+	id, path := identityFor(t), pathFor(t, "sink")
+	sink, err := CreateSink(path, id, 2*MinLimit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { sink.Close() }()
+	assertFootprint(t, path, sink.Stats())
+	var last Record
+	for sequence := int64(1); ; sequence++ {
+		r := Record{Version: Version, Identity: id, Sequence: sequence, Offset: sequence - 1,
+			Native: Native{Version: "v1", Kind: "delta", Data: []byte("x")}, Normalized: Normalized{Stream: "stdout"}}
+		r.Digest = digest(r)
+		before := sink.Stats()
+		ack, err := sink.Receive(r)
+		assertFootprint(t, path, sink.Stats())
+		if errors.Is(err, ErrSpoolFull) {
+			if sink.Stats() != before || ack.Through != sequence-1 || ack.Expected != sequence {
+				t.Fatalf("full sink advanced state: %+v %v", ack, err)
+			}
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		last = r
+	}
+	before := sink.Stats()
+	if before.Acknowledged < 100 {
+		t.Fatal("too few small chunks exercised")
+	}
+	if err := sink.Close(); err != nil {
+		t.Fatal(err)
+	}
+	sink, err = OpenSink(path, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertFootprint(t, path, sink.Stats())
+	if sink.Stats() != before || sink.Stats().Acknowledged != sink.Acknowledged() {
+		t.Fatalf("sink accounting lost on reopen: before=%+v after=%+v", before, sink.Stats())
+	}
+	ack, err := sink.Receive(last)
+	if err != nil || !ack.Duplicate || ack.Through != before.Acknowledged || sink.Stats() != before {
+		t.Fatalf("lost ack replay changed full sink: %+v %v", ack, err)
+	}
+	assertFootprint(t, path, sink.Stats())
+}
+
+// Old payload-only accounting could create otherwise valid oversized journals.
+// Reopen must refuse them without truncating recoverable data or retaining a lock.
+func TestOpenRefusesLegacyOverLimitJournal(t *testing.T) {
+	for _, role := range []string{"spool", "sink"} {
+		t.Run(role, func(t *testing.T) {
+			id, path := identityFor(t), pathFor(t, role)
+			line, err := json.Marshal(entry{Open: &header{Version: Version, Role: role, Identity: id, Limit: MinLimit}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			journal, err := j.Create(path, line)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for sequence := int64(1); sequence <= 150; sequence++ {
+				r := Record{Version: Version, Identity: id, Sequence: sequence, Offset: sequence - 1,
+					Native: Native{Version: "v1", Kind: "delta", Data: []byte("x")}, Normalized: Normalized{Stream: "stdout"}}
+				r.Digest = digest(r)
+				line, err := json.Marshal(entry{Chunk: &r})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err := journal.Append(line); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := journal.Close(); err != nil {
+				t.Fatal(err)
+			}
+			file := filepath.Join(path, "journal.jsonl")
+			before, err := os.ReadFile(file)
+			if err != nil || int64(len(before)) <= MinLimit {
+				t.Fatalf("oversized fixture: bytes=%d err=%v", len(before), err)
+			}
+			if _, err := open(path, role, id); !errors.Is(err, ErrSpoolFull) {
+				t.Fatalf("oversized journal reopened: %v", err)
+			}
+			after, err := os.ReadFile(file)
+			if err != nil || !bytes.Equal(before, after) {
+				t.Fatalf("refusal changed recoverable data: %v", err)
+			}
+			journal, err = j.Open(path)
+			if err != nil {
+				t.Fatalf("refusal retained ownership: %v", err)
+			}
+			journal.Close()
+		})
+	}
+}
+
+func TestNativeBuffersAreDetached(t *testing.T) {
+	id := identityFor(t)
+	spoolPath, sinkPath := pathFor(t, "spool"), pathFor(t, "sink")
+	spool, err := CreateSpool(spoolPath, id, MinLimit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { spool.Close() }()
+	sink, err := CreateSink(sinkPath, id, MinLimit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { sink.Close() }()
+	native, normalized := chunk(1)
+	returned, err := spool.Append(native, normalized)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := clone(returned)
+	assertRecord := func(got Record) {
+		t.Helper()
+		if !reflect.DeepEqual(got, want) || Validate(got) != nil {
+			t.Fatalf("record bytes or digest changed: got=%+v want=%+v", got, want)
+		}
+	}
+	native.Data[0] ^= 0xff
+	assertRecord(returned)
+	assertRecord(spool.Pending()[0])
+	returned.Native.Data[0] ^= 0xff
+	assertRecord(spool.Pending()[0])
+	assertRecord(spool.Records()[0])
+	received := spool.Pending()[0]
+	ack, err := sink.Receive(received)
+	if err != nil || ack.Through != 1 {
+		t.Fatalf("detached resend rejected: %+v %v", ack, err)
+	}
+	received.Native.Data[0] ^= 0xff
+	assertRecord(sink.Records()[0])
+	assertRecord(spool.Pending()[0])
+	// Exercise every record-returning accessor both live and after recovery.
+	for _, reopened := range []bool{false, true} {
+		if reopened {
+			if err := spool.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if err := sink.Close(); err != nil {
+				t.Fatal(err)
+			}
+			spool, err = OpenSpool(spoolPath, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sink, err = OpenSink(sinkPath, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		for _, records := range []func() []Record{spool.Pending, spool.Records, sink.Records} {
+			got := records()
+			assertRecord(got[0])
+			got[0].Native.Data[0] ^= 0xff
+			got[0].Digest = "mutated"
+			assertRecord(records()[0])
+		}
+		ack, err := sink.Receive(spool.Pending()[0])
+		if err != nil || !ack.Duplicate || ack.Through != 1 {
+			t.Fatalf("mutation damaged duplicate replay: %+v %v", ack, err)
+		}
 	}
 }

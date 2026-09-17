@@ -6,6 +6,7 @@ issue or qualify an execution runtime. No process produces these records, no
 transport carries them and no harness adapter is integrated. `internal/runner`
 still refuses launch with `runner_execution_unqualified`. #9/#10 reconciliation,
 #16 supervisor evidence and #6 real adapter acceptance remain outstanding.
+Persisting output grants no execution, acceptance, publication or merge authority.
 
 ## Framing
 
@@ -22,6 +23,9 @@ native byte `Offset` of its chunk, the exact `Native` harness event
 a later consumer is not bound to this slice's projection choices. `Digest`
 covers the canonical record and proves self-consistency only; it authenticates
 nothing and every boundary revalidates with `Validate`.
+`Append` and `Receive` copy native buffers, and every returned record is detached
+from retained state. Callers may reuse buffers after a call returns; concurrent
+mutation during a call is not supported.
 
 ## Ordering, acknowledgement and reconnect
 
@@ -40,6 +44,8 @@ record, a changed payload for a retained sequence returns
 `runstream_sequence_gap` with the expected sequence rather than buffering
 out-of-order input. Non-contiguous byte offsets and foreign identities refuse.
 A positive `Ack` follows the durable write; it never precedes it.
+`Stats().Acknowledged` and `Acknowledged()` report the same durable sink watermark,
+including immediately after reopening or replaying a duplicate.
 
 Reopening either side replays the log and refuses any history that does not
 match this version, role and identity. A changed generation is reconciliation
@@ -53,12 +59,25 @@ directory sync before acknowledgement, and a poisoned handle on any uncertain
 write. Chunk payloads are capped at 48 KiB native bytes and 8 KiB normalized
 text; the spool limit is 64 KiB to 4 MiB and is chosen at creation.
 
+`LimitBytes` caps the complete `journal.jsonl` file: opening record, chunks,
+acknowledgements, hash-chain envelopes and newlines. On healthy handles,
+`Stats.UsedBytes` is the measured file length, including immediately after creation
+and reopen; it is not filesystem block allocation or a heap-byte measurement.
+The journal exposes no sizing API, so runstream predicts writes using its current
+canonical envelope and verifies that prediction against file size on creation,
+reopen and each append. A mismatch poisons the handle. Envelope-format changes
+must update this preflight sizing; file-size regression tests guard the coupling.
+
 A full spool returns `runstream_spool_full`, refusing new output while keeping
 every retained record recoverable. There is no truncation, compaction or
 oldest-record eviction: exhaustion is an explicit backpressure signal for the
-producer, and only acknowledgement progress may still be recorded, from a small
-reserve above the chunk budget. Memory is bounded by the same limit because the
-journal retains its rows.
+producer. The sender reserves one quarter of the total limit for acknowledgement
+progress: chunks may fill only the first three quarters, and acknowledgements may
+use the remaining capacity without exceeding the total cap. The sink needs no
+separate acknowledgement entries and may use the full limit for accepted chunks.
+Older journals that already exceed their declared limit are refused on reopen
+with `runstream_spool_full` and left intact for recovery. Retained memory is bounded
+proportionally to the file cap; decoded records and copies add heap overhead.
 
 Run:
 
@@ -71,7 +90,10 @@ go vet ./internal/runstream
 Tests cover reconnect resume, duplicate and out-of-order delivery, tampered and
 foreign-identity records, ownership loss, spool exhaustion with continued
 acknowledgement, and a real SIGKILLed receiver whose durable watermark survives
-and whose lost acknowledgement is deduplicated on replay.
+and whose lost acknowledgement is deduplicated on replay. Regressions compare
+small-chunk and acknowledgement accounting to actual file size, refuse oversized
+legacy journals without changing their bytes, and mutate input and returned
+buffers to verify stable resend bytes, digests and sink records across reopen.
 
 Still missing: the selected transport and its encodings, runner and daemon
 integration, browser presentation, retention and compaction policy, artifact

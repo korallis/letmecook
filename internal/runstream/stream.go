@@ -9,6 +9,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"unicode/utf8"
 
@@ -74,6 +77,8 @@ type Ack struct {
 
 // Stats separates what a sender persisted locally from what a receiver has
 // acknowledged. Appended bytes are never evidence of remote durability.
+// UsedBytes is the complete journal file length on a healthy handle; LimitBytes
+// includes the sender's acknowledgement reserve, not just chunk payloads.
 type Stats struct {
 	Appended     int64 `json:"appended"`
 	Acknowledged int64 `json:"acknowledged"`
@@ -136,6 +141,9 @@ func Validate(r Record) error {
 type log struct {
 	mu       sync.Mutex
 	store    *j.Journal
+	path     string
+	role     string
+	entries  int
 	identity p.Identity
 	limit    int64
 	used     int64
@@ -143,6 +151,41 @@ type log struct {
 	acked    int64
 	offset   int64
 	failed   bool
+}
+
+// journalBytes mirrors runnerjournal's canonical envelope solely for preflight
+// sizing. Hash contents do not affect JSON length. Check the prediction against
+// the actual file on create, replay and every append so format drift fails closed.
+func journalBytes(sequence int, data []byte) (int64, error) {
+	hash := strings.Repeat("0", sha256.Size*2)
+	previous := hash
+	if sequence == 0 {
+		previous = ""
+	}
+	line, err := json.Marshal(struct {
+		Sequence int             `json:"sequence"`
+		Previous string          `json:"previous"`
+		Data     json.RawMessage `json:"data"`
+		Digest   string          `json:"digest"`
+	}{sequence, previous, data, hash})
+	return int64(len(line) + 1), err // runnerjournal appends a newline.
+}
+
+func (l *log) measure(expected int64) error {
+	info, err := os.Stat(filepath.Join(l.path, "journal.jsonl"))
+	if err == nil {
+		err = l.store.Check()
+	}
+	if err != nil {
+		l.failed = true
+		return errors.Join(ErrUnavailable, err)
+	}
+	l.used = info.Size()
+	if l.used != expected {
+		l.failed = true
+		return ErrUnavailable
+	}
+	return nil
 }
 
 func create(path, role string, identity p.Identity, limit int64) (*log, error) {
@@ -156,11 +199,20 @@ func create(path, role string, identity p.Identity, limit int64) (*log, error) {
 	if err != nil {
 		return nil, ErrInvalid
 	}
+	size, err := journalBytes(0, line)
+	if err != nil || size > limit {
+		return nil, ErrInvalid
+	}
 	store, err := j.Create(path, line)
 	if err != nil {
 		return nil, errors.Join(ErrUnavailable, err)
 	}
-	return &log{store: store, identity: identity, limit: limit}, nil
+	l := &log{store: store, path: path, role: role, entries: 1, identity: identity, limit: limit}
+	if err := l.measure(size); err != nil {
+		store.Close()
+		return nil, err
+	}
+	return l, nil
 }
 
 // open refuses any history that does not replay to exactly this role, version
@@ -173,7 +225,7 @@ func open(path, role string, identity p.Identity) (*log, error) {
 	if err != nil {
 		return nil, errors.Join(ErrUnavailable, err)
 	}
-	l := &log{store: store, identity: identity}
+	l := &log{store: store, path: path, role: role, identity: identity}
 	rows := store.Records()
 	if len(rows) == 0 {
 		store.Close()
@@ -197,6 +249,24 @@ func open(path, role string, identity p.Identity) (*log, error) {
 		return nil, ErrInvalid
 	}
 	l.limit = head.Open.Limit
+	var size int64
+	for sequence, row := range rows {
+		n, err := journalBytes(sequence, row)
+		if err != nil {
+			store.Close()
+			return nil, ErrUnavailable
+		}
+		size += n
+	}
+	if err := l.measure(size); err != nil {
+		store.Close()
+		return nil, err
+	}
+	if l.used > l.limit {
+		store.Close()
+		return nil, ErrSpoolFull
+	}
+	l.entries = len(rows)
 	for _, row := range rows[1:] {
 		var e entry
 		if json.Unmarshal(row, &e) != nil || e.Open != nil {
@@ -212,14 +282,15 @@ func open(path, role string, identity p.Identity) (*log, error) {
 			}
 			l.rows = append(l.rows, r)
 			l.offset += int64(len(r.Native.Data))
-			l.used += int64(len(row))
+			if role == "sink" {
+				l.acked = r.Sequence
+			}
 		case e.Ack != nil && e.Chunk == nil:
-			if *e.Ack <= l.acked || *e.Ack > int64(len(l.rows)) {
+			if role != "spool" || *e.Ack <= l.acked || *e.Ack > int64(len(l.rows)) {
 				store.Close()
 				return nil, ErrUnavailable
 			}
 			l.acked = *e.Ack
-			l.used += int64(len(row))
 		default:
 			store.Close()
 			return nil, ErrUnavailable
@@ -235,19 +306,26 @@ func (l *log) append(e entry, chunk bool) error {
 	if err != nil {
 		return ErrInvalid
 	}
-	budget := l.limit
-	if !chunk {
-		// Acknowledgement progress must still be recordable on a full spool.
-		budget += l.limit / 4
+	size, err := journalBytes(l.entries, line)
+	if err != nil {
+		return ErrInvalid
 	}
-	if l.used+int64(len(line)) > budget {
+	budget := l.limit
+	if chunk && l.role == "spool" {
+		// Reserve acknowledgement capacity inside the total durable byte limit.
+		budget -= l.limit / 4
+	}
+	if l.used+size > budget {
 		return ErrSpoolFull
 	}
 	if err = l.store.Append(line); err != nil {
 		l.failed = true
 		return errors.Join(ErrUnavailable, err)
 	}
-	l.used += int64(len(line))
+	if err := l.measure(l.used + size); err != nil {
+		return err
+	}
+	l.entries++
 	return nil
 }
 
@@ -295,6 +373,7 @@ func OpenSpool(path string, identity p.Identity) (*Spool, error) {
 // Append assigns the next sequence and native offset and syncs the record
 // before returning it. A full spool refuses new output and keeps every
 // unacknowledged record recoverable instead of dropping the oldest work.
+// Native bytes are copied; the returned record is detached from retained state.
 func (s *Spool) Append(native Native, normalized Normalized) (Record, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -313,12 +392,13 @@ func (s *Spool) Append(native Native, normalized Normalized) (Record, error) {
 	if err := Validate(r); err != nil {
 		return Record{}, err
 	}
+	r = clone(r)
 	if err := s.append(entry{Chunk: &r}, true); err != nil {
 		return Record{}, err
 	}
 	s.rows = append(s.rows, r)
 	s.offset += int64(len(native.Data))
-	return r, nil
+	return clone(r), nil
 }
 
 // Acknowledge records a receiver watermark durably. It is monotonic and
@@ -391,6 +471,7 @@ func OpenSink(path string, identity p.Identity) (*Sink, error) {
 // its retained acknowledgement without duplicating a logical record, a later
 // one reports the gap explicitly, and a changed payload for a retained
 // sequence conflicts. A positive Ack follows the durable write, never precedes it.
+// Accepted native bytes are detached from the caller's buffer.
 func (k *Sink) Receive(r Record) (Ack, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
@@ -417,6 +498,7 @@ func (k *Sink) Receive(r Record) (Ack, error) {
 	case r.Offset != k.offset:
 		return position, ErrConflict
 	}
+	r = clone(r)
 	if err := k.append(entry{Chunk: &r}, true); err != nil {
 		return k.position(), err
 	}
