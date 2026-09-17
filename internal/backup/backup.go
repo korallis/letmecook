@@ -98,7 +98,7 @@ func create(ctx context.Context, s *store.Store, artifactsDir, streamsDir, out s
 	if err = s.SnapshotDatabase(ctx, filepath.Join(output.Name(), "state.db")); err != nil {
 		return m, err
 	}
-	if err = omitGatewayProfiles(ctx, filepath.Join(output.Name(), "state.db")); err != nil {
+	if err = sanitizeSnapshot(ctx, filepath.Join(output.Name(), "state.db")); err != nil {
 		return m, err
 	}
 	if err = syncPath(output, "state.db"); err != nil {

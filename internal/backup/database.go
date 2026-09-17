@@ -8,11 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/korallis/letmecook/internal/closedjson"
-	"github.com/korallis/letmecook/internal/store"
+	"io"
 	"net/url"
 	"reflect"
+	"strings"
 
+	"github.com/korallis/letmecook/internal/closedjson"
+	"github.com/korallis/letmecook/internal/store"
 	p "github.com/korallis/letmecook/schemas/execution"
 	a "github.com/korallis/letmecook/schemas/readapi"
 )
@@ -68,42 +70,165 @@ func integrity(ctx context.Context, db *sql.DB) error {
 	return rows.Err()
 }
 
-// Snapshot gateway configuration is intentionally NOT restored. Remove values
-// only in the private COPY, retaining the schema/immutability trigger exactly.
-// A second VACUUM removes deleted bytes from free pages, too. The source DB and
-// its credentials/authority evidence are never changed by this sanitization.
-func omitGatewayProfiles(ctx context.Context, path string) (err error) {
+// Secret-bearing columns are an explicit allowlist, not a scan of arbitrary
+// candidate/output text. Only the COPY is changed; trigger definitions are
+// restored exactly and VACUUM removes the deleted values from free pages.
+const omittedCredentialResponse = `{"error":"credential_response_omitted","detail":"create a new enrollment after restoring"}`
+
+// Match both current path spellings and the planned semantic identity route.
+// The content rule also covers future names and nested response envelopes.
+func credentialReceipt(route, response string) (bool, error) {
+	switch route {
+	case "/api/v1/identity/enrollments", "POST /api/v1/identity/enrollments", "identity.enrollments":
+		return true, nil
+	}
+	if response == "" {
+		return false, nil
+	}
+	d := json.NewDecoder(strings.NewReader(response))
+	d.UseNumber()
+	// Token traversal observes duplicate keys too; ordinary Unmarshal would
+	// discard an earlier non-empty token if a later duplicate were empty.
+	var visit func(int) (json.Token, bool, error)
+	visit = func(depth int) (json.Token, bool, error) {
+		if depth > 64 {
+			return nil, false, errors.New("invalid_owner_response")
+		}
+		token, err := d.Token()
+		if err != nil {
+			return nil, false, err
+		}
+		found := false
+		switch token {
+		case json.Delim('{'):
+			for d.More() {
+				key, err := d.Token()
+				if err != nil {
+					return nil, false, err
+				}
+				value, nested, err := visit(depth + 1)
+				if err != nil {
+					return nil, false, err
+				}
+				secret, ok := value.(string)
+				found = found || nested || (key == "token" && ok && secret != "")
+			}
+			if end, err := d.Token(); err != nil || end != json.Delim('}') {
+				return nil, false, errors.New("invalid_owner_response")
+			}
+		case json.Delim('['):
+			for d.More() {
+				_, nested, err := visit(depth + 1)
+				if err != nil {
+					return nil, false, err
+				}
+				found = found || nested
+			}
+			if end, err := d.Token(); err != nil || end != json.Delim(']') {
+				return nil, false, errors.New("invalid_owner_response")
+			}
+		}
+		return token, found, nil
+	}
+	_, found, err := visit(0)
+	if err != nil {
+		return false, errors.New("invalid_owner_response")
+	}
+	if _, err = d.Token(); err != io.EOF {
+		return false, errors.New("invalid_owner_response")
+	}
+	return found, nil
+}
+
+// Collect before writing so one SQLite connection never has an active rows
+// cursor while mutating receipts. The same predicate guards Verify.
+func secretReceiptIDs(ctx context.Context, reader interface {
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+}) ([]string, error) {
+	rows, err := reader.QueryContext(ctx, "SELECT message_id,route,status,response FROM owner_commands")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	ids := []string{}
+	for rows.Next() {
+		var id, route, response string
+		var status int
+		if err = rows.Scan(&id, &route, &status, &response); err != nil {
+			return nil, err
+		}
+		match, e := credentialReceipt(route, response)
+		if e != nil {
+			return nil, e
+		}
+		if match && (status != 410 || response != omittedCredentialResponse) {
+			ids = append(ids, id)
+		}
+	}
+	return ids, rows.Err()
+}
+
+func sanitizeSnapshot(ctx context.Context, path string) (err error) {
 	db, err := openDatabase(path, false)
 	if err != nil {
 		return err
 	}
 	defer func() { err = errors.Join(err, db.Close()) }()
-	var n int
-	if err = db.QueryRowContext(ctx, "SELECT count(*) FROM gateway_profiles").Scan(&n); err != nil {
-		return err
-	}
-	if n == 0 {
-		return nil
-	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	var trigger string
-	if err = tx.QueryRowContext(ctx, "SELECT sql FROM sqlite_schema WHERE type='trigger' AND name='gateway_profiles_no_delete'").Scan(&trigger); err != nil {
+	var profiles int
+	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM gateway_profiles").Scan(&profiles); err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, "DROP TRIGGER gateway_profiles_no_delete; DELETE FROM gateway_profiles;"); err != nil {
+	ids, err := secretReceiptIDs(ctx, tx)
+	if err != nil {
 		return err
 	}
-	if _, err = tx.ExecContext(ctx, trigger); err != nil {
-		return err
+	var profileArgs, receiptArgs [][]any
+	if profiles > 0 {
+		profileArgs = [][]any{nil}
+	}
+	for _, id := range ids {
+		receiptArgs = append(receiptArgs, []any{omittedCredentialResponse, id})
+	}
+	// Explicit table/column allowlist. Preserve receipt identity/request hashes;
+	// a 410 tombstone cannot masquerade as a successful credential replay.
+	rules := []struct {
+		trigger, mutation string
+		args              [][]any
+	}{
+		{"gateway_profiles_no_delete", "DELETE FROM gateway_profiles", profileArgs},
+		{"owner_commands_no_update", "UPDATE owner_commands SET status=410,response=? WHERE message_id=?", receiptArgs},
+	}
+	for _, rule := range rules {
+		if len(rule.args) == 0 {
+			continue
+		}
+		var trigger string
+		if err = tx.QueryRowContext(ctx, "SELECT sql FROM sqlite_schema WHERE type='trigger' AND name=?", rule.trigger).Scan(&trigger); err != nil {
+			return err
+		}
+		if _, err = tx.ExecContext(ctx, "DROP TRIGGER "+rule.trigger); err != nil {
+			return err
+		}
+		for _, args := range rule.args {
+			if _, err = tx.ExecContext(ctx, rule.mutation, args...); err != nil {
+				return err
+			}
+		}
+		if _, err = tx.ExecContext(ctx, trigger); err != nil {
+			return err
+		}
 	}
 	if err = tx.Commit(); err != nil {
 		return err
 	}
-	_, err = db.ExecContext(ctx, "VACUUM")
+	if profiles > 0 || len(ids) > 0 {
+		_, err = db.ExecContext(ctx, "VACUUM")
+	}
 	return err
 }
 
@@ -265,6 +390,13 @@ func databaseInventory(ctx context.Context, path string, m *Manifest, verify boo
 	}
 	if profiles != 0 {
 		return nil, fmt.Errorf("gateway_configuration_in_backup")
+	}
+	credentialReceipts, err := secretReceiptIDs(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+	if len(credentialReceipts) > 0 {
+		return nil, errors.New("credential_response_in_backup")
 	}
 	return refs, nil
 }
