@@ -142,7 +142,10 @@ authority supersession. One predicate decides whether any latch is still in
 force, whatever its kind (`rcActiveStopFilter` in `internal/store/reconcile.go`,
 over `control_stops s`): `store.TaskLatched`, `ClearLatches`, `RetryInputs.Latched`,
 `PlanRetry` and admission/runtime fencing all use it. The sticky `dispatch_stops`
-flag follows its own `pause_task` latch (`dispatchID(task, "legacy-stop")`).
+flag follows its initial `pause_task` latch (`dispatchID(task, "legacy-stop")`).
+After owner resume, a new `StopDispatch` derives a fresh pause marker from the
+retained pause-clearance count; repeated stops before the next resume replay it.
+A cleared immutable marker is never silently reused as a new stop.
 Terminal release alone does not clear a cancellation latch: reconciliation must
 record its clearance before another dispatch can be admitted.
 

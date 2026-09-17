@@ -122,8 +122,12 @@ Tasks pin the registered repository's base. Protected paths are refused.
 
 The task request limit is **65,536 bytes for the entire encoded JSON envelope**,
 including IDs, scope, criteria, settings, and JSON escaping, not 65,536 bytes of
-brief prose. The normalized task must also fit that bound. Repository/eligibility
-requests have the same total-envelope ceiling; durable job payloads must also fit
+brief prose. Creation also encodes the actual runner `TaskInput` with a full-width
+dispatch UUID and digest and requires it to fit 65,536 bytes. With the current
+wire shape this adds 141 bytes, so the effective normalized owner-task ceiling
+is **65,395 bytes** (not an independent prose budget). Oversized tasks return a
+typed 422 `oversized` before persistence. Repository/eligibility requests have
+the same 65,536-byte total-envelope ceiling; durable job payloads must also fit
 65,536 bytes including their internal wrapper. A field's individual bound does
 not reserve that many bytes independently of the enclosing request.
 
@@ -139,7 +143,9 @@ The runner selects `attempts[min(epoch-1,last)]`. Edits use exactly one of `cont
 `content_base64`, or `delete:true`; timing/output controls are bounded `delay_ms` and
 `stream_bytes`. The default fake script is one noop attempt. OpenCode uses
 `{"model":"gateway-model-id"}` with optional `variant`. Unknown/duplicate/null
-settings are refused. Settings object keys are recursively sorted, preserving
+settings are refused. Both raw and canonical settings must fit 49,152 bytes;
+JSON escaping expansion is checked before persistence and returns typed
+`oversized`, never a database constraint failure. Settings object keys are recursively sorted, preserving
 optional-key presence; criteria/paths/operations are sorted before persistence.
 `store.BriefDigest` is SHA-256 of ordered canonical JSON
 `{brief,criteria,paths,operations,harness,settings}`. The grant's brief revision/hash

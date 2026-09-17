@@ -108,10 +108,28 @@ func Normalize(in TaskInput) (TaskInput, error) {
 		}
 	}
 	raw, _ := json.Marshal(in)
-	if len(raw) > 65536 {
+	if len(raw) > execwire.MaxBytes {
+		return in, g.Deny("oversized", "task")
+	}
+	// Reserve the real runner envelope, not just the smaller owner request.
+	// Every dispatch/task UUID has this fixed width and the digest is 64 hex
+	// bytes; no future dispatch may make an accepted task undeliverable.
+	if _, err := execwire.Encode(RunnerInput(in, "ffffffff-ffff-4fff-bfff-ffffffffffff")); err != nil {
 		return in, g.Deny("oversized", "task")
 	}
 	return in, nil
+}
+
+// RunnerInput projects normalized owner intent into its definitive delivery
+// shape. It carries no authority; the store still binds the retained brief and
+// grant before delivery, and the runner validates that binding independently.
+func RunnerInput(in TaskInput, dispatchID string) execwire.TaskInput {
+	criteria := make([]execwire.Criterion, len(in.Criteria))
+	for n, c := range in.Criteria {
+		criteria[n] = execwire.Criterion{ID: c.ID, Text: c.Text}
+	}
+	brief, _ := TaskDigests(in)
+	return execwire.TaskInput{Version: execwire.Version, DispatchID: dispatchID, TaskID: in.MessageID, Repository: in.Repository, BaseCommit: in.BaseCommit, BriefSHA256: brief, Brief: in.Brief, Criteria: criteria, Paths: in.Paths, Operations: in.Operations, Harness: in.Harness, Settings: in.Settings}
 }
 func TaskDigests(in TaskInput) (brief, plan string) {
 	brief = digest(struct {

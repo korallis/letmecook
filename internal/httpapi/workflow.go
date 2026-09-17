@@ -339,9 +339,6 @@ func workflowRoutes(d Deps) []Route {
 			if err != nil {
 				return nil, 0, err
 			}
-			if err = d.Store.RetainExecutionDecision(ctx, a.Fingerprint, grant.ID, proposal.Decision); err != nil {
-				return nil, 0, err
-			}
 			return struct {
 				Grant    g.Grant     `json:"grant"`
 				Decision sc.Decision `json:"decision"`
@@ -364,9 +361,6 @@ func workflowRoutes(d Deps) []Route {
 				return nil, 0, err
 			}
 			grant, err = d.Store.RestrictExecution(store.DecisionContext(ctx, decision), in.ExpectedGrantID, grant)
-			if err == nil {
-				err = d.Store.RetainExecutionDecision(ctx, a.Fingerprint, grant.ID, decision)
-			}
 			return grant, 201, err
 		})),
 		ownerRoute("POST", "/api/v1/tasks/{id}/invalidate", ownerMutation(d, "task.invalidate", func(ctx context.Context, a Actor, r Request, in invalidateCommand) (any, int, error) {

@@ -711,7 +711,18 @@ func (s *Store) StopDispatch(ctx context.Context, actor, taskID string) error {
 		if _, err := tx.ExecContext(ctx, "INSERT INTO dispatch_stops VALUES(?,?) ON CONFLICT(task_id) DO NOTHING", taskID, who.ID); err != nil {
 			return err
 		}
-		if _, err := latchStop(ctx, tx, actor, c.Request{ID: dispatchID(taskID, "legacy-stop"), Kind: c.PauseTask, TaskID: taskID, Cause: "operator"}, s.controlStamp()); err != nil {
+		// A cleared immutable stop cannot be re-latched. Use the number of
+		// retained pause clearances as an idempotent per-resume generation:
+		// repeated stops before resume replay; the next stop after resume is new.
+		var cleared int64
+		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM control_stops s JOIN reconcile_reports r ON r.id=?||s.id WHERE s.kind='pause_task' AND s.task_id=?", latchClearedPrefix, taskID).Scan(&cleared); err != nil {
+			return err
+		}
+		key := "legacy-stop"
+		if cleared > 0 {
+			key = fmt.Sprintf("legacy-stop:%d", cleared)
+		}
+		if _, err := latchStop(ctx, tx, actor, c.Request{ID: dispatchID(taskID, key), Kind: c.PauseTask, TaskID: taskID, Cause: "operator"}, s.controlStamp()); err != nil {
 			return err
 		}
 		m := p.Message{Version: p.FencedVersion, Kind: "transition", Identity: p.Identity{Generation: s.meta.Generation, TaskID: taskID}, From: p.Assigned, To: p.Stopping}

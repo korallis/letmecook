@@ -302,3 +302,50 @@ func TestWorkflowOpenCodeDigestThroughRunnerInput(t *testing.T) {
 		t.Fatalf("settings were not retained canonically: created=%s owner=%s runner=%s", created.Brief.Settings, brief.Settings, runner.Settings)
 	}
 }
+
+func TestIntReviewStopDispatchAfterResumeIsNotSilentNoop(t *testing.T) {
+	f := dispatchFixtureFor(t, nil)
+	task := f.grant.TaskID
+	if _, err := f.s.db.Exec("INSERT INTO tasks VALUES(?,'ready')", task); err != nil {
+		t.Fatal(err)
+	}
+	for n := 0; n < 3; n++ {
+		for replay := 0; replay < 2; replay++ {
+			if err := f.s.StopDispatch(ctx, f.owner, task); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := f.s.Dispatch(ctx, f.request); err == nil {
+				t.Fatal("stop after resume did not block dispatch")
+			}
+		}
+		rowCount(t, f.s, "control_stops", n+1)
+		if cleared, err := f.s.ResumeLatches(ctx, f.owner, task, newID()); err != nil || len(cleared) != 1 {
+			t.Fatal(cleared, err)
+		}
+	}
+	if d := admitted(t, f); d.Assignment.Identity.Epoch != 1 {
+		t.Fatal(d)
+	}
+}
+
+func TestIntReviewTaskAndSettingsCreateBounds(t *testing.T) {
+	s, _ := persistent(t)
+	profile, owner, _ := repositoryFixture(t, s)
+	if _, err := s.RegisterRepository(ctx, owner, 0, profile); err != nil {
+		t.Fatal(err)
+	}
+	brief := TaskBrief{TaskID: newID(), Repository: profile.ID, BaseCommit: profile.Base.Commit, Brief: "x", Criteria: []Criterion{{ID: "c1", Text: "ok"}}, Paths: []string{"a.txt"}, Operations: []string{"read"}, Harness: "opencode", Settings: json.RawMessage(`{"model":"m"}`)}
+	raw, err := json.Marshal(inputBrief(brief))
+	if err != nil {
+		t.Fatal(err)
+	}
+	brief.Brief = strings.Repeat("x", 65536-len(raw)+1)
+	_, err = s.CreateTask(ctx, owner, brief)
+	requireReason(t, err, "oversized")
+	rowCount(t, s, "task_briefs", 0)
+	brief.Brief, brief.Harness = "b", "fake"
+	brief.Settings = json.RawMessage(`{"attempts":[{"mode":"edit","edits":[{"path":"a.txt","content":"` + strings.Repeat("<", 3500) + strings.Repeat("a", 30000) + `"}]}]}`)
+	_, err = s.CreateTask(ctx, owner, brief)
+	requireReason(t, err, "oversized")
+	rowCount(t, s, "task_briefs", 0)
+}

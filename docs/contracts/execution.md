@@ -142,6 +142,14 @@ selected ALPN read from the connection is what the store checks with
 | `POST /attempts/{id}/finalize` | `Completion{version, message_id, receipt_id, stream{through, digest}, exit{code, pgid, observed_unix_ns}, boundary}` → `{outcome, released}` | CAS, terminal event, `dispatch_releases` and result head in one transaction (section 5) |
 | `POST /usage` | `Usage{version, message_id, identity, receipts[]}` → `{outcome:"recorded"}` | `attempt_usage` upsert per `request_id`; a terminal receipt supersedes its reservation and is never regressed |
 
+Task creation bounds the actual encoded `TaskInput` reply with a full-width
+UUID and canonical brief digest, not only the smaller owner request. The reply
+must fit `execwire.MaxBytes` (65,536 bytes); its current 141-byte overhead makes
+the normalized owner-task limit 65,395 bytes. Settings are bounded to 49,152
+bytes both before and after canonical JSON escaping. These permanent input
+errors are typed `oversized` refusals at creation, before a dispatch can become
+undeliverable; execution reply overflow is independently guarded with 503.
+
 Every runner request that changes state is keyed by its `message_id` under one
 replay rule: the daemon retains, in the transaction that applied the request,
 the digest of the canonical request and the response it earned (per route and
