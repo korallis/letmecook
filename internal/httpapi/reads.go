@@ -2,12 +2,14 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 
 	g "github.com/korallis/letmecook/internal/authority"
 	i "github.com/korallis/letmecook/internal/identity"
+	"github.com/korallis/letmecook/internal/runstream"
 	"github.com/korallis/letmecook/internal/store"
 	p "github.com/korallis/letmecook/schemas/execution"
 	a "github.com/korallis/letmecook/schemas/readapi"
@@ -113,7 +115,10 @@ func ownerReads(d Deps) []Route {
 				return nil, g.Deny("store_unavailable", "streams")
 			}
 			records, ack, err := d.Sinks.Window(r.Path["id"], after, limit)
-			return map[string]any{"records": records, "ack": ack, "poll_after_ms": 500}, err
+			if err != nil {
+				return nil, err
+			}
+			return boundedStreamWindow(records, ack)
 		}),
 		readRoute("/api/v1/attempts/{id}/artifacts", nil, func(ctx context.Context, a Actor, r Request) (any, error) {
 			return d.Store.AttemptArtifacts(ctx, r.Path["id"])
@@ -169,3 +174,42 @@ func ownerReads(d Deps) []Route {
 	return routes
 }
 func aMaxItems() int64 { return int64(a.MaxItems) }
+
+// Stream pages are bounded by both the requested record count and the read API's
+// encoded response limit. Ack remains the sink's global durable watermark; the
+// next cursor is the last returned record, not Ack.Through.
+type streamWindow struct {
+	Records     []runstream.Record `json:"records"`
+	Ack         runstream.Ack      `json:"ack"`
+	PollAfterMS int                `json:"poll_after_ms"`
+}
+
+func boundedStreamWindow(records []runstream.Record, ack runstream.Ack) (streamWindow, error) {
+	out := streamWindow{Records: []runstream.Record{}, Ack: ack, PollAfterMS: 500}
+	base, err := json.Marshal(out)
+	if err != nil {
+		return out, err
+	}
+	size := len(base)
+	for _, record := range records {
+		encoded, err := json.Marshal(record)
+		if err != nil {
+			return out, err
+		}
+		next := size + len(encoded)
+		if len(out.Records) > 0 {
+			next++
+		} // array comma
+		if next > a.MaxBytes {
+			// A valid bounded runstream record fits alone. Refuse a corrupt
+			// oversized record rather than returning an unadvanceable page.
+			if len(out.Records) == 0 {
+				return out, g.Deny("store_unavailable", "streams")
+			}
+			break
+		}
+		out.Records = append(out.Records, record)
+		size = next
+	}
+	return out, nil
+}

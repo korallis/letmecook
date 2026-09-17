@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -20,6 +21,7 @@ import (
 	v "github.com/korallis/letmecook/internal/verification"
 	"github.com/korallis/letmecook/internal/workflow"
 	p "github.com/korallis/letmecook/schemas/execution"
+	a "github.com/korallis/letmecook/schemas/readapi"
 )
 
 // S1's registry is not in this lane. Adapt a real durable Sink, never fabricated
@@ -296,4 +298,101 @@ func syntheticOwnerReport(candidate v.Candidate) v.Report {
 	at := time.Now().UTC()
 	evidence := v.Evidence{ID: v.ID(), CandidateDigest: candidate.Manifest.SHA256, BaseCommit: candidate.BaseCommit, ProfileID: "test-only-unconfined", CheckName: check.Name, Argv: check.Argv, EnvKeys: []string{"PATH"}, CWD: ".", ExitCode: &zero, Stdout: v.Stream{Prefix: []byte{}, SHA256: v.Digest(nil)}, Stderr: v.Stream{Prefix: []byte{}, SHA256: v.Digest(nil)}, Started: at, Ended: at, Verifier: "synthetic-store-fixture", Environment: v.Environment{OS: "synthetic", Arch: "synthetic", DockerBinary: "absent", DockerSearchPath: check.Env["PATH"], ExpectedConfinement: "test-only-unconfined", ObservedConfinement: "test-only-unconfined"}}
 	return v.Report{ID: v.ID(), Candidate: candidate, Checks: v.TrustedChecks{ID: "test-approved", ApprovedBy: "operator", ApprovalRef: "test-approval", Checks: []v.Check{check}}, Evidence: []v.Evidence{evidence}, Suggestions: []v.Suggestion{}, Limitations: []string{v.ContentLimitation, "synthetic persistence fixture; no actual checks executed"}}
+}
+
+func TestOwnerHTTPSLargeStreamByteBoundedWindow(t *testing.T) {
+	f := newOwnerFixture(t)
+	ctx := context.Background()
+	streams := &fixtureSinkReader{}
+	endpoint, client := f.serve(t, streams)
+	defer client.CloseIdleConnections()
+	create := taskBody(f, "stream-create")
+	taskID := create["message_id"].(string)
+	postWorkflow(t, client, endpoint, "/api/v1/tasks", create, 201)
+	proposal, err := workflow.BuildGrant(ctx, f.s, taskID, f.facts.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	approve := commandBody("stream-approve")
+	approve["eligibility_id"] = f.facts.ID
+	approve["expected_grant_id"] = ""
+	approve["proposal_digest"] = proposal.Digests["proposal"]
+	approve["allow_development_isolation"] = true
+	postWorkflow(t, client, endpoint, "/api/v1/tasks/"+taskID+"/approve", approve, 201)
+	dispatch := commandBody("stream-dispatch")
+	dispatch["grant_id"] = approve["message_id"]
+	dispatch["grant_revision"] = int64(1)
+	dispatch["attempt_ms"] = int64(60000)
+	postWorkflow(t, client, endpoint, "/api/v1/tasks/"+taskID+"/dispatch", dispatch, 201)
+	task, err := f.s.Task(ctx, taskID)
+	if err != nil || len(task.Attempts) != 1 {
+		t.Fatal(task, err)
+	}
+	identity := task.Attempts[0].Identity
+	attempt := identity.AttemptID
+
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	spool, err := runstream.CreateSpool(filepath.Join(root, "spool"), identity, runstream.MaxLimit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer spool.Close()
+	sink, err := runstream.CreateSink(filepath.Join(root, "sink"), identity, runstream.MaxLimit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sink.Close()
+	const count = 40
+	for range count {
+		record, err := spool.Append(runstream.Native{Version: "fixture-v1", Kind: "stdout", Data: bytes.Repeat([]byte("x"), runstream.MaxNative)}, runstream.Normalized{Stream: "stdout", Text: "large output"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := sink.Receive(record); err != nil {
+			t.Fatal(err)
+		}
+	}
+	all := sink.Records()
+	encoded, err := json.Marshal(all)
+	if err != nil || len(encoded) <= a.MaxBytes {
+		t.Fatalf("fixture must exceed reply bound: %d %v", len(encoded), err)
+	}
+	streams.mu.Lock()
+	streams.sink, streams.attempt = sink, attempt
+	streams.mu.Unlock()
+	var after int64
+	pages := 0
+	for after < count {
+		raw, _ := getOwner(t, client, endpoint, "/api/v1/attempts/"+attempt+"/stream?limit=128&after="+strconv.FormatInt(after, 10), 200)
+		if len(raw) > a.MaxBytes {
+			t.Fatalf("response exceeds read bound: %d", len(raw))
+		}
+		window := decodeOwner[struct {
+			Records []runstream.Record `json:"records"`
+			Ack     runstream.Ack      `json:"ack"`
+		}](t, raw)
+		if len(window.Records) == 0 || window.Ack.Through != count || window.Ack.Expected != count+1 || window.Ack.Bytes != count*runstream.MaxNative {
+			t.Fatalf("invalid page/ack: %+v", window.Ack)
+		}
+		for _, record := range window.Records {
+			after++
+			if record.Sequence != after || record.Digest != all[after-1].Digest {
+				t.Fatalf("lost or repeated record at %d", after)
+			}
+		}
+		pages++
+	}
+	if pages < 2 {
+		t.Fatal("large stream was not paginated")
+	}
+	streams.mu.Lock()
+	streams.sink = nil
+	streams.mu.Unlock()
+	raw, _ := getOwner(t, client, endpoint, "/api/v1/attempts/"+attempt+"/stream", 503)
+	if !bytes.Contains(raw, []byte(`"error":"store_unavailable"`)) {
+		t.Fatal(string(raw))
+	}
 }
