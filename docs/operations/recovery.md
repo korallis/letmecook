@@ -41,9 +41,9 @@ latest report through `reconcile.Reader`.
 | `terminated_old_boot` | the same evidence from another boot (retained by `ReportTermination` or observed before a restart) **and** the replacement barrier elapsed | release as above | no |
 | `lease_lapsed_unconfirmed` | every lease past the barrier, no termination evidence | `FenceAttempt` to `stopping` under the lease-clock stop `dispatchID(nonce, "expired")`; reservation held | yes |
 | `remote_work_unknown` | termination reported without quiescent remote work or with an unsettled boundary | none; reservation held | yes |
-| `custody_committed_pending_finalization` | non-quarantined current-generation receipt, no finalize | `unknown` or lapsed `result_pending`: `CompleteFinalization` from stored evidence (exit observation at exactly the sink watermark and digest, all boundary receipts terminal, no latch, live grant); otherwise wait for the runner | only when the store refuses |
-| `result_pending_remote` | exit observed (or the runner's journal says `result_pending`), no receipt | `unknown` without a stop: `RecoverResultPending` so the runner's upload is admitted; then wait | no |
-| `journal_corrupt` | the runner's hello journal reports corruption, or the attempt has no dispatch | none | yes |
+| `custody_committed_pending_finalization` | non-quarantined current-generation receipt, no finalize | `unknown` or lapsed `result_pending` **with a durable quiescence proof**: `CompleteFinalization` from stored evidence (exit observation at exactly the sink watermark and digest, no boundary receipt in flight, no latch, live grant); without proof the reservation stays held | yes once the barrier elapses without proof |
+| `result_pending_remote` | the daemon's exit observation (or, as a hint only, the runner's journal says `result_pending`), no receipt | `unknown` without a stop **and with the exit observed**: `RecoverResultPending` so the runner's upload is admitted; a journal alone changes nothing (the runner re-proposes with its exit evidence) | no |
+| `journal_corrupt` | the runner's latest durable hello journal (`runner_sessions.hello`) or the hello being processed reports corruption, or the attempt has no dispatch | none; every store mutation for the attempt refuses `journal_corrupt` until a later hello reports the journal intact | yes |
 | `stale_generation` | the attempt belongs to another generation (restored store) | none: neither launched nor released | yes |
 | `awaiting_evidence` | nothing provable yet (live lease, barrier pending, accepted without a lease request) | none | no |
 | `latch_cleared` | a `cancel_attempt` stop whose attempt is terminal and released | clearing record `latch-cleared:<stop_id>` in `reconcile_reports` | no |
@@ -55,12 +55,33 @@ releases on a timer, a bare success flag or an absent PID. A release's
 `evidence_digest` is the supervisor's report digest or the SHA-256 of the
 retained daemon-ledger snapshot (`runtime_observations` kind `reconcile`).
 
+### Quiescence proof for finalization from evidence
+
+Received usage receipts are never proof that the inference boundary drained: a
+reservation whose receipt was never posted is invisible in them, so remote work
+could still be running. `CompleteFinalization` releases only with one positive,
+durable proof, in this order:
+
+1. the runner's retained finalize attestation for the receipt (a `completion`
+   or `attestation` record whose settled boundary covers every retained usage
+   row and whose stream and exit equal the daemon's evidence);
+2. a `launch_intent` with `boundary_port: 0`: the fake harness runs without an
+   inference boundary, so no reservation was ever possible (and no usage row may
+   exist);
+3. a runner-journal attestation (`store.BoundaryAttestation`) bound to the
+   dispatch's runner boot and the receipt. `execwire.Journal` carries no
+   boundary yet, so reconcile cannot derive this proof on the current wire.
+
+A usage reservation without a terminal receipt refuses regardless. Without
+proof the classification stays `custody_committed_pending_finalization`, becomes
+`action_required` once the replacement barrier elapses and never releases; the
+runner's own finalize (or an owner release with verified provenance) resolves it.
+
 `CompleteFinalization` retains the completion it finalized from (kind
-`completion`) with the boundary the attempt's usage receipts describe. The
-runner's later `POST /x/v1/attempts/{id}/finalize` for the same receipt is
-answered with the same outcome only when it attests that stream watermark, exit
-and boundary; a divergent attestation is `identity_conflict`. A supervisor that
-posted every boundary receipt before finalizing attests exactly that state.
+`completion`, with the proof source) carrying the proven boundary. The runner's
+later `POST /x/v1/attempts/{id}/finalize` for the same receipt is answered with
+the same outcome only when it attests that stream watermark, exit and boundary;
+a divergent attestation is `identity_conflict`.
 A `--fixture` daemon has no reservations, grants or leases; reconcile reports
 nothing for it and retains nothing.
 
@@ -73,6 +94,22 @@ domain is unusable, so each lease counts as 30 s maximum validity plus its
 retained 7 s margin from the reopen. An attempt with no lease ever issued has
 nothing to wait for. `store.SetControlClock` exists for tests and diagnostics;
 production waits.
+
+Termination evidence is *current* only when it was validated on arrival (a
+`control_observations` row), under this daemon boot, and the runner's latest
+session still runs the incarnation that executed the attempt. A retained report,
+a report from another daemon boot, or any report once the runner has restarted
+is non-current: `ReleaseAttempt` re-checks all three inside its transaction and
+requires the barrier, whatever the classifier decided.
+
+### Reports and retry admission
+
+Startup always retains its report. A hello or sweep retains one only when its
+entries differ from the last retained report of this boot, so identical hello
+replays and idle sweeps do not accrete rows. Auto-retry admission re-derives the
+terminal cause of the task's last attempt from durable records and requires
+that attempt to be the one this run released or unlatched; a stale cause never
+retries a later attempt that ended otherwise.
 
 ### Stop latches
 
