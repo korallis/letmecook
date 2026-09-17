@@ -22,7 +22,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/korallis/letmecook/internal/backup"
 	i "github.com/korallis/letmecook/internal/identity"
+	"github.com/korallis/letmecook/internal/jobs"
+	"github.com/korallis/letmecook/internal/reconcile"
 	p "github.com/korallis/letmecook/schemas/execution"
 )
 
@@ -97,7 +100,7 @@ func TestIdentityCLI(t *testing.T) {
 	}
 	addr := listener.Addr().String()
 	listener.Close()
-	args := append(append([]string{}, base...), "--listen", addr, "--execution-listen", "127.0.0.1:0", "--endpoint", "https://"+addr, "--tls-cert", serverFile, "--tls-key", serverKey)
+	args := append(append([]string{}, base...), "--listen", addr, "--execution-listen", "127.0.0.1:0", "--endpoint", "https://"+addr, "--tls-cert", serverFile, "--tls-key", serverKey, "--backup-dir", filepath.Join(dir, "backups"))
 	live, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	reader, writer := io.Pipe()
@@ -132,6 +135,65 @@ func TestIdentityCLI(t *testing.T) {
 	if err != nil || res.StatusCode != 200 || identity.Role != "owner" {
 		t.Fatal("CLI owner authentication")
 	}
+	// These live owner calls exercise the daemon composition, not a test-created
+	// worker: startup reconciliation, backup service, durable job submission and
+	// the running worker must all be wired before the ready line.
+	workflowCall := func(method, path, body string, want int, result any) {
+		t.Helper()
+		req, err := http.NewRequest(method, "https://"+addr+path, strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if method == "POST" {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		res, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		raw, err := io.ReadAll(res.Body)
+		if err != nil || res.StatusCode != want {
+			t.Fatalf("workflow %s: status=%d body=%s err=%v", path, res.StatusCode, raw, err)
+		}
+		if result != nil {
+			if err := json.Unmarshal(raw, result); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	var report reconcile.Report
+	workflowCall("GET", "/api/v1/reconcile", "", 200, &report)
+	if report.Trigger != "startup" || !p.ValidID(report.ID) {
+		t.Fatalf("missing startup reconciliation: %+v", report)
+	}
+	workflowCall("POST", "/api/v1/daemon/pause", `{"version":"workflow-provisional-v1","message_id":"00000000-0000-4000-8000-000000000020","reason":"composition test"}`, 200, nil)
+	var submitted struct {
+		JobID string `json:"job_id"`
+	}
+	workflowCall("POST", "/api/v1/backup", `{"version":"workflow-provisional-v1","message_id":"00000000-0000-4000-8000-000000000021","destination":"composition"}`, 202, &submitted)
+	if !p.ValidID(submitted.JobID) {
+		t.Fatal("backup job identity missing")
+	}
+	for {
+		var job jobs.Job
+		workflowCall("GET", "/api/v1/jobs/"+submitted.JobID, "", 200, &job)
+		if job.State == jobs.Succeeded {
+			break
+		}
+		if job.State == jobs.Failed {
+			t.Fatalf("backup job failed: %s", job.Error)
+		}
+		select {
+		case <-live.Done():
+			t.Fatal("backup job did not finish", live.Err())
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+	if _, err := backup.Verify(filepath.Join(dir, "backups", "composition")); err != nil {
+		t.Fatal("worker backup is not verifiable", err)
+	}
+	workflowCall("POST", "/api/v1/daemon/resume", `{"version":"workflow-provisional-v1","message_id":"00000000-0000-4000-8000-000000000022","reason":"composition complete"}`, 200, nil)
 	// Exercise the actual execution socket and ConnContext hook, not just its
 	// startup line. Enroll and enable the runner through the live owner API.
 	runner, _, _ := localCertificate(t, false)

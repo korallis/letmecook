@@ -62,11 +62,11 @@ Installation configuration is **flags only**:
 | `--artifacts-dir` | Same path, ownership and creation requirements as `--state-dir`, validated on each startup. May change on reopen or share/nest with other configured directories; no artifact lock or persisted path binding. Reserved location only: no uploads, artifact writes, custody or acknowledgements. |
 | `--listen` | Explicit IP:port, 0..65535; plaintext requires exact `127.0.0.1`. HTTPS permits an operator-selected IP (including explicit wildcard); no DNS discovery or proxy exception. 0 requests an ephemeral port. |
 | `--execution-listen` | Explicit IP:port for the separate execution listener; required together with `--tls-cert`, `--tls-key` and `--endpoint`. Refused in plaintext and fixture modes. 0 requests an ephemeral port. |
-| `--allow-development-profile` | Repeatable explicit profile IDs, default none. Parsed and validated here; admission wiring awaits the S0a merge. Never grants supported-runtime status. |
-| `--verification-isolation-profile` | Default `unqualified` (refuses execution). The provisional `macos-sandbox-exec-dev` name also requires an explicit matching development-profile allow flag; verification implementation remains pending. |
-| `--auto-retry` | Boolean, default false. Passed to the refusing reconcile seam; no automatic retry exists in this slice. |
+| `--allow-development-profile` | Repeatable explicit profile IDs, default none. Shared by store admission and owner workflow policy; default admission refuses unsupported profiles. Never grants supported-runtime status. |
+| `--verification-isolation-profile` | Default `unqualified` (refuses execution). The provisional `macos-sandbox-exec-dev` profile also requires an explicit matching development-profile allow flag. The jobs worker runs trusted checks with no network and explicit secret-path denials, without denying checkout roots under `<state-dir>/verify`; reports remain `qualification: development`, `supported: false`. |
+| `--auto-retry` | Boolean, default false. Startup reconciliation runs before listeners, hello reconciliation runs after session commit, and sweeps run every five seconds. The startup/sweep opt-in enables only evidence-gated infrastructure retries (`harness_crash`, `lease_expired`, `runner_restarted`, `daemon_restart`), never unknown remote work or authority refusals. |
 | `--gateway-config` | Optional explicit `gateway-config-v1` JSON file. Validates HTTPS endpoint, file credential reference, protocols and models without reading the credential or contacting the gateway. |
-| `--backup-dir` | Optional absolute clean destination root; parsed only until the backup service is composed. |
+| `--backup-dir` | Optional absolute clean private destination root. Enables owner backup jobs; creation requires paused state and no active execution, and writes one validated child name under this root. |
 | `--fixture` | Exclusive alternative to install flags: creates/seeds fresh disposable public #94 data and serves the existing shell. Graceful exit removes only this owned fixture directory. |
 
 Choose any operator-controlled host meeting the local storage requirements. No

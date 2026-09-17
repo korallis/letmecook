@@ -103,13 +103,13 @@ func workflowError(err error) *Error {
 	if errors.As(err, &refusal) {
 		status := 422
 		switch refusal.Code {
-		case "malformed", "invalid_query", "invalid_id", "invalid_bound", "invalid_assessment":
+		case "malformed", "invalid_query", "invalid_id", "invalid_bound", "invalid_assessment", "invalid_destination":
 			status = 400
 		case "identity_denied", "boundary_refused":
 			status = 403
 		case "not_found":
 			status = 404
-		case "revision_conflict", "identity_conflict", "current_assignment", "reconciliation_required", "stopped", "stop_latched", "candidate_conflict", "paused", "eligibility_stale", "superseded", "stale_generation", "stale_decision", "stale_evidence":
+		case "active_execution", "not_paused", "revision_conflict", "identity_conflict", "current_assignment", "reconciliation_required", "stopped", "stop_latched", "candidate_conflict", "paused", "eligibility_stale", "superseded", "stale_generation", "stale_decision", "stale_evidence":
 			status = 409
 		case "cursor_expired":
 			status = 410
