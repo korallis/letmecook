@@ -50,7 +50,10 @@ credential into fixtures, repository content or worker configuration.
 
 The profile uses Apple's `/usr/bin/sandbox-exec` with the **allow-default** shape
 measured to let the pinned OpenCode binary start on this Mac. A deny-default
-profile previously prevented startup and is not silently substituted.
+profile previously prevented startup and is not silently substituted. The narrower
+per-attempt write and signal rules now pass real native canaries; the pinned
+OpenCode startup/config-isolation probe must be rerun in the integrated system
+proof before claiming compatibility with those stricter rules.
 
 * Deny network access except the attempt boundary's one loopback port; the fake
   no-boundary case denies all network. Another loopback port is not an exception.
@@ -82,7 +85,7 @@ inventory, a provider-cost/token guarantee, or measured adversarial confinement.
 Resource rlimits do not establish a hard memory or aggregate-process reservation.
 A worktree alone remains no security boundary.
 
-The guardian samples process ancestry to notice setsid escapes; this cannot prove
+The guardian samples process ancestry every 100 ms to notice setsid escapes; this cannot prove
 that an adversary never created a short-lived, unobserved escape. Known escapes
 or inconclusive EPERM observations stay unknown and cannot release reservations.
 On supervisor SIGKILL its pipe closes; the guardian kills the group and syncs a

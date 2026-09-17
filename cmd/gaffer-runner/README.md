@@ -34,7 +34,8 @@ The operator supplies two independent local inputs; neither is downloaded policy
   exact eligibility mirror. Changed or expired policy stops the accepted attempt.
 * `--repository-profile` defaults to `<state-dir>/repository.json`, a full
   `repositories.Profile`. Its digest, pinned remote/base, repository revision and
-  runner-root selection must match the dispatch. `repositories.Prepare` makes an
+  runner-root selection are checked before `Accept`; mismatch sends a durable
+  `local_policy_denied` refusal without a lease. They must match the dispatch. `repositories.Prepare` makes an
   independent clone with disabled hooks, filters and ambient Git configuration.
 
 Task content comes from authenticated `GET /x/v1/input?dispatch_id=...`.
@@ -120,14 +121,19 @@ key as `<key-file>.ca.crt`; the TLS private key stays in memory. A
 Cancel is journaled before stopping. `TerminateProcessGroup` records request,
 acknowledgment and observation separately. TERM escalates at two seconds, with a
 five-second observation bound. Lease expiry uses `ExpiryStopID(last_nonce)`.
+Shutdown and local launch failures use `LocalStopID(attempt_id, cause)` and carry
+the cause on the stopping proposal, never impersonating a lease expiry. Local
+Prepare/PrepareLaunch/Start failures retain and send stop/containment evidence;
+ambiguous Start failures remain unknown, not proof that no process started.
 The guardian independently stops on its deadline or supervisor stdin EOF (even
 SIGKILL), and writes a synced private receipt. EPERM is inconclusive, not ESRCH.
-A detected setsid escape remains unknown; no terminated message or release is
-claimed, even when best-effort cleanup killed the observed escaped PID.
+A detected setsid escape sends `terminated` with `confirmed_process: unknown`
+and an unobserved measurement. No positive containment or release is claimed,
+even when best-effort cleanup killed the observed escaped PID.
 
 `Open` consumes guardian recovery evidence, only re-signals a still-matching
 PID/start token if needed, then writes a fresh restart boot and sticky quarantine.
-Old messages retain their IDs; generation/boot refusals become durable `fenced`
+Old messages retain their IDs and exact serialized bytes; generation/boot refusals become durable `fenced`
 events. Old-boot termination and receipt accounting are replayed for daemon
 reconciliation; no old lease is installed. Uploads interrupted before a complete
 outbox/finalization record stay preserved and may still need operator recovery.
@@ -136,7 +142,17 @@ outbox/finalization record stay preserved and may still need operator recovery.
 
 `go test -race -count=1 ./cmd/gaffer-runner ./internal/runner` runs real TLS against
 an in-test daemon, a real built runner executable, real guardian/job processes,
-real SIGKILL recovery and macOS sandbox canaries. It tests lost commit replies,
+real SIGKILL recovery and macOS sandbox canaries. Tests kill/restart serve after
+a dropped finalize reply and assert byte-identical replay, outbox acknowledgments
+and stale-generation fencing. They also exercise the guardian's own deadline
+with an open pipe from a hung supervisor, idle cancel floods, postaccept local
+failures and fake scanner/release lifecycle. It tests lost commit replies,
 lease expiry, TERM-ignore escalation, setsid escape, stream exhaustion, approval,
 crash/nonzero exit, envelope violation and refusal paths. This is lane evidence,
 not a test of another lane's daemon route/store transaction implementation.
+
+The narrowed write/signal profile passes the native fake-job canaries. Re-running
+the pinned OpenCode startup/config-isolation probe under that narrower profile
+is pending in the integrated system proof; this standalone lane does not claim
+that OpenCode requalification has passed. `mach-lookup` remains unrestricted,
+including securityd/keychain IPC; see the macOS development operations limitations.

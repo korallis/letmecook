@@ -284,6 +284,14 @@ func (s *supervisor) lease(ctx context.Context, r *runner.Runner, d string) erro
 	return r.RenewGuardian()
 }
 func (s *supervisor) transition(ctx context.Context, r *runner.Runner, d store.Dispatch, from, to p.AttemptState, revision int64, e w.Evidence, stopID string) (p.Message, error) {
+	if to == p.Stopping {
+		for _, cause := range w.LocalStopCauses {
+			if stopID == w.LocalStopID(d.Assignment.Identity.AttemptID, cause) {
+				e.Cause = cause
+				break
+			}
+		}
+	}
 	m := p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "transition", Identity: d.Assignment.Identity, ExpectedRevision: &revision, From: from, To: to}
 	reply, err := s.message(ctx, r, d.ID, m, &e, nil, nil)
 	if err == nil && (reply.Message == nil || !messagesEqual(m, *reply.Message)) {
@@ -551,6 +559,9 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 		case <-tick.C:
 			status, e := r.Tick()
 			if e != nil && status.StopRequired {
+				if errors.Is(e, runner.ErrPolicy) {
+					return cancelAndDrain(s.localCancel(d, "local_policy_drift"), "local_policy_drift")
+				}
 				return cancelAndDrain(s.expiryCancel(r, d), "lease_expired")
 			}
 		case item := <-eventCh:
@@ -600,7 +611,7 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 		return err
 	}
 	if !report.PGIDEmpty || report.Escaped {
-		return runner.ErrTerminationUnconfirmed
+		return cancelAndDrain(s.localCancel(d, "containment_unconfirmed"), "containment_unconfirmed")
 	}
 	if err = drain(guardCtx); err != nil {
 		return err

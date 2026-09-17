@@ -7,10 +7,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"github.com/korallis/letmecook/internal/control"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/korallis/letmecook/internal/artifacts"
 	g "github.com/korallis/letmecook/internal/authority"
@@ -235,14 +237,15 @@ func (s *supervisor) recoverTermination(ctx context.Context, r *runner.Runner, m
 	if status.Runtime == nil {
 		return nil
 	}
-	if status.Guardian == nil || status.Guardian.Escaped || !status.Guardian.PGIDEmpty {
-		return runner.ErrTerminationUnconfirmed
-	}
 	nonce := lastNonce(r)
 	if nonce == "" {
 		return runner.ErrTerminationUnconfirmed
 	}
-	cancel := p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: meta.Dispatch.Assignment.Identity, StopID: w.ExpiryStopID(nonce), RunnerBoot: meta.RunnerBoot, DaemonBoot: meta.DaemonBoot}
+	stopID := w.LocalStopID(meta.Dispatch.Assignment.Identity.AttemptID, "runner_shutdown")
+	if status.Guardian != nil && status.Guardian.Cause == "lease_expired" {
+		stopID = w.ExpiryStopID(nonce)
+	}
+	cancel := p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: meta.Dispatch.Assignment.Identity, StopID: stopID, RunnerBoot: meta.RunnerBoot, DaemonBoot: meta.DaemonBoot}
 	for _, entry := range r.Outbox() {
 		if entry.Kind == "cancel" {
 			var retained p.Message
@@ -250,6 +253,20 @@ func (s *supervisor) recoverTermination(ctx context.Context, r *runner.Runner, m
 				cancel = retained
 			}
 		}
+	}
+	if status.Guardian == nil || status.Guardian.Escaped || !status.Guardian.PGIDEmpty {
+		measurement := control.Measurement{RequestedAt: time.Now().UTC(), AcknowledgedAt: time.Now().UTC()}
+		report := runner.GuardianReport{}
+		if status.Guardian != nil {
+			report = *status.Guardian
+			if report.StopUnixNS > 0 {
+				measurement.RequestedAt = time.Unix(0, report.StopUnixNS).UTC()
+				measurement.AcknowledgedAt = measurement.RequestedAt
+			}
+			measurement.Escalated = report.Escalated
+		}
+		_, err := s.containment(ctx, r, meta.Dispatch, cancel, "unknown", r.RecoveredBoundaryState(), measurement, report, "recovered_containment_unconfirmed")
+		return errors.Join(runner.ErrTerminationUnconfirmed, err)
 	}
 	evidence, err := r.GuardianEvidence(cancel)
 	if err != nil {

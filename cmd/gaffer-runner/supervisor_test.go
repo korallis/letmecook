@@ -222,7 +222,7 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 		if old, ok := d.reply[m.MessageID]; ok {
 			var prior w.MessageEnvelope
 			_ = json.Unmarshal(d.request[m.MessageID], &prior)
-			if p.CheckReplay(m.Message, prior.Message, d.dispatch.Assignment.Identity) != p.OK || !bytes.Equal(d.request[m.MessageID], body) {
+			if p.CheckReplay(m.Message, prior.Message, d.dispatch.Assignment.Identity) != p.Duplicate || !bytes.Equal(d.request[m.MessageID], body) {
 				errorReply(409, "identity_conflict")
 				return
 			}
@@ -710,6 +710,9 @@ func TestLeaseLapseAndIgnoreTermCancel(t *testing.T) {
 			if mode == "hang" {
 				f.d.session.LeaseValidityMS = 8000
 				f.s.session.LeaseValidityMS = 8000
+				// Deliberately accelerated failure fixture; default sessions use S1's
+				// 2000/5000/20000/5000 timings.
+				f.s.session.RenewEveryMS = 200
 			}
 			done := make(chan error, 1)
 			go func() { done <- f.s.attempt(f.ctx, f.dispatch) }()
@@ -925,6 +928,19 @@ func TestSupervisorSIGKILLGuardianEOFAndOpen(t *testing.T) {
 			}
 			if time.Since(start) > 5*time.Second {
 				t.Fatal("guardian EOF deadline exceeded", time.Since(start))
+			}
+			if _, err := f.s.client.Hello(f.ctx, w.Hello{Version: w.Version, MessageID: uuid(), RunnerBoot: f.s.boot, EligibilityID: f.local.ID, EligibilityRevision: 1, PolicyDigest: strings.Repeat("a", 64), Journals: []w.Journal{}}); err != nil {
+				t.Fatal(err)
+			}
+			if err := f.s.recoverTermination(f.ctx, r, attemptMeta{d, boot.RunnerBoot, f.s.session.DaemonBoot}); err != nil {
+				t.Fatal("recover termination", err)
+			}
+			f.d.mu.Lock()
+			retained := f.d.termination
+			released := f.d.released
+			f.d.mu.Unlock()
+			if retained == nil || retained.Message.RunnerBoot != boot.RunnerBoot || released {
+				t.Fatal("old boot termination not retained conservatively")
 			}
 			t.Logf("SIGKILL supervisor -> guardian EOF -> durable empty pgid observed -> Open quarantined in %s; job=%d guardian=%d", time.Since(start), runtime.PID, runtime.GuardianPID)
 
@@ -1308,4 +1324,304 @@ func (f *fixture) sendCancel(m p.Message) {
 	f.d.cancel = &m
 	f.d.mu.Unlock()
 	f.s.cancel <- m
+}
+
+type serveProcess struct {
+	cmd            *exec.Cmd
+	stdout, stderr lockedBuffer
+	reaped         bool
+	boot           bootRecord
+}
+
+func (p *serveProcess) kill() {
+	if !p.reaped {
+		p.cmd.Process.Kill()
+		p.cmd.Wait()
+		p.reaped = true
+	}
+}
+func startServeBinary(t *testing.T, f *fixture, activate bool) *serveProcess {
+	t.Helper()
+	cfg := f.s.cfg
+	var previous bootRecord
+	b, _ := os.ReadFile(filepath.Join(cfg.StateDir, "boot.json"))
+	json.Unmarshal(b, &previous)
+	p := &serveProcess{}
+	p.cmd = exec.Command(testBinary, "serve", "--state-dir", cfg.StateDir, "--repository-root", cfg.RepositoryRoot, "--daemon", cfg.Daemon, "--daemon-fingerprint", cfg.Fingerprint, "--cert", cfg.Cert, "--key", cfg.Key, "--isolation-profile", cfg.Isolation, "--harness", "fake")
+	p.cmd.Stdout = &p.stdout
+	p.cmd.Stderr = &p.stderr
+	if err := p.cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.kill)
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		b, e := os.ReadFile(filepath.Join(cfg.StateDir, "boot.json"))
+		if e == nil && json.Unmarshal(b, &p.boot) == nil && p.boot.RunnerBoot != previous.RunnerBoot {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("new boot absent", p.stderr.String())
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if activate {
+		local := f.local
+		local.RunnerBoot = p.boot.RunnerBoot
+		f.d.mu.Lock()
+		f.d.eligibleBoot = p.boot.RunnerBoot
+		if !f.d.dispatch.Acknowledged {
+			d := f.d.dispatch
+			d.Facts = local
+			fh, _ := sc.Digest(local)
+			d.Decision.Eligibility.SHA256 = fh
+			dh, _ := sc.Digest(d.Decision)
+			d.Request.Envelope.RouteDecision.SHA256 = dh
+			d.Assignment.Route.DecisionDigest = dh
+			ih, _ := sc.Digest(struct {
+				store.DispatchRequest
+				Facts sc.Eligibility `json:"facts"`
+			}{d.DispatchRequest, d.Facts})
+			d.Assignment.InputDigest = ih
+			f.d.dispatch = d
+		}
+		f.d.mu.Unlock()
+		if err := runner.DurableFile(cfg.Policy, local); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return p
+}
+func journalHas(path, kind, key string) bool {
+	b, _ := os.ReadFile(filepath.Join(path, "journal.jsonl"))
+	for _, line := range bytes.Split(b, []byte{'\n'}) {
+		var row struct {
+			Data struct{ Kind, Key string } `json:"data"`
+		}
+		if json.Unmarshal(line, &row) == nil && row.Data.Kind == kind && (key == "" || row.Data.Key == key) {
+			return true
+		}
+	}
+	return false
+}
+func TestServeRestartReplaysFinalizeBytesOrFences(t *testing.T) {
+	for _, stale := range []bool{false, true} {
+		t.Run(fmt.Sprintf("stale_generation=%v", stale), func(t *testing.T) {
+			f := newFixture(t, "edit")
+			f.d.blockFinalize = true
+			f.d.finalizeWaiting = make(chan struct{}, 1)
+			first := startServeBinary(t, f, true)
+			select {
+			case <-f.d.finalizeWaiting:
+			case <-time.After(10 * time.Second):
+				t.Fatal("finalize not reached", first.stderr.String(), first.stdout.String())
+			}
+			f.d.mu.Lock()
+			original := append([]byte(nil), f.d.finalizeBodies[0]...)
+			f.d.mu.Unlock()
+			var completion w.Completion
+			if err := w.Decode(original, &completion); err != nil {
+				t.Fatal(err)
+			}
+			journal := filepath.Join(f.s.cfg.StateDir, "attempts", f.dispatch.ID, "journal")
+			if journalHas(journal, "outbox_ack", completion.MessageID) {
+				t.Fatal("lost reply was acknowledged")
+			}
+			first.kill() // SIGKILL after durable enqueue and daemon commit, before ACK.
+			f.d.mu.Lock()
+			f.d.blockFinalize = false
+			f.d.stale = stale
+			f.d.mu.Unlock()
+			second := startServeBinary(t, f, false) // recovery works before new-boot owner import
+			kind, key := "outbox_ack", completion.MessageID
+			if stale {
+				kind, key = "fenced", ""
+			}
+			deadline := time.Now().Add(8 * time.Second)
+			for !journalHas(journal, kind, key) {
+				if time.Now().After(deadline) {
+					t.Fatal("recovery event absent", kind, second.stderr.String(), second.stdout.String())
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+			f.d.mu.Lock()
+			bodies := append([][]byte(nil), f.d.finalizeBodies...)
+			f.d.mu.Unlock()
+			if len(bodies) != 2 || !bytes.Equal(bodies[0], bodies[1]) {
+				t.Fatalf("replay changed exact request bytes: %d requests", len(bodies))
+			}
+			if stale && journalHas(journal, "outbox_ack", completion.MessageID) {
+				t.Fatal("stale replay acknowledged")
+			}
+			second.kill()
+			reopened, err := runner.Open(journal, f.s.options())
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer reopened.Close()
+			found := false
+			for _, entry := range reopened.Outbox() {
+				if entry.Key == completion.MessageID {
+					found = true
+					if !bytes.Equal(entry.Body, original) || entry.Acknowledged == stale {
+						t.Fatal("durable replay body/ack differs")
+					}
+				}
+			}
+			if !found {
+				t.Fatal("finalize outbox missing")
+			}
+			t.Logf("SIGKILL/restart preserved %d-byte finalize message %s; %s durable", len(original), completion.MessageID, kind)
+		})
+	}
+}
+func TestIdleRepeatedCancelsCannotWedgeInbox(t *testing.T) {
+	f := newFixture(t, "noop")
+	f.d.dispatch.Acknowledged = true
+	cancel := p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: f.dispatch.Assignment.Identity, StopID: uuid(), RunnerBoot: f.s.boot, DaemonBoot: f.s.session.DaemonBoot}
+	f.d.cancel = &cancel
+	f.d.cancelCopies = 100 // exceeds the supervisor channel capacity in one poll
+	process := startServeBinary(t, f, true)
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		f.d.mu.Lock()
+		polls := f.d.inboxCalls
+		f.d.mu.Unlock()
+		if polls >= 3 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("idle cancel delivery wedged", polls, process.stderr.String())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	process.kill()
+}
+func TestShutdownUsesLocalStopNotExpiry(t *testing.T) {
+	f := newFixture(t, "hang")
+	done := make(chan error, 1)
+	go func() { done <- f.s.attempt(f.ctx, f.dispatch) }()
+	waitState(t, f, p.Running)
+	f.cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(8 * time.Second):
+		t.Fatal("shutdown timeout")
+	}
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	if f.d.termination == nil || f.d.termination.Message.StopID != w.LocalStopID(f.dispatch.Assignment.Identity.AttemptID, "runner_shutdown") || f.d.termination.Message.StopID == w.ExpiryStopID(f.d.lastNonce) {
+		t.Fatal("shutdown misclassified as expiry")
+	}
+	found := false
+	for _, body := range f.d.request {
+		var env w.MessageEnvelope
+		if json.Unmarshal(body, &env) == nil && env.Evidence != nil && env.Evidence.Cause == "runner_shutdown" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("stopping cause absent")
+	}
+}
+
+type failStartHarness struct{ h.Harness }
+
+func (f failStartHarness) Start(context.Context, h.RunRequest) (h.RunHandle, error) {
+	return h.RunHandle{}, errors.New("injected harness Start failure")
+}
+func TestPostacceptFailuresSendStopEvidence(t *testing.T) {
+	for _, stage := range []string{"checkout", "prepare_launch", "start"} {
+		t.Run(stage, func(t *testing.T) {
+			f := newFixture(t, "noop")
+			switch stage {
+			case "checkout":
+				if err := os.RemoveAll(strings.TrimPrefix(f.profile.Remote, "file://")); err != nil {
+					t.Fatal(err)
+				}
+			case "prepare_launch":
+				f.s.profile = isolation.Unqualified{}
+			case "start":
+				f.s.harness = failStartHarness{f.s.harness}
+			}
+			if err := f.s.attempt(f.ctx, f.dispatch); err == nil {
+				t.Fatal("injected failure absent")
+			}
+			f.d.mu.Lock()
+			defer f.d.mu.Unlock()
+			if !f.d.dispatch.Acknowledged || f.d.leaseCount == 0 || !contains(f.d.calls, "stopping") || f.d.termination == nil {
+				t.Fatal("local failure left acknowledged lease without stop evidence", f.d.calls)
+			}
+			m := f.d.termination
+			want := "not_started"
+			if stage == "start" {
+				want = "unknown"
+			}
+			if m.Message.ConfirmedProcess != want || m.Message.StopID != w.LocalStopID(f.dispatch.Assignment.Identity.AttemptID, "launch_failed") || m.Measurement.Validate(want != "unknown") != nil {
+				t.Fatalf("wrong failure observation %+v", m)
+			}
+			if want == "unknown" && f.d.released {
+				t.Fatal("ambiguous start released")
+			}
+			cause := false
+			for _, body := range f.d.request {
+				var env w.MessageEnvelope
+				if json.Unmarshal(body, &env) == nil && env.Evidence != nil && env.Evidence.Cause == "launch_failed" {
+					cause = true
+				}
+			}
+			if !cause {
+				t.Fatal("stop cause absent")
+			}
+		})
+	}
+}
+func TestFakeCompletedRunsPrunedAcrossAttempts(t *testing.T) {
+	adapter := fake.New(testBinary)
+	for i := 0; i < fake.MaxRetainedRuns+2; i++ {
+		f := newFixture(t, "noop")
+		f.s.harness = adapter
+		if err := f.s.attempt(f.ctx, f.dispatch); err != nil {
+			t.Fatalf("completed attempt %d still retained: %v", i, err)
+		}
+	}
+}
+
+func TestRecoverUnknownContainmentRetainsObservation(t *testing.T) {
+	f := newFixture(t, "detached_child")
+	process := startServeBinary(t, f, true)
+	waitState(t, f, p.Running)
+	time.Sleep(350 * time.Millisecond)
+	process.kill()
+	journal := filepath.Join(f.s.cfg.StateDir, "attempts", f.dispatch.ID, "journal")
+	r, err := runner.Open(journal, f.s.options())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	status := r.Status()
+	if status.Guardian == nil || !status.Guardian.Escaped {
+		t.Fatalf("escape was not retained: %+v", status.Guardian)
+	}
+	if _, err := f.s.client.Hello(f.ctx, w.Hello{Version: w.Version, MessageID: uuid(), RunnerBoot: f.s.boot, EligibilityID: f.local.ID, EligibilityRevision: 1, PolicyDigest: strings.Repeat("a", 64), Journals: []w.Journal{}}); err != nil {
+		t.Fatal(err)
+	}
+	f.d.mu.Lock()
+	d := f.d.dispatch
+	f.d.mu.Unlock()
+	err = f.s.recoverTermination(f.ctx, r, attemptMeta{d, process.boot.RunnerBoot, f.s.session.DaemonBoot})
+	if !errors.Is(err, runner.ErrTerminationUnconfirmed) {
+		t.Fatal(err)
+	}
+	f.d.mu.Lock()
+	defer f.d.mu.Unlock()
+	if f.d.termination == nil || f.d.termination.Message.ConfirmedProcess != "unknown" || f.d.termination.Measurement.Validate(false) != nil || f.d.released {
+		t.Fatal("unknown recovery was lost or released")
+	}
+	if !journalHas(journal, "outbox_ack", f.d.termination.MessageID) {
+		t.Fatal("unknown observation not acknowledged durably")
+	}
 }
