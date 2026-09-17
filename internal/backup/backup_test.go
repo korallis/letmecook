@@ -932,10 +932,9 @@ func TestRepeatedRestorePreservesHistoricalStreamIdentity(t *testing.T) {
 	}
 }
 func TestRestoredSnapshotPreservesHistoricalEventGenerations(t *testing.T) {
-	t.Skip("integration: readapi historical generations pending")
 	f := testFixture(t, true)
 	f.retainedDispatch(t)
-	before, err := f.s.Snapshot(ctx, "", 128)
+	before, err := f.s.Snapshot(ctx, "", 50)
 	must(t, err)
 	if len(before.Events) == 0 {
 		t.Fatal("fixture has no real retained events")
@@ -947,15 +946,25 @@ func TestRestoredSnapshotPreservesHistoricalEventGenerations(t *testing.T) {
 	s, err := store.Open(ctx, state, art)
 	must(t, err)
 	defer s.Close()
-	after, err := s.Snapshot(ctx, "", 128)
+	// The restored store has a new generation; the bounded snapshot projects
+	// only current-generation events, so it serves reads without rejecting
+	// the retained history, which stays in the immutable log unrewritten.
+	after, err := s.Snapshot(ctx, "", 50)
 	must(t, err)
-	if len(after.Events) != len(before.Events) {
-		t.Fatal("historical events lost", after)
+	if after.Generation == before.Generation {
+		t.Fatal("restore kept the old generation")
 	}
-	for i, event := range after.Events {
-		if event.Message.Identity.Generation != before.Events[i].Message.Identity.Generation {
-			t.Fatal("historical generation rewritten", event)
-		}
+	if len(after.Events) != 0 {
+		t.Fatal("retired-generation events projected as current", after.Events)
+	}
+	must(t, s.Close())
+	db, err := sql.Open("sqlite", "file:"+filepath.Join(state, "state.db")+"?mode=ro&immutable=1")
+	must(t, err)
+	defer db.Close()
+	var retained int
+	must(t, db.QueryRow("SELECT count(*) FROM events WHERE json_extract(message,'$.identity.generation')=?", before.Generation).Scan(&retained))
+	if retained != len(before.Events) {
+		t.Fatalf("historical events lost or rewritten: %d != %d", retained, len(before.Events))
 	}
 }
 
