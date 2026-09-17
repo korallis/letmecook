@@ -2,7 +2,9 @@ package httpapi
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -188,11 +190,18 @@ func OwnerMutation(d Deps, route string, decode func([]byte) (string, any, error
 			return nil, &Error{400, "malformed", ""}
 		}
 		raw, _ = json.Marshal(canonical)
-		hash, _ := sc.Digest(struct {
+		hashInput, err := json.Marshal(struct {
 			Route string
 			Path  map[string]string
 			Body  json.RawMessage
 		}{route, req.Path, raw})
+		if err != nil {
+			return nil, &Error{400, "malformed", ""}
+		}
+		// The already-bounded request gains route/path metadata here; do not
+		// reuse the smaller authority-record cap and silently hash an error.
+		sum := sha256.Sum256(hashInput)
+		hash := hex.EncodeToString(sum[:])
 		lock := ownerMutex(d.Store)
 		select {
 		case lock <- struct{}{}:

@@ -79,7 +79,10 @@ func readJSON(path string, out any) error {
 // Replies are bounded and checked for duplicate keys/invalid encoding before
 // they are interpreted. Only documented optional legacy fields may be null.
 func decodeReply(raw []byte, value any) error {
-	return closedjson.Decode(raw, value, maxReply, map[string]bool{
+	return decodeReplyBound(raw, value, maxReply)
+}
+func decodeReplyBound(raw []byte, value any, limit int) error {
+	return closedjson.Decode(raw, value, limit, map[string]bool{
 		"provider_cost_micros": true, "exit_code": true, "refusal": true, "decision": true,
 		"criteria": true, "paths": true, "operations": true, "attempts": true, "events": true,
 		"evidence": true, "suggestions": true, "limitations": true, "reasons": true, "checks": true,
@@ -117,12 +120,18 @@ func call(ctx context.Context, g globals, method, path string, input any) (json.
 		return nil, &cliError{0, "daemon_unavailable", "pinned mTLS request failed"}
 	}
 	defer response.Body.Close()
-	raw, err := io.ReadAll(io.LimitReader(response.Body, maxReply+1))
-	if err != nil || len(raw) > maxReply || !json.Valid(raw) {
+	replyLimit := maxReply
+	reportID := strings.TrimPrefix(path, "/api/v1/verifications/")
+	reportRead := method == "GET" && strings.HasPrefix(path, "/api/v1/verifications/") && validID(reportID)
+	if reportRead {
+		replyLimit = v.MaxReportBytes
+	}
+	raw, err := io.ReadAll(io.LimitReader(response.Body, int64(replyLimit)+1))
+	if err != nil || len(raw) > replyLimit || !json.Valid(raw) {
 		return nil, &cliError{0, "invalid_response", "daemon response was not bounded JSON"}
 	}
 	var bounded any
-	if decodeReply(raw, &bounded) != nil {
+	if decodeReplyBound(raw, &bounded, replyLimit) != nil {
 		return nil, &cliError{0, "invalid_response", "daemon response was not closed JSON"}
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
@@ -138,6 +147,12 @@ func call(ctx context.Context, g globals, method, path string, input any) (json.
 			e.Error = "request_refused"
 		}
 		return nil, &cliError{response.StatusCode, e.Error, e.Detail}
+	}
+	if reportRead {
+		var report v.Report
+		if decodeReplyBound(raw, &report, v.MaxReportBytes) != nil || report.ID != reportID || report.Validate() != nil {
+			return nil, &cliError{0, "invalid_response", "invalid verification report"}
+		}
 	}
 	return json.RawMessage(raw), nil
 }
@@ -264,7 +279,7 @@ func taskInputFlags(f *flag.FlagSet) (repo, base, brief, harness, settings *stri
 	repo = f.String("repo", "", "registered repository")
 	base = f.String("base", "", "pinned commit")
 	brief = f.String("brief-file", "", "task brief text")
-	harness = f.String("harness", "fake", "fake or opencode")
+	harness = f.String("harness", "", "required: fake or opencode")
 	settings = f.String("settings-file", "", "harness settings JSON")
 	criterion, paths, operations = new(values), new(values), new(values)
 	f.Var(criterion, "criterion", "id=text; repeatable")
@@ -273,6 +288,9 @@ func taskInputFlags(f *flag.FlagSet) (repo, base, brief, harness, settings *stri
 	return
 }
 func makeTaskInput(g globals, repo, base, briefFile, harness, settingsFile string, criterion, paths, operations []string) (workflow.TaskInput, error) {
+	if harness != "fake" && harness != "opencode" {
+		return workflow.TaskInput{}, fmt.Errorf("explicit harness required")
+	}
 	brief, err := os.ReadFile(briefFile)
 	if err != nil {
 		return workflow.TaskInput{}, err
@@ -388,7 +406,7 @@ func approve(ctx context.Context, global globals, id, eligibility, expected stri
 		return nil, e
 	}
 	var proposal workflow.Proposal
-	if json.Unmarshal(raw, &proposal) != nil || proposal.Digests["proposal"] == "" {
+	if decodeReply(raw, &proposal) != nil || proposal.Digests["proposal"] == "" {
 		return nil, &cliError{0, "invalid_response", "invalid proposal"}
 	}
 	if !global.JSON {
@@ -575,26 +593,27 @@ func reviewRequest(ctx context.Context, g globals, id, action, reportID, overrid
 	if e != nil {
 		return nil, e
 	}
-	var current struct {
-		Report v.Report `json:"report"`
-		Status v.Status `json:"status"`
-	}
+	var current v.Summary
 	if decodeReply(raw, &current) != nil {
 		return nil, &cliError{0, "invalid_response", "invalid current verification"}
 	}
-	report := current.Report
-	if reportID != "" && reportID != report.ID {
-		raw, e = call(ctx, g, "GET", "/api/v1/verifications/"+reportID, nil)
-		if e != nil {
-			return nil, e
-		}
-		if decodeReply(raw, &report) != nil {
-			return nil, &cliError{0, "invalid_response", "invalid verification"}
-		}
+	if reportID == "" {
+		reportID = current.ID
 	}
-	// Only the server knows the live generation, selection and artifact custody.
+	if !validID(reportID) {
+		return nil, &cliError{422, "verification_required", "current candidate has no verification"}
+	}
+	raw, e = call(ctx, g, "GET", "/api/v1/verifications/"+reportID, nil)
+	if e != nil {
+		return nil, e
+	}
+	var report v.Report
+	if decodeReplyBound(raw, &report, v.MaxReportBytes) != nil {
+		return nil, &cliError{0, "invalid_response", "invalid verification"}
+	}
+	// The server alone knows current generation, selection and retained custody.
 	status := current.Status
-	status.Verified = status.Verified && report.ID == current.Report.ID && report.Candidate == current.Report.Candidate
+	status.Verified = status.Verified && report.ID == current.ID
 	if action == "accept" && !status.Verified && override == "" {
 		return nil, &cliError{422, "verification_required", "accept requires verified evidence; an override request cannot bypass the service gate"}
 	}

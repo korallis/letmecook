@@ -24,7 +24,9 @@ cannot invoke owner workflow routes. The API uses closed bounded JSON, version
 5. After finalized artifact custody, request verification as a job. Trusted checks
    come only from the approved repository profile. Recreate exact content in a
    private checkout, compare every changed/untracked/ignored/deleted file with the
-   grant envelope, and save verification before job success.
+   candidate attempt's retained dispatch envelope, and save verification before job
+   success. A later wider approval cannot expand the authority used to verify an
+   earlier candidate.
 6. Accept or reject the exact verification and selection IDs, retaining coverage,
    evidence and limitations. Acceptance requires verified current evidence. A CLI
    override reason is merely a recorded request, never a verification bypass.
@@ -32,12 +34,27 @@ cannot invoke owner workflow routes. The API uses closed bounded JSON, version
 The default verification profile is `unqualified`: it saves refusal evidence and
 executes nothing. `macos-sandbox-exec-dev` is development-only, **supported: false**;
 its verifier requires measured launcher digests, controls, confinement canaries
-and explicit limitations. The outside-write canary uses a cleaned synthetic
-private directory under the real owner home, not the profile's system-temp write
-exceptions. Measured profile limitations (including writable system temp and
+and explicit limitations. Construct it with
+`verification.NewDevelopmentProfile(profile, timeout, stateDir)`. The explicit
+private state directory owns `verification-canary`; each probe is cleaned up.
+There is no HOME fallback or write into the real HOME outside configured state.
+Canary roots inside verification workspaces or system-temp exceptions (`/tmp`,
+`/private/tmp`, `/var/folders`, `/private/var/folders`) are refused. Measured profile limitations (including writable system temp and
 unproven escaped-session termination) are retained in each report. Escape/drift
 is retained as unqualified refusal evidence.
 No evidence here establishes a supported unattended runtime.
+
+Task create has a 65,536-byte **total encoded JSON envelope** ceiling, including
+brief, criteria, scope, settings, IDs and escaping; normalized input must also fit.
+This is not a promise that a 65,536-byte brief fits. Repository/eligibility request
+bodies share that total ceiling, and durable repository job payloads include an
+additional internal wrapper within their own 65,536-byte bound. CLI creation and
+flow require explicit `--harness fake|opencode`; there is no implicit harness.
+
+Task views and `/tasks/{id}/verification` expose only verification `{id,status}`
+summaries, with bounded diagnostic reasons. Full reports (up to 8 MiB) come from
+`/verifications/{id}`; ordinary JSON replies stay bounded at 1 MiB. Reports are
+immutable history; current status also depends on selection, generation and custody.
 
 ## Retries, jobs and control
 

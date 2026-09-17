@@ -27,7 +27,9 @@ import (
 	r "github.com/korallis/letmecook/internal/repositories"
 	sc "github.com/korallis/letmecook/internal/scheduler"
 	"github.com/korallis/letmecook/internal/store"
+	v "github.com/korallis/letmecook/internal/verification"
 	"github.com/korallis/letmecook/internal/workflow"
+	p "github.com/korallis/letmecook/schemas/execution"
 )
 
 type ownerFixture struct {
@@ -500,6 +502,8 @@ func TestWorkflowJSONGoldenAndExitCodes(t *testing.T) {
 func TestReviewOverrideGoldenStillRefused(t *testing.T) {
 	f := newOwnerFixture(t)
 	taskID := workflow.IntentID("review", "task")
+	report := syntheticOwnerReport(v.Candidate{SelectionID: v.ID(), Identity: p.Identity{Generation: v.ID(), TaskID: taskID, AttemptID: v.ID(), Epoch: 1}, Manifest: p.Manifest{ManifestID: v.ID(), SHA256: strings.Repeat("a", 64), Bytes: 1}, BaseCommit: f.profile.Base.Commit})
+	report.RecreationFailure = "unqualified fixture"
 	task := store.Task{Brief: store.TaskBrief{TaskID: taskID, Criteria: []store.Criterion{{ID: "c1", Text: "passes"}}}, Phase: "awaiting_review"}
 	requested := false
 	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -508,7 +512,9 @@ func TestReviewOverrideGoldenStillRefused(t *testing.T) {
 		case r.Method == "GET" && r.URL.Path == "/api/v1/tasks/"+taskID:
 			json.NewEncoder(w).Encode(task)
 		case r.Method == "GET" && strings.HasSuffix(r.URL.Path, "/verification"):
-			fmt.Fprintf(w, `{"report":{"id":%q,"candidate":{"selection_id":%q},"checks":{"checks":[]},"evidence":[],"limitations":["unqualified"]},"status":{"verified":false,"reasons":["unqualified"]}}`, workflow.IntentID("review", "report"), workflow.IntentID("review", "selection"))
+			json.NewEncoder(w).Encode(v.Summarize(report.ID, v.Status{Verified: false, Reasons: []string{"unqualified"}}))
+		case r.Method == "GET" && r.URL.Path == "/api/v1/verifications/"+report.ID:
+			json.NewEncoder(w).Encode(report)
 		case r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/review"):
 			raw, _ := io.ReadAll(r.Body)
 			requested = strings.Contains(string(raw), "owner override requested: audit only")

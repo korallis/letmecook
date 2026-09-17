@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -116,12 +117,28 @@ func WorkflowJobHandlers(d Deps, options VerificationOptions) map[string]jobs.Ha
 		if err != nil {
 			return nil, err
 		}
-		grant, err := d.Store.ExecutionGrant(ctx, task.GrantHead)
+		// Verification is constrained by the envelope actually dispatched for this
+		// candidate, never by a later (possibly wider) approval on the task.
+		dispatchID := ""
+		for _, attempt := range task.Attempts {
+			if attempt.Identity == candidate.Identity {
+				dispatchID = attempt.DispatchID
+				break
+			}
+		}
+		if dispatchID == "" {
+			return nil, g.Deny("candidate_conflict", "dispatch")
+		}
+		dispatched, err := d.Store.Assignment(ctx, dispatchID)
 		if err != nil {
 			return nil, err
 		}
+		if dispatched.Assignment.Identity != candidate.Identity || dispatched.Request.TaskID != in.TaskID {
+			return nil, g.Deny("candidate_conflict", "dispatch")
+		}
+		envelope := dispatched.Request.Envelope
 		checks := v.TrustedChecks{ID: profileDigest, ApprovedBy: who.ID, ApprovalRef: profile.ID + ":" + strconv.FormatInt(profile.Revision, 10), Checks: []v.Check{}}
-		if len(grant.Envelope.Runners) == 0 {
+		if len(envelope.Runners) == 0 {
 			return nil, g.Deny("malformed", "runners")
 		}
 		for index, command := range profile.Verification.Commands {
@@ -160,7 +177,7 @@ func WorkflowJobHandlers(d Deps, options VerificationOptions) map[string]jobs.Ha
 		// Keep remote, pinned base and trusted commands unchanged; only the daemon's
 		// private checkout destination differs from the runner's execution root.
 		checkoutProfile := profile
-		checkoutProfile.RunnerRoots = []repositories.RunnerRoot{{RunnerID: grant.Envelope.Runners[0], Root: parent}}
+		checkoutProfile.RunnerRoots = []repositories.RunnerRoot{{RunnerID: envelope.Runners[0], Root: parent}}
 		checkoutDigest, err := checkoutProfile.Digest()
 		if err != nil {
 			return nil, err
@@ -179,7 +196,7 @@ func WorkflowJobHandlers(d Deps, options VerificationOptions) map[string]jobs.Ha
 		if err != nil {
 			return nil, err
 		}
-		report, err := v.Run(ctx, d.Store, d.Store, verifier, v.Request{ReportID: workflow.IntentID(j.ID, "verification"), Candidate: candidate, TrustedRepo: checkout.Path, PrivateParent: parent, Verifier: "gafferd:" + metadata.DaemonBoot, Checks: checks, Envelope: &grant.Envelope, RepositoryProfile: &profile})
+		report, err := v.Run(ctx, d.Store, d.Store, verifier, v.Request{ReportID: workflow.IntentID(j.ID, "verification"), Candidate: candidate, TrustedRepo: checkout.Path, PrivateParent: parent, Verifier: "gafferd:" + metadata.DaemonBoot, Checks: checks, Envelope: &envelope, RepositoryProfile: &profile})
 		if err != nil {
 			return nil, err
 		}
@@ -208,14 +225,23 @@ func init() {
 				if err := pathID(r); err != nil {
 					return nil, err
 				}
-				return d.Store.Verification(ctx, r.Path["id"])
+				report, err := d.Store.Verification(ctx, r.Path["id"])
+				if err != nil {
+					return nil, err
+				}
+				raw, err := json.Marshal(report)
+				if err != nil || len(raw) > v.MaxReportBytes {
+					return nil, g.Deny("store_unavailable", "verification_bounds")
+				}
+				// Explicit dedicated-report bound; do not enlarge ordinary JSON views.
+				return Response{Status: 200, Body: []byte(raw), Header: http.Header{"Content-Type": []string{"application/json"}, "Content-Length": []string{strconv.Itoa(len(raw))}}}, nil
 			}),
 			readRoute("/api/v1/tasks/{id}/verification", nil, func(ctx context.Context, a Actor, r Request) (any, error) {
 				if err := pathID(r); err != nil {
 					return nil, err
 				}
 				report, status, err := d.Store.CurrentVerification(ctx, r.Path["id"])
-				return map[string]any{"report": report, "status": status}, err
+				return v.Summarize(report.ID, status), err
 			}),
 			ownerRoute("POST", "/api/v1/tasks/{id}/review", ownerMutation(d, "task.review", func(ctx context.Context, a Actor, r Request, in reviewCommand) (any, int, error) {
 				if !p.ValidID(in.VerificationID) || !p.ValidID(in.SelectionID) || len(in.Notes) > 8192 || !slices.Contains([]string{"accept", "reject"}, in.Action) {

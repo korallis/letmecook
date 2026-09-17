@@ -120,7 +120,15 @@ The CLI explicitly defaults operations to read/verify/write; the API invents no
 scope. Paths are exact, portable, sorted paths, never globs or `.git` access.
 Tasks pin the registered repository's base. Protected paths are refused.
 
-`harness` is `fake` or `opencode`. `settings` is the direct harness-specific JSON
+The task request limit is **65,536 bytes for the entire encoded JSON envelope**,
+including IDs, scope, criteria, settings, and JSON escaping, not 65,536 bytes of
+brief prose. The normalized task must also fit that bound. Repository/eligibility
+requests have the same total-envelope ceiling; durable job payloads must also fit
+65,536 bytes including their internal wrapper. A field's individual bound does
+not reserve that many bytes independently of the enclosing request.
+
+`--harness fake|opencode` is required for both `task create` and `flow run`; there
+is no implicit fake execution choice. `settings` is the direct harness-specific JSON
 object, **not a `fake_spec` wrapper**. Fake example:
 
 ```json
@@ -147,11 +155,20 @@ Both daemon `--allow-development-profile macos-sandbox-exec-dev` and approval
 `--allow-development-isolation` are required. No flag qualifies it for unattended
 production execution. Verification defaults to `unqualified` refusal evidence;
 only explicit daemon profile selection enables the measured development verifier.
+Its constructor additionally requires an explicit private state directory. The
+outside-write canary lives under `STATE/verification-canary`, never inferred from
+HOME, outside verification workspaces and system-temp exceptions. State roots in
+`/tmp`, `/private/tmp`, `/var/folders`, or `/private/var/folders` are refused.
 
 `review accept --override-with-reason TEXT` records a requested reason in the
 submitted limitations. It **does not bypass** the service's verified-evidence gate:
 an unverified report still returns `verification_required`. This deliberately
 preserves `review.ValidateDecision` rather than treating a CLI flag as authority.
+Task get/list and `/tasks/{id}/verification` return a bounded verification
+`{id,status}` summary. Full evidence is read only from `/verifications/{id}`
+(`gaffer verify show UUID`), capped at 8 MiB; ordinary CLI/API replies remain
+capped at 1 MiB. The CLI fetches that report separately and uses server-current
+status, not a historical report's self-evaluation, before accepting.
 A new report or candidate selection invalidates earlier acceptance. Rejection is
 an explicit local decision, not publication or merge.
 

@@ -247,16 +247,9 @@ func TestOwnerHTTPSReadsReviewVerificationAndRetry(t *testing.T) {
 	if err != nil || len(entries) != 0 {
 		t.Fatal("private verification roots not cleaned", entries, err)
 	}
-	var current struct {
-		Report v.Report `json:"report"`
-		Status v.Status `json:"status"`
-	}
 	raw, _ = getOwner(t, client, endpoint, "/api/v1/tasks/"+taskID+"/verification", 200)
-	current = decodeOwner[struct {
-		Report v.Report `json:"report"`
-		Status v.Status `json:"status"`
-	}](t, raw)
-	if current.Status.Verified || current.Report.ID != verifiedID {
+	current := decodeOwner[v.Summary](t, raw)
+	if current.Status.Verified || current.ID != verifiedID {
 		t.Fatal(string(raw))
 	}
 	accept["message_id"] = v.ID()

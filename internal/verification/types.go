@@ -17,6 +17,9 @@ import (
 )
 
 const CaptureLimit = 16 << 10
+
+// MaxReportBytes is the dedicated report endpoint/storage bound, not a task-view bound.
+const MaxReportBytes = 8 << 20
 const UnqualifiedReason = "no proven Docker-free execution profile (#89)"
 const DevelopmentLimitation = "isolation profile macos-sandbox-exec-dev is a development profile: unqualified for unattended execution"
 const ContentLimitation = "manifest v1 binds content, not executable modes; recreated files use mode 0600"
@@ -219,7 +222,7 @@ func (r Report) Validate() error {
 		seen[e.CheckName], ids[e.ID] = true, true
 	}
 	b, err := json.Marshal(r)
-	if err != nil || len(b) > 8<<20 {
+	if err != nil || len(b) > MaxReportBytes {
 		return fmt.Errorf("verification bounds")
 	}
 	return nil
@@ -261,4 +264,24 @@ func Evaluate(r Report, current Candidate) Status {
 	}
 	s.Verified = len(s.Reasons) == 0
 	return s
+}
+
+// Summary keeps task and list views independent of potentially large evidence.
+type Summary struct {
+	ID     string `json:"id"`
+	Status Status `json:"status"`
+}
+
+// Summarize keeps diagnostics bounded; complete evidence is read by report ID.
+func Summarize(id string, status Status) Summary {
+	reasons := make([]string, 0, min(len(status.Reasons), 32))
+	for _, reason := range status.Reasons[:min(len(status.Reasons), 32)] {
+		runes := []rune(reason)
+		if len(runes) > 256 {
+			reason = string(runes[:256]) + "…"
+		}
+		reasons = append(reasons, reason)
+	}
+	status.Reasons = reasons
+	return Summary{ID: id, Status: status}
 }

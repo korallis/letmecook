@@ -168,8 +168,12 @@ func TestReviewAcceptUsesServerStatusNotSelfEvaluation(t *testing.T) {
 			io.WriteString(w, `{}`)
 			return
 		}
+		if strings.HasPrefix(r.URL.Path, "/api/v1/verifications/") {
+			json.NewEncoder(w).Encode(report)
+			return
+		}
 		if strings.HasSuffix(r.URL.Path, "/verification") {
-			json.NewEncoder(w).Encode(map[string]any{"report": report, "status": v.Status{Verified: false, Reasons: []string{"server observed stale or unavailable candidate"}}})
+			json.NewEncoder(w).Encode(v.Summarize(report.ID, v.Status{Verified: false, Reasons: []string{"server observed stale or unavailable candidate"}}))
 			return
 		}
 		json.NewEncoder(w).Encode(store.Task{Brief: store.TaskBrief{TaskID: taskID, Criteria: []store.Criterion{{ID: "c1", Text: "fixture"}}}})
