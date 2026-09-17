@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -325,6 +326,90 @@ func TestDevelopmentVerificationRefusesWideStateBeforeStartup(t *testing.T) {
 			for _, path := range []string{filepath.Join(state, "state.db"), artifacts} {
 				if _, err := os.Lstat(path); !os.IsNotExist(err) {
 					t.Fatal("refusal happened after store initialization", path, err)
+				}
+			}
+		})
+	}
+}
+
+// Invoke the real main in an owned child so its stderr and os.Exit are observable.
+func TestDaemonDiagnosticProcess(t *testing.T) {
+	if os.Getenv("GAFFER_DIAGNOSTIC_PROCESS") != "1" {
+		return
+	}
+	for n, arg := range os.Args {
+		if arg == "--" {
+			os.Args = append([]string{os.Args[0]}, os.Args[n+1:]...)
+			main()
+			return
+		}
+	}
+	t.Fatal("diagnostic child requires an argument separator")
+}
+
+func TestMainStartupDiagnostics(t *testing.T) {
+	_, cert, key := localCertificate(t, true)
+	cases := []struct {
+		name string
+		mode os.FileMode
+		want string
+	}{
+		{"missing-install-flags", 0, "configure --state-dir, --artifacts-dir and --listen"},
+		{"state-permissions", 0755, "mode 0700"},
+	}
+	if runtime.GOOS == "darwin" {
+		// The native development verifier rejects macOS system-temp exceptions.
+		cases = append(cases, struct {
+			name string
+			mode os.FileMode
+			want string
+		}{"system-temp-state", 0700, "outside system-temp exception roots"})
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			args := []string{"-test.run=^TestDaemonDiagnosticProcess$", "--"}
+			state := ""
+			if tc.mode != 0 {
+				parent := t.TempDir()
+				if tc.name == "system-temp-state" {
+					var err error
+					parent, err = os.MkdirTemp("/private/tmp", "gafferd-diagnostic-")
+					if err != nil {
+						t.Fatal(err)
+					}
+					t.Cleanup(func() { os.RemoveAll(parent) })
+				}
+				root, err := filepath.EvalSymlinks(parent)
+				if err != nil {
+					t.Fatal(err)
+				}
+				state = filepath.Join(root, "state")
+				if err := os.Mkdir(state, 0700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Chmod(state, tc.mode); err != nil {
+					t.Fatal(err)
+				}
+				args = append(args, "--state-dir", state, "--artifacts-dir", filepath.Join(root, "artifacts"), "--listen", "127.0.0.1:0", "--execution-listen", "127.0.0.1:0", "--endpoint", "https://127.0.0.1", "--tls-cert", cert, "--tls-key", key, "--allow-development-profile=macos-sandbox-exec-dev", "--verification-isolation-profile=macos-sandbox-exec-dev")
+			}
+			cmd := exec.CommandContext(ctx, os.Args[0], args...)
+			cmd.Env = append(os.Environ(), "GAFFER_DIAGNOSTIC_PROCESS=1")
+			var stdout, stderr bytes.Buffer
+			cmd.Stdout, cmd.Stderr = &stdout, &stderr
+			err := cmd.Run()
+			exit, ok := err.(*exec.ExitError)
+			if !ok || exit.ExitCode() != 1 || ctx.Err() != nil {
+				t.Fatalf("startup must exit 1 without hanging: %v; stderr=%s", err, stderr.String())
+			}
+			if stdout.Len() != 0 || !strings.Contains(stderr.String(), "gafferd startup or shutdown failed: ") || !strings.Contains(stderr.String(), tc.want) || state != "" && !strings.Contains(stderr.String(), state) {
+				t.Fatalf("missing actionable diagnostic or readiness claimed: stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			if state != "" {
+				info, err := os.Lstat(state)
+				if err != nil || info.Mode().Perm() != tc.mode {
+					t.Fatal("diagnostic refusal changed operator permissions", info, err)
 				}
 			}
 		})

@@ -252,7 +252,7 @@ func run(ctx context.Context, args []string, out io.Writer) (err error) {
 			}
 			verifier, err = verification.NewDevelopmentProfile(profile, time.Hour, *state)
 			if err != nil {
-				return err
+				return fmt.Errorf("development verification refused for state directory %q: requires a canonical directory with mode 0700 outside system-temp exception roots: %w", *state, err)
 			}
 		}
 		handlers := httpapi.WorkflowJobHandlers(d, httpapi.VerificationOptions{StateDir: *state, Profile: verifier})
@@ -352,8 +352,9 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := run(ctx, os.Args[1:], os.Stdout); err != nil {
-		// Startup inputs/paths and library errors may contain sensitive material.
-		fmt.Fprintln(os.Stderr, "gafferd startup or shutdown failed")
+		// Preserve actionable install diagnostics. Gateway configuration errors
+		// are sanitized by the loader; never print the configuration itself.
+		fmt.Fprintf(os.Stderr, "gafferd startup or shutdown failed: %v\n", err)
 		os.Exit(1)
 	}
 }

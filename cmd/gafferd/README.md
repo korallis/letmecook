@@ -71,7 +71,7 @@ Installation configuration is **flags only**:
 
 Choose any operator-controlled host meeting the local storage requirements. No
 configuration discovery from HOME, environment, files, repository plugins, accounts,
-proxy/router variables or a private network. Unknown/positional flags reject.
+proxy/router variables or a private network. Unknown/positional flags reject. Startup failures print their wrapped diagnostic to stderr and exit nonzero without a readiness claim; verification-state refusals name the configured path and required private mode or system-temp exclusion.
 The identity API accepts connections only; it never contacts, discovers or enrolls
 network hosts on its own. Runner runtime and 9Router clients remain absent; no
 provider credentials are stored.
