@@ -2,6 +2,10 @@ package runnerjournal
 
 import "golang.org/x/sys/unix"
 
+func renameNew(from, to string) error {
+	return unix.Renameat2(unix.AT_FDCWD, from, unix.AT_FDCWD, to, unix.RENAME_NOREPLACE)
+}
+
 func localFilesystem(fd int) error {
 	var s unix.Statfs_t
 	if err := unix.Fstatfs(fd, &s); err != nil {
