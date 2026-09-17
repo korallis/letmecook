@@ -52,16 +52,17 @@ type Options struct {
 }
 
 type event struct {
-	Kind         string          `json:"kind"`
-	Session      *Session        `json:"session,omitempty"`
-	Bounds       *Bounds         `json:"bounds,omitempty"`
-	Boot         string          `json:"boot,omitempty"`
-	Message      *p.Message      `json:"message,omitempty"`
-	Ack          *p.Message      `json:"ack,omitempty"`
-	Input        *store.Dispatch `json:"input,omitempty"`
-	PolicyDigest string          `json:"policy_digest,omitempty"`
-	At           int64           `json:"at"`
-	Reason       string          `json:"reason,omitempty"`
+	Kind         string             `json:"kind"`
+	Session      *Session           `json:"session,omitempty"`
+	Bounds       *Bounds            `json:"bounds,omitempty"`
+	Boot         string             `json:"boot,omitempty"`
+	Message      *p.Message         `json:"message,omitempty"`
+	Ack          *p.Message         `json:"ack,omitempty"`
+	Input        *store.Dispatch    `json:"input,omitempty"`
+	PolicyDigest string             `json:"policy_digest,omitempty"`
+	At           int64              `json:"at"`
+	Reason       string             `json:"reason,omitempty"`
+	Termination  *TerminationRecord `json:"termination,omitempty"`
 }
 type state struct {
 	Session      Session
@@ -78,14 +79,16 @@ type state struct {
 	Reason       string
 	Last         int64
 	Messages     map[string]p.Message
+	Termination  *TerminationRecord
 }
 
 type Runner struct {
-	mu      sync.Mutex
-	log     *j.Journal
-	options Options
-	state   state
-	failed  bool
+	mu                      sync.Mutex
+	log                     *j.Journal
+	options                 Options
+	state                   state
+	failed                  bool
+	beforeTerminationCommit func() // instance-local failure seam; nil in normal use
 }
 type Status struct {
 	RunnerBoot   string
@@ -96,6 +99,7 @@ type Status struct {
 	Reason       string
 	// Always false. Lease metadata is never a process launch capability.
 	ExecutionEnabled bool
+	Termination      *TerminationRecord
 }
 
 func id() string {
@@ -229,6 +233,9 @@ func reduce(old state, e event) (state, error) {
 		s.StopBy = nil
 		s.Last = e.At
 		return s, nil
+	}
+	if e.Kind == "termination" {
+		return reduceTermination(s, e)
 	}
 	if s.Stopped {
 		return old, ErrStopped
@@ -570,6 +577,10 @@ func (r *Runner) Stop() error {
 }
 func (r *Runner) status() Status {
 	s := Status{RunnerBoot: r.state.Boot, StopRequired: r.state.Stopped || r.failed, Quarantined: r.state.Stopped || r.failed, Reason: r.state.Reason}
+	if r.state.Termination != nil {
+		v := clone(*r.state.Termination)
+		s.Termination = &v
+	}
 	if r.failed {
 		s.Reason = "journal_unavailable"
 	}

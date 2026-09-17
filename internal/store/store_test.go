@@ -395,6 +395,10 @@ func TestOwnedStoreProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer s.Close()
+	if strings.HasPrefix(mode, "control-") {
+		ownedControl(t, s, mode)
+		return
+	}
 	if mode == "crash" || mode == "grant-crash" || mode == "dispatch-crash" {
 		err = sqlite.RegisterScalarFunction("owned_test_pause", 0, func(*sqlite.FunctionContext, []driver.Value) (driver.Value, error) {
 			fmt.Println("interrupted")

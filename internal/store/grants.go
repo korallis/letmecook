@@ -99,7 +99,10 @@ func liveGrant(ctx context.Context, tx *sql.Tx, grant g.Grant, now int64) error 
 
 func invalidateGrant(ctx context.Context, tx *sql.Tx, id, reason, actor string, now int64) error {
 	_, err := tx.ExecContext(ctx, "INSERT INTO execution_invalidations(grant_id,reason,actor,at_ms) VALUES(?,?,?,?)", id, reason, actor, now)
-	return err
+	if err != nil {
+		return err
+	}
+	return latchInvalidations(ctx, tx)
 }
 
 func (s *Store) changeExecution(ctx context.Context, expectedID string, grant g.Grant, approval bool) (g.Grant, error) {
@@ -320,7 +323,10 @@ func expireGrants(ctx context.Context, tx *sql.Tx, now int64) error {
 	_, err := tx.ExecContext(ctx, `INSERT INTO execution_invalidations(grant_id,reason,actor,at_ms)
 SELECT g.id,'expired','clock',? FROM execution_grants g JOIN execution_grant_heads h ON h.grant_id=g.id
 WHERE g.expires_ms<=? AND NOT EXISTS(SELECT 1 FROM execution_invalidations i WHERE i.grant_id=g.id) ORDER BY g.id`, now, now)
-	return err
+	if err != nil {
+		return err
+	}
+	return latchInvalidations(ctx, tx)
 }
 
 // Invalidation is a durable, replayable signal for #19 stop/reconciliation, NOT

@@ -371,6 +371,16 @@ func (s *Store) CustodyResult(ctx context.Context, request CustodyRequest) (Cust
 		return CustodyReceipt{}, err
 	}
 	defer tx.Rollback()
+	stopped, err := controlResultFenced(ctx, tx, request.Result.Identity)
+	if err != nil {
+		return CustodyReceipt{}, err
+	}
+	if stopped {
+		q = true
+		if err := controlFence(ctx, tx, request.Result, "revoked_or_expired"); err != nil {
+			return CustodyReceipt{}, err
+		}
+	}
 	now := time.Now().UnixMilli()
 	if _, err = tx.ExecContext(ctx, "INSERT INTO artifact_manifests VALUES(?,?,?,?,?,?)", want.ManifestID, want.SHA256, want.Bytes, request.Manifest, now, map[bool]string{true: "quarantined", false: "committed"}[q]); err != nil {
 		return CustodyReceipt{}, err

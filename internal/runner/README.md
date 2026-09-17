@@ -45,7 +45,10 @@ and subsequent operations. Failed persistence poisons the handle and signals sto
 
 `Tick` is an explicit metadata check, **not an autonomous watchdog**. Its returned
 deadline is not installed in a production supervisor and cannot authorize launch.
-No process is marked terminated, and local stop never implies remote quiescence.
+The explicit `TerminateProcessGroup` library experiment can separately journal
+observed disappearance of an externally owned process group; see
+[`internal/control`](../control/README.md) for its trust and containment limits.
+It does not install a watchdog. Local stop never implies remote quiescence.
 Future integration must enforce measured suspend-inclusive timing and complete
 process-tree termination outside untrusted job code. The clock/bounds callbacks
 are testable seams, not measurement evidence or safe production defaults.
@@ -93,7 +96,7 @@ bytes remain recovery input rather than being silently discarded. The existing
 Go foundation CI includes both packages on Linux and macOS.
 
 Still missing: real transport/bootstrap integration, qualified watchdog and
-process identity/launch/stop, no-launch evidence, real adapter smoke, suspension
+contained process identity/launch/stop, no-launch evidence, real adapter smoke, suspension
 and reboot measurements, result custody, full output spooling and reconciliation.
 Passing these tests establishes library behavior only, not supported execution
 or original M1 acceptance.

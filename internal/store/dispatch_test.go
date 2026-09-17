@@ -22,7 +22,7 @@ import (
 )
 
 // Prior-schema fixtures remove new objects before replaying old migrations.
-const dropDispatchSchema = `DROP TABLE dispatch_acks; DROP TABLE dispatch_releases; DROP TABLE dispatches; DROP TABLE dispatch_eligibility; DROP TABLE dispatch_stops;`
+const dropDispatchSchema = dropControlSchema + `DROP TABLE dispatch_acks; DROP TABLE dispatch_releases; DROP TABLE dispatches; DROP TABLE dispatch_eligibility; DROP TABLE dispatch_stops;`
 
 type dispatchFixture struct {
 	s                        *Store
@@ -798,7 +798,7 @@ func TestDispatchSchemaFiveMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer r.Close()
-	if r.meta.SchemaVersion != 7 {
+	if r.meta.SchemaVersion != 8 {
 		t.Fatal(r.meta)
 	}
 	view := snapshot(t, r)

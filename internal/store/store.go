@@ -22,13 +22,16 @@ import (
 )
 
 type Store struct {
-	mu        sync.Mutex
-	db        *sql.DB
-	lock      *os.File
-	dir       string
-	artifacts string
-	meta      a.Metadata
-	fixture   bool
+	mu           sync.Mutex
+	db           *sql.DB
+	lock         *os.File
+	dir          string
+	artifacts    string
+	meta         a.Metadata
+	fixture      bool
+	controlStart time.Time
+	controlNow   func() time.Time
+	controlHook  func(string) error // instance-local failure/crash seam; nil in normal use
 }
 
 func newID() string {
@@ -105,7 +108,7 @@ func openStore(ctx context.Context, dir string, fixture bool) (_ *Store, err err
 	if err != nil {
 		return nil, err
 	}
-	s := &Store{lock: lock, dir: dir, fixture: fixture}
+	s := &Store{lock: lock, dir: dir, fixture: fixture, controlStart: time.Now(), controlNow: time.Now}
 	defer func() {
 		if err != nil {
 			err = errors.Join(err, s.Close())
@@ -227,7 +230,7 @@ func (s *Store) migrate(ctx context.Context) error {
 			}
 		}
 		version = 1
-	} else if version != 1 && (s.fixture || version != 2 && version != 3 && version != 4 && version != 5 && version != 6 && version != 7) {
+	} else if version != 1 && (s.fixture || version != 2 && version != 3 && version != 4 && version != 5 && version != 6 && version != 7 && version != 8) {
 		return fmt.Errorf("unsupported schema version")
 	}
 	mode := "fixture-only"
@@ -271,6 +274,12 @@ PRAGMA user_version=2;`); err != nil {
 				return err
 			}
 			version = 7
+		}
+		if version == 7 {
+			if _, err = tx.ExecContext(ctx, controlSchema); err != nil {
+				return err
+			}
+			version = 8
 		}
 		if err = expireGrants(ctx, tx, time.Now().UnixMilli()); err != nil {
 			return err
