@@ -498,7 +498,7 @@ func TestVerificationSchemaEightMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.Exec(dropVerificationSchema + "PRAGMA user_version=8"); err != nil {
+	if _, err = db.Exec(dropSchema10 + dropVerificationSchema + "PRAGMA user_version=8"); err != nil {
 		t.Fatal(err)
 	}
 	if err = db.Close(); err != nil {
@@ -509,7 +509,7 @@ func TestVerificationSchemaEightMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer reopened.Close()
-	if reopened.meta.SchemaVersion != 9 || reopened.meta.Generation != generation {
+	if reopened.meta.SchemaVersion != 10 || reopened.meta.Generation != generation {
 		t.Fatal(reopened.meta)
 	}
 	if _, err = reopened.SelectVerificationCandidate(ctx, "", report.Candidate.Manifest); err != nil {

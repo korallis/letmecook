@@ -36,6 +36,9 @@ const (
 	DelayedReply           Refusal = "delayed_reply"
 	AckNotDurable          Refusal = "ack_not_durable"
 	ReconciliationRequired Refusal = "reconciliation_required"
+	// LocalPolicyDenied: the runner's own policy refuses an otherwise valid
+	// assignment; sent before acceptance, never after a launch.
+	LocalPolicyDenied Refusal = "local_policy_denied"
 )
 
 type Identity struct {
@@ -221,7 +224,7 @@ func Decode(data []byte) (Message, error) {
 		r, ok := m["route"].(map[string]any)
 		valid = matches(m["assignment_id"], uuid) && matches(m["input_digest"], hash) && ok &&
 			fields(r, "route_ref", "decision_digest", "policy_digest", "limits_profile") && matches(r["route_ref"], routeRef) &&
-			matches(r["decision_digest"], hash) && matches(r["policy_digest"], hash) && in(r["limits_profile"], any("strict-provider-output-v1"), any("native-subscription-local-v1"))
+			matches(r["decision_digest"], hash) && matches(r["policy_digest"], hash) && in(r["limits_profile"], any("strict-provider-output-v1"), any("native-subscription-local-v1"), any("gateway-local-bounds-v1"))
 	case "lease_request", "lease_reply":
 		valid = matches(m["nonce"], uuid) && matches(m["runner_boot"], uuid) && matches(m["daemon_boot"], uuid)
 		if kind == "lease_request" {
@@ -248,14 +251,14 @@ func Decode(data []byte) (Message, error) {
 			valid = valid && matches(m["stop_id"], uuid)
 		}
 		if kind == "terminated" {
-			valid = valid && in(m["confirmed_process"], any("not_started"), any("terminated")) &&
+			valid = valid && in(m["confirmed_process"], any("not_started"), any("terminated"), any("unknown")) &&
 				in(m["remote_work"], any("quiescent"), any("unknown")) && matches(m["evidence_digest"], hash)
 		}
 	case "refuse":
 		reason, ok := m["reason"].(string)
 		valid = ok && matches(m["in_reply_to"], uuid) && in(Refusal(reason), Malformed, Oversized, UnknownVersion,
 			StaleGeneration, StaleAttempt, IdentityConflict, RevisionConflict, InvalidTransition,
-			NonceMismatch, BootMismatch, DelayedReply, AckNotDurable, ReconciliationRequired)
+			NonceMismatch, BootMismatch, DelayedReply, AckNotDurable, ReconciliationRequired, LocalPolicyDenied)
 	}
 	if !valid {
 		return Message{}, Malformed

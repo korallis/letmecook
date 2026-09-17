@@ -141,7 +141,8 @@ func canonicalManifest(raw []byte, result p.Message) (CandidateManifest, []Artif
 	seen := map[string]bool{}
 	for _, group := range [][]ArtifactBlob{m.Tracked, m.Untracked, m.Binary, m.Recovery} {
 		for _, b := range group {
-			if !safeArtifactPath(b.Path) || !validHex(b.SHA256) || b.Bytes < 1 || b.Bytes > maxArtifactBytes || seen[b.Path] {
+			// Zero-byte files are real candidate content (an emptied file is a change).
+			if !safeArtifactPath(b.Path) || !validHex(b.SHA256) || b.Bytes < 0 || b.Bytes > maxArtifactBytes || seen[b.Path] {
 				return CandidateManifest{}, nil, fmt.Errorf("manifest path/blob")
 			}
 			seen[b.Path] = true
@@ -264,7 +265,9 @@ func (s *Store) CustodyResult(ctx context.Context, request CustodyRequest) (Cust
 		if oldID != want.ManifestID || oldHash != want.SHA256 || oldBytes != want.Bytes {
 			return CustodyReceipt{}, p.IdentityConflict
 		}
-		return custodyReply(request.Result, receipt, quarantined != 0), nil
+		// A retained receipt from a retired generation is history, never current:
+		// replay after restore reports it quarantined under the current generation.
+		return custodyReply(request.Result, receipt, quarantined != 0 || request.Result.Identity.Generation != s.meta.Generation), nil
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return CustodyReceipt{}, err
@@ -406,7 +409,9 @@ func (s *Store) CustodyResult(ctx context.Context, request CustodyRequest) (Cust
 			return CustodyReceipt{}, err
 		}
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO artifact_results VALUES(?,?,?,?,?,?,?,?,?,?,?)", request.Result.Identity.Generation, request.Result.Identity.TaskID, request.Result.Identity.AttemptID, request.Result.Identity.Epoch, want.ManifestID, want.SHA256, want.Bytes, receipt, !q, q, now); err != nil {
+	// Custody never names a current result: artifact_result_heads (schema 10) does
+	// that only after evidence-checked finalization, so current is always 0 here.
+	if _, err = tx.ExecContext(ctx, "INSERT INTO artifact_results VALUES(?,?,?,?,?,?,?,?,?,?,?)", request.Result.Identity.Generation, request.Result.Identity.TaskID, request.Result.Identity.AttemptID, request.Result.Identity.Epoch, want.ManifestID, want.SHA256, want.Bytes, receipt, 0, q, now); err != nil {
 		return CustodyReceipt{}, err
 	}
 	if err = artifactStep("before_metadata_commit"); err != nil {
@@ -420,9 +425,12 @@ func (s *Store) CustodyResult(ctx context.Context, request CustodyRequest) (Cust
 	}
 	return custodyReply(request.Result, receipt, q), nil
 }
+
+// custodyReply is deterministic in the receipt: a replayed or lost acknowledgement
+// is byte-identical to the first one, so the runner journal can dedupe it.
 func custodyReply(result p.Message, receipt string, q bool) CustodyReceipt {
 	r := p.Receipt{Identity: result.Identity, Manifest: *result.Manifest, ReceiptID: receipt, Artifacts: "verified_durable", Metadata: "manifest_and_result_committed"}
-	ack := p.Message{Version: result.Version, MessageID: newID(), Kind: "result_ack", Identity: result.Identity, Manifest: result.Manifest, ReceiptID: receipt}
+	ack := p.Message{Version: result.Version, MessageID: dispatchID(receipt, "ack"), Kind: "result_ack", Identity: result.Identity, Manifest: result.Manifest, ReceiptID: receipt}
 	return CustodyReceipt{Receipt: r, Ack: ack, Quarantined: q}
 }
 

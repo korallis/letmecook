@@ -13,6 +13,8 @@ import (
 	"os"
 	"slices"
 	"time"
+
+	p "github.com/korallis/letmecook/schemas/execution"
 )
 
 const Version = "identity-provisional-v1"
@@ -130,4 +132,15 @@ func ServerTLS(certFile, keyFile string) (*tls.Config, error) {
 			return err
 		},
 	}, nil
+}
+
+// ExecutionTLS uses the same client pins and certificate rules as ServerTLS,
+// but advertises only the provisional execution-channel ALPN.
+func ExecutionTLS(certFile, keyFile string) (*tls.Config, error) {
+	cfg, err := ServerTLS(certFile, keyFile)
+	if err != nil {
+		return nil, err
+	}
+	cfg.NextProtos = []string{p.FencedVersion}
+	return cfg, nil
 }

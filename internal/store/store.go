@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	sc "github.com/korallis/letmecook/internal/scheduler"
 	p "github.com/korallis/letmecook/schemas/execution"
 	a "github.com/korallis/letmecook/schemas/readapi"
 	"github.com/korallis/letmecook/tests/fixtures/protocol/data"
@@ -29,9 +30,50 @@ type Store struct {
 	artifacts    string
 	meta         a.Metadata
 	fixture      bool
+	admission    sc.AdmissionPolicy
 	controlStart time.Time
 	controlNow   func() time.Time
 	controlHook  func(string) error // instance-local failure/crash seam; nil in normal use
+}
+
+// ErrNotImplemented is returned by every M1 seam stub (execution, uploads,
+// finalize, workflow, backup, reconcile) until its owning slice replaces the body.
+// Callers must treat it as a refusal, never as success or as an empty result.
+var ErrNotImplemented = errors.New("store: not implemented")
+
+// Options is explicit operator configuration for a persistent store. It never
+// comes from a request, a runner or a fixture.
+type Options struct {
+	// Admission names the development isolation profiles the daemon may admit
+	// (gafferd --allow-development-profile). The zero value refuses them all.
+	Admission sc.AdmissionPolicy
+}
+
+// upgrade is one ordered persistent-schema step. Each SQL body runs inside the
+// single startup transaction and sets PRAGMA user_version to from+1 itself.
+type upgrade struct {
+	from int
+	sql  string
+}
+
+const schema2 = `ALTER TABLE metadata ADD COLUMN artifacts_dir TEXT NOT NULL DEFAULT '';
+CREATE TRIGGER events_no_update BEFORE UPDATE ON events BEGIN SELECT RAISE(ABORT,'events are append-only'); END;
+CREATE TRIGGER events_no_delete BEFORE DELETE ON events BEGIN SELECT RAISE(ABORT,'events are append-only'); END;
+PRAGMA user_version=2;`
+
+// upgrades is the complete persistent migration chain, ascending and gapless from
+// 1 to readapi.SchemaVersion. Later needs are new numbered files appended here by
+// the store owner; steps are never edited once released.
+var upgrades = []upgrade{
+	{1, schema2},
+	{2, identitySchema},
+	{3, grantSchema},
+	{4, repositorySchema},
+	{5, dispatchSchema},
+	{6, artifactSchema},
+	{7, controlSchema},
+	{8, verificationSchema},
+	{9, schema10},
 }
 
 func newID() string {
@@ -78,9 +120,17 @@ func open(ctx context.Context, dir string) (*Store, error) {
 	return openStore(ctx, dir, true)
 }
 
-// Open creates or reopens persistent, non-executing metadata. Paths are explicit;
-// no fixture import, restore, runner or artifact custody is provided.
+// Open creates or reopens persistent, non-executing metadata with zero Options:
+// no development isolation profile is admissible. Paths are explicit; no fixture
+// import, restore, runner or artifact custody is provided.
 func Open(ctx context.Context, dir, artifactsDir string) (*Store, error) {
+	return OpenWithOptions(ctx, dir, artifactsDir, Options{})
+}
+
+// OpenWithOptions is Open with explicit operator configuration. The admission
+// policy is threaded into Dispatch, Delivery and AcknowledgeAssignment; it is
+// process configuration, never persisted, so every restart must supply it again.
+func OpenWithOptions(ctx context.Context, dir, artifactsDir string, o Options) (*Store, error) {
 	var err error
 	if dir, err = prepareDirectory(dir); err != nil {
 		return nil, err
@@ -100,6 +150,7 @@ func Open(ctx context.Context, dir, artifactsDir string) (*Store, error) {
 		return nil, err
 	}
 	s.artifacts = artifactsDir
+	s.admission = o.Admission
 	return s, nil
 }
 
@@ -114,6 +165,13 @@ func openStore(ctx context.Context, dir string, fixture bool) (_ *Store, err err
 			err = errors.Join(err, s.Close())
 		}
 	}()
+	// A failed restore marks its target; never serve a partially restored state.
+	if _, e := os.Lstat(filepath.Join(dir, ".restore-incomplete")); !os.IsNotExist(e) {
+		if e != nil {
+			return nil, e
+		}
+		return nil, fmt.Errorf("incomplete restore; use fresh empty restore targets")
+	}
 	for _, name := range []string{"state.db", "state.db-wal", "state.db-shm", "state.db-journal"} {
 		st, e := os.Lstat(filepath.Join(dir, name))
 		if e != nil && !os.IsNotExist(e) {
@@ -230,62 +288,27 @@ func (s *Store) migrate(ctx context.Context) error {
 			}
 		}
 		version = 1
-	} else if version != 1 && (s.fixture || version != 2 && version != 3 && version != 4 && version != 5 && version != 6 && version != 7 && version != 8 && version != 9) {
+	} else if version != 1 && (s.fixture || version < 2 || version > a.SchemaVersion) {
 		return fmt.Errorf("unsupported schema version")
 	}
 	mode := "fixture-only"
 	if !s.fixture {
 		mode = "store-only"
-		if version == 1 {
-			if _, err = tx.ExecContext(ctx, `ALTER TABLE metadata ADD COLUMN artifacts_dir TEXT NOT NULL DEFAULT '';
-CREATE TRIGGER events_no_update BEFORE UPDATE ON events BEGIN SELECT RAISE(ABORT,'events are append-only'); END;
-CREATE TRIGGER events_no_delete BEFORE DELETE ON events BEGIN SELECT RAISE(ABORT,'events are append-only'); END;
-PRAGMA user_version=2;`); err != nil {
+		for _, step := range upgrades {
+			if version != step.from {
+				continue
+			}
+			if _, err = tx.ExecContext(ctx, step.sql); err != nil {
 				return err
 			}
-			version = 2
+			version = step.from + 1
 		}
-		if version == 2 {
-			if _, err = tx.ExecContext(ctx, identitySchema); err != nil {
-				return err
-			}
-			version = 3
+		var applied int
+		if err = tx.QueryRowContext(ctx, "PRAGMA user_version").Scan(&applied); err != nil {
+			return err
 		}
-		if version == 3 {
-			if _, err = tx.ExecContext(ctx, grantSchema); err != nil {
-				return err
-			}
-			version = 4
-		}
-		if version == 4 {
-			if _, err = tx.ExecContext(ctx, repositorySchema); err != nil {
-				return err
-			}
-			version = 5
-		}
-		if version == 5 {
-			if _, err = tx.ExecContext(ctx, dispatchSchema); err != nil {
-				return err
-			}
-			version = 6
-		}
-		if version == 6 {
-			if _, err = tx.ExecContext(ctx, artifactSchema); err != nil {
-				return err
-			}
-			version = 7
-		}
-		if version == 7 {
-			if _, err = tx.ExecContext(ctx, controlSchema); err != nil {
-				return err
-			}
-			version = 8
-		}
-		if version == 8 {
-			if _, err = tx.ExecContext(ctx, verificationSchema); err != nil {
-				return err
-			}
-			version = 9
+		if version != a.SchemaVersion || applied != version {
+			return fmt.Errorf("migration chain incomplete: reached %d, recorded %d", version, applied)
 		}
 		if err = expireGrants(ctx, tx, time.Now().UnixMilli()); err != nil {
 			return err
@@ -554,7 +577,9 @@ func (s *Store) Snapshot(ctx context.Context, taskID string, limit int) (a.Snaps
 	if taskID != "" && len(v.Tasks) == 0 {
 		return v, sql.ErrNoRows
 	}
-	rows, err = tx.QueryContext(ctx, `SELECT sequence,revision,message FROM events WHERE (?='' OR task_id=?) ORDER BY sequence LIMIT ?`, taskID, taskID, limit)
+	// The bounded read projection carries the current generation only; retired
+	// generations stay in the immutable log for the history reads.
+	rows, err = tx.QueryContext(ctx, `SELECT sequence,revision,message FROM events WHERE json_extract(message,'$.identity.generation')=? AND (?='' OR task_id=?) ORDER BY sequence LIMIT ?`, s.meta.Generation, taskID, taskID, limit)
 	if err != nil {
 		return v, err
 	}

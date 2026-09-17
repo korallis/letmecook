@@ -1,5 +1,5 @@
 // Package httpapi serves bounded store reads and the provisional mTLS identity API.
-// Only fixtures expose the embedded shell. No execution surface.
+// Only fixtures expose the embedded shell; execution uses a separate listener.
 package httpapi
 
 import (
@@ -12,9 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
 
-	i "github.com/korallis/letmecook/internal/identity"
 	"github.com/korallis/letmecook/internal/store"
 	p "github.com/korallis/letmecook/schemas/execution"
 	a "github.com/korallis/letmecook/schemas/readapi"
@@ -43,68 +41,12 @@ func New(s *store.Store, addr net.Addr) (http.Handler, error) {
 	return newAPI(s, tcp.String(), false)
 }
 
-func newAPI(s *store.Store, host string, secure bool) (http.Handler, error) {
-	metadata, err := s.Status(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	slots := make(chan struct{}, 16)
+// legacyAPI retains the identity and read response/query contract unchanged.
+// guard and the shared control pool run before this handler.
+func legacyAPI(s *store.Store, metadata a.Status, secure bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "no-store")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
-		w.Header().Set("Cross-Origin-Resource-Policy", "same-origin")
-		refuse := func(status int, code string) {
-			version := a.Version
-			if secure && strings.HasPrefix(r.URL.Path, "/api/v1/identity/") {
-				version = i.Version
-			}
-			w.WriteHeader(status)
-			json.NewEncoder(w).Encode(struct {
-				Version             string   `json:"version"`
-				Error               string   `json:"error"`
-				Mode                string   `json:"mode"`
-				MissingCapabilities []string `json:"missing_capabilities"`
-			}{version, code, metadata.Mode, a.MissingCapabilities()})
-		}
-		peer, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil || (!secure && !net.ParseIP(peer).IsLoopback()) || r.Host != host || r.URL.IsAbs() || r.URL.Host != "" {
-			refuse(403, "boundary_refused")
-			return
-		}
-		if origins := r.Header.Values("Origin"); len(origins) > 1 || len(origins) == 1 && (secure || origins[0] != "http://"+host) {
-			refuse(403, "origin_refused")
-			return
-		}
-		for name := range r.Header {
-			if strings.HasPrefix(strings.ToLower(name), "x-forwarded-") || strings.EqualFold(name, "Forwarded") {
-				refuse(403, "proxy_refused")
-				return
-			}
-		}
-		if site := r.Header.Get("Sec-Fetch-Site"); site != "" && site != "same-origin" && site != "none" {
-			refuse(403, "origin_refused")
-			return
-		}
-		if len(r.RequestURI) > 512 || r.Header.Get("Content-Encoding") != "" || (secure && (r.Header.Get("Cookie") != "" || r.Header.Get("Authorization") != "")) {
-			refuse(400, "invalid_request")
-			return
-		}
-		if r.URL.RawPath != "" {
-			refuse(404, "not_found")
-			return
-		}
-		select {
-		case slots <- struct{}{}:
-			defer func() { <-slots }()
-		default:
-			refuse(503, "busy")
-			return
-		}
-		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-		defer cancel()
-		r = r.WithContext(ctx)
+		ctx := r.Context()
+		refuse := legacyRefuse(metadata, secure, w, r)
 		if secure && identityAPI(s, w, r, refuse) {
 			return
 		}
@@ -190,5 +132,5 @@ func newAPI(s *store.Store, host string, secure bool) (http.Handler, error) {
 			return
 		}
 		w.Write(b)
-	}), nil
+	})
 }

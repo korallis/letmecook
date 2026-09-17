@@ -213,7 +213,10 @@ func (e Envelope) Validate() error {
 			if b.ProviderOutputTokens == 0 {
 				return Deny("incompatible_route_policy", "provider_output_tokens")
 			}
-		case "native-subscription-local-v1":
+		case "native-subscription-local-v1", "gateway-local-bounds-v1":
+			// Neither profile can enforce a provider output-token or monetary cap.
+			// gateway-local-bounds-v1: the configured model gateway owns accounts and
+			// billing; Gaffer enforces only its local bounds (docs/decisions/0002 §6).
 			if b.ProviderOutputTokens != 0 || b.ProviderCostMicros != nil {
 				return Deny("incompatible_route_policy", "provider_bounds")
 			}
@@ -221,10 +224,15 @@ func (e Envelope) Validate() error {
 			return Deny("incompatible_route_policy", "limits_profile")
 		}
 		for _, t := range r.Targets {
-			if !reference.MatchString(t.Provider) || !model.MatchString(t.Model) || !slices.Contains([]string{"subscription", "metered"}, t.Billing) {
+			if !reference.MatchString(t.Provider) || !model.MatchString(t.Model) || !slices.Contains([]string{"subscription", "metered", "gateway-managed"}, t.Billing) {
 				return Deny("malformed", "provider_model_billing")
 			}
 			if r.LimitsProfile == "native-subscription-local-v1" && t.Billing != "subscription" {
+				return Deny("incompatible_route_policy", "billing")
+			}
+			// gateway-managed billing exists only under the gateway profile, and that
+			// profile classifies every reachable target as gateway-managed.
+			if (r.LimitsProfile == "gateway-local-bounds-v1") != (t.Billing == "gateway-managed") {
 				return Deny("incompatible_route_policy", "billing")
 			}
 		}

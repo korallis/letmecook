@@ -49,6 +49,14 @@ type Options struct {
 	// must be included or explicitly invalidate via Stop; no measured clock ships.
 	MonotonicMS func() int64
 	WallTime    func() time.Time
+	// Admission is the supervisor's own operator-authorized development-profile
+	// policy (gaffer-runner --isolation-profile). Accept rechecks the daemon's
+	// admission against it; the zero value refuses every development profile.
+	Admission sc.AdmissionPolicy
+	// Boot, when set, is the supervisor process boot that Create records instead of
+	// minting one, so every journal this process creates shares the boot it
+	// published in its facts. Open ignores it: a reopen always mints a restart boot.
+	Boot string
 }
 
 type event struct {
@@ -128,10 +136,14 @@ func validConfiguration(s Session, bounds Bounds) bool {
 
 // Create requires a new private journal directory and explicit trusted inputs.
 func Create(path string, o Options) (*Runner, error) {
-	if !validOptions(o) {
+	if !validOptions(o) || o.Boot != "" && !p.ValidID(o.Boot) {
 		return nil, p.Malformed
 	}
-	e := event{Kind: "init", Session: &o.Session, Bounds: &o.Bounds, Boot: id(), At: o.MonotonicMS()}
+	boot := o.Boot
+	if boot == "" {
+		boot = id()
+	}
+	e := event{Kind: "init", Session: &o.Session, Bounds: &o.Bounds, Boot: boot, At: o.MonotonicMS()}
 	s, err := reduce(state{}, e)
 	if err != nil {
 		return nil, err
@@ -448,7 +460,9 @@ func (r *Runner) Accept(session Session, dispatch store.Dispatch) (p.Message, er
 	if !reflect.DeepEqual(local, dispatch.Facts) || local.RunnerBoot != r.state.Boot || local.Repository.RunnerRoot.RunnerID != session.RunnerID {
 		return p.Message{}, ErrPolicy
 	}
-	if err = sc.CheckDispatch(dispatch.Request, dispatch.Decision, local, r.options.WallTime().UnixMilli()); err != nil {
+	// The supervisor's own policy decides whether a development profile the daemon
+	// admitted is acceptable here; a mismatch refuses rather than trusting the daemon.
+	if err = sc.CheckDispatchWithPolicy(dispatch.Request, dispatch.Decision, local, r.options.WallTime().UnixMilli(), r.options.Admission); err != nil {
 		return p.Message{}, err
 	}
 	capacity := local.Capacity.Values()

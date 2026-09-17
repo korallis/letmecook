@@ -42,7 +42,11 @@ Use [operator-selected deployment](../spec.md#12-operator-selected-deployment).
    and enforceable budgets under the explicitly allowed limits profiles.
    `strict-provider-output-v1` remains the default for existing grants. Native
    local limits require explicit operator authority and exclude tasks or grants
-   requiring either hard provider bound. Missing, stale or mismatched mandatory
+   requiring either hard provider bound. `gateway-local-bounds-v1` (M1 development
+   path, [decision 0002](../decisions/0002-m1-end-to-end-integration.md) §6) does
+   the same for a configured model gateway endpoint: every target carries billing
+   `gateway-managed`, that billing value is invalid under any other profile, and no
+   provider output-token or cost guarantee follows. Missing, stale or mismatched mandatory
    capability evidence excludes the candidate. Unknown optional performance evidence is
    recorded separately. Discovery and configured account presence are not readiness.
 3. **Rank eligible choices.** Compare task fit using versioned operator preferences

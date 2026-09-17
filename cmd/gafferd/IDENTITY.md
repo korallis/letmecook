@@ -34,6 +34,14 @@ on every request, including existing keep-alive connections. No TLS termination
 proxy/forwarding exception exists. This is HTTPS `http/1.1`, **not** the execution
 contract's `execution-provisional-v2` ALPN; O2/O6 execution reconciliation remains open.
 
+A separate `--execution-listen IP:port` is now required with the HTTPS install
+flags. It uses the same stored pins and TLS client-leaf validation, but negotiates
+only `execution-provisional-v2` before serving HTTP/1.1 under `/x/v1`; every request
+requires an enabled runner. The owner listener and identity API remain on
+`http/1.1`. Host on the second listener is its accepted socket's IP:port, so include
+that IP in the server certificate SANs. This is a provisional empty route seam,
+not execution permission, eligibility or a supported runtime.
+
 1. Generate the owner key outside any repository/worker sandbox in a private
    directory. With OpenSSL 3, for example (repeat on each selected runner using
    runner-specific filenames; do not copy private keys between machines):
@@ -67,7 +75,8 @@ contract's `execution-provisional-v2` ALPN; O2/O6 execution reconciliation remai
 
    ```sh
    .local/gafferd --state-dir "$state" --artifacts-dir "$artifacts" \
-     --listen "$selected_ip:$port" --endpoint "https://$selected_name:$port" \
+     --listen "$selected_ip:$port" --execution-listen "$selected_ip:$execution_port" \
+     --endpoint "https://$selected_name:$port" \
      --tls-cert "$credentials/server.crt" --tls-key "$credentials/server.key"
    ```
 

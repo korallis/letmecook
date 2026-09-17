@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"time"
 
 	p "github.com/korallis/letmecook/schemas/execution"
@@ -32,6 +33,12 @@ const (
 
 var ErrFenced = errors.New("stop_fenced")
 
+// LocalStopCauses are the runner-originated cancel_attempt causes a supervisor
+// may latch without an owner stop or a lease expiry: it shut down, a launch
+// failed after acceptance, containment could not be confirmed, or its local
+// policy drifted. They never release a reservation by themselves.
+var LocalStopCauses = []string{"runner_shutdown", "launch_failed", "containment_unconfirmed", "local_policy_drift"}
+
 type Request struct {
 	ID        string `json:"id"`
 	Kind      Kind   `json:"kind"`
@@ -51,7 +58,7 @@ func (r Request) Validate() error {
 			return p.Malformed
 		}
 	case CancelAttempt:
-		if !p.ValidID(r.TaskID) || !p.ValidID(r.AttemptID) || r.GrantID != "" || (r.Cause != "operator" && r.Cause != "lease_expired") {
+		if !p.ValidID(r.TaskID) || !p.ValidID(r.AttemptID) || r.GrantID != "" || (r.Cause != "operator" && r.Cause != "lease_expired" && !slices.Contains(LocalStopCauses, r.Cause)) {
 			return p.Malformed
 		}
 	case GlobalStop:

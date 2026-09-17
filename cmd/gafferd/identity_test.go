@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 	"net"
@@ -22,6 +23,7 @@ import (
 	"time"
 
 	i "github.com/korallis/letmecook/internal/identity"
+	p "github.com/korallis/letmecook/schemas/execution"
 )
 
 func localCertificate(t *testing.T, server bool) (tls.Certificate, string, string) {
@@ -95,7 +97,7 @@ func TestIdentityCLI(t *testing.T) {
 	}
 	addr := listener.Addr().String()
 	listener.Close()
-	args := append(append([]string{}, base...), "--listen", addr, "--endpoint", "https://"+addr, "--tls-cert", serverFile, "--tls-key", serverKey)
+	args := append(append([]string{}, base...), "--listen", addr, "--execution-listen", "127.0.0.1:0", "--endpoint", "https://"+addr, "--tls-cert", serverFile, "--tls-key", serverKey)
 	live, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	reader, writer := io.Pipe()
@@ -112,6 +114,10 @@ func TestIdentityCLI(t *testing.T) {
 	if !scanner.Scan() || scanner.Text() != "store-only https://"+addr+"/api/v1/status" {
 		t.Fatal("TLS startup")
 	}
+	if !scanner.Scan() || !strings.HasPrefix(scanner.Text(), "execution https://127.0.0.1:") || !strings.HasSuffix(scanner.Text(), "/x/v1") {
+		t.Fatal("execution startup", scanner.Text())
+	}
+	executionAddr := strings.TrimSuffix(strings.TrimPrefix(scanner.Text(), "execution https://"), "/x/v1")
 	roots := x509.NewCertPool()
 	roots.AddCert(server.Leaf)
 	client := &http.Client{Transport: &http.Transport{Proxy: nil, TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: roots, Certificates: []tls.Certificate{owner}}}, Timeout: time.Second}
@@ -126,6 +132,68 @@ func TestIdentityCLI(t *testing.T) {
 	if err != nil || res.StatusCode != 200 || identity.Role != "owner" {
 		t.Fatal("CLI owner authentication")
 	}
+	// Exercise the actual execution socket and ConnContext hook, not just its
+	// startup line. Enroll and enable the runner through the live owner API.
+	runner, _, _ := localCertificate(t, false)
+	runnerPin, err := i.Fingerprint(runner.Leaf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	runnerClient := &http.Client{Transport: &http.Transport{Proxy: nil, TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: roots, Certificates: []tls.Certificate{runner}}}, Timeout: time.Second}
+	defer runnerClient.CloseIdleConnections()
+	post := func(c *http.Client, path string, body any, result any) {
+		t.Helper()
+		data, err := json.Marshal(body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, err := c.Post("https://"+addr+"/api/v1/identity/"+path, "application/json", bytes.NewReader(data))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		if res.StatusCode != 200 {
+			t.Fatalf("identity %s status %d", path, res.StatusCode)
+		}
+		if err := json.NewDecoder(res.Body).Decode(result); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var invitation struct {
+		Token i.Token `json:"token"`
+	}
+	const messageID = "00000000-0000-4000-8000-000000000001"
+	post(client, "enrollments", map[string]any{"version": i.Version, "message_id": messageID, "fingerprint": runnerPin}, &invitation)
+	var principal i.Principal
+	post(runnerClient, "enroll", map[string]any{"version": i.Version, "message_id": messageID, "token": invitation.Token}, &principal)
+	requestExecution := func(cert tls.Certificate, wantStatus int, wantError string) {
+		t.Helper()
+		conn, err := tls.DialWithDialer(&net.Dialer{Timeout: time.Second}, "tcp", executionAddr, &tls.Config{MinVersion: tls.VersionTLS13, RootCAs: roots, Certificates: []tls.Certificate{cert}, NextProtos: []string{p.FencedVersion}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer conn.Close()
+		if conn.ConnectionState().NegotiatedProtocol != p.FencedVersion {
+			t.Fatal("execution ALPN not selected")
+		}
+		conn.SetDeadline(time.Now().Add(time.Second))
+		if _, err := fmt.Fprintf(conn, "GET /x/v1 HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", executionAddr); err != nil {
+			t.Fatal(err)
+		}
+		res, err := http.ReadResponse(bufio.NewReader(conn), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		var body struct{ Version, Error string }
+		if err := json.NewDecoder(res.Body).Decode(&body); err != nil || res.StatusCode != wantStatus || body.Version != "execution-channel-provisional-v1" || body.Error != wantError {
+			t.Fatalf("execution response: %d %+v %v", res.StatusCode, body, err)
+		}
+	}
+	requestExecution(owner, 403, "identity_denied")
+	requestExecution(runner, 403, "identity_denied") // Enrollment alone grants no runner authority.
+	post(client, "update", map[string]any{"version": i.Version, "message_id": messageID, "id": principal.ID, "revision": principal.Revision, "action": "enable", "fingerprint": ""}, &principal)
+	requestExecution(runner, 404, "not_found") // Empty route set reached after the runner gate.
 	// Offline recovery must fail while the daemon holds the state lock.
 	_, nextOwner, _ := localCertificate(t, false)
 	out.Reset()
