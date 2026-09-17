@@ -55,6 +55,15 @@ releases on a timer, a bare success flag or an absent PID. A release's
 `evidence_digest` is the supervisor's report digest or the SHA-256 of the
 retained daemon-ledger snapshot (`runtime_observations` kind `reconcile`).
 
+`CompleteFinalization` retains the completion it finalized from (kind
+`completion`) with the boundary the attempt's usage receipts describe. The
+runner's later `POST /x/v1/attempts/{id}/finalize` for the same receipt is
+answered with the same outcome only when it attests that stream watermark, exit
+and boundary; a divergent attestation is `identity_conflict`. A supervisor that
+posted every boundary receipt before finalizing attests exactly that state.
+A `--fixture` daemon has no reservations, grants or leases; reconcile reports
+nothing for it and retains nothing.
+
 ### The replacement barrier
 
 `ReconciliationInputs.LeaseBarrierPassed` is `controlExpiry`: elapsed time on the
