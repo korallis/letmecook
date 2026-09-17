@@ -34,16 +34,6 @@ func TestSeamStubsRefuseUntilImplemented(t *testing.T) {
 	errs = append(errs, err)
 	_, err = s.PutGatewayProfile(ctx, "", nil)
 	errs = append(errs, err)
-	errs = append(errs, s.SnapshotDatabase(ctx, ""))
-	release, err := s.PinArtifacts()
-	if release != nil {
-		t.Fatal("unimplemented pin returned a release")
-	}
-	errs = append(errs, err)
-	_, err = OpenRestored(ctx, "", "", RestoreRecord{}, Options{})
-	errs = append(errs, err)
-	_, err = s.RestoreHistory(ctx)
-	errs = append(errs, err)
 	_, err = s.FenceAttempt(ctx, "", "")
 	errs = append(errs, err)
 	_, err = s.NonTerminalAttempts(ctx)
@@ -53,7 +43,7 @@ func TestSeamStubsRefuseUntilImplemented(t *testing.T) {
 	errs = append(errs, s.PutReconcileReport(ctx, ReconcileReport{}))
 	_, err = s.ReconciliationInputs(ctx, "")
 	errs = append(errs, err)
-	if len(errs) != 20 {
+	if len(errs) != 16 {
 		t.Fatalf("stub inventory drifted: %d", len(errs))
 	}
 	for i, err := range errs {
