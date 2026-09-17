@@ -209,6 +209,42 @@ func TestLeaseLapseWithoutEvidenceStaysBlocked(t *testing.T) {
 	}
 }
 
+// No renewal (or runner clock tick) is needed for the daemon's own issuance
+// clock to expire the lease and latch the canonical stop at the sweep barrier.
+func TestLeaseRunnerClockExpiresOnDaemonClockWithoutRenewal(t *testing.T) {
+	f := newFixture(t)
+	k := f.newTask(t)
+	k.dispatch(t)
+	k.hello(t)
+	k.accept(t)
+	clock := time.Now().UTC()
+	f.s.SetControlClock(func() time.Time { return clock })
+	sent := int64(661)
+	request := p.Message{Version: p.FencedVersion, Kind: "lease_request", MessageID: uuid(), Identity: k.id(), Nonce: uuid(), RunnerBoot: f.facts.RunnerBoot, DaemonBoot: f.boot, SentMS: &sent}
+	lease, err := f.s.IssueLease(ctx, f.runner, k.session.SessionID, k.d.ID, p.FencedVersion, request)
+	if err != nil {
+		t.Fatal("boot-local first lease refused", err)
+	}
+	k.propose(t, p.Starting, launchIntent(lease.Request.Nonce))
+	k.propose(t, p.Running, launched())
+	// The inclusive boundary remains blocked: expiry requires strictly after
+	// daemon issuance + full validity + the retained seven-second margin.
+	clock = lease.Issued.Wall.Add(time.Duration(lease.DeadlineNS - lease.Issued.ElapsedNS + lease.MarginNS))
+	e := entryFor(t, f.sweep(t, false), k.id().AttemptID)
+	if e.Classification != AwaitingEvidence || e.Released || e.ActionRequired {
+		t.Fatalf("expired before daemon barrier: %+v", e)
+	}
+	clock = clock.Add(time.Nanosecond)
+	e = entryFor(t, f.sweep(t, false), k.id().AttemptID)
+	if e.Classification != LeaseLapsedUnconfirmed || e.Released || !e.ActionRequired || e.State != p.Stopping || e.Cause != CauseLeaseExpired {
+		t.Fatalf("daemon clock failed to latch expiry: %+v", e)
+	}
+	in, err := f.s.ReconciliationInputs(ctx, k.id().AttemptID)
+	if err != nil || in.LeaseCount != 1 || !in.LeaseBarrierPassed || len(in.StopTargets) != 1 || in.StopTargets[0].Cancel.StopID != execwire.ExpiryStopID(request.Nonce) || in.Dispatch.Released {
+		t.Fatalf("expiry was renewed, misidentified or released without evidence: %+v, %v", in, err)
+	}
+}
+
 // Old-boot termination evidence releases only after the replacement barrier:
 // an operator cancel becomes cancelled (never auto-retried); a supervisor
 // lease-expiry stop becomes expired and, with --auto-retry, one new attempt.

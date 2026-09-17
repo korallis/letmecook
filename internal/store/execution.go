@@ -1234,8 +1234,9 @@ func (s *Store) ProposeTransition(ctx context.Context, fingerprint, session, sel
 // IssueLease is RecordControlLease without owner(): the daemon builds the
 // lease_reply (validity 20000 ms, nonce-derived message id), runs p.CheckLease
 // with the contract timing (drift 2000 ms, termination 5000 ms, the prior
-// lease's runner cutoff, nonce activity) and records issuance through
-// issueLeaseTx with a 7 s margin. Durable point: the control_leases row
+// lease's runner cutoff, nonce activity) using sent_ms as the runner-domain
+// baseline. The runner checks actual reply delay. Issuance uses the daemon's
+// separate clock through issueLeaseTx with a 7 s margin. Durable point: the control_leases row
 // committed before the reply is returned; a refusal is fenced (controlFence)
 // and committed before the error (BootMismatch, c.ErrFenced, DelayedReply,
 // NonceMismatch, paused) is returned. The same nonce returns the retained reply.
@@ -1302,7 +1303,11 @@ func (s *Store) IssueLease(ctx context.Context, fingerprint, session, dispatchKe
 	}
 	validity := LeaseValidityMS
 	reply := p.Message{Version: p.FencedVersion, Kind: "lease_reply", MessageID: dispatchID(request.Nonce, "lease-reply"), Identity: identity, Nonce: request.Nonce, RunnerBoot: request.RunnerBoot, DaemonBoot: request.DaemonBoot, ValidityMS: &validity}
-	timing := p.Timing{RunnerBoot: d.Facts.RunnerBoot, DaemonBoot: s.meta.DaemonBoot, ReceivedMS: s.controlNow().UnixMilli(), DriftMS: SessionDriftMS, TerminationMS: SessionTerminationMS, NonceActive: true}
+	// sent_ms and the prior cutoff belong to one runner boot's monotonic
+	// clock, not this daemon's wall clock. Use S as the validation baseline:
+	// only the runner can check the actual reply arrival R against S and its
+	// cutoff. issueLeaseTx records the independent daemon issuance/expiry stamp.
+	timing := p.Timing{RunnerBoot: d.Facts.RunnerBoot, DaemonBoot: s.meta.DaemonBoot, ReceivedMS: *request.SentMS, DriftMS: SessionDriftMS, TerminationMS: SessionTerminationMS, NonceActive: true}
 	if sess.RunnerBoot != request.RunnerBoot {
 		timing.RunnerBoot = sess.RunnerBoot
 	}

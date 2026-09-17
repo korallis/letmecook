@@ -626,6 +626,69 @@ func TestProposeTransitionTaskStatesHooksAndLeaseLapse(t *testing.T) {
 	}
 }
 
+// The runner's sent_ms is boot-local, never a daemon Unix timestamp.
+func TestIssueLeaseRunnerClockAndPriorCutoff(t *testing.T) {
+	for _, delta := range []int64{-1, 0, 1} {
+		t.Run(fmt.Sprintf("renewal-cutoff%+d", delta), func(t *testing.T) {
+			x := executionFixtureFor(t, nil)
+			clock := x.s.controlStart.Add(time.Second)
+			x.s.controlNow = func() time.Time { return clock }
+			request := x.leaseRequest()
+			sent := int64(661)
+			request.SentMS = &sent
+			lease, err := x.s.IssueLease(ctx, x.runner, x.session.SessionID, x.d.ID, p.FencedVersion, request)
+			if err != nil {
+				t.Fatalf("runner sent_ms=%d against daemon wall_ms=%d: %v", sent, clock.UnixMilli(), err)
+			}
+			if !lease.Issued.Wall.Equal(clock) || lease.Issued.ElapsedNS != int64(time.Second) || lease.Issued.Boot != x.s.meta.DaemonBoot || lease.DeadlineNS != int64(21*time.Second) || lease.MarginNS != int64(7*time.Second) {
+				t.Fatalf("issuance did not retain the separate daemon clock: %+v", lease)
+			}
+			// Replaying later preserves the original daemon deadline as well as
+			// the reply. It must not create a fresh issuance from either clock.
+			clock = clock.Add(time.Second)
+			again, err := x.s.IssueLease(ctx, x.runner, x.session.SessionID, x.d.ID, p.FencedVersion, request)
+			if err != nil || !reflect.DeepEqual(again, lease) {
+				t.Fatal("replay changed issuance", again, err)
+			}
+			renewal := x.leaseRequest()
+			nextSent := sent + LeaseValidityMS - SessionDriftMS - SessionTerminationMS + delta
+			renewal.SentMS = &nextSent
+			_, err = x.s.IssueLease(ctx, x.runner, x.session.SessionID, x.d.ID, p.FencedVersion, renewal)
+			if delta < 0 {
+				if err != nil {
+					t.Fatal("renewal before prior runner cutoff refused", err)
+				}
+				rowCount(t, x.s, "control_leases", 2)
+				rowCount(t, x.s, "control_fenced", 0)
+				return
+			}
+			if !errors.Is(err, p.DelayedReply) {
+				t.Fatal("renewal at/past prior runner cutoff not refused", err)
+			}
+			rowCount(t, x.s, "control_leases", 1)
+			rowCount(t, x.s, "control_fenced", 1)
+			var reason string
+			if err := x.s.db.QueryRow("SELECT reason FROM control_fenced WHERE message_id=?", renewal.MessageID).Scan(&reason); err != nil || reason != string(p.DelayedReply) {
+				t.Fatal("renewal refusal not durably fenced", reason, err)
+			}
+		})
+	}
+}
+
+func TestIssueLeaseRunnerClockBounds(t *testing.T) {
+	for _, sent := range []int64{-1, p.MaxInteger - LeaseValidityMS + 1, p.MaxInteger + 1} {
+		t.Run(fmt.Sprint(sent), func(t *testing.T) {
+			x := executionFixtureFor(t, nil)
+			request := x.leaseRequest()
+			request.SentMS = &sent
+			if _, err := x.s.IssueLease(ctx, x.runner, x.session.SessionID, x.d.ID, p.FencedVersion, request); !errors.Is(err, p.Malformed) {
+				t.Fatal("out-of-bounds sent_ms accepted", err)
+			}
+			rowCount(t, x.s, "control_leases", 0)
+		})
+	}
+}
+
 func TestIssueLeaseReplayFencingAndCommitOrder(t *testing.T) {
 	x := executionFixtureFor(t, nil)
 	request := x.leaseRequest()
@@ -666,7 +729,7 @@ func TestIssueLeaseReplayFencingAndCommitOrder(t *testing.T) {
 		}
 	}
 	delayed := x.leaseRequest()
-	sent := time.Now().Add(-20 * time.Second).UnixMilli()
+	sent := *second.Request.SentMS + LeaseValidityMS - SessionDriftMS - SessionTerminationMS
 	delayed.SentMS = &sent
 	refuse("delayed", delayed, p.DelayedReply, "")
 	wrongBoot := x.leaseRequest()

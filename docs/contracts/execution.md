@@ -214,10 +214,17 @@ acceptance is recorded like every other refusal.
 
 Lease service: the daemon builds `lease_reply{nonce, boots, validity_ms 20000}`
 (its `message_id` is derived from the nonce; the closed `lease_reply` field set
-carries no `in_reply_to`, so the nonce is the correlation), checks it with
-`CheckLease` under `drift_ms 2000`, `termination_ms 5000`, the prior lease's
-runner cutoff and nonce revocation, and records issuance with a 7 s margin. The
-same nonce replays the retained reply. `delayed_reply`, `boot_mismatch`,
+carries no `in_reply_to`, so the nonce is the correlation). It validates binding,
+boots, integer bounds, nonce state and the prior runner cutoff under
+`drift_ms 2000`, `termination_ms 5000`. The daemon calls `CheckLease` with
+`ReceivedMS = request.sent_ms`: these values and the prior cutoff share the
+runner boot's monotonic domain, not the daemon's wall clock. A renewal whose
+`sent_ms` is at or past that prior cutoff is refused and fenced. The runner
+separately enforces the delayed-reply cutoff using its actual local receive time.
+Issuance records the daemon's own wall/boot-elapsed stamp, full validity deadline
+and 7 s margin; daemon expiry latches and reconcile barriers use that separate
+clock. The same nonce replays the retained reply and original issuance without
+extending either deadline. `delayed_reply`, `boot_mismatch`,
 `nonce_mismatch`, `stale_generation`, `paused` and `revoked_or_expired` refusals
 are fenced and committed before the 409.
 
