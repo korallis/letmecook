@@ -40,8 +40,16 @@ const (
 	maxInboxWaitMS   = 25000
 	inboxPollAfterMS = 500
 	inboxPage        = 128
-	inboxPages       = 8
+	// inboxByteBudget bounds the encoded assignments of one inbox reply so the
+	// whole reply stays under execwire.MaxBytes for the runner's closed decoder.
+	inboxByteBudget = 48 * 1024
 )
+
+// withinInboxBudget admits the next assignment when it fits the byte budget;
+// the first assignment is always offered so a large one is never starved.
+func withinInboxBudget(used, next, count int) bool {
+	return count == 0 || used+next <= inboxByteBudget
+}
 
 func init() { Register("execution", executionRoutes) }
 
@@ -243,32 +251,34 @@ func (x executionAPI) readInbox(ctx context.Context, a Actor, session string) (e
 	}
 	inbox := execwire.Inbox{Assignments: []execwire.Dispatch{}, Cancels: []p.Message{}, Paused: sess.Paused, PollAfterMS: inboxPollAfterMS}
 	if !sess.Paused && sess.Mode == "normal" {
-		// The pending outbox is paged until this session finds a deliverable
-		// dispatch or the bound is reached, so a backlog belonging to other runners
-		// or incarnations cannot starve an eligible session.
-		after := ""
-		for page := 0; page < inboxPages && len(inbox.Assignments) == 0; page++ {
-			ids, err := x.Store.PendingAssignments(ctx, after, inboxPage)
+		// The store selects only dispatches admitted for this runner under this
+		// session's eligibility revision and boot, so a backlog for other runners
+		// or incarnations never hides them; the reply is bounded by encoded size
+		// so a batch always decodes within the wire limit.
+		ids, err := x.Store.PendingAssignmentsFor(ctx, a.Fingerprint, session, inboxPage)
+		if err != nil {
+			return execwire.Inbox{}, err
+		}
+		used := 0
+		for _, id := range ids {
+			d, err := x.Store.Assignment(ctx, id)
+			if err != nil || d.Facts.Repository.RunnerRoot.RunnerID != a.ID || sess.Binds(d) != nil {
+				continue
+			}
+			if _, err := x.Store.Delivery(ctx, a.Fingerprint, id); err != nil {
+				log.Printf("execution inbox: dispatch %s not delivered: %v", id, routeError(err).Code)
+				continue
+			}
+			wire := wireDispatch(d)
+			raw, err := json.Marshal(wire)
 			if err != nil {
 				return execwire.Inbox{}, err
 			}
-			for _, id := range ids {
-				d, err := x.Store.Assignment(ctx, id)
-				// Only dispatches admitted for this runner under this session's boot and
-				// eligibility revision are offered; older incarnations are reconcile's.
-				if err != nil || d.Facts.Repository.RunnerRoot.RunnerID != a.ID || sess.Binds(d) != nil {
-					continue
-				}
-				if _, err := x.Store.Delivery(ctx, a.Fingerprint, id); err != nil {
-					log.Printf("execution inbox: dispatch %s not delivered: %v", id, routeError(err).Code)
-					continue
-				}
-				inbox.Assignments = append(inbox.Assignments, wireDispatch(d))
-			}
-			if len(ids) < inboxPage {
+			if !withinInboxBudget(used, len(raw), len(inbox.Assignments)) {
 				break
 			}
-			after = ids[len(ids)-1]
+			used += len(raw)
+			inbox.Assignments = append(inbox.Assignments, wire)
 		}
 	}
 	cancels, err := x.Store.PendingCancels(ctx, a.Fingerprint, session)
@@ -346,6 +356,14 @@ func (x executionAPI) messages(ctx context.Context, a Actor, r Request) (any, *E
 		if err != nil {
 			return nil, routeError(err)
 		}
+		// Ownership precedes every replay lookup: another runner's message and
+		// dispatch ids earn nothing, not even a retained acknowledgement.
+		if d.Facts.Repository.RunnerRoot.RunnerID != a.ID {
+			return nil, &Error{403, "runner_disabled", "dispatch"}
+		}
+		if d.Assignment.Identity.AttemptID != env.Message.Identity.AttemptID {
+			return nil, &Error{409, "identity_conflict", ""}
+		}
 		attempt := d.Assignment.Identity.AttemptID
 		if response, err := x.Store.RunnerReceipt(ctx, a.Fingerprint, r.Session, attempt, store.ReceiptMessages, env.MessageID, env.Message); err == nil {
 			var retained messageReply
@@ -398,10 +416,21 @@ func (x executionAPI) messages(ctx context.Context, a Actor, r Request) (any, *E
 		if err != nil {
 			return nil, routeError(err)
 		}
+		// A stopping proposal may have latched a runner-local cancel target.
+		if m.To == p.Stopping && x.Hub != nil {
+			x.Hub.Notify(InboxKey)
+		}
 		return messageReply{Outcome: "applied", Message: &m}, nil
 	case "terminated":
 		if env.Measurement == nil || env.Boundary == nil {
 			return nil, &Error{400, "malformed", ""}
+		}
+		d, err := x.Store.Assignment(ctx, env.DispatchID)
+		if err != nil {
+			return nil, routeError(err)
+		}
+		if d.Assignment.Identity.AttemptID != env.Message.Identity.AttemptID {
+			return nil, &Error{409, "identity_conflict", ""}
 		}
 		evidence := c.Evidence{Terminated: env.Message, Measurement: *env.Measurement}
 		boundary := store.BoundaryState{Reservations: env.Boundary.Reservations, TerminalReceipts: env.Boundary.TerminalReceipts, InFlight: env.Boundary.InFlight, Quiescent: env.Boundary.Quiescent}

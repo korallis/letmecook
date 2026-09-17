@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -210,9 +211,10 @@ func TestDaemonSideWritersNotifyTheInbox(t *testing.T) {
 	}
 }
 
-// Second review: a pending backlog that is not deliverable to this session
-// (other runners or incarnations, corrupt or foreign rows) cannot starve an
-// eligible dispatch that sorts after the first page.
+// Second and third review: a pending backlog that is not deliverable to this
+// session (other runners or incarnations, corrupt or foreign rows), however
+// large, cannot starve an eligible dispatch: the store query selects only this
+// session's dispatches.
 func TestInboxPagesPastAnIneligibleBacklog(t *testing.T) {
 	h := newExecutionHarness(t)
 	handler := h.recorder(t)
@@ -222,7 +224,7 @@ func TestInboxPagesPastAnIneligibleBacklog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for n := range 130 {
+	for n := range 1100 {
 		task := fmt.Sprintf("00000000-0000-4000-8000-%012d", n*3+1)
 		attempt := fmt.Sprintf("00000000-0000-4000-8000-%012d", n*3+2)
 		dispatch := fmt.Sprintf("00000000-0000-4000-8000-%012d", n*3+3)
@@ -243,5 +245,117 @@ func TestInboxPagesPastAnIneligibleBacklog(t *testing.T) {
 	var inbox execwire.Inbox
 	if w.Code != 200 || execwire.Decode(w.Body.Bytes(), &inbox) != nil || len(inbox.Assignments) != 1 || inbox.Assignments[0].ID != h.d.ID {
 		t.Fatalf("eligible dispatch starved by the backlog: %d %s", w.Code, w.Body.String())
+	}
+}
+
+// P2-3: the inbox reply is bounded by encoded bytes, always offers the first
+// assignment, and stays under the runner's closed-decoder limit.
+func TestInboxByteBudget(t *testing.T) {
+	if inboxByteBudget >= execwire.MaxBytes {
+		t.Fatal("budget exceeds the wire limit")
+	}
+	if !withinInboxBudget(0, inboxByteBudget*2, 0) {
+		t.Fatal("first assignment starved")
+	}
+	if withinInboxBudget(inboxByteBudget-10, 20, 1) || !withinInboxBudget(10, 20, 1) {
+		t.Fatal("budget arithmetic")
+	}
+}
+
+// P2-9: another runner replaying this runner's message and dispatch ids earns
+// nothing, not even a retained acknowledgement.
+func TestAcceptReplayRequiresOwnership(t *testing.T) {
+	h := newExecutionHarness(t)
+	handler := h.recorder(t)
+	session := h.sessionID(t)
+	ctx := context.Background()
+	sess, err := h.s.ExecutionSession(ctx, pin(t, h.runner), session)
+	if err != nil {
+		t.Fatal(err)
+	}
+	accept := p.Message{Version: p.FencedVersion, Kind: "accept", MessageID: newTestID(), Identity: h.d.Assignment.Identity, AssignmentID: h.d.Assignment.AssignmentID, RunnerBoot: h.facts.RunnerBoot, DaemonBoot: sess.DaemonBoot}
+	body := string(encode(t, execwire.MessageEnvelope{Version: execwire.Version, MessageID: accept.MessageID, DispatchID: h.d.ID, Message: accept}))
+	if w := h.do(t, handler, "POST", "/x/v1/messages", session, body); w.Code != 200 {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	other, _, _ := certificate(t, false)
+	invite, err := h.s.CreateEnrollment(ctx, pin(t, h.owner), newTestID(), pin(t, other))
+	if err != nil {
+		t.Fatal(err)
+	}
+	principal, err := h.s.Enroll(ctx, pin(t, other), invite.Token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.s.UpdateIdentity(ctx, pin(t, h.owner), principal.ID, principal.Revision, "enable", ""); err != nil {
+		t.Fatal(err)
+	}
+	otherSession, err := h.s.RunnerSession(ctx, pin(t, other), helloRecord(h.facts.RunnerBoot, h.facts.ID, 1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := routeRequest(other, true, "POST", "/x/v1/messages", body)
+	req.Header.Set("X-Gaffer-Session", otherSession.SessionID)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	assertRouteError(t, w, 403, "runner_disabled")
+	if _, err := h.s.RunnerReceipt(ctx, pin(t, other), otherSession.SessionID, h.d.Assignment.Identity.AttemptID, "messages", accept.MessageID, accept); err == nil {
+		t.Fatal("receipt readable without ownership")
+	}
+}
+
+// P2-10: a terminated envelope must name the dispatch its evidence belongs to.
+func TestTerminatedEnvelopeMustNameItsAttempt(t *testing.T) {
+	h := newExecutionHarness(t)
+	handler := h.recorder(t)
+	session := h.sessionID(t)
+	sess, err := h.s.ExecutionSession(context.Background(), pin(t, h.runner), session)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreign := h.d.Assignment.Identity
+	foreign.AttemptID = newTestID()
+	terminated := p.Message{Version: p.FencedVersion, Kind: "terminated", MessageID: newTestID(), Identity: foreign, StopID: newTestID(), RunnerBoot: h.facts.RunnerBoot, DaemonBoot: sess.DaemonBoot, ConfirmedProcess: "terminated", RemoteWork: "quiescent", EvidenceDigest: strings.Repeat("e", 64)}
+	wall := time.Now().UTC()
+	duration := int64(time.Millisecond)
+	raw, _ := json.Marshal(struct {
+		Version     string         `json:"version"`
+		MessageID   string         `json:"message_id"`
+		DispatchID  string         `json:"dispatch_id"`
+		Message     p.Message      `json:"message"`
+		Boundary    map[string]any `json:"boundary"`
+		Measurement c.Measurement  `json:"measurement"`
+	}{execwire.Version, terminated.MessageID, h.d.ID, terminated, map[string]any{"reservations": 0, "terminal_receipts": 0, "in_flight": 0, "quiescent": true}, c.Measurement{RequestedAt: wall, AcknowledgedAt: wall, ObservedAt: &wall, RequestToAckNS: duration, AckToObservedNS: &duration}})
+	w := h.do(t, handler, "POST", "/x/v1/messages", session, string(raw))
+	assertRouteError(t, w, 409, "identity_conflict")
+}
+
+// P2-11: a stopping proposal that latches a runner-local cancel wakes the inbox.
+func TestStoppingProposalNotifiesTheInbox(t *testing.T) {
+	h := newExecutionHarness(t)
+	handler := h.recorder(t)
+	session := h.sessionID(t)
+	ctx := context.Background()
+	sess, err := h.s.ExecutionSession(ctx, pin(t, h.runner), session)
+	if err != nil {
+		t.Fatal(err)
+	}
+	accept := p.Message{Version: p.FencedVersion, Kind: "accept", MessageID: newTestID(), Identity: h.d.Assignment.Identity, AssignmentID: h.d.Assignment.AssignmentID, RunnerBoot: h.facts.RunnerBoot, DaemonBoot: sess.DaemonBoot}
+	if err := h.s.AcknowledgeAssignment(ctx, pin(t, h.runner), h.d.ID, accept); err != nil {
+		t.Fatal(err)
+	}
+	wake, cancel := h.hub.Subscribe(InboxKey)
+	defer cancel()
+	w := h.do(t, handler, "POST", "/x/v1/messages", session, string(encode(t, h.transition(t, p.Stopping, execwire.Evidence{Kind: "stop", Cause: "runner_shutdown"}))))
+	if w.Code != 200 {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	select {
+	case <-wake:
+	case <-time.After(2 * time.Second):
+		t.Fatal("stopping proposal did not notify the inbox")
+	}
+	if count(t, h.db(t), "SELECT count(*) FROM control_targets") != 1 {
+		t.Fatal("local cancel not latched")
 	}
 }

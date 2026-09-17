@@ -510,7 +510,13 @@ func TestExecutionRoutesEndToEndOverTLS(t *testing.T) {
 	if state.AttemptState != p.Succeeded || !state.Released || !state.Acknowledged || state.Stream.Through != 3 || state.ReceiptID != committed.Receipt.ReceiptID || state.Head == nil || state.Head.AttemptID != attempt || state.LastLease == nil || state.LastLease.Nonce != request.Nonce || state.StopTargets == nil {
 		t.Fatalf("state: %s", string(encode(t, state)))
 	}
-	if got := call(t, client, base, "POST", "/x/v1/streams/"+attempt, session, encode(t, execwire.StreamBatch{Version: execwire.Version, Records: records[:1]})); got.status != 409 || got.code(t) != "stale_attempt" {
+	// After finalization a retained batch still replays its acknowledgement; a
+	// new record is refused.
+	call(t, client, base, "POST", "/x/v1/streams/"+attempt, session, encode(t, execwire.StreamBatch{Version: execwire.Version, Records: records[:1]})).decode(t, &ack)
+	if ack.Through != 3 {
+		t.Fatal("lost stream ack not replayed after finalization", ack)
+	}
+	if got := call(t, client, base, "POST", "/x/v1/streams/"+attempt, session, encode(t, execwire.StreamBatch{Version: execwire.Version, Records: skipped[3:]})); got.status != 409 || got.code(t) != "stale_attempt" {
 		t.Fatal("terminal attempt streamed", got.status, string(got.body))
 	}
 	// A daemon-side session check survives across the same TLS connection: a
