@@ -242,12 +242,14 @@ From repository root, ordinary macOS user:
 node --test experiments/isolation-native/run.test.ts
 ```
 
-Nine behavioral checks cover absent/malformed/default/non-Linux admission,
+Ten behavioral checks cover absent/malformed/default/non-Linux admission,
 missing effective limits before a simulated sentinel, exact cleanup ownership,
 missing/corrupt/torn/symlinked journals, durable unresolved intent, competing stale
 admission, immutable failed receipts and non-replayable resolution, journal bounds,
 inert preparation/native CLI platform refusal, and replay-time rejection of correctly
-hashed resolutions with missing or conflicting cleanup observations. Synthetic test values are not
+hashed resolutions with missing or conflicting cleanup observations. A task-owned
+local Unix socket also exercises the gate-to-fixture server restart; it uses only
+fixed synthetic replies and is not a confinement or inference proof. Synthetic test values are not
 profile measurements. Strict TypeScript checking uses a compiler and Node types; no install is needed for
 the runnable check above. With the existing inference-boundary development tools:
 

@@ -4,6 +4,8 @@ import * as fs from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createServer, request } from 'node:http';
+import { retireMockInstance } from './probe.ts';
 import { fileURLToPath } from 'node:url';
 import { admission, validateProfile, CONTROLS, PROCEDURE, BASE, hash, Journal, exclusive, assertEffective, assertOwned, prepare, main, json } from './run.ts';
 
@@ -160,4 +162,34 @@ test('reloaded quarantine resolutions require complete cleanup evidence even wit
     const restarted = new Journal(journal.directory, process.getuid!());
     assert.throws(() => restarted.assertLaunch(identity.profileHash, nextId));
   });
+});
+
+test('synthetic mock retires its actual UDS listener before restarting at the same path', async () => {
+  const directory = fs.mkdtempSync(join(tmpdir(), 'g89-'));
+  const socketPath = join(directory, 's');
+  const first = createServer((_req, response) => response.end('gate'));
+  const second = createServer((_req, response) => response.end('fixture'));
+  const exchange = () => new Promise<string>((done, fail) => {
+    const req = request({ socketPath, path: '/', agent: false }, response => {
+      let body = ''; response.on('data', chunk => { body += chunk; });
+      response.on('end', () => done(body)); response.on('error', fail);
+    });
+    req.setTimeout(1000, () => req.destroy(new Error('synthetic UDS exchange timeout')));
+    req.on('error', fail); req.end();
+  });
+  try {
+    await new Promise<void>((done, fail) => { first.once('error', fail); first.listen(socketPath, done); });
+    assert.equal(await exchange(), 'gate');
+    await new Promise<void>((done, fail) => {
+      second.once('error', fail);
+      retireMockInstance(first, () => {
+        try { assert.equal(fs.existsSync(socketPath), false); second.listen(socketPath, done); }
+        catch (error) { fail(error); }
+      });
+    });
+    assert.equal(await exchange(), 'fixture');
+  } finally {
+    for (const server of [first, second]) if (server.listening) await new Promise<void>(done => server.close(() => done()));
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
 });

@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
-import { request, createServer } from 'node:http';
+import { request, createServer, type Server } from 'node:http';
 import { connect } from 'node:net';
 import { createSocket } from 'node:dgram';
 import { Resolver } from 'node:dns/promises';
@@ -237,6 +237,12 @@ export async function egress(endpoints: Endpoint[], isolated: boolean) {
   return results;
 }
 
+// Node owns removal of its listening UDS path when close completes. A second
+// unlink would fail with ENOENT (or remove a replacement path we do not own).
+export function retireMockInstance(server: Server, restart: () => void) {
+  server.close(restart);
+}
+
 async function mock(c: Config) {
   assert.equal(c.role, 'mock'); assert.equal(process.pid, 1);
   let instance: 'gate' | 'fixture' = 'gate', accepted = 0, pressureStarted = false;
@@ -268,7 +274,7 @@ async function mock(c: Config) {
         accepted++; reply(200, 'synthetic inference accepted');
         if (instance === 'gate') {
           // Two sequential server instances, independent frozen budgets. Same read-only-bound directory.
-          server.close(() => { fs.unlinkSync('/router/inference.sock'); instance = 'fixture'; accepted = 0; start(); });
+          retireMockInstance(server, () => { instance = 'fixture'; accepted = 0; start(); });
         } else if (accepted === 3 && /^(bytes|inodes)-(socket|mock-log)$/.test(c.testCase) && !pressureStarted) {
           pressureStarted = true;
           setImmediate(() => { try { const result = pressure(c.testCase); writeGate({ result: 'fixture-complete', pressure: result }); }
