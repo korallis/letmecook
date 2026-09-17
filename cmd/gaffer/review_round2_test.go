@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"encoding/json"
+	"github.com/korallis/letmecook/internal/execwire"
 	"github.com/korallis/letmecook/internal/httpapi"
 	"github.com/korallis/letmecook/internal/jobs"
 	"github.com/korallis/letmecook/internal/store"
@@ -166,15 +167,42 @@ func TestHTTPSTaskEnvelopeBoundaryAndBareIdentityConflict(t *testing.T) {
 	f := newOwnerFixture(t)
 	endpoint, client := f.serve(t)
 	body := taskBody(f, "maximum-task")
-	body["brief"] = ""
 	raw, _ := json.Marshal(body)
-	body["brief"] = strings.Repeat("x", 65536-len(raw))
+	var input workflow.TaskInput
+	if err := json.Unmarshal(raw, &input); err != nil {
+		t.Fatal(err)
+	}
+	input, err := workflow.Normalize(input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dispatchID := workflow.IntentID("http-test", "maximum-dispatch")
+	wire, err := execwire.Encode(workflow.RunnerInput(input, dispatchID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The owner envelope is smaller than the required runner reply. Accept
+	// and replay the real wire maximum, not an undeliverable owner-only bound.
+	body["brief"] = body["brief"].(string) + strings.Repeat("x", execwire.MaxBytes-len(wire))
 	raw, _ = json.Marshal(body)
-	if len(raw) != 65536 {
-		t.Fatal(len(raw))
+	if err := json.Unmarshal(raw, &input); err != nil {
+		t.Fatal(err)
+	}
+	wire, err = execwire.Encode(workflow.RunnerInput(input, dispatchID))
+	if err != nil || len(wire) != execwire.MaxBytes || len(raw) >= execwire.MaxBytes {
+		t.Fatal("wire/owner bounds", len(wire), len(raw), err)
 	}
 	mutation(t, client, endpoint, "/api/v1/tasks", body, 201)
+	// A new intent one byte over the semantic limit is a typed refusal; an
+	// oversized transport body is independently still HTTP 413.
+	body["message_id"] = workflow.IntentID("http-test", "over-maximum-task")
 	body["brief"] = body["brief"].(string) + "x"
+	refused, _ := postWorkflow(t, client, endpoint, "/api/v1/tasks", body, 422)
+	if !strings.Contains(string(refused), `"error":"oversized"`) {
+		t.Fatal(string(refused))
+	}
+	raw, _ = json.Marshal(body)
+	body["brief"] = body["brief"].(string) + strings.Repeat("x", execwire.MaxBytes+1-len(raw))
 	postWorkflow(t, client, endpoint, "/api/v1/tasks", body, 413)
 	body = taskBody(f, "bare-task")
 	db, err := sql.Open("sqlite", filepath.Join(f.state, "state.db"))
