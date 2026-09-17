@@ -115,11 +115,64 @@ func TestEligibilityQualificationValidation(t *testing.T) {
 	for name, mutate := range map[string]func(*Eligibility){
 		"unknown-qualification": func(f *Eligibility) { f.Isolation.Qualification = "production" },
 		"test-only-supported":   func(f *Eligibility) { f.Isolation.Qualification = "test-only"; f.Isolation.Supported = true },
+		"unqualified-supported": func(f *Eligibility) { f.Isolation.Qualification = "unqualified"; f.Isolation.Supported = true },
 		"qualified-without-id":  func(f *Eligibility) { f.Isolation = IsolationProfile{Qualification: "development"} },
 	} {
 		bad := facts
 		mutate(&bad)
-		code(t, bad.Validate(), "malformed")
+		if err := bad.Validate(); err == nil {
+			t.Fatal(name, "accepted")
+		} else {
+			code(t, err, "malformed")
+		}
+	}
+}
+
+// An explicitly unqualified profile is never admitted by either entry point, with
+// or without a policy, a Supported claim or a complete control set.
+func TestUnqualifiedProfileNeverAdmitted(t *testing.T) {
+	allow := AdmissionPolicy{DevelopmentProfiles: []string{"macos-sandbox-exec-dev"}}
+	rebind := func(mutate func(*Eligibility)) (g.Request, Decision, Eligibility) {
+		t.Helper()
+		r, d, f := admissionFixture(t)
+		mutate(&f)
+		fh, err := Digest(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		d.Eligibility = g.Revision{Number: 1, SHA256: fh}
+		dh, err := Digest(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r.Envelope.RouteDecision = g.Revision{Number: 1, SHA256: dh}
+		return r, d, f
+	}
+	for name, tc := range map[string]struct {
+		mutate func(*Eligibility)
+		want   string
+	}{
+		// Passes Validate; must be refused as unsupported by both entry points.
+		"unqualified-native-full-controls": {func(f *Eligibility) {
+			f.Isolation.Qualification = "unqualified"
+			f.Isolation.Controls = RequiredIsolationControls()
+		}, "isolation_unsupported"},
+		"unqualified-dedicated-vm": {func(f *Eligibility) {
+			f.Isolation.Qualification = "unqualified"
+			f.Isolation.Kind = "dedicated-vm"
+			f.Isolation.Controls = RequiredIsolationControls()
+		}, "isolation_unsupported"},
+		// Fails Validate: a Supported claim cannot accompany an explicit qualification.
+		"unqualified-supported-full-controls": {func(f *Eligibility) {
+			f.Isolation.Qualification = "unqualified"
+			f.Isolation.Supported = true
+			f.Isolation.Controls = RequiredIsolationControls()
+		}, "malformed"},
+	} {
+		r, d, f := rebind(tc.mutate)
+		code(t, CheckDispatch(r, d, f, 100000), tc.want)
+		code(t, CheckDispatchWithPolicy(r, d, f, 100000, AdmissionPolicy{}), tc.want)
+		code(t, CheckDispatchWithPolicy(r, d, f, 100000, allow), tc.want)
 		_ = name
 	}
 }

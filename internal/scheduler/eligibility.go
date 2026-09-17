@@ -170,8 +170,10 @@ func (v Eligibility) Validate() error {
 	if !slices.Contains([]string{"", "unqualified", "development", "test-only"}, iso.Qualification) || iso.ID == "" && iso.Qualification != "" {
 		return g.Deny("malformed", "isolation_qualification")
 	}
-	// A development or test-only profile is never a supported unattended runtime.
-	if iso.Supported && (iso.Qualification == "development" || iso.Qualification == "test-only") {
+	// An explicitly unqualified, development or test-only profile is never a
+	// supported unattended runtime; only an empty (historical) qualification may
+	// accompany Supported == true.
+	if iso.Supported && iso.Qualification != "" {
 		return g.Deny("malformed", "isolation_qualification")
 	}
 	_, err := Digest(v)
@@ -282,6 +284,11 @@ func CheckDispatchWithPolicy(request g.Request, decision Decision, facts Eligibi
 	iso := facts.Isolation
 	if iso.ID == "" {
 		return g.Deny("isolation_missing", "profile")
+	}
+	// An explicitly unqualified profile refuses launch regardless of policy or
+	// any Supported claim; only historical records leave the qualification empty.
+	if iso.Qualification == "unqualified" {
+		return g.Deny("isolation_unsupported", "qualification")
 	}
 	development := iso.Qualification == "development"
 	if development && !policy.Development(iso.ID) {
