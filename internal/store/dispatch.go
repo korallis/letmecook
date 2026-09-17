@@ -260,7 +260,7 @@ func (s *Store) Dispatch(ctx context.Context, request DispatchRequest) (Dispatch
 	if err != nil {
 		return Dispatch{}, err
 	}
-	if err := sc.CheckDispatch(request.Request, request.Decision, facts, now); err != nil {
+	if err := sc.CheckDispatchWithPolicy(request.Request, request.Decision, facts, now, s.admission); err != nil {
 		return Dispatch{}, err
 	}
 	if err := placement(ctx, tx, facts); err != nil {
@@ -536,7 +536,7 @@ func (s *Store) Delivery(ctx context.Context, fingerprint, id string) (p.Message
 	if err := expireGrants(ctx, tx, time.Now().UnixMilli()); err != nil {
 		return p.Message{}, err
 	}
-	v, decision := deliverable(ctx, tx, fingerprint, id, s.meta.Generation)
+	v, decision := deliverable(ctx, tx, fingerprint, id, s.meta.Generation, s.admission)
 	if err := tx.Commit(); err != nil {
 		return p.Message{}, err
 	}
@@ -546,7 +546,7 @@ func (s *Store) Delivery(ctx context.Context, fingerprint, id string) (p.Message
 	return v.Assignment, nil
 }
 
-func deliverable(ctx context.Context, tx *sql.Tx, fingerprint, id, generation string) (Dispatch, error) {
+func deliverable(ctx context.Context, tx *sql.Tx, fingerprint, id, generation string, policy sc.AdmissionPolicy) (Dispatch, error) {
 	if !p.ValidID(id) {
 		return Dispatch{}, g.Deny("malformed", "dispatch_id")
 	}
@@ -582,7 +582,7 @@ func deliverable(ctx context.Context, tx *sql.Tx, fingerprint, id, generation st
 	if err != nil {
 		return Dispatch{}, err
 	}
-	if err := sc.CheckDispatch(v.Request, v.Decision, facts, now); err != nil {
+	if err := sc.CheckDispatchWithPolicy(v.Request, v.Decision, facts, now, policy); err != nil {
 		return Dispatch{}, err
 	}
 	if err := placement(ctx, tx, facts); err != nil {
@@ -638,7 +638,7 @@ func (s *Store) AcknowledgeAssignment(ctx context.Context, fingerprint, id strin
 	if err := expireGrants(ctx, tx, time.Now().UnixMilli()); err != nil {
 		return err
 	}
-	v, err := deliverable(ctx, tx, fingerprint, id, s.meta.Generation)
+	v, err := deliverable(ctx, tx, fingerprint, id, s.meta.Generation, s.admission)
 	if err != nil {
 		if commitErr := tx.Commit(); commitErr != nil {
 			return commitErr

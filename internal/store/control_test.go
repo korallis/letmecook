@@ -530,7 +530,7 @@ func TestControlSchemaSevenMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(dropVerificationSchema + dropControlSchema + "PRAGMA user_version=7"); err != nil {
+	if _, err := db.Exec(dropSchema10 + dropVerificationSchema + dropControlSchema + "PRAGMA user_version=7"); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.Close(); err != nil {
@@ -541,7 +541,7 @@ func TestControlSchemaSevenMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer s.Close()
-	if s.meta.SchemaVersion != 9 {
+	if s.meta.SchemaVersion != 10 {
 		t.Fatal(s.meta)
 	}
 	retained, err := s.Assignment(ctx, d.ID)

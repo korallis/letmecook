@@ -40,7 +40,7 @@ func assignment(s *Store) p.Message {
 func TestPersistentTransactionsAndRecovery(t *testing.T) {
 	s, artifacts := persistent(t)
 	fresh := snapshot(t, s)
-	if fresh.Mode != "store-only" || fresh.SchemaVersion != 9 || len(fresh.Tasks) != 0 || len(fresh.Events) != 0 {
+	if fresh.Mode != "store-only" || fresh.SchemaVersion != 10 || len(fresh.Tasks) != 0 || len(fresh.Events) != 0 {
 		t.Fatal(fresh)
 	}
 	m := assignment(s)
@@ -118,7 +118,7 @@ func TestPersistentMigrationAndFixtureRefusal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.meta.SchemaVersion != 9 || r.meta.Generation != generation {
+	if r.meta.SchemaVersion != 10 || r.meta.Generation != generation {
 		t.Fatal("migration identity")
 	}
 	r.Close()

@@ -37,13 +37,12 @@ try {
     assert.equal(status.mode, mode);
     if (mode === 'store-only') {
       assert.equal(status.task_count, 0); assert.equal(status.event_count, 0);
-      assert.equal(status.schema_version, 9);
-      assert.equal(decode(encode({ ...status, schema_version: 2 }), 'status').schema_version, 2);
-      assert.equal(decode(encode({ ...status, schema_version: 3 }), 'status').schema_version, 3);
-      assert.equal(decode(encode({ ...status, schema_version: 4 }), 'status').schema_version, 4);
-      assert.equal(decode(encode({ ...status, schema_version: 5 }), 'status').schema_version, 5);
-      assert.equal(decode(encode({ ...status, schema_version: 6 }), 'status').schema_version, 6);
-      assert.throws(() => decode(encode({ ...status, schema_version: 10 }), 'status'));
+      assert.equal(status.schema_version, 10);
+      for (const accepted of [2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+        assert.equal(decode(encode({ ...status, schema_version: accepted }), 'status').schema_version, accepted);
+      }
+      assert.throws(() => decode(encode({ ...status, schema_version: 11 }), 'status'));
+      assert.throws(() => decode(encode({ ...status, schema_version: 9.5 }), 'status'));
       assert.equal(snapshot.generation, status.generation);
       assert.deepEqual(snapshot.tasks, []); assert.deepEqual(snapshot.events, []);
       assert.throws(() => decode(encode({ ...status, mode: 'fixture-only' }), 'status'));
