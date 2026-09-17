@@ -147,9 +147,28 @@ or overflowing output emits `failed` and continues discarding/draining until the
 supervisor cancels. A failed event is not proof of process termination.
 
 Events have monotonic local sequence numbers and can be read after a sequence.
-A terminal event is followed by EOF. Events are retained in this adapter object;
-create/discard adapters with the supervised run lifecycle rather than treating
-this memory as a restart journal.
+A terminal event is followed by EOF. This memory is not a restart journal. The
+supervisor must durably spool/finalize output before calling the optional seam:
+
+```go
+Release(ctx context.Context, handle harness.RunHandle, through int64) error
+```
+
+`through` is the exact last **harness Event.Sequence**, not the spool-record
+sequence. Release waits for actual process exit and both pipe readers, then
+requires that exact final sequence and a terminal event. A too-small, future or
+zero watermark returns `ErrRelease`; any failure retains events unchanged. The
+adapter does not verify custody itself: the trusted supervisor must only supply
+this acknowledgement after durable output/finalization, including on cancellation.
+Unspooled or incomplete custody must not be silently discarded to obtain release.
+
+Successful release removes the run, clears its command/environment, token and
+event references, and invalidates old streams/handles (`ErrHandle`); the verified
+protocol/model probe gate remains reusable. `MaxRetainedRuns = 8` bounds active,
+starting and completed-but-unreleased runs. At capacity Start returns `ErrRun`
+instead of evicting evidence. A supervisor omitting release therefore fails closed
+rather than accumulating unbounded runs. Other references held by the caller and
+Go string backing memory are not securely erased by dropping adapter references.
 
 `Cancel` is an observed-pgid fallback: TERM, grace (2 s), KILL, then bounded
 observation (5 s). It does not signal the guardian's own group, treats EPERM as

@@ -48,8 +48,12 @@ func helperOpenCode(brief string) int {
 	if brief == "ignore-term" {
 		signal.Ignore(syscall.SIGTERM)
 	}
-	if brief == "hang" || brief == "ignore-term" {
-		event("step_start", map[string]string{"type": "step-start"})
+	if brief == "hang" || brief == "ignore-term" || brief == "malformed-hang" {
+		if brief == "malformed-hang" {
+			fmt.Println(`{"type":`)
+		} else {
+			event("step_start", map[string]string{"type": "step-start"})
+		}
 		for {
 			time.Sleep(time.Second)
 		}
@@ -627,6 +631,149 @@ func TestPreparedLauncherRuntimeFilesArePreserved(t *testing.T) {
 		}
 		if _, err := a.Start(context.Background(), request); !errors.Is(err, ErrRun) {
 			t.Fatal("preexisting runtime config was trusted", err)
+		}
+	}
+}
+
+func TestReleaseRequiresExitAndExactDurableWatermark(t *testing.T) {
+	a, l := helperAdapter(t, "chat_completions")
+	a.grace, a.killWait = 30*time.Millisecond, time.Second
+	gateway, err := newProbeGateway("chat_completions", "model-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer gateway.close()
+	h, err := a.Start(context.Background(), runRequest(t, l, gateway, "malformed-hang"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { a.Cancel(context.Background(), h) })
+	stream, err := a.Events(context.Background(), h, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wait, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	first, err := stream.Next(wait)
+	if err != nil || first.Kind != harness.Failed {
+		t.Fatal("child did not report malformed output", err)
+	}
+	short, stop := context.WithTimeout(context.Background(), 30*time.Millisecond)
+	defer stop()
+	if err := a.Release(short, h, first.Sequence); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatal("released a live process", err)
+	}
+	if _, err = a.Cancel(wait, h); err != nil {
+		t.Fatal(err)
+	}
+	events := collect(t, a, h)
+	through := events[len(events)-1].Sequence
+	for _, wrong := range []int64{0, through - 1, through + 1} {
+		if err = a.Release(wait, h, wrong); !errors.Is(err, ErrRelease) {
+			t.Fatal("accepted incomplete/future custody watermark", err)
+		}
+	}
+	// Failed release leaves the complete replay intact.
+	if replay := collect(t, a, h); len(replay) != len(events) {
+		t.Fatal("failed release lost events")
+	}
+	a.mu.Lock()
+	r := a.runs[h.ID]
+	a.mu.Unlock()
+	// The caller can supply guardian-observed process fields; ID owns the stream.
+	h.PID, h.PGID, h.GuardianPID = 200, 200, h.PID
+	if err = a.Release(wait, h, through); err != nil {
+		t.Fatal(err)
+	}
+	if len(a.runs) != 0 || r.events != nil || r.completion != nil || r.cmd != nil || r.token != "" || !r.released {
+		t.Fatal("retained command, secret or events after release")
+	}
+	if _, err = stream.Next(wait); !errors.Is(err, ErrHandle) {
+		t.Fatal("old stream replayed released memory", err)
+	}
+	if _, err = a.Events(wait, h, 0); !errors.Is(err, ErrHandle) {
+		t.Fatal("released handle still addressable", err)
+	}
+	if err = a.Release(wait, h, through); !errors.Is(err, ErrHandle) {
+		t.Fatal("released handle silently reused", err)
+	}
+}
+
+func TestRetainedRunsBoundConcurrentAdmissionAndReleasePreservesGate(t *testing.T) {
+	a, l := helperAdapter(t, "chat_completions")
+	gateway, err := newProbeGateway("chat_completions", "model-a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer gateway.close()
+	requests := make([]harness.RunRequest, MaxRetainedRuns+1)
+	for i := range requests {
+		requests[i] = runRequest(t, l, gateway, "normal")
+	}
+	type result struct {
+		h   harness.RunHandle
+		err error
+	}
+	results := make(chan result, len(requests))
+	start := make(chan struct{})
+	for _, req := range requests {
+		go func() {
+			<-start
+			h, err := a.Start(context.Background(), req)
+			results <- result{h, err}
+		}()
+	}
+	close(start)
+	var handles []harness.RunHandle
+	refused := 0
+	for range requests {
+		r := <-results
+		if errors.Is(r.err, ErrRun) {
+			refused++
+		} else if r.err != nil {
+			t.Fatal(r.err)
+		} else {
+			handles = append(handles, r.h)
+		}
+	}
+	// Count includes concurrent pre-launch reservations; conservative refusal
+	// during insertion is allowed, but there must be no over-cap admission.
+	if len(handles) == 0 || len(handles) > MaxRetainedRuns || refused == 0 || len(a.runs) != len(handles) {
+		t.Fatal("retention bound did not fence concurrent admission")
+	}
+	for len(handles) < MaxRetainedRuns {
+		h, err := a.Start(context.Background(), runRequest(t, l, gateway, "normal"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		handles = append(handles, h)
+	}
+	watermarks := make([]int64, len(handles))
+	for i, h := range handles {
+		events := collect(t, a, h)
+		watermarks[i] = events[len(events)-1].Sequence
+	}
+	if _, err := a.Start(context.Background(), runRequest(t, l, gateway, "normal")); !errors.Is(err, ErrRun) {
+		t.Fatal("completed but unreleased runs did not bound admission", err)
+	}
+	for i, h := range handles {
+		if err := a.Release(context.Background(), h, watermarks[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Repeated success keeps the same verified gate, never accumulating command
+	// environments/events or requiring another probe for every attempt.
+	for range 3 {
+		h, err := a.Start(context.Background(), runRequest(t, l, gateway, "normal"))
+		if err != nil {
+			t.Fatal("release invalidated probe or leaked admission slot", err)
+		}
+		events := collect(t, a, h)
+		if err := a.Release(context.Background(), h, events[len(events)-1].Sequence); err != nil {
+			t.Fatal(err)
+		}
+		if len(a.runs) != 0 || a.starting != 0 {
+			t.Fatal("completed runs accumulated after release")
 		}
 	}
 }

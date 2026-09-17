@@ -21,7 +21,7 @@ type run struct {
 	cmd             *exec.Cmd
 	events          []harness.Event
 	changed         chan struct{}
-	ended           bool
+	ended, released bool
 	done            chan struct{}
 	bytes, maxBytes int64
 	token           string
@@ -184,6 +184,10 @@ func (s *eventStream) Next(ctx context.Context) (harness.Event, error) {
 			return harness.Event{}, err
 		}
 		s.run.mu.Lock()
+		if s.run.released {
+			s.run.mu.Unlock()
+			return harness.Event{}, ErrHandle
+		}
 		if s.after < int64(len(s.run.events)) {
 			event := s.run.events[s.after]
 			s.after = event.Sequence

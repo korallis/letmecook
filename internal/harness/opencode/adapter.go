@@ -19,11 +19,16 @@ import (
 
 const Version = "1.18.31"
 
+// MaxRetainedRuns bounds active plus unreleased runs (including concurrent
+// starts). A full adapter refuses admission rather than dropping unspooled data.
+const MaxRetainedRuns = 8
+
 var (
 	ErrBinary          = errors.New("opencode_binary_refused")
 	ErrConfigIsolation = errors.New("opencode_config_isolation_unproven")
 	ErrRun             = errors.New("opencode_run_refused")
 	ErrHandle          = errors.New("opencode_handle_unknown")
+	ErrRelease         = errors.New("opencode_release_refused")
 )
 
 // Adapter pins the operator-selected binary by digest. Probe evidence is local
@@ -34,6 +39,7 @@ type Adapter struct {
 	mu              sync.Mutex
 	gates           map[string]bool
 	runs            map[string]*run
+	starting        int
 	grace, killWait time.Duration
 }
 
@@ -96,11 +102,21 @@ func (a *Adapter) Start(ctx context.Context, req harness.RunRequest) (harness.Ru
 		return harness.RunHandle{}, err
 	}
 	a.mu.Lock()
-	passed := a.gates[gateKey(req.Boundary.Protocol, model)]
-	a.mu.Unlock()
-	if !passed {
+	if !a.gates[gateKey(req.Boundary.Protocol, model)] {
+		a.mu.Unlock()
 		return harness.RunHandle{}, ErrConfigIsolation
 	}
+	if len(a.runs)+a.starting >= MaxRetainedRuns {
+		a.mu.Unlock()
+		return harness.RunHandle{}, ErrRun
+	}
+	a.starting++
+	a.mu.Unlock()
+	defer func() {
+		a.mu.Lock()
+		a.starting--
+		a.mu.Unlock()
+	}()
 	if err = prepareWorkspace(req.Workspace, false); err != nil {
 		return harness.RunHandle{}, err
 	}
