@@ -72,8 +72,21 @@ func Encode(value any) ([]byte, error) {
 
 // ExpiryStopID derives a stable UUIDv4-shaped intent from the last lease nonce.
 // It is deterministic, not a source of random IDs or a proof of lease ownership.
-func ExpiryStopID(nonce string) string {
-	b := sha256.Sum256([]byte("lease-expiry:" + nonce))
+func ExpiryStopID(nonce string) string { return derivedID("lease-expiry:" + nonce) }
+
+// LocalStopCauses are the runner-originated stop causes a supervisor may report
+// without an owner stop or a lease expiry: it shut down, a launch failed after
+// acceptance, containment could not be confirmed, or its local policy drifted.
+var LocalStopCauses = []string{"runner_shutdown", "launch_failed", "containment_unconfirmed", "local_policy_drift"}
+
+// LocalStopID derives the deterministic stop identity for a runner-originated
+// stop of one attempt and cause, so replay and the daemon's latch agree.
+func LocalStopID(attemptID, cause string) string {
+	return derivedID("local-stop:" + attemptID + ":" + cause)
+}
+
+func derivedID(seed string) string {
+	b := sha256.Sum256([]byte(seed))
 	b[6] = b[6]&15 | 64
 	b[8] = b[8]&63 | 128
 	return fmt.Sprintf("%x-%x-%x-%x-%x", b[:4], b[4:6], b[6:8], b[8:10], b[10:16])

@@ -577,7 +577,9 @@ func (s *Store) Snapshot(ctx context.Context, taskID string, limit int) (a.Snaps
 	if taskID != "" && len(v.Tasks) == 0 {
 		return v, sql.ErrNoRows
 	}
-	rows, err = tx.QueryContext(ctx, `SELECT sequence,revision,message FROM events WHERE (?='' OR task_id=?) ORDER BY sequence LIMIT ?`, taskID, taskID, limit)
+	// The bounded read projection carries the current generation only; retired
+	// generations stay in the immutable log for the history reads.
+	rows, err = tx.QueryContext(ctx, `SELECT sequence,revision,message FROM events WHERE json_extract(message,'$.identity.generation')=? AND (?='' OR task_id=?) ORDER BY sequence LIMIT ?`, s.meta.Generation, taskID, taskID, limit)
 	if err != nil {
 		return v, err
 	}

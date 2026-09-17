@@ -1,6 +1,7 @@
 package store
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -49,4 +50,30 @@ func TestOpenRefusesIncompleteRestoreMarker(t *testing.T) {
 		t.Fatal(err)
 	}
 	reopened.Close()
+}
+
+// The bounded snapshot projects only current-generation events; retained
+// events from a retired generation stay in the log without breaking reads.
+func TestSnapshotProjectsCurrentGenerationOnly(t *testing.T) {
+	f := dispatchFixtureFor(t, nil)
+	d := admitted(t, f)
+	before, err := f.s.Snapshot(ctx, "", 50)
+	if err != nil || len(before.Events) == 0 {
+		t.Fatal("expected current events", err)
+	}
+	retired := "00000000-0000-4000-8000-0000000000aa"
+	m := d.Assignment
+	m.MessageID = "00000000-0000-4000-8000-0000000000ab"
+	m.Identity.Generation = retired
+	body, _ := json.Marshal(m)
+	if _, err := f.s.db.Exec("INSERT INTO events(message_id,attempt_id,task_id,epoch,revision,message) VALUES(?,?,?,?,?,?)", m.MessageID, m.Identity.AttemptID, m.Identity.TaskID, m.Identity.Epoch, 999, string(body)); err != nil {
+		t.Fatal(err)
+	}
+	after, err := f.s.Snapshot(ctx, "", 50)
+	if err != nil {
+		t.Fatalf("snapshot rejected retained historical event: %v", err)
+	}
+	if len(after.Events) != len(before.Events) {
+		t.Fatalf("historical event projected: %d != %d", len(after.Events), len(before.Events))
+	}
 }

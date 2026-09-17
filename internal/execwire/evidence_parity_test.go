@@ -30,3 +30,16 @@ func TestEvidenceMirrorsStoreRuntimeEvidence(t *testing.T) {
 		}
 	}
 }
+
+func TestLocalStopIDIsDeterministicAndDistinct(t *testing.T) {
+	a := execwire.LocalStopID("00000000-0000-4000-8000-000000000003", "runner_shutdown")
+	if a != execwire.LocalStopID("00000000-0000-4000-8000-000000000003", "runner_shutdown") {
+		t.Fatal("not deterministic")
+	}
+	if a == execwire.LocalStopID("00000000-0000-4000-8000-000000000003", "launch_failed") || a == execwire.ExpiryStopID("00000000-0000-4000-8000-000000000003") {
+		t.Fatal("collision across causes")
+	}
+	if len(a) != 36 || a[14] != '4' {
+		t.Fatalf("not uuid v4 shaped: %s", a)
+	}
+}
