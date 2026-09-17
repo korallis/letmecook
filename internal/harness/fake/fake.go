@@ -68,6 +68,9 @@ func Decode(data []byte, attempt int) (Settings, error) {
 	return s, nil
 }
 
+const MaxRetainedRuns = 8
+const maxRetainedBytes = 8 << 20
+
 type Harness struct {
 	Binary string
 	mu     sync.Mutex
@@ -100,6 +103,11 @@ func (f *Harness) Start(ctx context.Context, r h.RunRequest) (h.RunHandle, error
 	if r.Launcher == nil {
 		return h.RunHandle{}, errors.New("launcher required")
 	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.runs) >= MaxRetainedRuns || f.runs[r.Identity.AttemptID] != nil {
+		return h.RunHandle{}, errors.New("fake retained-run limit or duplicate identity")
+	}
 	s, e := Decode(r.Settings, 0)
 	if e != nil {
 		return h.RunHandle{}, e
@@ -126,11 +134,9 @@ func (f *Harness) Start(ctx context.Context, r h.RunRequest) (h.RunHandle, error
 	if e = cmd.Start(); e != nil {
 		return h.RunHandle{}, e
 	}
-	stream := &events{ch: make(chan item, 16)}
+	stream := &events{changed: make(chan struct{}), done: make(chan struct{})}
 	id := r.Identity.AttemptID
-	f.mu.Lock()
 	f.runs[id] = stream
-	f.mu.Unlock()
 	go func() {
 		var wg sync.WaitGroup
 		wg.Add(2)
@@ -139,9 +145,12 @@ func (f *Harness) Start(ctx context.Context, r h.RunRequest) (h.RunHandle, error
 		wg.Wait()
 		err := cmd.Wait()
 		if err != nil {
-			stream.ch <- item{event: h.Event{Kind: h.Failed, At: time.Now(), Summary: "harness_crash", Raw: json.RawMessage(`{"kind":"failed","reason":"harness_crash"}`)}}
+			stream.append(item{event: h.Event{Kind: h.Failed, At: time.Now(), Summary: "harness_crash", Raw: json.RawMessage(`{"kind":"failed","reason":"harness_crash"}`)}})
 		}
-		close(stream.ch)
+		stream.mu.Lock()
+		close(stream.done)
+		stream.notify()
+		stream.mu.Unlock()
 	}()
 	return h.RunHandle{ID: id, PID: cmd.Process.Pid, PGID: cmd.Process.Pid}, nil
 }
@@ -163,24 +172,89 @@ type item struct {
 	err   error
 }
 type events struct {
-	ch  chan item
-	seq int64
+	mu            sync.Mutex
+	rows          []item
+	next          int
+	bytes         int
+	overflow      bool
+	changed, done chan struct{}
 }
 
+func (e *events) notify() { close(e.changed); e.changed = make(chan struct{}) }
+func (e *events) append(v item) bool {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if e.overflow {
+		return false
+	}
+	n := len(v.event.Raw) + len(v.event.Summary) + 256
+	if e.bytes+n > maxRetainedBytes {
+		e.overflow = true
+		e.rows = append(e.rows, item{err: errors.New("fake output retention full")})
+		e.notify()
+		return false
+	}
+	e.bytes += n
+	e.rows = append(e.rows, v)
+	e.notify()
+	return true
+}
 func (e *events) Next(ctx context.Context) (h.Event, error) {
-	select {
-	case <-ctx.Done():
-		return h.Event{}, ctx.Err()
-	case v, ok := <-e.ch:
-		if !ok {
-			return h.Event{}, io.EOF
+	for {
+		if err := ctx.Err(); err != nil {
+			return h.Event{}, err
 		}
-		e.seq++
-		v.event.Sequence = e.seq
-		return v.event, v.err
+		e.mu.Lock()
+		if e.next < len(e.rows) {
+			v := e.rows[e.next]
+			e.next++
+			v.event.Sequence = int64(e.next)
+			e.mu.Unlock()
+			return v.event, v.err
+		}
+		select {
+		case <-e.done:
+			e.mu.Unlock()
+			return h.Event{}, io.EOF
+		default:
+		}
+		changed := e.changed
+		e.mu.Unlock()
+		select {
+		case <-ctx.Done():
+			return h.Event{}, ctx.Err()
+		case <-changed:
+		}
 	}
 }
-func (e *events) scan(r io.Reader, stderr bool) {
+
+// Release never drops bytes to make a full spool look complete. Full/error runs
+// remain bounded and retained; normal completed runs are pruned after custody.
+func (f *Harness) Release(ctx context.Context, handle h.RunHandle, through int64) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	e := f.runs[handle.ID]
+	if e == nil {
+		return errors.New("unknown fake run")
+	}
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	select {
+	case <-e.done:
+	default:
+		return errors.New("fake run still active")
+	}
+	if e.overflow || through != int64(len(e.rows)) || e.next != len(e.rows) {
+		return errors.New("fake output not fully retained")
+	}
+	delete(f.runs, handle.ID)
+	return nil
+}
+func (e *events) scan(r io.ReadCloser, stderr bool) {
+	defer r.Close()
 	s := bufio.NewScanner(r)
 	s.Buffer(make([]byte, 4096), h.MaxRawBytes)
 	s.Split(func(data []byte, eof bool) (int, []byte, error) {
@@ -207,10 +281,12 @@ func (e *events) scan(r io.Reader, stderr bool) {
 			v.Kind = h.Activity
 			v.Text = "stderr"
 		}
-		e.ch <- item{event: h.Event{Kind: v.Kind, At: time.Now(), Summary: v.Text, Raw: raw, Native: native}}
+		if !e.append(item{event: h.Event{Kind: v.Kind, At: time.Now(), Summary: v.Text, Raw: raw, Native: native}}) {
+			return
+		}
 	}
 	if err := s.Err(); err != nil {
-		e.ch <- item{err: err}
+		e.append(item{err: err})
 	}
 }
 

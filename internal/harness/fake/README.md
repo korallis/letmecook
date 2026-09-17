@@ -23,3 +23,10 @@ and forked children are real signal targets. Detached-child calls setsid; the
 guardian must report unknown containment, not a release. Huge output flows
 through real pipes and durable spool limits. Native JSON lines are retained with
 normalized status/activity, and nonzero subprocess exit emits a failed event.
+
+Readers retain a bounded 8 MiB event window per run without waiting on the event
+consumer, so a full supervisor spool cannot strand scanner goroutines. Hitting
+the window closes the read pipes, retains an explicit error and refuses release.
+At most eight unresolved runs are retained. `Release(ctx, handle, through)` prunes
+only completed, fully consumed runs at the exact final event watermark after the
+supervisor's durable custody gate; incomplete output is never dropped to release.
