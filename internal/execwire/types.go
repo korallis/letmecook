@@ -114,6 +114,9 @@ type Evidence struct {
 	PGIDEmpty      bool   `json:"pgid_empty"`
 	ObservedUnixNS int64  `json:"observed_unix_ns"`
 	StreamThrough  int64  `json:"stream_through"`
+	// Cause names a runner-originated stop (one of LocalStopCauses) on a
+	// stopping proposal so the daemon derives LocalStopID for the latch.
+	Cause string `json:"cause,omitempty"`
 }
 type MessageEnvelope struct {
 	Version     string           `json:"version"`

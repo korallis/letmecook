@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	c "github.com/korallis/letmecook/internal/control"
 	"reflect"
 
 	"github.com/korallis/letmecook/internal/closedjson"
@@ -77,7 +78,7 @@ func ExpiryStopID(nonce string) string { return derivedID("lease-expiry:" + nonc
 // LocalStopCauses are the runner-originated stop causes a supervisor may report
 // without an owner stop or a lease expiry: it shut down, a launch failed after
 // acceptance, containment could not be confirmed, or its local policy drifted.
-var LocalStopCauses = []string{"runner_shutdown", "launch_failed", "containment_unconfirmed", "local_policy_drift"}
+var LocalStopCauses = c.LocalStopCauses
 
 // LocalStopID derives the deterministic stop identity for a runner-originated
 // stop of one attempt and cause, so replay and the daemon's latch agree.
