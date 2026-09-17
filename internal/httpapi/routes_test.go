@@ -21,10 +21,10 @@ import (
 func isolatedRegistry(t *testing.T) {
 	t.Helper()
 	registry.Lock()
-	previous := registry.entries
-	registry.entries = nil
+	previous, composed := registry.entries, registry.composed
+	registry.entries, registry.composed = nil, false
 	registry.Unlock()
-	t.Cleanup(func() { registry.Lock(); registry.entries = previous; registry.Unlock() })
+	t.Cleanup(func() { registry.Lock(); registry.entries, registry.composed = previous, composed; registry.Unlock() })
 }
 func routeStore(t *testing.T) (*store.Store, tls.Certificate, tls.Certificate, string) {
 	t.Helper()
@@ -279,5 +279,107 @@ func TestRouteResponseStatusAndHeaders(t *testing.T) {
 		if strings.Contains(w.Body.String(), "leaked") || w.Header().Get("Secret") != "" {
 			t.Fatal("programming error leaked")
 		}
+	}
+}
+
+func TestNoncanonicalPathsNeverRedirect(t *testing.T) {
+	isolatedRegistry(t)
+	s, owner, _, _ := routeStore(t)
+	ownerAPI, err := NewTLS(s, "https://127.0.0.1:7444")
+	if err != nil {
+		t.Fatal(err)
+	}
+	executionAPI, err := NewExecution(s, Deps{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"//", "///", "/api//v1/status", "/x/v1/../"} {
+		t.Run(path, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			ownerAPI.ServeHTTP(w, routeRequest(owner, false, "GET", path, ""))
+			assertRouteError(t, w, 404, "not_found")
+			if w.Header().Get("Location") != "" {
+				t.Fatal("owner redirected")
+			}
+			r := routeRequest(owner, false, "GET", path, "")
+			r.TLS = nil
+			r = r.WithContext(context.WithValue(r.Context(), http.LocalAddrContextKey, &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: 7444}))
+			w = httptest.NewRecorder()
+			executionAPI.ServeHTTP(w, r)
+			assertRouteError(t, w, 403, "identity_denied")
+			if w.Header().Get("Location") != "" {
+				t.Fatal("execution redirected before authorization")
+			}
+		})
+	}
+	for path, want := range map[string]bool{"": false, "/": true, "//": false, "///": false, "/api/v1/": true, "/api/v1": true, "/api/v1//": false, "/api/./v1": false} {
+		if canonicalPath(path) != want {
+			t.Errorf("canonicalPath(%q) != %t", path, want)
+		}
+	}
+}
+
+func TestGuardRefusalEnvelopeByRouteFamily(t *testing.T) {
+	isolatedRegistry(t)
+	s, owner, _, _ := routeStore(t)
+	Register("workflow", func(Deps) []Route {
+		return []Route{{Method: "GET", Pattern: "/api/v1/tasks", Role: "owner", Handle: func(context.Context, Actor, Request) (any, *Error) { t.Fatal("guard bypassed"); return nil, nil }}}
+	})
+	h, err := NewTLS(s, "https://127.0.0.1:7444")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, path := range []string{"/api/v1/tasks", "/api/v1/future", "/api/v1/status", "/api/v1/snapshot", "/api/v1/identity/self", "/api/v1/identity/enrollments", "/api/v1/identity/enroll", "/api/v1/identity/update"} {
+		r := routeRequest(owner, false, "GET", path, "")
+		r.Header.Set("Origin", "https://hostile.invalid")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		assertRouteError(t, w, 403, "origin_refused")
+		var body map[string]json.RawMessage
+		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			t.Fatal(err)
+		}
+		if !legacyRoutePath(path) {
+			if string(body["version"]) != `"workflow-provisional-v1"` || string(body["detail"]) != `""` || len(body) != 3 {
+				t.Fatalf("workflow guard envelope: %s", w.Body.String())
+			}
+		} else {
+			version := `"read-provisional-v1"`
+			if strings.HasPrefix(path, "/api/v1/identity/") {
+				version = `"identity-provisional-v1"`
+			}
+			if string(body["version"]) != version || body["mode"] == nil || body["missing_capabilities"] == nil || len(body) != 4 {
+				t.Fatalf("legacy guard envelope: %s", w.Body.String())
+			}
+		}
+	}
+}
+
+func TestRegistryRejectsLateRegistration(t *testing.T) {
+	for _, execution := range []bool{false, true} {
+		t.Run(fmt.Sprint(execution), func(t *testing.T) {
+			isolatedRegistry(t)
+			s, _, _, _ := routeStore(t)
+			Register("empty", func(Deps) []Route { return nil })
+			var err error
+			if execution {
+				_, err = NewExecution(s, Deps{})
+			} else {
+				_, err = NewTLS(s, "https://127.0.0.1:7444")
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Both listeners may compose sequentially from the same frozen snapshot.
+			if _, err := NewExecution(s, Deps{}); err != nil {
+				t.Fatal(err)
+			}
+			defer func() {
+				if recover() == nil {
+					t.Fatal("late registration did not panic")
+				}
+			}()
+			Register("late", func(Deps) []Route { return nil })
+		})
 	}
 }

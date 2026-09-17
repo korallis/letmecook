@@ -87,23 +87,29 @@ type registration struct {
 
 var registry struct {
 	sync.RWMutex
-	entries []registration
+	entries  []registration
+	composed bool
 }
 
 // Register contributes a route set from a package init. Duplicate (method,
 // pattern) pairs panic when composed, including duplicates across owner sets.
 // Factories run only with real dependencies, never speculatively during init.
+// The first composition freezes registration; later Register calls panic.
 func Register(set string, fn func(Deps) []Route) {
 	if set == "" || fn == nil {
 		panic("invalid route registration")
 	}
 	registry.Lock()
 	defer registry.Unlock()
+	if registry.composed {
+		panic("route registration after composition")
+	}
 	registry.entries = append(registry.entries, registration{set, fn})
 }
 func registered() []registration {
-	registry.RLock()
-	defer registry.RUnlock()
+	registry.Lock()
+	defer registry.Unlock()
+	registry.composed = true
 	return append([]registration(nil), registry.entries...)
 }
 
@@ -153,6 +159,8 @@ func newAPI(s *store.Store, host string, secure bool, dependencies ...Deps) (htt
 	}
 	if secure {
 		mount(mux, seen, d, false, pools)
+	} else {
+		_ = registered() // Plaintext composition also freezes the init-only registry.
 	}
 	mux.Handle("/", legacy)
 	// ServeMux redirects noncanonical paths. The old API did not: pass them to the
@@ -165,6 +173,10 @@ func newAPI(s *store.Store, host string, secure bool, dependencies ...Deps) (htt
 		mux.ServeHTTP(w, r)
 	})
 	return guard(host, secure, func(w http.ResponseWriter, r *http.Request, status int, code string) {
+		if secure && strings.HasPrefix(r.URL.Path, "/api/v1/") && !legacyRoutePath(r.URL.Path) {
+			writeRouteError(w, false, &Error{status, code, ""})
+			return
+		}
 		legacyRefuse(metadata, secure, w, r)(status, code)
 	}, dispatch), nil
 }
@@ -355,7 +367,22 @@ func writeRouteError(w http.ResponseWriter, execution bool, e *Error) {
 	w.WriteHeader(e.Status)
 	json.NewEncoder(w).Encode(execwire.ErrorBody{Version: version, Error: e.Code, Detail: e.Detail})
 }
-func canonicalPath(p string) bool { return p == "/" || path.Clean(p) == strings.TrimSuffix(p, "/") }
+func canonicalPath(p string) bool {
+	np := path.Clean(p)
+	if strings.HasSuffix(p, "/") && np != "/" {
+		np += "/"
+	}
+	return p != "" && np == p
+}
+
+func legacyRoutePath(path string) bool {
+	switch path {
+	case "/api/v1/status", "/api/v1/snapshot", "/api/v1/identity/self",
+		"/api/v1/identity/enrollments", "/api/v1/identity/enroll", "/api/v1/identity/update":
+		return true
+	}
+	return false
+}
 
 func legacyRefuse(metadata a.Status, secure bool, w http.ResponseWriter, r *http.Request) func(int, string) {
 	return func(status int, code string) {
