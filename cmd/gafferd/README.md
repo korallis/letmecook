@@ -106,11 +106,36 @@ runner authority. Host must match the accepted socket's IP:port; no Origin,
 forwarding or proxy exception is added. Use an explicit IP SAN for that endpoint.
 Handshake and header budgets are 5 seconds, read/write 150 seconds, idle 60 seconds,
 headers 8192 bytes. Control/long/bulk pools are 16/8/2 with 2/30/120-second context
-budgets. The existing owner listener keeps its short timeouts. This slice mounts an
-empty execution route set: it adds transport and interface seams, **not** route
-bodies, a supported runtime, launch, finalization or retry. Startup calls the
+budgets. The existing owner listener keeps its short timeouts. Startup calls the
 reconcile seam before opening either listener; only its explicit not-implemented
 result is temporarily tolerated. A real recovery error prevents startup.
+
+The execution listener serves the provisional `/x/v1` route set defined in the
+[execution contract](../../docs/contracts/execution.md#selected-transport-provisional):
+`POST /session`, `GET /state`, `GET /input`, `GET /inbox` (long poll, ≤ 25 s),
+`POST /messages` (`accept`, `refuse`, `transition`, `terminated`), `POST /lease`,
+`POST /streams/{attempt_id}`, `POST /attempts/{id}/uploads`,
+`PUT /uploads/{id}/blobs/{sha256}` (≤ 64 MiB, 256 MiB per attempt),
+`POST /uploads/{id}/commit`, `POST /attempts/{id}/finalize` and `POST /usage`.
+Bodies are closed JSON (`execution-channel-provisional-v1`). Every request
+re-authenticates the runner credential; every request except `POST /session`
+must carry exactly one `X-Gaffer-Session` header naming a `runner_sessions` row
+that the same runner created under this daemon boot and generation, otherwise
+409 `session_stale`: a daemon restart invalidates every session and the runner
+must hello again. A hello opens a `normal` session only when it cites the
+runner's latest imported eligibility revision and that record carries the
+hello's `runner_boot`; after a runner restart the session is `recovery_only`
+(evidence accepted, nothing delivered) until the owner re-imports facts. Every
+durable point commits before its reply leaves the daemon: sessions, transitions
+with their evidence, leases (refusals fenced first), stream records (fsync per
+record under `<state-dir>/streams/<attempt_id>.sink`), staged blobs
+(`<artifacts-dir>/upload/<upload_id>/`), custody and the one finalize
+transaction (terminal CAS, event, release and result head). While
+`daemon_state.paused` is set the inbox delivers nothing new and leases, forward
+transitions and finalization are refused `paused`; stops, termination evidence,
+streams, refusals and usage still land so a paused daemon drains evidence. The
+routes are development evidence for the M1 development profile, not a supported
+runtime, and grant no acceptance, publication or merge authority.
 
 ## Read contract for #95
 
@@ -181,8 +206,12 @@ No CORS, preflight, browser session or cross-origin exception.
   grants, CAS heads and durable invalidations), then schema 5 (immutable repository
   identities and approved input profiles), then schema 6 (atomic dispatch input,
   reservation/outbox, eligibility history, sticky stops and ack/release receipts;
-  retained attempts with a unique current-attempt index). Persistent application ID
-  `0x47414646` distinguishes it from #94.
+  retained attempts with a unique current-attempt index), schema 7 (artifact
+  custody), schema 8 (durable stop metadata), schema 9 (verification and local
+  review) and schema 10 (task briefs, runner sessions, runtime observations,
+  upload sessions, result heads, usage, jobs, daemon state, reconcile reports and
+  restore history; `PRAGMA user_version` is verified to be 10 after migration).
+  Persistent application ID `0x47414646` distinguishes it from #94.
   Unknown schemas, unrecognized DBs and fixture imports fail closed. Migration,
   fresh boot and restart recovery share one commit. Generation survives ordinary
   restart; restore/new-generation/retired namespaces remain #23, not file copying.
@@ -195,18 +224,21 @@ No CORS, preflight, browser session or cross-origin exception.
   + event insert commit together; append-only event triggers prevent update/delete.
 - Persistent attempt writes validate v2 and current generation before replay. The
   [admission lifecycle](../../internal/scheduler/README.md#charges-stop-and-release)
-  owns stop and proof-gated terminal transitions. Starting/running/result/success
-  transitions still await their evidence owners.
+  owns stop and proof-gated terminal transitions. Starting/running/result_pending
+  transitions are runner proposals checked against retained leases, the stream
+  sink and process evidence; succeeded/failed come only from the evidence-gated
+  finalize transaction (see the execution listener above).
   Restart changes active attempts to unknown/reconciling and appends matching
   events atomically with fresh boot.
   Recovery leaves unknown/terminal history unchanged and never resumes execution.
   Exhaustion/errors abort startup rather than wrapping revision or fabricating safe state.
-- Artifact directory is explicit configuration, **not artifact durability**. No blob,
-  manifest, result receipt, lease, runner runtime, inference,
-  acceptance, publication or merge exists. Repository validation is a separate
-  typed in-process operation; daemon startup never contacts repositories. Store
-  event durability proves none of #10's physical custody, fencing, stop or
-  live-evidence obligations.
+- Artifact directory is explicit configuration, **not artifact durability**
+  beyond the provisional custody path: blobs, manifests, result receipts and
+  leases exist only as the execution channel's development evidence; no runner
+  runtime, inference, acceptance, publication or merge exists here. Repository
+  validation is a separate typed in-process operation; daemon startup never
+  contacts repositories. Store event durability proves none of #10's physical
+  custody, fencing, stop or live-evidence obligations.
 
 ## Verification
 

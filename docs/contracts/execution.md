@@ -112,6 +112,97 @@ into a fabricated identity. `reconciliation_required` means valid shape but miss
 required owner evidence; no admission. Other named refusals retain #93 meanings.
 A receiver must not answer a refusal with another refusal.
 
+### Selected transport (provisional)
+
+The provisional execution channel is `gafferd`'s second TLS listener
+(`--execution-listen`, runner mTLS, ALPN exactly `execution-provisional-v2`,
+HTTP/1.1 under `/x/v1`; see the
+[integration record](../decisions/0002-m1-end-to-end-integration.md) §4). Bodies
+are closed JSON (`execution-channel-provisional-v1`, ≤ 64 KiB except blobs, no
+unknown fields, no nulls). Every request re-authenticates the runner credential
+(403 `identity_denied`) and, except `POST /x/v1/session`, carries exactly one
+`X-Gaffer-Session` header naming a `runner_sessions` row created by that runner
+under the current daemon boot and generation (else 409 `session_stale`). The
+selected ALPN read from the connection is what the store checks with
+`CheckSession`; no body field can substitute for it. Pools: control 16/2 s, long
+8/30 s, bulk 2/120 s (503 `busy` when exhausted).
+
+| Route | Body → reply | Durable point before the reply |
+| --- | --- | --- |
+| `POST /session` | `Hello` → `Session{session_id, generation, daemon_boot, runner_id, mode, drift_ms 2000, termination_ms 5000, lease_validity_ms 20000, renew_every_ms 5000, paused}` | `runner_sessions` row; same `message_id` → same row, changed hello → 409 `identity_conflict`. `mode` is `normal` only when the hello cites the runner's latest published eligibility revision and that record carries the hello's `runner_boot`; otherwise `recovery_only` (evidence accepted, nothing delivered). |
+| `GET /state?dispatch_id=` | → `State{attempt_state, revision, acknowledged, released, last_lease, stream{through, expected, bytes}, receipt_id, head, stop_targets[], paused}` | read |
+| `GET /input?dispatch_id=` | → `TaskInput{version, dispatch_id, task_id, repository, base_commit, brief_sha256, brief, criteria[], paths[], operations[], harness, settings}` | read; `brief_sha256` recomputed from the retained brief must equal the stored digest and the grant's `brief.sha256`, else 409 `reconciliation_required` |
+| `GET /inbox?wait_ms≤25000` | → `Inbox{assignments[], cancels[], paused, poll_after_ms}` | `Delivery` commits grant expiry; refused deliveries are logged, never sent; long-poll wakes on the daemon's notify hub; a paused daemon or a `recovery_only` session delivers no assignment but still delivers cancels |
+| `POST /messages` | `MessageEnvelope{version, message_id, dispatch_id, message, evidence?, boundary?, measurement?}` → `{outcome, message?}` or, for `terminated`, `{outcome, released}` | one transaction per kind (below) |
+| `POST /lease` | `LeaseEnvelope` → `lease_reply` | `control_leases` row; refusals fenced in `control_fenced` and committed before the 409 |
+| `POST /streams/{attempt_id}` | `StreamBatch{version, records[]}` ≤ 64 KiB, contiguous → `StreamAck{through, expected, bytes}` | sink append fsynced per record; 409 `stream_sequence_gap` / `stream_record_conflict` carry the expected sequence in `detail`; duplicates replay the retained acknowledgement |
+| `POST /attempts/{id}/uploads` | `UploadBegin` → 201 `UploadSession{upload_id, missing[], bytes_allowed}` | manifest file plus `upload_sessions`/`upload_blobs` rows; replay by `message_id` |
+| `PUT /uploads/{id}/blobs/{sha256}` | raw bytes → 201 new / 200 duplicate `{sha256, bytes, duplicate}` | temp file hashed, fsynced, renamed, directory fsynced, row marked staged; 422 `digest_mismatch` removes the temp file; 413 `oversized` over 256 MiB per attempt |
+| `POST /uploads/{id}/commit` | `{version, message_id}` → `CommitReply{ack, receipt, quarantined}` | custody promotion and metadata commit (`CustodyResult`), then the session mark; 409 `upload_incomplete` lists missing digests (at most 32) in `detail`; a lost reply replays the byte-identical acknowledgement |
+| `POST /attempts/{id}/finalize` | `Completion{version, message_id, receipt_id, stream{through, digest}, exit{code, pgid, observed_unix_ns}, boundary}` → `{outcome, released}` | CAS, terminal event, `dispatch_releases` and result head in one transaction (section 5) |
+| `POST /usage` | `Usage{version, message_id, identity, receipts[]}` → `{outcome:"recorded"}` | `attempt_usage` upsert per `request_id`; a terminal receipt supersedes its reservation and is never regressed |
+
+`POST /messages` by `message.kind`: `accept` → `AcknowledgeAssignment` →
+`{outcome:"acknowledged"}`; `refuse` (in reply to the assignment, before
+acknowledgement) → `runtime_observations(kind:"refused")` →
+`{outcome:"recorded"}`; `transition` → `ProposeTransition`; `terminated` →
+`ReportTermination`. Transition proposals carry `evidence` whose kind and fields
+are checked against durable state: `assigned→starting` needs `launch_intent`
+with `workspace`, `nonce` equal to the current, unexpired, unrevoked lease,
+`guardian_pid` 0, and `boundary_port` 1..65535 (exactly 0 when the retained
+task brief names the `fake` harness, which runs without an inference boundary);
+`starting→running` needs `launched` with non-zero `guardian_pid`, `pid`, `pgid`
+and `start_unix_ns`; `running→result_pending` (also `unknown→result_pending`
+after a daemon restart) needs `exit` with `pgid`, `pgid_empty`,
+`observed_unix_ns` and `stream_through` equal to the sink watermark; any state
+`→stopping` needs `stop` and either a latched `control_targets` row or `nonce`
+equal to the runner's last lease (its own lease lapse). Proposals to terminal
+states or `unknown`, a wrong edge, a wrong runner, a stale generation, a session
+whose runner boot differs from the dispatch's, a latched stop (non-stopping
+edges), a paused daemon (non-stopping edges) and structurally missing evidence
+are refused (`invalid_transition`, `runner_disabled`, `stale_generation`,
+`boot_mismatch`, `stop_latched`, `paused`, `malformed`,
+`reconciliation_required`). The recorded message is returned; an equal replay
+returns it again, an unequal replay under the same `message_id` is
+`identity_conflict`. Every applied proposal retains its evidence in
+`runtime_observations` in the same transaction.
+
+`terminated` validates the evidence exactly as the owner import does (target,
+boots, measurement) and releases the reservation to `cancelled` (or `expired`
+for a `lease_expired` stop) only when the reported boundary is settled
+(`quiescent`, no in-flight requests, reservations equal to terminal receipts),
+`remote_work` is `quiescent`, `confirmed_process` is `terminated` or
+`not_started`, and the attempt is `stopping` or `unknown`; the runner principal
+is the release actor. Otherwise the observation is retained and the reply is
+`{outcome:"observed", released:false}`. A `stop_id` equal to
+`ExpiryStopID(last lease nonce)` first latches the `lease_expired` cancel under
+actor `lease-clock`. Evidence carrying another daemon or runner boot is retained
+in `runtime_observations` for reconcile (`{outcome:"retained"}`), never promoted.
+
+Lease service: the daemon builds `lease_reply{nonce, boots, validity_ms 20000}`
+(its `message_id` is derived from the nonce; the closed `lease_reply` field set
+carries no `in_reply_to`, so the nonce is the correlation), checks it with
+`CheckLease` under `drift_ms 2000`, `termination_ms 5000`, the prior lease's
+runner cutoff and nonce revocation, and records issuance with a 7 s margin. The
+same nonce replays the retained reply. `delayed_reply`, `boot_mismatch`,
+`nonce_mismatch`, `stale_generation`, `paused` and `revoked_or_expired` refusals
+are fenced and committed before the 409.
+
+Error envelope `{version:"execution-channel-provisional-v1", error, detail}`.
+Codes: 400 `malformed`, `unknown_version`, `invalid_query`, `invalid_id`,
+`invalid_bound`; 403 `identity_denied`, `runner_disabled`; 404 `not_found`; 409
+the protocol refusals verbatim plus `session_stale`, `stop_latched`, `stopped`,
+`paused`, `revoked_or_expired`, `upload_incomplete`, `stream_sequence_gap`,
+`stream_record_conflict`; 413 `oversized`, `spool_full`; 422 `digest_mismatch`
+and the remaining authority denies (with `detail` naming the field); 503
+`busy`, `store_unavailable`. Streams are received into one sink per attempt at
+`<state-dir>/streams/<attempt_id>.sink` (4 MiB, identity-bound, fsync per
+record); `stream.digest` in `State`, `Completion` and reconcile inputs is
+`runstream.StreamDigest`: SHA-256 over the concatenated record digests in
+sequence order. This transport is development evidence for O2, not its closure:
+peer revocation, journal/state sync and mixed-peer behaviour are exercised only
+by the M1 development scenarios.
+
 ### Acknowledgement points
 
 | Event | Durable point and replay semantics |
@@ -281,6 +372,46 @@ that loss. Native session resume requires intact compatible session/environment,
 not just a transcript. A custody ack is not verification, local acceptance or
 publication/merge permission.
 
+
+### Upload, commit and finalize (provisional, O6)
+
+The provisional custody path over the execution channel is `BeginUpload` →
+`RecordUploadedBlob` per missing digest → `CommitUpload` → `FinalizeAttempt`.
+`BeginUpload` requires a `result_pending` attempt owned by the runner (a
+stale-generation identity is admitted only so its bytes are retained and
+quarantined at commit), binds `result.identity`, the manifest digest and the
+distinct blob inventory before any byte arrives, refuses a blob over 64 MiB or
+an inventory over 256 MiB (413 `oversized`), replays by `message_id`, reuses an
+open session for the same manifest and refuses a second manifest for the
+attempt (`identity_conflict`). Each `PUT` streams exactly the promised length
+into a temp file while hashing, fsyncs, renames to the digest name and fsyncs
+the directory before the row is marked staged and committed; a short, long or
+mismatching body removes the temp file (422 `digest_mismatch`) and leaves the
+digest missing. Bytes are charged per attempt across every upload session
+before they are stored. `CommitUpload` refuses while any digest is missing or
+no longer verifies (409 `upload_incomplete` naming up to 32 digests), otherwise
+hands the staged files to `CustodyResult`, then marks the session committed;
+the acknowledgement is deterministic in the receipt, so a reply lost before or
+after the session mark is replayed byte-identically, including after a restart.
+`FinalizeAttempt` accepts only a non-quarantined receipt of the current
+generation and identity, a retained `exit` observation equal to the claimed
+exit, a settled boundary, a claimed stream watermark no later than the sink's
+with an equal chain digest, no latched stop (409 `stop_latched`), a live grant,
+current boots and an unpaused daemon (409 `paused`); anything less is 409
+`reconciliation_required`. It then moves `result_pending` to the manifest's
+outcome, records the terminal event `dispatchID(receipt_id, "terminal")`, the
+`dispatch_releases` row (actor: runner principal), `tasks.state`
+`awaiting_review` or `reconciling` and, on success, the `artifact_result_heads`
+head in one transaction. A finalized attempt replays the same reply for the same
+receipt. Once a head exists, only that attempt's manifest can be selected or
+accepted for verification. A crash between custody and finalize leaves a receipt
+with no terminal event for reconcile to complete from the stored evidence;
+nothing reruns. These are development-evidence obligations under O6, proven by
+real-bytes tests (crash hooks around every commit, SIGKILL after the sink
+acknowledgement and around the finalize commit, digest mismatch, aggregate cap,
+lost-reply replay, stale-generation quarantine); the archive and resumable
+transfer formats remain unselected.
+
 ## 6. Safe retry versus quarantine
 
 “Safe retry” means eligible to propose a **new** attempt under renewed admission
@@ -347,6 +478,15 @@ or runtime qualification evidence.
 | O6 — manifest and custody | Select exact manifest/archive/path/chunk/size contract and durable filesystem/store operations; prove hash verification, crash/sync/rename/disk-full/lost-ack behavior against real bytes, including unsupported artifact shapes and retention. |
 | O7 — authority and recovery | Bind input/route digests to real grants/full-graph evidence; preserve strict/native limits and remote-unknown reservations. Specify evidence-authorized quarantine clearing, task verification/acceptance and separate delivery reconciliation. |
 | O8 — review and acceptance | Obtain required independent contract review before lock, exact-final-head code review and actual CI. Record reviewer identity honestly: pipeline GPT-5.6 Sol-review is not Opus and does not satisfy a separately required Opus review. Head changes need renewed review. |
+
+
+Development evidence for O4 and O5 (S1, #115): the execution channel records
+supervisor termination evidence, lease-clock latches on `ExpiryStopID`, lease
+lapse and the paused/stop refusals only under the development profile
+`macos-sandbox-exec-dev` (`qualification: development`, `supported: false`).
+Those tests demonstrate the daemon's commit-before-reply and release rules
+against real SQLite, TLS and SIGKILL, not measured confinement, drift or
+watchdog bounds; O4 and O5 stay open.
 
 Related work: [#10](https://github.com/korallis/letmecook/issues/10),
 [#9](https://github.com/korallis/letmecook/issues/9),
