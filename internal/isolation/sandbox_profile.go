@@ -87,13 +87,27 @@ func profileText(c SandboxConfig, w Workspace) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	denies := []string{filepath.Join(home, ".config"), filepath.Join(home, ".claude"), filepath.Join(home, ".codex"), filepath.Join(home, ".ssh"), filepath.Join(home, ".local/share/opencode"), filepath.Join(home, ".local/state/opencode")}
+	denies := []string{}
+	for _, path := range []string{
+		".config", ".claude", ".claude.json", ".codex", ".ssh", ".aws", ".azure",
+		".netrc", ".authinfo", ".gnupg", "Library/Keychains", ".gitconfig", ".git-credentials",
+		".npmrc", ".pypirc", ".docker", ".kube", ".local/share/opencode", ".local/state/opencode",
+		".gaffer", ".local/share/gaffer", ".local/state/gaffer",
+	} {
+		denies = append(denies, filepath.Join(home, path))
+	}
 	for _, path := range append([]string{c.CredentialPath, c.RunnerStateDir}, c.SecretPaths...) {
 		if path != "" {
 			denies = append(denies, path)
 			if p, e := canonical(path); e == nil && p != path {
 				denies = append(denies, p)
 			}
+		}
+	}
+	// Deny canonical aliases too (e.g. credential directories linked outside HOME).
+	for _, path := range append([]string(nil), denies...) {
+		if p, e := canonical(path); e == nil && p != path {
+			denies = append(denies, p)
 		}
 	}
 	for _, path := range denies {
@@ -105,6 +119,11 @@ func profileText(c SandboxConfig, w Workspace) (string, error) {
 	}
 	return b.String(), nil
 }
+
+// "secret-separation" is the existing admission contract identifier. In this
+// development profile it means ONLY enumerated credential/state paths are denied.
+// Shell rc files, preferences and /etc remain readable; mach/keychain IPC stays
+// open. It does not claim full host-secret isolation or unattended qualification.
 func developmentControls() []string {
 	v := []string{"controlled-egress", "external-supervisor", "secret-separation", "tree-termination", "workspace-only"}
 	if os.Geteuid() != 0 {

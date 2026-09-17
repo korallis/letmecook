@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"net"
 	"net/http"
@@ -8,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -22,6 +22,12 @@ func TestDarwinSandboxCanaries(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.RemoveAll(root) })
+	// HOME is a private synthetic host root, never the operator's .config.
+	home = filepath.Join(root, "synthetic-host-home")
+	if err := os.Mkdir(home, 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", home)
 	config := filepath.Join(home, ".config")
 	if err := os.MkdirAll(config, 0700); err != nil {
 		t.Fatal(err)
@@ -33,7 +39,7 @@ func TestDarwinSandboxCanaries(t *testing.T) {
 	secret.WriteString("synthetic-home-canary")
 	secret.Close()
 	t.Cleanup(func() { os.Remove(secret.Name()) })
-	forbidden, err := os.CreateTemp(home, "gaffer-outside-canary-")
+	forbidden, err := os.CreateTemp(root, "gaffer-outside-canary-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +71,26 @@ func TestDarwinSandboxCanaries(t *testing.T) {
 	defer closeDenied()
 	_, port, _ := net.SplitHostPort(allowed)
 	n, _ := strconv.Atoi(port)
-	profile := isolation.MacOSSandboxExecDev{BoundaryPort: n, CredentialPath: credential, RunnerStateDir: state, SecretPaths: []string{identityKey}, RepositoryRoot: root}
+	// All data is synthetic, including the colocated daemon's state.
+	daemonState := filepath.Join(root, "daemon-state")
+	os.Mkdir(daemonState, 0700)
+	os.WriteFile(filepath.Join(daemonState, "secret"), []byte("synthetic-daemon-secret"), 0600)
+	deniedPaths := []string{".config", ".claude", ".claude.json", ".codex", ".ssh", ".aws", ".azure", ".netrc", ".authinfo", ".gnupg", "Library/Keychains", ".gitconfig", ".git-credentials", ".npmrc", ".pypirc", ".docker", ".kube", ".local/share/opencode", ".local/state/opencode", ".gaffer", ".local/share/gaffer", ".local/state/gaffer"}
+	canaries := map[string]string{}
+	for _, rel := range deniedPaths {
+		path := filepath.Join(home, rel)
+		if rel == ".config" {
+			path = filepath.Join(path, "gh", "hosts.yml")
+		}
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte("synthetic-secret"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		canaries[rel] = path
+	}
+	profile := isolation.MacOSSandboxExecDev{BoundaryPort: n, CredentialPath: credential, RunnerStateDir: state, SecretPaths: []string{identityKey, daemonState}, RepositoryRoot: root}
 	launcher, err := profile.Prepare(context.Background(), w)
 	if err != nil {
 		t.Fatal(err)
@@ -82,9 +107,16 @@ func TestDarwinSandboxCanaries(t *testing.T) {
 		}
 		return cmd.CombinedOutput()
 	}
-	for name, path := range map[string]string{"home-secret": secret.Name(), "credential": credential, "runner-identity": identityKey, "runner-state": filepath.Join(state, "secret")} {
+	for name, path := range map[string]string{"home-secret": secret.Name(), "credential": credential, "runner-identity": identityKey, "runner-state": filepath.Join(state, "secret"), "daemon-state": filepath.Join(daemonState, "secret")} {
+		canaries[name] = path
+	}
+	for name, path := range canaries {
 		t.Run(name, func(t *testing.T) {
-			if b, e := run("/bin/cat", path); e == nil || strings.Contains(string(b), "synthetic-") {
+			contents, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if b, e := run("/bin/cat", path); e == nil || bytes.Contains(b, contents) {
 				t.Fatalf("canary readable: %q, %v", b, e)
 			}
 		})

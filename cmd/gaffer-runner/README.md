@@ -45,7 +45,9 @@ of canonical `{brief,criteria,paths,operations,harness,settings}`, in that order
 with recursively sorted settings keys. The input is journaled before acceptance.
 There are no local task override flags; only authenticated approved input is used.
 
-Other flags are `--gateway-config`, `--opencode-bin`, and `--spool-bytes`
+For a colocated daemon, supply `--daemon-state-dir /absolute/private/state` so
+the job cannot read its database/identity files. No path for a remote daemon can
+be inferred from its HTTPS endpoint. Other flags are `--gateway-config`, `--opencode-bin`, and `--spool-bytes`
 (default 4 MiB, minimum 64 KiB). The standalone S2 build registers only `fake`.
 The `harnessFactories` seam accepts the separately implemented OpenCode adapter;
 adding its registration at integration is necessary before `--harness opencode`
@@ -133,10 +135,29 @@ even when best-effort cleanup killed the observed escaped PID.
 
 `Open` consumes guardian recovery evidence, only re-signals a still-matching
 PID/start token if needed, then writes a fresh restart boot and sticky quarantine.
-Old messages retain their IDs and exact serialized bytes; generation/boot refusals become durable `fenced`
-events. Old-boot termination and receipt accounting are replayed for daemon
-reconciliation; no old lease is installed. Uploads interrupted before a complete
-outbox/finalization record stay preserved and may still need operator recovery.
+Old messages retain their IDs and exact serialized bytes. Every authenticated
+4xx replay refusal records a terminal `outbox_refused` outcome without ACKing or
+deleting the request; replay continues through later entries and journals.
+Generation/boot refusals additionally become durable `fenced` events. Old-boot termination and receipt accounting are replayed for daemon
+reconciliation; no old lease is installed. Once the job has finished, clean
+shutdown does not propose stopping or report it cancelled. The immutable custody
+plan, synced blob snapshots, upload response and custody receipt resume
+begin/blob/commit/usage/finalize with stable IDs after restart, before owner facts
+import. Durable commit intent marks all blob PUTs complete, so losing the commit
+reply retries that commit rather than attempting PUTs into a closed upload. Legacy journals without a complete custody plan remain preserved for
+reconciliation rather than inventing missing intent. Refused result edges reconcile
+the daemon revision/stop target and report the trusted guardian observation.
+
+Hello summaries include last acknowledged phase, retained receipt ID and durable
+stream watermark. A missing guardian report is unknown containment, not journal
+corruption. Transient task-input fetch failures occur before directory creation
+and are retried locally because inbox delivery is one-time.
+
+On `session_stale` (for example daemon restart), the runner fails closed: it stops
+the guardian and retains evidence locally. The stale session cannot acknowledge
+a termination observation. The operator must restart serve to establish a fresh
+authenticated session, replay/reconcile retained evidence, and import that new
+runner boot's facts before new work. No automatic lease resumption is attempted.
 
 ## Verification
 
@@ -156,3 +177,17 @@ the pinned OpenCode startup/config-isolation probe under that narrower profile
 is pending in the integrated system proof; this standalone lane does not claim
 that OpenCode requalification has passed. `mach-lookup` remains unrestricted,
 including securityd/keychain IPC; see the macOS development operations limitations.
+
+### Development secret-separation scope
+
+`secret-separation` is a compatibility contract identifier, not full host-secret
+isolation. It means the enumerated paths are denied to the job: the configured
+gateway credential/configuration, runner key/state, optional colocated daemon
+state, and HOME `.config` (including gh/gcloud), `.claude`, `.claude.json`, `.codex`,
+`.ssh`, `.aws`, `.azure`, `.netrc`, `.authinfo`, `.gnupg`, `Library/Keychains`,
+`.gitconfig`, `.git-credentials`, `.npmrc`, `.pypirc`, `.docker`, `.kube`, OpenCode
+local data/state and Gaffer local state/data. Canonical aliases are also denied.
+Other host files, including shell rc files, preferences and `/etc`, remain
+readable; mach/keychain IPC stays open. These limitations are why the profile is
+**development**, unsupported and unqualified for unattended execution. Native
+canaries use a private synthetic HOME, never the operator's credential directories.

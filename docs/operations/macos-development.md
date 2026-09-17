@@ -18,12 +18,15 @@ profile flag, enroll the runner certificate, then:
 gaffer-runner serve \
   --state-dir /private/tmp/gaffer-runner-state \
   --repository-root /private/tmp/gaffer-checkouts \
+  --daemon-state-dir /private/tmp/gafferd-state \
   --daemon https://127.0.0.1:7444 --daemon-fingerprint "$DAEMON_SHA256" \
   --cert /private/tmp/runner.crt --key /private/tmp/runner.key \
   --isolation-profile macos-sandbox-exec-dev --harness fake \
   --gateway-config /private/tmp/gateway.json
 ```
 
+Use `--daemon-state-dir` for a colocated daemon (omit it for a remote daemon);
+it denies the configured private state path, including identity/database files.
 Every start mints a fresh `boot.json`. In another terminal, generate/import facts
 for **that** boot before dispatching anything:
 
@@ -61,9 +64,12 @@ proof before claiming compatibility with those stricter rules.
 * Deny file writes to the repository root and everywhere else except the attempt's
   candidate/private HOME/TMP/runtime directories and the necessary null/TTY devices.
   Neither `/private/var/folders` nor `/private/tmp` is a general write exception.
-* Deny read-data and writes to real HOME `.config`, `.claude`, `.codex`, `.ssh`,
-  OpenCode local data/state, the gateway credential file, runner mTLS key, gateway
-  configuration and runner state directory.
+* Deny read-data and writes to HOME `.config` (including gh/gcloud), `.claude`,
+  `.claude.json`, `.codex`, `.ssh`, `.aws`, `.azure`, `.netrc`, `.authinfo`, `.gnupg`,
+  `Library/Keychains`, `.gitconfig`, `.git-credentials`, `.npmrc`, `.pypirc`,
+  `.docker`, `.kube`, OpenCode local data/state and Gaffer local state/data;
+  also deny canonical aliases, the gateway credential/configuration, runner mTLS
+  key/state, and the configured colocated daemon state directory.
 * Use a clean private HOME and XDG configuration/data/state/cache. Runtime files
   live outside the candidate, never in a packed artifact.
 * Run a separate-session trusted guardian with file-size, descriptor and CPU-time
@@ -79,7 +85,10 @@ write and the selected boundary listener.
 ## What it does not prove
 
 Allow-default is a compatibility profile, not comprehensive least privilege.
-Unlisted host data remains readable. `mach-lookup` remains open, including
+The contract identifier `secret-separation` under this development profile means
+only that these enumerated secret paths are denied to the job. It is **not full
+host-secret isolation**: shell rc files, preferences, `/etc` and other unlisted
+host data remain readable. `mach-lookup` remains open, including
 securityd/keychain IPC; path canaries do not prove isolation from those services. This is not a VM/container, a complete secret
 inventory, a provider-cost/token guarantee, or measured adversarial confinement.
 Resource rlimits do not establish a hard memory or aggregate-process reservation.
@@ -99,6 +108,14 @@ content and add a terminal `spool_full` status before stopping. Approval-require
 crash/nonzero exit and grant-path violations produce failed manifests, not local
 acceptance. Custody commit still is not finalization: the candidate workspace is
 deleted only after a positive finalization reply with release. Interrupted upload
-phases lacking a complete finalization outbox remain preserved for reconciliation.
+phases resume from the immutable custody plan and synced blob snapshots without
+cancelling a finished attempt. Terminal transport refusals retain bytes and a
+separate refused outcome, never a false acknowledgment. Legacy incomplete plans
+remain preserved for reconciliation.
+
+A daemon restart can invalidate the execution session (`session_stale`). The
+runner stops locally and exits fail-closed; the guardian receipt remains durable.
+The operator must restart serve for a new authenticated session and evidence
+replay/reconciliation, then import the runner's new boot facts before new work.
 Execution, local acceptance, publication and merge are separate; this runner has
 no publication credentials or merge route.

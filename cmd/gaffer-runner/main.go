@@ -95,12 +95,14 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 type config struct {
 	StateDir, Daemon, Fingerprint, Cert, Key, RepositoryRoot, Isolation, Harness, GatewayConfig, OpenCodeBin, Policy, RepositoryProfile string
 	SpoolLimit                                                                                                                          int64
+	DaemonStateDir                                                                                                                      string `json:"daemon_state_dir,omitempty"`
 }
 
 func parseConfig(args []string) (config, error) {
 	var c config
 	f := flag.NewFlagSet("serve", flag.ContinueOnError)
 	f.StringVar(&c.StateDir, "state-dir", "", "private supervisor state")
+	f.StringVar(&c.DaemonStateDir, "daemon-state-dir", "", "deny colocated daemon private state to jobs")
 	f.StringVar(&c.Daemon, "daemon", "", "execution HTTPS endpoint")
 	f.StringVar(&c.Fingerprint, "daemon-fingerprint", "", "pinned daemon SHA256")
 	f.StringVar(&c.Cert, "cert", "", "runner certificate")
@@ -116,7 +118,7 @@ func parseConfig(args []string) (config, error) {
 	if err := f.Parse(args); err != nil {
 		return c, err
 	}
-	if f.NArg() != 0 || !filepath.IsAbs(c.StateDir) || !filepath.IsAbs(c.RepositoryRoot) {
+	if f.NArg() != 0 || !filepath.IsAbs(c.StateDir) || !filepath.IsAbs(c.RepositoryRoot) || c.DaemonStateDir != "" && !filepath.IsAbs(c.DaemonStateDir) {
 		return c, errors.New("absolute state-dir and repository-root required")
 	}
 	if c.Policy == "" {
@@ -144,7 +146,7 @@ func profileFor(c config) (isolation.Profile, error) {
 	if c.Isolation != isolation.DevelopmentProfileID {
 		return nil, isolation.ErrExecutionUnqualified
 	}
-	config := isolation.SandboxConfig{RepositoryRoot: c.RepositoryRoot, RunnerStateDir: c.StateDir, SecretPaths: []string{c.Key, c.GatewayConfig}}
+	config := isolation.SandboxConfig{RepositoryRoot: c.RepositoryRoot, RunnerStateDir: c.StateDir, SecretPaths: []string{c.Key, c.GatewayConfig, c.DaemonStateDir}}
 	if c.GatewayConfig != "" {
 		gateway, err := inference.LoadGatewayConfig(c.GatewayConfig)
 		if err != nil {
