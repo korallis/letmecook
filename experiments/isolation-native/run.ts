@@ -135,6 +135,17 @@ export function exclusive(path: string, body: string) {
 }
 type RecordValue = { kind: 'genesis' | 'intent' | 'failed' | 'completed' | 'resolution'; runId: string; profileHash: string; bootId: string; detail: unknown };
 type JournalRow = RecordValue & { sequence: number; previous: string; digest: string };
+function assertResolution(detail: unknown, failedRecord: JournalRow) {
+  const value = detail as Record<string, unknown>;
+  keys(value, ['failedRecordDigest', 'replayAllowed', 'cleanupVerified', 'resources']);
+  assert.equal(value.failedRecordDigest, failedRecord.digest, 'resolution failure identity mismatch');
+  assert.equal(value.replayAllowed, false); assert.equal(value.cleanupVerified, true);
+  assert.ok(Array.isArray(value.resources) && value.resources.length > 0, 'resolution needs cleanup observations');
+  for (const resource of value.resources) {
+    assert.equal(resource.populated, 0); assert.deepEqual(resource.processes, []);
+    assert.ok(['inactive', 'failed', 'not-found'].includes(resource.active), 'resolution resource remains active');
+  }
+}
 // Append only, bounded journal. A torn append is corrupt, never permission to retry.
 export class Journal {
   directory: string;
@@ -162,6 +173,7 @@ export class Journal {
     });
     // Validate transitions too: well-hashed fabricated/incomplete resolution is still denied.
     const runs = new Map<string, string>();
+    const failures = new Map<string, JournalRow>();
     for (const row of rows.slice(1)) {
       const state = runs.get(row.runId);
       if (row.kind === 'intent') {
@@ -169,9 +181,9 @@ export class Journal {
         assert.ok([...runs.values()].every(s => s === 'completed' || s === 'resolved-failure'), 'overlapping intent/quarantine');
         runs.set(row.runId, 'intent');
       }
-      else if (row.kind === 'failed') { assert.equal(state, 'intent'); runs.set(row.runId, 'failed'); }
+      else if (row.kind === 'failed') { assert.equal(state, 'intent'); runs.set(row.runId, 'failed'); failures.set(row.runId, row); }
       else if (row.kind === 'completed') { assert.equal(state, 'intent'); runs.set(row.runId, 'completed'); }
-      else { assert.equal(state, 'failed'); runs.set(row.runId, 'resolved-failure'); }
+      else { assert.equal(state, 'failed'); assertResolution(row.detail, failures.get(row.runId)!); runs.set(row.runId, 'resolved-failure'); }
       assert.equal(row.profileHash, rows[0].profileHash, 'journal profile mismatch');
     }
     return rows;
@@ -202,11 +214,7 @@ export class Journal {
       const prior = rows.filter(r => r.runId === value.runId).at(-1);
       assert.equal(prior?.kind, value.kind === 'resolution' ? 'failed' : 'intent', 'invalid journal transition');
       if (value.kind === 'resolution') {
-        const detail = value.detail as any;
-        assert.equal(detail?.failedRecordDigest, prior!.digest);
-        assert.equal(detail?.replayAllowed, false); assert.equal(detail?.cleanupVerified, true);
-        assert.ok(Array.isArray(detail?.resources) && detail.resources.length > 0);
-        for (const r of detail.resources) { assert.equal(r.populated, 0); assert.deepEqual(r.processes, []); assert.ok(['inactive', 'failed', 'not-found'].includes(r.active)); }
+        assertResolution(value.detail, prior!);
       }
     }
     if (!initialize) assert.equal(value.profileHash, rows[0].profileHash);

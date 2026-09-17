@@ -242,13 +242,32 @@ From repository root, ordinary macOS user:
 node --test experiments/isolation-native/run.test.ts
 ```
 
-Eight behavioral checks cover absent/malformed/default/non-Linux admission,
+Nine behavioral checks cover absent/malformed/default/non-Linux admission,
 missing effective limits before a simulated sentinel, exact cleanup ownership,
 missing/corrupt/torn/symlinked journals, durable unresolved intent, competing stale
 admission, immutable failed receipts and non-replayable resolution, journal bounds,
-and inert preparation/native CLI platform refusal. Synthetic test values are not
-profile measurements. Strict TypeScript checking uses an already-installed compiler
-and Node types; no install is needed for the runnable check above.
+inert preparation/native CLI platform refusal, and replay-time rejection of correctly
+hashed resolutions with missing or conflicting cleanup observations. Synthetic test values are not
+profile measurements. Strict TypeScript checking uses a compiler and Node types; no install is needed for
+the runnable check above. With the existing inference-boundary development tools:
+
+```sh
+experiments/inference-boundary/node_modules/.bin/tsc --noEmit --strict \
+  --target es2023 --module esnext --moduleResolution bundler \
+  --allowImportingTsExtensions --types node \
+  --typeRoots experiments/inference-boundary/node_modules/@types \
+  experiments/isolation-native/run.ts experiments/isolation-native/probe.ts \
+  experiments/isolation-native/run.test.ts
+```
+
+The dedicated `Native confinement source checks` workflow runs only these offline
+checks on Linux and macOS. Its Linux runner is not a selected confinement target;
+passing CI provides no native runtime evidence.
+
+Source refresh on **17 September 2026** preserves the reviewed procedure and the
+unmeasured default profile. Journal resolution details are validated both when
+appended and when replayed after restart; a valid hash alone cannot clear
+quarantine without a matching failed record and empty, inactive resources.
 
 This evidence document is not an input to `docs/build-reader.ts`; no reader source,
 layout or generated `docs/index.html` changed. Fresh independent exact-head source

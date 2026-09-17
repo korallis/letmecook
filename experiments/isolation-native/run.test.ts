@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { admission, validateProfile, CONTROLS, PROCEDURE, BASE, hash, Journal, exclusive, assertEffective, assertOwned, prepare, main } from './run.ts';
+import { admission, validateProfile, CONTROLS, PROCEDURE, BASE, hash, Journal, exclusive, assertEffective, assertOwned, prepare, main, json } from './run.ts';
 
 // Deliberately synthetic objects for pure logic. No host inventory, native entrypoint,
 // system service, namespace, mount, network socket or pressure operation runs here.
@@ -133,4 +133,31 @@ test('prepare emits bounded argv data, refuses injection; no native execution', 
     const probe = spawnSync(process.execPath, [fileURLToPath(new URL('./probe.ts', import.meta.url)), '--bootstrap'], { encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } });
     assert.equal(probe.status, 1); assert.match(probe.stderr, /requires Linux/);
   }
+});
+
+test('reloaded quarantine resolutions require complete cleanup evidence even with valid hashes', () => {
+  for (const corrupt of [
+    (detail: any) => { detail.failedRecordDigest = hash('different failed run'); },
+    (detail: any) => { detail.replayAllowed = true; },
+    (detail: any) => { detail.cleanupVerified = false; },
+    (detail: any) => { detail.resources = []; },
+    (detail: any) => { detail.resources[0].populated = 1; },
+    (detail: any) => { detail.resources[0].processes = [123]; },
+    (detail: any) => { detail.resources[0].active = 'active'; },
+    (detail: any) => { delete detail.cleanupVerified; },
+  ]) temporary(directory => {
+    const journal = initialized(directory);
+    journal.append({ ...identity, kind: 'intent', runId, detail: {} });
+    journal.append({ ...identity, kind: 'failed', runId, detail: { syntheticOnly: true } });
+    const failure = journal.read().at(-1)!;
+    const detail = { failedRecordDigest: failure.digest, replayAllowed: false, cleanupVerified: true,
+      resources: [{ populated: 0, processes: [], active: 'inactive' }] };
+    corrupt(detail);
+    // Simulate intact serialization/checksum with semantically incomplete recovery evidence.
+    // Startup must independently validate it, without trusting the previous writer's checks.
+    const entry = { ...identity, kind: 'resolution', runId, detail, sequence: failure.sequence + 1, previous: failure.digest };
+    fs.appendFileSync(join(journal.directory, 'journal.jsonl'), json({ ...entry, digest: hash(json(entry)) }) + '\n');
+    const restarted = new Journal(journal.directory, process.getuid!());
+    assert.throws(() => restarted.assertLaunch(identity.profileHash, nextId));
+  });
 });
