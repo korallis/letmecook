@@ -119,7 +119,7 @@ func ownerReads(d Deps) []Route {
 			return d.Store.AttemptArtifacts(ctx, r.Path["id"])
 		}),
 		readRoute("/api/v1/attempts/{id}/usage", nil, func(ctx context.Context, a Actor, r Request) (any, error) {
-			return d.Store.AttemptUsage(ctx, r.Path["id"])
+			return d.Store.AttemptUsageRows(ctx, r.Path["id"])
 		}),
 		readRoute("/api/v1/stops/{id}", []string{"attempt_id"}, func(ctx context.Context, a Actor, r Request) (any, error) {
 			if err := pathID(r); err != nil {

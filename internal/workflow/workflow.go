@@ -41,7 +41,7 @@ type Proposal struct {
 	Digests  map[string]string `json:"digests"`
 }
 type Reader interface {
-	TaskInput(context.Context, string) (TaskInput, error)
+	BriefInput(context.Context, string) (TaskInput, error)
 	Eligibility(context.Context, string) (sc.Eligibility, error)
 }
 
@@ -130,7 +130,7 @@ func TaskDigests(in TaskInput) (brief, plan string) {
 }
 
 func BuildGrant(ctx context.Context, source Reader, taskID, eligibilityID string) (Proposal, error) {
-	in, err := source.TaskInput(ctx, taskID)
+	in, err := source.BriefInput(ctx, taskID)
 	if err != nil {
 		return Proposal{}, err
 	}

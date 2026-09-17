@@ -225,7 +225,10 @@ func inputBrief(b TaskBrief) workflow.TaskInput {
 	}
 	return workflow.TaskInput{Version: workflow.Version, MessageID: b.TaskID, Repository: b.Repository, BaseCommit: b.BaseCommit, Brief: b.Brief, Criteria: cs, Paths: b.Paths, Operations: b.Operations, Harness: b.Harness, Settings: b.Settings}
 }
-func (s *Store) TaskInput(ctx context.Context, id string) (workflow.TaskInput, error) {
+
+// BriefInput is the owner-side canonical brief view behind grant building; the
+// runner-facing TaskInput in execution.go serves GET /x/v1/input.
+func (s *Store) BriefInput(ctx context.Context, id string) (workflow.TaskInput, error) {
 	t, err := s.Task(ctx, id)
 	return inputBrief(t.Brief), err
 }
@@ -849,7 +852,10 @@ func (s *Store) Events(ctx context.Context, after int64, limit int, task string)
 func (s *Store) AttemptArtifacts(ctx context.Context, id string) ([]json.RawMessage, error) {
 	return s.workflowJSONRows(ctx, "SELECT m.body FROM artifact_manifests m JOIN artifact_results r ON r.manifest_id=m.manifest_id WHERE r.attempt_id=? ORDER BY r.receipt_id", id)
 }
-func (s *Store) AttemptUsage(ctx context.Context, id string) ([]json.RawMessage, error) {
+
+// AttemptUsageRows is the owner read view of retained receipts as raw JSON; the
+// execution channel's AttemptUsage returns the typed receipts.
+func (s *Store) AttemptUsageRows(ctx context.Context, id string) ([]json.RawMessage, error) {
 	return s.workflowJSONRows(ctx, "SELECT body FROM attempt_usage WHERE attempt_id=? ORDER BY request_id", id)
 }
 func (s *Store) workflowJSONRows(ctx context.Context, query, id string) ([]json.RawMessage, error) {
