@@ -52,17 +52,17 @@ func TestEnvelopeReadsBaseWithOneGitBatch(t *testing.T) {
 
 func TestBaseGitBatchRejectsMalformedOutput(t *testing.T) {
 	oid := strings.Repeat("a", 40)
-	for _, tc := range []struct{ name, output string }{
-		{"missing", oid + " missing\n"},
-		{"wrong-object", strings.Repeat("b", 40) + " blob 0\n\n"},
-		{"wrong-type", oid + " tree 0\n\n"},
-		{"negative", oid + " blob -1\n"},
-		{"oversized", oid + " blob 1048577\n"},
-		{"overflow", oid + " blob 9999999999999999999999999\n"},
-		{"truncated", oid + " blob 4\nxx"},
-		{"delimiter", oid + " blob 1\nx!"},
-		{"trailing", oid + " blob 1\nx\nextra"},
-		{"header-bound", strings.Repeat("x", 8192) + "\n"},
+	for _, tc := range []struct{ name, output, refusal string }{
+		{"missing", oid + " missing\n", "base blob identity/type"},
+		{"wrong-object", strings.Repeat("b", 40) + " blob 0\n\n", "base blob identity/type"},
+		{"wrong-type", oid + " tree 0\n\n", "base blob identity/type"},
+		{"negative", oid + " blob -1\n", "base blob bounds"},
+		{"oversized", oid + " blob 1048577\n", "base blob bounds"},
+		{"overflow", oid + " blob 9999999999999999999999999\n", "base blob bounds"},
+		{"truncated", oid + " blob 4\nxx", "base blob truncated"},
+		{"delimiter", oid + " blob 1\nx!", "base blob delimiter"},
+		{"trailing", oid + " blob 1\nx\nextra", "base blob trailing output"},
+		{"header-bound", strings.Repeat("x", 8192) + "\n", "base blob header: bufio: buffer full"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			bin := t.TempDir()
@@ -77,8 +77,8 @@ func TestBaseGitBatchRejectsMalformedOutput(t *testing.T) {
 			t.Setenv("PATH", bin)
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
-			if _, err := baseBlobs(ctx, bin, []baseObject{{"file", oid}}); err == nil {
-				t.Fatal("malformed batch accepted")
+			if _, err := baseBlobs(ctx, bin, []baseObject{{"file", oid}}); err == nil || !strings.Contains(err.Error(), tc.refusal) {
+				t.Fatalf("want %q, got %v", tc.refusal, err)
 			}
 		})
 	}
