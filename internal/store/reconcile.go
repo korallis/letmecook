@@ -900,6 +900,13 @@ func rcClearLatches(ctx context.Context, tx *sql.Tx, taskID, attemptID, daemonBo
 // together. A released dispatch replays its retained proof. Durable point: that
 // commit. It never releases on a timer, a bare flag or remote_work unknown.
 func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis ReleaseBasis) (ReleaseOutcome, error) {
+	if !p.ValidID(attemptID) {
+		return ReleaseOutcome{}, g.Deny("malformed", "attempt_id")
+	}
+	// Release must wait for every admitted append to become durable before it
+	// makes terminal replay and backup pinning legal.
+	unlock := s.sinks().Serialize(attemptID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tx, err := s.grantTransaction(ctx)
@@ -1139,6 +1146,13 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 // Durable point: the CAS, its event and the retained recovery record in one
 // commit; replay returns the recorded transition. It never restarts the attempt.
 func (s *Store) RecoverResultPending(ctx context.Context, attemptID string, journal execwire.Journal) (p.Message, error) {
+	if !p.ValidID(attemptID) {
+		return p.Message{}, g.Deny("malformed", "attempt_id")
+	}
+	// Recovery shares the append/transition lock order even though this edge
+	// is nonterminal; no recovery writer may overtake admitted stream I/O.
+	unlock := s.sinks().Serialize(attemptID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tx, err := s.grantTransaction(ctx)
@@ -1350,6 +1364,13 @@ func rcQuiescenceProof(rows []RuntimeObservation, receiptID string, exit *Runtim
 // the same state returns the same reply. Durable point: that one commit.
 // Nothing reruns; without proof the reservation stays held.
 func (s *Store) CompleteFinalization(ctx context.Context, attemptID string, attested *BoundaryAttestation) (FinalizeReply, error) {
+	if !p.ValidID(attemptID) {
+		return FinalizeReply{}, g.Deny("malformed", "attempt_id")
+	}
+	// Read and prove the final watermark only after admitted appends finish;
+	// never hold the store mutex while waiting on their sink I/O.
+	unlock := s.sinks().Serialize(attemptID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tx, err := s.grantTransaction(ctx)
