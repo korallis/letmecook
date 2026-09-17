@@ -577,6 +577,10 @@ func (s *Store) StopStatus(ctx context.Context, stopID, attemptID string) (c.Vie
 	if !validControlEvidence(evidence, v.Target) {
 		return c.View{}, g.Deny("corrupt_record", "observation")
 	}
+	evidence, err = s.strongestTermination(ctx, tx, attemptID, stopID, evidence)
+	if err != nil {
+		return c.View{}, err
+	}
 	v.Evidence = &evidence
 	// Old-boot observations remain history, not current confirmation.
 	if evidence.Terminated.DaemonBoot == s.meta.DaemonBoot {

@@ -881,9 +881,9 @@ func (s *Store) strongestTermination(ctx context.Context, tx *sql.Tx, attemptID,
 }
 
 // TerminationView is the effective termination of one stop: the immutable
-// control observation upgraded by its strongest accepted revision. Owner reads
-// (StopStatus) that only consult control_observations see the first
-// observation; this is the settled view. Durable point: none (read).
+// control observation upgraded by its strongest accepted revision. StopStatus
+// uses the same selection without rewriting the first observation's history.
+// Durable point: none (read).
 func (s *Store) TerminationView(ctx context.Context, stopID, attemptID string) (c.Evidence, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -3,8 +3,8 @@ package reconcile
 // Regression probes adopted verbatim from the S5 delta review of c29707a
 // (/Users/leebarry/.claude/jobs/13633b12/tmp/s5-review2/reconcile_probe_test.go):
 // each either reproduced an unsafe outcome before its fix or pins a rule the
-// review confirmed, and passes once reconcile enforces it. Only gofmt and this
-// header changed.
+// review confirmed, and passes once reconcile enforces it. The expiry probe now
+// distinguishes canonical new stops from retained legacy daemon stops.
 
 import (
 	"database/sql"
@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	c "github.com/korallis/letmecook/internal/control"
 	"github.com/korallis/letmecook/internal/execwire"
 	"github.com/korallis/letmecook/internal/store"
 	p "github.com/korallis/letmecook/schemas/execution"
@@ -253,7 +254,7 @@ func TestS5Review2FirstHelloAfterRestartIsRetained(t *testing.T) {
 }
 
 func TestS5Review2BothLeaseExpiryStopIDs(t *testing.T) {
-	for _, kind := range []string{"runner_expiry", "daemon_expiry"} {
+	for _, kind := range []string{"runner_expiry", "daemon_expiry", "legacy_daemon_expiry"} {
 		t.Run(kind, func(t *testing.T) {
 			f := newFixture(t)
 			k := f.newTask(t)
@@ -263,16 +264,29 @@ func TestS5Review2BothLeaseExpiryStopIDs(t *testing.T) {
 				if _, err := f.s.FenceAttempt(ctx, k.id().AttemptID, CauseLeaseExpired); err != nil {
 					t.Fatal(err)
 				}
+				in, err := f.s.ReconciliationInputs(ctx, k.id().AttemptID)
+				if err != nil || len(in.StopTargets) != 1 || in.StopTargets[0].Cancel.StopID != stopID {
+					t.Fatalf("new daemon expiry must use the runner's canonical ID: %+v %v", in.StopTargets, err)
+				}
+			} else if kind == "legacy_daemon_expiry" {
+				// Model a retained pre-integration stop through the trusted stop API.
+				// A legacy ID counts only with its actual immutable target; creating a
+				// new canonical stop cannot authorize evidence for this different ID.
 				stopID = derive(lease.Request.Nonce, "expired")
+				stop := c.Request{ID: stopID, Kind: c.CancelAttempt, TaskID: k.id().TaskID, AttemptID: k.id().AttemptID, Cause: CauseLeaseExpired}
+				if _, err := f.s.RequestStop(ctx, f.owner, stop); err != nil {
+					t.Fatal(err)
+				}
+				k.propose(t, p.Stopping, store.RuntimeEvidence{Kind: "stop"})
 			}
 			ev := k.terminated(stopID, "terminated", "quiescent")
-			if kind == "daemon_expiry" {
+			if kind != "runner_expiry" {
 				ev.Terminated.DaemonBoot = uuid()
 			}
 			if got := k.report(t, ev, quiescent()); got.Released {
 				t.Fatal("expected observation without release")
 			}
-			if kind == "daemon_expiry" {
+			if kind != "runner_expiry" {
 				f.advance(barrier)
 			}
 			entry := entryFor(t, f.sweep(t, false), k.id().AttemptID)

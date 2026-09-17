@@ -71,7 +71,20 @@ func TestHTTPSTaskResumeReplaysDurableClearances(t *testing.T) {
 	create := taskBody(f, "resume-task")
 	postWorkflow(t, client, endpoint, "/api/v1/tasks", create, 201)
 	task := create["message_id"].(string)
+	proposal, err := workflow.BuildGrant(context.Background(), f.s, task, f.facts.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	approval := commandBody("resume-approve")
+	approval["eligibility_id"], approval["proposal_digest"], approval["allow_development_isolation"] = f.facts.ID, proposal.Digests["proposal"], true
+	postWorkflow(t, client, endpoint, "/api/v1/tasks/"+task+"/approve", approval, 201)
+	dispatch := commandBody("resume-dispatch")
+	dispatch["grant_id"], dispatch["grant_revision"], dispatch["attempt_ms"] = approval["message_id"], 1, 60000
 	postWorkflow(t, client, endpoint, "/api/v1/tasks/"+task+"/stop", commandBody("resume-stop"), 202)
+	refused, _ := postWorkflow(t, client, endpoint, "/api/v1/tasks/"+task+"/dispatch", dispatch, 409)
+	if !bytes.Contains(refused, []byte(`"error":"stopped"`)) {
+		t.Fatal(string(refused))
+	}
 	body := commandBody("resume-command")
 	first := mutation(t, client, endpoint, "/api/v1/tasks/"+task+"/resume", body, 200)
 	var response struct {
@@ -97,8 +110,20 @@ func TestHTTPSTaskResumeReplaysDurableClearances(t *testing.T) {
 			t.Fatal(n, err)
 		}
 	}
-	// TODO(integration): fresh dispatch after resume depends on the integrator's
-	// suppression changes; this test proves durable marker writes, not admission.
+	// The previously refused intent now admits one dispatch. The owner resume
+	// clears suppression, not the append-only task-stop history.
+	raw, _ := postWorkflow(t, client, endpoint, "/api/v1/tasks/"+task+"/dispatch", dispatch, 201)
+	admitted := decodeOwner[store.Dispatch](t, raw)
+	if admitted.Request.TaskID != task || admitted.Assignment.Identity.Epoch != 1 {
+		t.Fatal("resume did not admit fresh work", admitted)
+	}
+	var stops, attempts int
+	if err = db.QueryRow("SELECT count(*) FROM dispatch_stops WHERE task_id=?", task).Scan(&stops); err != nil || stops != 1 {
+		t.Fatal("task stop history lost", stops, err)
+	}
+	if err = db.QueryRow("SELECT count(*) FROM attempts WHERE task_id=?", task).Scan(&attempts); err != nil || attempts != 1 {
+		t.Fatal("unexpected attempt count", attempts, err)
+	}
 }
 
 func TestProposalUnknownFieldsRefusedBeforeApproval(t *testing.T) {

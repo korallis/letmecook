@@ -222,7 +222,7 @@ func run(ctx context.Context, args []string, out io.Writer) (err error) {
 			if e != nil {
 				return e
 			}
-			verifier, err = verification.NewDevelopmentProfile(profile, time.Hour)
+			verifier, err = verification.NewDevelopmentProfile(profile, time.Hour, *state)
 			if err != nil {
 				return err
 			}

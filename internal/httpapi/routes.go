@@ -74,11 +74,9 @@ type Response struct {
 	Header http.Header
 }
 
-// SinkReader is local until S1 provides runstream.SinkReader. Structural interface
-// compatibility lets either seam expose exactly the same durable window.
-type SinkReader interface {
-	Window(attempt string, after, limit int64) ([]runstream.Record, runstream.Ack, error)
-}
+// SinkReader exposes only owner-readable windows; Store.Streams' read-only
+// SinkView satisfies it without leaking the serialized writer.
+type SinkReader = runstream.SinkReader
 type Deps struct {
 	Store *store.Store
 	// DaemonFingerprint is the SHA-256 DER pin of the execution listener's

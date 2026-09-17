@@ -157,8 +157,9 @@ with a fresh intent key that rebinds the last request to the head grant, retains
 nothing: `store.Dispatch` re-checks everything and creates the next epoch. The
 owner may retry any terminal cause (`failed` included).
 
-`gafferd --auto-retry` (default off) lets Startup, OnHello and Sweep dispatch
-the retry themselves, only for causes `harness_crash`, `lease_expired`,
+`gafferd --auto-retry` (default off) enables automatic dispatch in Startup and
+Sweep. The channel's OnHello currently uses the default retry-off dependencies;
+it still reconciles evidence. Automatic dispatch runs only for causes `harness_crash`, `lease_expired`,
 `runner_restarted` and `daemon_restart`, only for a release this run performed or
 a latch it cleared, and never for `failed`, `refused`, operator stops,
 `remote_work_unknown` or authority refusals. The store's `one_current_attempt`
