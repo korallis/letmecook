@@ -47,39 +47,70 @@ type FinalizeReply struct {
 	Released bool   `json:"released"`
 }
 
-// exitObserved reports whether a retained exit observation matches the claimed exit.
-func exitObserved(ctx context.Context, tx *sql.Tx, attemptID string, exit ExitRecord) (bool, error) {
+// sameCompletion compares what a completion attests, ignoring its message id.
+func sameCompletion(a, b Completion) bool {
+	a.MessageID, b.MessageID = "", ""
+	return a == b
+}
+
+// exitObserved returns the stream watermark of the retained exit observation
+// matching the claimed exit, and whether one exists.
+func exitObserved(ctx context.Context, tx *sql.Tx, attemptID string, exit ExitRecord) (int64, bool, error) {
 	rows, err := tx.QueryContext(ctx, "SELECT body FROM runtime_observations WHERE attempt_id=? AND kind='exit'", attemptID)
 	if err != nil {
-		return false, err
+		return 0, false, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var body string
 		var v runtimeRecord
 		if err := rows.Scan(&body); err != nil {
-			return false, err
+			return 0, false, err
 		}
 		if json.Unmarshal([]byte(body), &v) != nil || v.Evidence == nil {
 			continue
 		}
 		e := v.Evidence
 		if e.Kind == "exit" && e.PGIDEmpty && e.Code == exit.Code && e.PGID == exit.PGID && e.ObservedUnixNS == exit.ObservedUnixNS {
-			return true, nil
+			return e.StreamThrough, true, nil
 		}
 	}
-	return false, rows.Err()
+	return 0, false, rows.Err()
+}
+
+// retainedCompletion returns the completion a finalized attempt was closed with.
+func retainedCompletion(ctx context.Context, tx *sql.Tx, attemptID string) (Completion, bool, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT body FROM runtime_observations WHERE attempt_id=? AND kind='completion'", attemptID)
+	if err != nil {
+		return Completion{}, false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var body string
+		var v runtimeRecord
+		if err := rows.Scan(&body); err != nil {
+			return Completion{}, false, err
+		}
+		if json.Unmarshal([]byte(body), &v) == nil && v.Completion != nil {
+			return *v.Completion, true, nil
+		}
+	}
+	return Completion{}, false, rows.Err()
 }
 
 // FinalizeAttempt verifies a non-quarantined current-generation receipt, a sink
-// watermark at least the claimed one with an equal digest, an exit observation in
-// runtime_observations, boundary.Quiescent, no stop latch, a live grant and
-// current boots; incomplete evidence is reconciliation_required and a latched
-// stop is stop_latched. Durable point: one committed transaction holding the CAS
-// result_pending -> succeeded|failed from the manifest outcome, the event
-// dispatchID(receipt_id, "terminal"), the dispatch_releases row (actor: runner
-// principal), tasks.state awaiting_review|reconciling and, for succeeded, the
-// artifact_result_heads upsert. Replay for the same receipt returns the same reply.
+// watermark equal to the claimed one and to the retained exit observation's,
+// with an equal chain digest, boundary.Quiescent, no stop latch, a live grant
+// and current boots and an unpaused daemon (dispatchAllowed refuses paused inside
+// the transaction); incomplete evidence is reconciliation_required and a
+// latched stop is stop_latched. Durable point: one committed transaction
+// holding the CAS result_pending -> succeeded|failed from the manifest outcome,
+// the event dispatchID(receipt_id, "terminal"), the dispatch_releases row
+// (actor: runner principal), tasks.state awaiting_review|reconciling, the
+// retained completion, the request receipt and, for succeeded, the
+// artifact_result_heads upsert. The same message_id replays the same reply for
+// the same completion and refuses a changed one; a different message_id for the
+// same receipt replays only when it attests the retained completion.
 func (s *Store) FinalizeAttempt(ctx context.Context, fingerprint, session, attemptID string, completion Completion) (FinalizeReply, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -103,8 +134,18 @@ func (s *Store) FinalizeAttempt(ctx context.Context, fingerprint, session, attem
 	if identity.Generation != s.meta.Generation {
 		return FinalizeReply{}, p.StaleGeneration
 	}
-	if sess.Paused {
-		return FinalizeReply{}, g.Deny("paused", "finalize")
+	requestSHA, err := requestDigest(completion)
+	if err != nil {
+		return FinalizeReply{}, err
+	}
+	if response, found, err := retainedReceipt(ctx, tx, attemptID, ReceiptFinalize, completion.MessageID, requestSHA); err != nil {
+		return FinalizeReply{}, err
+	} else if found {
+		var reply FinalizeReply
+		if json.Unmarshal(response, &reply) != nil {
+			return FinalizeReply{}, g.Deny("corrupt_record", "receipt")
+		}
+		return reply, nil
 	}
 	terminalID := dispatchID(completion.ReceiptID, "terminal")
 	state, revision, err := attemptState(ctx, tx, attemptID)
@@ -116,10 +157,18 @@ func (s *Store) FinalizeAttempt(ctx context.Context, fingerprint, session, attem
 		if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM events WHERE message_id=? AND attempt_id=?)", terminalID, attemptID).Scan(&finalized); err != nil {
 			return FinalizeReply{}, err
 		}
-		if finalized {
-			return FinalizeReply{Outcome: string(state), Released: true}, nil
+		if !finalized {
+			return FinalizeReply{}, p.InvalidTransition
 		}
-		return FinalizeReply{}, p.InvalidTransition
+		// A new message id for the same receipt replays only the retained attestation.
+		retained, found, err := retainedCompletion(ctx, tx, attemptID)
+		if err != nil {
+			return FinalizeReply{}, err
+		}
+		if !found || !sameCompletion(retained, completion) {
+			return FinalizeReply{}, p.IdentityConflict
+		}
+		return FinalizeReply{Outcome: string(state), Released: true}, nil
 	}
 	if state != p.ResultPending || d.Released {
 		return FinalizeReply{}, p.ReconciliationRequired
@@ -166,22 +215,20 @@ func (s *Store) FinalizeAttempt(ctx context.Context, fingerprint, session, attem
 		}
 		return FinalizeReply{}, err
 	}
-	observed, err := exitObserved(ctx, tx, attemptID, completion.Exit)
+	exitThrough, observed, err := exitObserved(ctx, tx, attemptID, completion.Exit)
 	if err != nil {
 		return FinalizeReply{}, err
 	}
-	if !observed || !completion.Boundary.settled() {
+	if !observed || !completion.Boundary.settled() || completion.Stream.Through != exitThrough {
 		return FinalizeReply{}, p.ReconciliationRequired
 	}
+	// The claim, the exit observation and the durable sink must agree exactly:
+	// nothing streamed after the exit, nothing attested beyond the sink.
 	watermark, err := s.Streams().Watermark(attemptID)
 	if err != nil {
 		return FinalizeReply{}, err
 	}
-	if watermark.Through < completion.Stream.Through {
-		return FinalizeReply{}, p.ReconciliationRequired
-	}
-	digest, err := s.Streams().Digest(attemptID, completion.Stream.Through)
-	if err != nil || digest != completion.Stream.Digest {
+	if watermark.Through != completion.Stream.Through || watermark.Digest != completion.Stream.Digest {
 		return FinalizeReply{}, p.ReconciliationRequired
 	}
 	to := p.Failed
@@ -231,6 +278,10 @@ func (s *Store) FinalizeAttempt(ctx context.Context, fingerprint, session, attem
 	if _, err := recordRuntime(ctx, tx, attemptID, "completion", sess.RunnerBoot, s.meta.DaemonBoot, body, now); err != nil {
 		return FinalizeReply{}, err
 	}
+	reply := FinalizeReply{Outcome: string(to), Released: true}
+	if err := recordReceipt(ctx, tx, attemptID, ReceiptFinalize, completion.MessageID, requestSHA, reply, sess.RunnerBoot, s.meta.DaemonBoot, now); err != nil {
+		return FinalizeReply{}, err
+	}
 	if err := s.step("before_finalize_commit"); err != nil {
 		return FinalizeReply{}, err
 	}
@@ -240,5 +291,5 @@ func (s *Store) FinalizeAttempt(ctx context.Context, fingerprint, session, attem
 	if err := s.step("after_finalize_commit"); err != nil {
 		return FinalizeReply{}, err
 	}
-	return FinalizeReply{Outcome: string(to), Released: true}, nil
+	return reply, nil
 }

@@ -25,6 +25,7 @@ import (
 	"errors"
 	"io"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -72,12 +73,16 @@ type SessionRecord struct {
 	DaemonFingerprint string `json:"daemon_fingerprint"`
 	RunnerID          string `json:"runner_id"`
 	RunnerBoot        string `json:"runner_boot"`
-	Mode              string `json:"mode"`
-	DriftMS           int64  `json:"drift_ms"`
-	TerminationMS     int64  `json:"termination_ms"`
-	LeaseValidityMS   int64  `json:"lease_validity_ms"`
-	RenewEveryMS      int64  `json:"renew_every_ms"`
-	Paused            bool   `json:"paused"`
+	// EligibilityID and EligibilityRevision are the facts the hello cited; a
+	// session may only be shown dispatches admitted under exactly those facts.
+	EligibilityID       string `json:"eligibility_id"`
+	EligibilityRevision int64  `json:"eligibility_revision"`
+	Mode                string `json:"mode"`
+	DriftMS             int64  `json:"drift_ms"`
+	TerminationMS       int64  `json:"termination_ms"`
+	LeaseValidityMS     int64  `json:"lease_validity_ms"`
+	RenewEveryMS        int64  `json:"renew_every_ms"`
+	Paused              bool   `json:"paused"`
 }
 
 // StreamWatermark is the runstream sink position: records acknowledged through
@@ -213,6 +218,86 @@ type runtimeRecord struct {
 	Termination *c.Evidence      `json:"termination,omitempty"`
 	Boundary    *BoundaryState   `json:"boundary,omitempty"`
 	Completion  *Completion      `json:"completion,omitempty"`
+	Receipt     *runnerReceipt   `json:"receipt,omitempty"`
+}
+
+// runnerReceipt is the one replay rule for runner requests: per (route,
+// message_id) the digest of the canonical request and the response it earned,
+// retained in the transaction that applied it. An identical request replays the
+// response; a changed request under the same id is identity_conflict and is
+// never applied.
+type runnerReceipt struct {
+	Route         string          `json:"route"`
+	RequestSHA256 string          `json:"request_sha256"`
+	Response      json.RawMessage `json:"response"`
+}
+
+const (
+	ReceiptMessages = "messages"
+	ReceiptUsage    = "usage"
+	ReceiptFinalize = "finalize"
+)
+
+func requestDigest(v any) (string, error) {
+	body, err := json.Marshal(v)
+	if err != nil {
+		return "", p.Malformed
+	}
+	sum := sha256.Sum256(body)
+	return hex.EncodeToString(sum[:]), nil
+}
+
+// retainedReceipt finds the receipt for (attempt, route, messageID). found is
+// false when none exists; a retained request with another digest is
+// identity_conflict.
+func retainedReceipt(ctx context.Context, tx *sql.Tx, attemptID, route, messageID, digest string) (json.RawMessage, bool, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT body FROM runtime_observations WHERE attempt_id=? AND kind='receipt'", attemptID)
+	if err != nil {
+		return nil, false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var body string
+		var v runtimeRecord
+		if err := rows.Scan(&body); err != nil {
+			return nil, false, err
+		}
+		if json.Unmarshal([]byte(body), &v) != nil || v.Receipt == nil || v.MessageID != messageID || v.Receipt.Route != route {
+			continue
+		}
+		if v.Receipt.RequestSHA256 != digest {
+			return nil, false, p.IdentityConflict
+		}
+		return v.Receipt.Response, true, nil
+	}
+	return nil, false, rows.Err()
+}
+
+func recordReceipt(ctx context.Context, tx *sql.Tx, attemptID, route, messageID, digest string, response any, runnerBoot, daemonBoot string, now int64) error {
+	raw, err := json.Marshal(response)
+	if err != nil {
+		return p.Malformed
+	}
+	body, err := runtimeBody(runtimeRecord{MessageID: messageID, Receipt: &runnerReceipt{Route: route, RequestSHA256: digest, Response: raw}})
+	if err != nil {
+		return err
+	}
+	_, err = recordRuntime(ctx, tx, attemptID, "receipt", runnerBoot, daemonBoot, body, now)
+	return err
+}
+
+// Binds reports whether a session may see or acknowledge a dispatch: the
+// dispatch must have been admitted under the session's runner boot and the
+// exact eligibility revision the hello cited. Anything else belongs to another
+// runner incarnation and is reconcile's, never this session's.
+func (v SessionRecord) Binds(d Dispatch) error {
+	if d.Facts.RunnerBoot != v.RunnerBoot {
+		return p.BootMismatch
+	}
+	if d.Facts.ID != v.EligibilityID || d.Facts.Revision != v.EligibilityRevision {
+		return g.Deny("reconciliation_required", "eligibility")
+	}
+	return nil
 }
 
 func sessionStale() error { return g.Deny("session_stale", "session") }
@@ -251,7 +336,8 @@ func (s *Store) runnerSession(ctx context.Context, tx *sql.Tx, fingerprint, sess
 		return who, SessionRecord{}, sessionStale()
 	}
 	v := SessionRecord{DriftMS: SessionDriftMS, TerminationMS: SessionTerminationMS, LeaseValidityMS: LeaseValidityMS, RenewEveryMS: LeaseRenewEveryMS}
-	err = tx.QueryRowContext(ctx, "SELECT id,runner_id,runner_boot,daemon_boot,generation,mode FROM runner_sessions WHERE id=?", session).Scan(&v.SessionID, &v.RunnerID, &v.RunnerBoot, &v.DaemonBoot, &v.Generation, &v.Mode)
+	var hello string
+	err = tx.QueryRowContext(ctx, "SELECT id,runner_id,runner_boot,daemon_boot,generation,mode,hello FROM runner_sessions WHERE id=?", session).Scan(&v.SessionID, &v.RunnerID, &v.RunnerBoot, &v.DaemonBoot, &v.Generation, &v.Mode, &hello)
 	if errors.Is(err, sql.ErrNoRows) {
 		return who, SessionRecord{}, sessionStale()
 	}
@@ -261,6 +347,11 @@ func (s *Store) runnerSession(ctx context.Context, tx *sql.Tx, fingerprint, sess
 	if v.RunnerID != who.ID || v.DaemonBoot != s.meta.DaemonBoot || v.Generation != s.meta.Generation {
 		return who, SessionRecord{}, sessionStale()
 	}
+	var cited HelloRecord
+	if json.Unmarshal([]byte(hello), &cited) != nil {
+		return who, SessionRecord{}, g.Deny("corrupt_record", "session")
+	}
+	v.EligibilityID, v.EligibilityRevision = cited.EligibilityID, cited.EligibilityRevision
 	if v.Paused, err = daemonPaused(ctx, tx); err != nil {
 		return who, SessionRecord{}, err
 	}
@@ -401,7 +492,7 @@ func (s *Store) RunnerSession(ctx context.Context, fingerprint string, hello Hel
 	if err != nil {
 		return SessionRecord{}, err
 	}
-	v := SessionRecord{SessionID: dispatchID(hello.MessageID, "session"), RunnerID: who.ID, RunnerBoot: hello.RunnerBoot, DriftMS: SessionDriftMS, TerminationMS: SessionTerminationMS, LeaseValidityMS: LeaseValidityMS, RenewEveryMS: LeaseRenewEveryMS, Paused: paused}
+	v := SessionRecord{SessionID: dispatchID(hello.MessageID, "session"), RunnerID: who.ID, RunnerBoot: hello.RunnerBoot, EligibilityID: hello.EligibilityID, EligibilityRevision: hello.EligibilityRevision, DriftMS: SessionDriftMS, TerminationMS: SessionTerminationMS, LeaseValidityMS: LeaseValidityMS, RenewEveryMS: LeaseRenewEveryMS, Paused: paused}
 	var oldRunner, oldHello string
 	err = tx.QueryRowContext(ctx, "SELECT runner_id,runner_boot,daemon_boot,generation,mode,hello FROM runner_sessions WHERE id=?", v.SessionID).Scan(&oldRunner, &v.RunnerBoot, &v.DaemonBoot, &v.Generation, &v.Mode, &oldHello)
 	if err == nil {
@@ -726,6 +817,16 @@ func (s *Store) RecordRefusal(ctx context.Context, fingerprint, session, selecte
 	if r := p.CheckSession(m, d.Assignment.Identity, selected); r != p.OK {
 		return r
 	}
+	if d.Assignment.Identity.Generation != s.meta.Generation {
+		return p.StaleGeneration
+	}
+	digest, err := requestDigest(m)
+	if err != nil {
+		return err
+	}
+	if _, found, err := retainedReceipt(ctx, tx, d.Assignment.Identity.AttemptID, ReceiptMessages, m.MessageID, digest); err != nil || found {
+		return err
+	}
 	if m.InReplyTo != d.Assignment.MessageID {
 		return p.IdentityConflict
 	}
@@ -739,7 +840,11 @@ func (s *Store) RecordRefusal(ctx context.Context, fingerprint, session, selecte
 	if err != nil {
 		return err
 	}
-	if _, err := recordRuntime(ctx, tx, d.Assignment.Identity.AttemptID, "refused", sess.RunnerBoot, s.meta.DaemonBoot, body, time.Now().UnixMilli()); err != nil {
+	now := time.Now().UnixMilli()
+	if _, err := recordRuntime(ctx, tx, d.Assignment.Identity.AttemptID, "refused", sess.RunnerBoot, s.meta.DaemonBoot, body, now); err != nil {
+		return err
+	}
+	if err := recordReceipt(ctx, tx, d.Assignment.Identity.AttemptID, ReceiptMessages, m.MessageID, digest, map[string]string{"outcome": "recorded"}, sess.RunnerBoot, s.meta.DaemonBoot, now); err != nil {
 		return err
 	}
 	if err := s.step("before_refusal_commit"); err != nil {
@@ -865,10 +970,25 @@ func (s *Store) ProposeTransition(ctx context.Context, fingerprint, session, sel
 	if r := p.CheckSession(m, identity, selected); r != p.OK {
 		return p.Message{}, r
 	}
-	// A paused daemon admits no new work but still drains stops.
-	if sess.Paused && m.To != p.Stopping {
-		return p.Message{}, g.Deny("paused", "transition")
+	// The dispatch's own identity is historical; only the current generation may
+	// change state, whatever the edge.
+	if identity.Generation != s.meta.Generation {
+		return p.Message{}, p.StaleGeneration
 	}
+	requestSHA, err := requestDigest(struct {
+		Message  p.Message       `json:"message"`
+		Evidence RuntimeEvidence `json:"evidence"`
+	}{m, evidence})
+	if err != nil {
+		return p.Message{}, err
+	}
+	if response, found, err := retainedReceipt(ctx, tx, identity.AttemptID, ReceiptMessages, m.MessageID, requestSHA); err != nil {
+		return p.Message{}, err
+	} else if found {
+		return p.Decode(response)
+	}
+	// A paused daemon admits no new work but still drains stops: dispatchAllowed
+	// refuses paused inside this transaction for every non-stopping edge.
 	if sess.RunnerBoot != d.Facts.RunnerBoot {
 		return p.Message{}, p.BootMismatch
 	}
@@ -959,6 +1079,9 @@ func (s *Store) ProposeTransition(ctx context.Context, fingerprint, session, sel
 	if _, err := recordRuntime(ctx, tx, identity.AttemptID, evidence.Kind, sess.RunnerBoot, s.meta.DaemonBoot, body, now.Wall.UnixMilli()); err != nil {
 		return p.Message{}, err
 	}
+	if err := recordReceipt(ctx, tx, identity.AttemptID, ReceiptMessages, m.MessageID, requestSHA, m, sess.RunnerBoot, s.meta.DaemonBoot, now.Wall.UnixMilli()); err != nil {
+		return p.Message{}, err
+	}
 	if err := s.step("before_transition_commit"); err != nil {
 		return p.Message{}, err
 	}
@@ -1013,6 +1136,29 @@ func (s *Store) IssueLease(ctx context.Context, fingerprint, session, dispatchKe
 			return fence(string(r), r)
 		}
 		return c.Lease{}, r
+	}
+	if identity.Generation != s.meta.Generation {
+		return fence(string(p.StaleGeneration), p.StaleGeneration)
+	}
+	// A retained nonce answers with its original reply before any timing check:
+	// a lost reply is replayed, never re-timed, and never extended.
+	var retained string
+	err = tx.QueryRowContext(ctx, "SELECT body FROM control_leases WHERE nonce=?", request.Nonce).Scan(&retained)
+	if err == nil {
+		var old c.Lease
+		if err := decodeControl(retained, &old); err != nil {
+			return c.Lease{}, err
+		}
+		if !validControlLease(old) {
+			return c.Lease{}, g.Deny("corrupt_record", "lease")
+		}
+		if old.DispatchID != dispatchKey || !reflect.DeepEqual(old.Request, request) {
+			return c.Lease{}, p.IdentityConflict
+		}
+		return old, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return c.Lease{}, err
 	}
 	if sess.Paused {
 		return fence("paused", g.Deny("paused", "lease"))
@@ -1069,12 +1215,17 @@ func (s *Store) IssueLease(ctx context.Context, fingerprint, session, dispatchKe
 // stopping|unknown, the releaseDispatchTx release to cancelled|expired with the
 // runner principal as actor, all in one committed transaction. Otherwise the
 // attempt stays stopping|unknown with remote_work unknown and Released is false.
-// Old-boot evidence is retained in runtime_observations (outcome retained).
+// Old-boot evidence is retained in runtime_observations (outcome retained), and
+// an unconfirmed report (confirmed_process unknown) is retained without a
+// control observation or release, leaving the cancel pending.
 func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, selected string, evidence c.Evidence, boundary BoundaryState) (TerminationReply, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	m := evidence.Terminated
-	if m.Kind != "terminated" || evidence.Measurement.Validate(true) != nil || !p.ValidID(m.StopID) {
+	// An unconfirmed containment report carries no observation timestamp; every
+	// confirmed one must.
+	unconfirmed := m.ConfirmedProcess == "unknown"
+	if m.Kind != "terminated" || evidence.Measurement.Validate(!unconfirmed) != nil || !p.ValidID(m.StopID) {
 		return TerminationReply{}, p.Malformed
 	}
 	tx, err := s.grantTransaction(ctx)
@@ -1094,6 +1245,25 @@ func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, sel
 	if r := p.CheckSession(m, identity, selected); r != p.OK {
 		return TerminationReply{}, r
 	}
+	if identity.Generation != s.meta.Generation {
+		return TerminationReply{}, p.StaleGeneration
+	}
+	requestSHA, err := requestDigest(struct {
+		Termination c.Evidence    `json:"termination"`
+		Boundary    BoundaryState `json:"boundary"`
+	}{evidence, boundary})
+	if err != nil {
+		return TerminationReply{}, err
+	}
+	if response, found, err := retainedReceipt(ctx, tx, identity.AttemptID, ReceiptMessages, m.MessageID, requestSHA); err != nil {
+		return TerminationReply{}, err
+	} else if found {
+		var reply TerminationReply
+		if json.Unmarshal(response, &reply) != nil {
+			return TerminationReply{}, g.Deny("corrupt_record", "receipt")
+		}
+		return reply, nil
+	}
 	body, err := runtimeBody(runtimeRecord{MessageID: m.MessageID, Termination: &evidence, Boundary: &boundary})
 	if err != nil {
 		return TerminationReply{}, err
@@ -1101,6 +1271,9 @@ func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, sel
 	now := s.controlStamp()
 	commit := func(reply TerminationReply) (TerminationReply, error) {
 		if _, err := recordRuntime(ctx, tx, identity.AttemptID, "terminated", m.RunnerBoot, m.DaemonBoot, body, now.Wall.UnixMilli()); err != nil {
+			return TerminationReply{}, err
+		}
+		if err := recordReceipt(ctx, tx, identity.AttemptID, ReceiptMessages, m.MessageID, requestSHA, reply, m.RunnerBoot, m.DaemonBoot, now.Wall.UnixMilli()); err != nil {
 			return TerminationReply{}, err
 		}
 		if err := s.step("before_termination_commit"); err != nil {
@@ -1132,6 +1305,34 @@ func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, sel
 				return TerminationReply{}, err
 			}
 		}
+	}
+	if unconfirmed {
+		// The runner could not confirm containment (detached child, EPERM,
+		// escape): the report is retained as history and the cancel stays
+		// pending, with no control observation and no release, until a
+		// confirmed report under a new message id arrives.
+		var targetBody string
+		err := tx.QueryRowContext(ctx, "SELECT body FROM control_targets WHERE stop_id=? AND attempt_id=?", m.StopID, identity.AttemptID).Scan(&targetBody)
+		if errors.Is(err, sql.ErrNoRows) {
+			return TerminationReply{}, p.ReconciliationRequired
+		}
+		if err != nil {
+			return TerminationReply{}, err
+		}
+		var target c.Target
+		if err := decodeControl(targetBody, &target); err != nil {
+			return TerminationReply{}, err
+		}
+		if r := p.CheckSession(m, target.Cancel.Identity, selected); r != p.OK {
+			return TerminationReply{}, r
+		}
+		if m.RunnerBoot != target.Cancel.RunnerBoot || m.DaemonBoot != target.Cancel.DaemonBoot {
+			return TerminationReply{}, p.BootMismatch
+		}
+		if err := controlMessage(ctx, tx, m); err != nil {
+			return TerminationReply{}, err
+		}
+		return commit(TerminationReply{Outcome: "observed"})
 	}
 	target, err := s.observeTerminationTx(ctx, tx, selected, evidence)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -1183,7 +1384,7 @@ func (s *Store) RecordUsage(ctx context.Context, fingerprint, session string, us
 		return err
 	}
 	defer tx.Rollback()
-	who, _, err := s.runnerSession(ctx, tx, fingerprint, session)
+	who, sess, err := s.runnerSession(ctx, tx, fingerprint, session)
 	if err != nil {
 		return err
 	}
@@ -1196,6 +1397,13 @@ func (s *Store) RecordUsage(ctx context.Context, fingerprint, session string, us
 	}
 	if usage.Identity.Generation != s.meta.Generation {
 		return p.StaleGeneration
+	}
+	requestSHA, err := requestDigest(usage)
+	if err != nil {
+		return err
+	}
+	if _, found, err := retainedReceipt(ctx, tx, usage.Identity.AttemptID, ReceiptUsage, usage.MessageID, requestSHA); err != nil || found {
+		return err
 	}
 	for _, r := range usage.Receipts {
 		body, err := json.Marshal(r)
@@ -1211,17 +1419,28 @@ func (s *Store) RecordUsage(ctx context.Context, fingerprint, session string, us
 			return err
 		}
 		if err == nil {
-			var retained UsageReceipt
-			if json.Unmarshal([]byte(old), &retained) == nil && retained.Terminal && !r.Terminal {
+			if old == string(body) {
 				continue
 			}
-			if old == string(body) {
+			var retained UsageReceipt
+			if json.Unmarshal([]byte(old), &retained) != nil {
+				return g.Deny("corrupt_record", "usage")
+			}
+			// A terminal receipt is immutable per request id; only a reservation
+			// may be superseded, and only by a later reservation or its terminal.
+			if retained.Terminal {
+				if r.Terminal {
+					return p.IdentityConflict
+				}
 				continue
 			}
 		}
 		if _, err := tx.ExecContext(ctx, "INSERT INTO attempt_usage VALUES(?,?,?) ON CONFLICT(attempt_id,request_id) DO UPDATE SET body=excluded.body", usage.Identity.AttemptID, r.RequestID, string(body)); err != nil {
 			return err
 		}
+	}
+	if err := recordReceipt(ctx, tx, usage.Identity.AttemptID, ReceiptUsage, usage.MessageID, requestSHA, map[string]string{"outcome": "recorded"}, sess.RunnerBoot, s.meta.DaemonBoot, time.Now().UnixMilli()); err != nil {
+		return err
 	}
 	if err := s.step("before_usage_commit"); err != nil {
 		return err
@@ -1230,6 +1449,69 @@ func (s *Store) RecordUsage(ctx context.Context, fingerprint, session string, us
 		return err
 	}
 	return s.step("after_usage_commit")
+}
+
+// RunnerReceipt reads the retained receipt for (attempt, route, messageID):
+// sql.ErrNoRows when none exists, identity_conflict when the retained request
+// differs from request, else the retained response bytes. Durable point: none.
+func (s *Store) RunnerReceipt(ctx context.Context, fingerprint, session, attemptID, route, messageID string, request any) (json.RawMessage, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !p.ValidID(attemptID) || !p.ValidID(messageID) || route == "" {
+		return nil, p.Malformed
+	}
+	digest, err := requestDigest(request)
+	if err != nil {
+		return nil, err
+	}
+	tx, err := s.grantTransaction(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	if _, _, err := s.runnerSession(ctx, tx, fingerprint, session); err != nil {
+		return nil, err
+	}
+	response, found, err := retainedReceipt(ctx, tx, attemptID, route, messageID, digest)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, sql.ErrNoRows
+	}
+	return response, nil
+}
+
+// RecordRunnerReceipt retains the receipt of a request another store method
+// applied in its own transaction (assignment acknowledgement). Durable point:
+// the committed row; a crash before it leaves the applied state replayable by
+// its own identity and the next identical request re-records the receipt.
+func (s *Store) RecordRunnerReceipt(ctx context.Context, fingerprint, session, attemptID, route, messageID string, request, response any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !p.ValidID(attemptID) || !p.ValidID(messageID) || route == "" {
+		return p.Malformed
+	}
+	digest, err := requestDigest(request)
+	if err != nil {
+		return err
+	}
+	tx, err := s.grantTransaction(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, sess, err := s.runnerSession(ctx, tx, fingerprint, session)
+	if err != nil {
+		return err
+	}
+	if err := recordReceipt(ctx, tx, attemptID, route, messageID, digest, response, sess.RunnerBoot, s.meta.DaemonBoot, time.Now().UnixMilli()); err != nil {
+		return err
+	}
+	if err := s.step("before_receipt_commit"); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // AttemptUsage reads the retained receipts of one attempt in request order.

@@ -540,7 +540,8 @@ func TestProposeTransitionRefusals(t *testing.T) {
 	if state, revision := attemptRow(t, x.s, x.d.Assignment.Identity.AttemptID); state != p.Running || revision != 3 {
 		t.Fatal(state, revision)
 	}
-	rowCount(t, x.s, "runtime_observations", 2)
+	rowCount(t, x.s, "runtime_observations WHERE kind<>'receipt'", 2)
+	rowCount(t, x.s, "runtime_observations WHERE kind='receipt'", 2)
 	// A latched stop refuses forward proposals with stop_latched but admits the
 	// stop proposal itself; paused refuses everything.
 	if _, err := x.s.RequestStop(ctx, x.owner, stopRequest(c.CancelAttempt, x.d)); err != nil {
@@ -593,7 +594,7 @@ func TestProposeTransitionTaskStatesHooksAndLeaseLapse(t *testing.T) {
 		if state != p.Starting {
 			t.Fatal("committed transition lost", state)
 		}
-		rowCount(t, x.s, "runtime_observations", 1)
+		rowCount(t, x.s, "runtime_observations WHERE kind<>'receipt'", 1)
 		got, err := x.s.ProposeTransition(ctx, x.runner, x.session.SessionID, p.FencedVersion, m, launchIntent(lease.Request.Nonce))
 		if err != nil || !reflect.DeepEqual(got, m) {
 			t.Fatal("lost reply not replayed", got, err)
@@ -690,14 +691,20 @@ func TestIssueLeaseReplayFencingAndCommitOrder(t *testing.T) {
 	requireReason(t, err, "runner_disabled")
 	_, err = x.s.IssueLease(ctx, x.runner, otherSession.SessionID, x.d.ID, p.FencedVersion, x.leaseRequest())
 	requireReason(t, err, "session_stale")
-	// A revoked nonce is a nonce mismatch, fenced before the refusal; a fresh
-	// nonce under the latched stop is fenced as revoked_or_expired.
+	// A retained nonce replays its reply even after revocation (never extended),
+	// a changed request under it conflicts, and a fresh nonce under the latched
+	// stop is fenced as revoked_or_expired.
 	if _, err := x.s.RequestStop(ctx, x.owner, stopRequest(c.GlobalStop, x.d)); err != nil {
 		t.Fatal(err)
 	}
+	if replayed, err := x.s.IssueLease(ctx, x.runner, x.session.SessionID, x.d.ID, p.FencedVersion, renewal); err != nil || !reflect.DeepEqual(replayed, second) {
+		t.Fatal("retained nonce not replayed after revocation", replayed, err)
+	}
 	revoked := x.leaseRequest()
 	revoked.Nonce = renewal.Nonce
-	refuse("revoked nonce", revoked, p.NonceMismatch, "")
+	if _, err := x.s.IssueLease(ctx, x.runner, x.session.SessionID, x.d.ID, p.FencedVersion, revoked); !errors.Is(err, p.IdentityConflict) {
+		t.Fatal("changed request under a retained nonce accepted", err)
+	}
 	refuse("latched", x.leaseRequest(), c.ErrFenced, "")
 	rowCount(t, x.s, "control_leases", 2)
 	// Commit before reply on issuance.
@@ -752,37 +759,52 @@ func TestReportTerminationReleasesOnlyWithQuiescentEvidence(t *testing.T) {
 	}
 	rowCount(t, x.s, "dispatch_releases", 0)
 	rowCount(t, x.s, "runtime_observations WHERE kind='terminated'", 1)
-	// The same message with changed evidence conflicts; a lying quiescent flag
-	// whose counts disagree does not release either.
+	// The first report under a message id decides: changed evidence, a changed
+	// boundary or changed remote_work under it are identity conflicts, and the
+	// identical report replays the same reply.
 	changed := evidence
 	changed.Terminated.EvidenceDigest = strings.Repeat("f", 64)
 	if _, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, changed, quiescent()); !errors.Is(err, p.IdentityConflict) {
 		t.Fatal(err)
 	}
-	reply, err = x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, evidence, BoundaryState{Reservations: 2, TerminalReceipts: 1, Quiescent: true})
-	if err != nil || reply.Released {
-		t.Fatal("inconsistent boundary released", reply, err)
+	if _, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, evidence, quiescent()); !errors.Is(err, p.IdentityConflict) {
+		t.Fatal("changed boundary under the same message accepted", err)
 	}
-	reply, err = x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, evidence, quiescent())
-	if err != nil || reply.Released {
-		t.Fatal("remote_work unknown released", reply, err)
-	}
-	// A quiescent, confirmed report releases to cancelled with the runner as actor.
 	settled := terminatedFor(&x, stop.ID, "quiescent")
 	settled.Terminated.MessageID = evidence.Terminated.MessageID
 	if _, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, settled, quiescent()); !errors.Is(err, p.IdentityConflict) {
 		t.Fatal("changed remote_work under the same message accepted", err)
 	}
+	if same, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, evidence, busy); err != nil || !reflect.DeepEqual(same, reply) {
+		t.Fatal("identical report replay changed", same, err)
+	}
 	other, otherSession := secondRunner(t, x.dispatchFixture)
 	_, err = x.s.ReportTermination(ctx, other, otherSession.SessionID, p.FencedVersion, settled, quiescent())
 	requireReason(t, err, "runner_disabled")
-	// The first observation is immutable, so release needs a stop whose
-	// observation is still open: a second cancel latch for the same attempt.
+	// A later stop with an inconsistent or unknown-remote-work report still does
+	// not release; only a settled, quiescent, confirmed report does.
 	second := stopRequest(c.CancelAttempt, x.d)
 	if _, err := x.s.RequestStop(ctx, x.owner, second); err != nil {
 		t.Fatal(err)
 	}
-	settled = terminatedFor(&x, second.ID, "quiescent")
+	unsettled := terminatedFor(&x, second.ID, "quiescent")
+	reply, err = x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, unsettled, BoundaryState{Reservations: 2, TerminalReceipts: 1, Quiescent: true})
+	if err != nil || reply.Released {
+		t.Fatal("inconsistent boundary released", reply, err)
+	}
+	third := stopRequest(c.CancelAttempt, x.d)
+	if _, err := x.s.RequestStop(ctx, x.owner, third); err != nil {
+		t.Fatal(err)
+	}
+	reply, err = x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, terminatedFor(&x, third.ID, "unknown"), quiescent())
+	if err != nil || reply.Released {
+		t.Fatal("remote_work unknown released", reply, err)
+	}
+	fourth := stopRequest(c.CancelAttempt, x.d)
+	if _, err := x.s.RequestStop(ctx, x.owner, fourth); err != nil {
+		t.Fatal(err)
+	}
+	settled = terminatedFor(&x, fourth.ID, "quiescent")
 	for range 2 {
 		reply, err = x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, settled, quiescent())
 		if err != nil || reply.Outcome != "observed" || !reply.Released {
