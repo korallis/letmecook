@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/korallis/letmecook/internal/authority"
@@ -23,8 +24,11 @@ func backupRoutes(d Deps) []Route {
 			MessageID   string `json:"message_id"`
 			Destination string `json:"destination"`
 		}
-		if closedjson.Decode(r.Body, &body, 4096, nil) != nil || body.Version != "workflow-provisional-v1" || !p.ValidID(body.MessageID) || body.Destination == "" || len(body.Destination) > 256 {
+		if closedjson.Decode(r.Body, &body, 4096, nil) != nil || body.Version != "workflow-provisional-v1" || !p.ValidID(body.MessageID) {
 			return nil, &Error{400, "malformed", ""}
+		}
+		if body.Destination == "" || body.Destination == "." || body.Destination == ".." || len(body.Destination) > 128 || strings.ContainsAny(body.Destination, "/\\\x00\r\n") {
+			return nil, &Error{400, "invalid_destination", "use a single backup name of at most 128 bytes"}
 		}
 		if d.Backup == nil {
 			return nil, &Error{503, "backup_unavailable", "backup destination root is not configured"}
@@ -34,6 +38,17 @@ func backupRoutes(d Deps) []Route {
 		if d.Jobs == nil {
 			return nil, &Error{503, "store_unavailable", "jobs_unavailable"}
 		}
+		// Check the same pause/active-attempt boundary as Create without retaining
+		// the pin across other store calls. The worker must recheck when it runs.
+		release, err := d.Store.PinArtifacts()
+		if err != nil {
+			switch err.Error() {
+			case "active_execution", "not_paused":
+				return nil, &Error{409, err.Error(), ""}
+			}
+			return nil, &Error{503, "store_unavailable", ""}
+		}
+		release()
 		status, err := d.Store.Status(ctx)
 		if err != nil {
 			return nil, &Error{503, "store_unavailable", ""}
@@ -54,12 +69,6 @@ func backupFailure(err error) *Error {
 	var refusal *authority.Refusal
 	if errors.As(err, &refusal) && refusal.Code == "identity_conflict" {
 		return &Error{409, "identity_conflict", ""}
-	}
-	switch err.Error() {
-	case "active_execution", "not_paused", "target_not_empty", "identity_conflict":
-		return &Error{409, err.Error(), ""}
-	case "invalid_destination", "overlapping_paths":
-		return &Error{400, "invalid_destination", ""}
 	}
 	return &Error{503, "backup_failed", "no completed backup was acknowledged; source data was not removed"}
 }

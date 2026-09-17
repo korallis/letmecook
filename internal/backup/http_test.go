@@ -11,6 +11,7 @@ import (
 	"crypto/x509/pkix"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/big"
@@ -71,7 +72,7 @@ func (j *jobRecorder) Get(context.Context, string) (jobs.Job, error) {
 }
 
 func TestOwnerBackupRouteOverMutualTLS(t *testing.T) {
-	for _, mode := range []string{"jobs-unavailable", "jobs", "jobs-conflict", "disabled"} {
+	for _, mode := range []string{"jobs-unavailable", "jobs", "jobs-conflict", "unpaused", "active", "disabled"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
 			state, artifacts := filepath.Join(root, "state"), filepath.Join(root, "artifacts")
@@ -110,7 +111,7 @@ func TestOwnerBackupRouteOverMutualTLS(t *testing.T) {
 			}
 			deps := httpapi.Deps{Backup: svc}
 			recorder := &jobRecorder{}
-			if mode == "jobs" || mode == "jobs-conflict" {
+			if mode == "jobs" || mode == "jobs-conflict" || mode == "unpaused" || mode == "active" {
 				deps.Jobs = recorder
 			}
 			if mode == "jobs-conflict" {
@@ -155,6 +156,29 @@ func TestOwnerBackupRouteOverMutualTLS(t *testing.T) {
 			if status != 400 {
 				t.Fatal("duplicate JSON accepted", status, string(raw))
 			}
+			for _, name := range []string{"", ".", "..", "../escape", "nested/name", `nested\name`, strings.Repeat("x", 129), "bad\x00name", "bad\nname"} {
+				encoded, e := json.Marshal(map[string]string{"version": "workflow-provisional-v1", "message_id": messageID, "destination": name})
+				if e != nil {
+					t.Fatal(e)
+				}
+				status, raw = call(owner, string(encoded))
+				if status != 400 || !bytes.Contains(raw, []byte("invalid_destination")) || len(recorder.submitted) != 0 {
+					t.Fatal("invalid destination queued", name, status, string(raw), recorder.submitted)
+				}
+			}
+			if mode == "unpaused" {
+				if _, err = db.Exec("UPDATE daemon_state SET paused=0"); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if mode == "active" {
+				if _, err = db.Exec("INSERT INTO tasks VALUES(?,'reconciling')", messageID); err != nil {
+					t.Fatal(err)
+				}
+				if _, err = db.Exec("INSERT INTO attempts VALUES(?,?,1,'unknown',1,?)", messageID, messageID, messageID); err != nil {
+					t.Fatal(err)
+				}
+			}
 			status, raw = call(owner, body)
 			switch mode {
 			case "disabled":
@@ -168,6 +192,14 @@ func TestOwnerBackupRouteOverMutualTLS(t *testing.T) {
 			case "jobs-conflict":
 				if status != 409 || !bytes.Contains(raw, []byte("identity_conflict")) {
 					t.Fatal(status, string(raw))
+				}
+			case "unpaused":
+				if status != 409 || !bytes.Contains(raw, []byte("not_paused")) || len(recorder.submitted) != 0 {
+					t.Fatal("unpaused job admitted", status, string(raw), recorder.submitted)
+				}
+			case "active":
+				if status != 409 || !bytes.Contains(raw, []byte("active_execution")) || len(recorder.submitted) != 0 {
+					t.Fatal("active job admitted", status, string(raw), recorder.submitted)
 				}
 			case "jobs-unavailable":
 				if status != 503 || !bytes.Contains(raw, []byte("store_unavailable")) || !bytes.Contains(raw, []byte("jobs_unavailable")) {

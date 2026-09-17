@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -215,9 +214,6 @@ func (s *service) destination(name string) (string, error) {
 		return "", err
 	}
 	defer r.Close()
-	if r.Name() != s.root {
-		return "", fmt.Errorf("backup_root_changed")
-	}
 	return filepath.Join(s.root, name), nil
 }
 func (s *service) Create(ctx context.Context, destination string) (Manifest, error) {

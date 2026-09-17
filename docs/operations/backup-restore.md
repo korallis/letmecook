@@ -17,7 +17,10 @@ satisfy the complete M1 system acceptance gate. The integration contract is
    boundary. The only permitted store call while holding the pin is
    `SnapshotDatabase`; release is idempotent. This intentionally favors correctness
    over read/write availability during the copy. Use the jobs worker for large
-   backups, and expect other store calls to wait.
+   backups, and expect other store calls to wait. This whole-copy mutex is the
+   accepted M1 trade-off. A follow-up should introduce an explicit collection-pin
+   flag, hold the mutex only around `VACUUM INTO`, and preserve the pause/attempt
+   fence while releasing the mutex for file copying.
 3. `SnapshotDatabase` uses modernc SQLite's **`VACUUM INTO`**, under the same mutex,
    to capture committed WAL pages into a new private `state.db`. It explicitly
    fsyncs that file and its parent. It never copies just the live main file.
@@ -27,10 +30,16 @@ satisfy the complete M1 system acceptance gate. The integration contract is
    `streams/<attempt_id>.sink/journal.jsonl`; unrelated files, upload staging,
    runner workspaces and recovery directories are not copied. A present sink
    directory with a missing journal is an error, not an empty stream.
-5. The copied database omits **gateway configuration values**. Only in that copy,
-   `gateway_profiles` rows are removed with their retained trigger restored, then
-   a second `VACUUM` removes their freed-page bytes. The source and all workflow
-   grant/receipt records are unchanged. Reconfigure the gateway after restore.
+5. The copied database omits **gateway configuration values and credential
+   responses**. Its `gateway_profiles` rows are removed. An explicit sanitization
+   allowlist also rewrites `owner_commands.status/response` for enrollment routes
+   or any response JSON containing a non-empty string under a `token` key at any
+   depth. Receipt identity and request hashes remain; status **410** and a
+   `credential_response_omitted` tombstone replace the secret response. This
+   recognizes path-based and `identity.enrollments` route names, but does not
+   depend on future route naming. Immutability triggers are restored exactly and
+   a second `VACUUM` removes freed-page secret bytes. **The source is unchanged.**
+   Reconfigure the gateway and create new enrollment invitations after restore.
 6. All files are copied with exclusive creation, expected SHA-256 and length
    checks, file fsyncs and directory fsyncs. Before completion they are rehashed.
    `backup-manifest.json` is atomically renamed into place **last**, and its parent
@@ -50,14 +59,20 @@ agreement, and completeness against both manifest-body references and their
 SQLite links. Retained runtime stream watermarks make a sink mandatory even if
 its entire directory/root is missing. Copied journals receive bounded read-only
 replay of the `runnerjournal` envelope and hash chain plus `runstream.Validate`
-record checks, binding the attempt
-identity, acknowledged watermark and generation lineage across repeated
-restores. Verification never opens a live writable sink; read-only backup media
-can be verified and restored without mutation. Extra files (including SQLite
-sidecars) are refused. Corrupt or missing content produces
-an error naming the failed content where available; a database-only directory is
-never reported as a complete backup. Hashes detect accidental corruption, not an
+record checks, binding the attempt identity, acknowledged watermark and
+generation lineage across repeated restores. Verification never opens a live
+writable sink; read-only backup media can be verified and restored without mutation. Extra files (including SQLite
+sidecars) are refused. Corrupt or missing content produces an error naming the
+failed content where available; a database-only directory is never reported as a complete backup. Hashes detect accidental corruption, not an
 attacker who can rewrite both the backup and its manifest. Store backups privately.
+
+**Residual stream-evidence limit:** a terminal attempt can have acknowledged sink
+records but no retained exit observation or other positive stream watermark. If
+that entire sink is then lost, the current database cannot distinguish it from
+an attempt that emitted no output; a missing sink remains optional in this case.
+A durable per-sink acknowledgement watermark independent of exit observations is
+future integration work. Existing positive watermarks and present-but-damaged
+sink directories still fail closed.
 
 ## Owner API and composition
 
@@ -66,6 +81,13 @@ The daemon's `--backup-dir` is an explicit private destination root. Compose
 `httpapi.Deps.Backup`. The service accepts only a direct child name, or its absolute
 path under that root; it refuses existing non-empty destinations and symlink
 roots. An unconfigured dependency returns `503 backup_unavailable`.
+
+The HTTP destination must be a single name of at most 128 bytes: no separators,
+`.`/`..`, NUL or line breaks. Absolute paths are rejected at submission even
+though the internal service can resolve equivalent direct-child absolute paths.
+The handler briefly acquires/releases the backup pin before queuing, refusing
+`not_paused` or `active_execution` with 409 without submitting a job. The worker
+rechecks this boundary when it executes; preflight is not a reservation.
 
 `POST /api/v1/backup` uses owner mTLS and closed JSON:
 
@@ -100,6 +122,14 @@ gaffer --json restore \
   --state-dir /absolute/recovery/state \
   --artifacts-dir /absolute/recovery/artifacts
 ```
+
+Offline `restore` **ignores the global `--timeout` request deadline**, including
+its 30-second default and `GAFFER_TIMEOUT`; a valid `--timeout 1ms` does not bound
+filesystem recovery. SIGINT/SIGTERM still cancel the operation. An interruption
+may leave partial targets that must not be resumed in place. Failure JSON keeps
+`code: restore_refused` and includes a bounded error class in `detail`, such as
+`digest_mismatch`, `target_not_empty`, `invalid_destination`, `no_space` or
+`interrupted`, without echoing paths or arbitrary database/payload text.
 
 No endpoint, network connection, certificate or key is used by `restore`. It first
 verifies the entire backup, then holds the same directory-inode ownership lock
@@ -146,7 +176,11 @@ The integrated contract requires `Dispatch`, `Delivery`, `IssueLease`,
 A new generation is a message fence, **not a process kill**. Old-generation
 assignment acknowledgements and lease/result control messages are refused
 `stale_generation`; newly arriving old-generation custody is retained in quarantine,
-never a current head. Historical acknowledged-receipt replay additionally needs
+never a current head. `TestRestoreIssueLeaseFencesOldGeneration` additionally
+invokes the actual lease issuance entry point against a retained old-generation
+session; it skips only while that S1 method returns `ErrNotImplemented` on the
+seams base, and otherwise requires `stale_generation` with no lease row created.
+Historical acknowledged-receipt replay additionally needs
 S0's retained-receipt generation check; the integration regression test is named
 `TestRestoreQuarantinesAlreadyAcknowledgedReceiptReplay` (skipped until that fix
 lands). Historical events must retain their original generation, and the legacy
@@ -172,6 +206,11 @@ also refuse `.restore-incomplete`; the standalone backup slice does not own that
   require a **separate backup and recovery procedure** under their owner's policy.
   Native output and candidate content must already be redacted upstream: this is
   an allowlisted backup, not a general-purpose secret scrubber of arbitrary text.
+  Legacy identity routes do not yet populate `owner_commands`, but future receipt
+  wrappers could retain raw invite tokens there. The route/content-based receipt
+  sanitization above closes that path and `Verify` rejects unsanitized matches;
+  other future secret-bearing columns or differently named credential keys must
+  be explicitly added to the sanitization contract.
 - There is no automatic backup schedule, rotation or backup GC. Retain at least
   the last independently verified backup and the Git/context/credential recovery
   material it needs. Never delete the only durable copy to make room for a new
@@ -199,4 +238,7 @@ killed with SIGKILL; the leftover directory has no manifest and is refused. An
 instance-local writer injects ENOSPC during real backup/restore copying and proves
 the original recovery data and prior verified backup survive. This is separate
 from host/disk-loss testing; no privileged tmpfs is claimed. Owner-route tests use
-real mutual TLS, not a mocked identity header.
+real mutual TLS, not a mocked identity header. The built restore CLI succeeds
+with `--timeout 1ms` and exposes distinct safe failure classes. Receipt tests
+cover nested/escaped token keys, future route names, unchanged source/ordinary
+receipts, immutable triggers and rejection despite a recomputed database hash.
