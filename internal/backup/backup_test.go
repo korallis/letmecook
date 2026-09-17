@@ -521,7 +521,34 @@ func (f *fixture) retainedDispatch(t *testing.T) {
 	execute(t, f.db, "INSERT INTO repositories VALUES('repo','file:///not-used')")
 	grantID := uuid()
 	execute(t, f.db, "INSERT INTO execution_grants VALUES(?,?,1,'{}',?)", grantID, f.identity.TaskID, time.Now().Add(time.Hour).UnixMilli())
-	facts := sc.Eligibility{ID: "retained", Revision: 1, RunnerBoot: uuid(), Repository: r.Selection{RunnerRoot: r.RunnerRoot{RunnerID: runner}}}
+	// Retained dispatches must carry valid eligibility: RunnerSession validates
+	// the persisted eligibility, not just the boot/id/revision cited by hello.
+	digest := strings.Repeat("a", 64)
+	revision := g.Revision{Number: 1, SHA256: digest}
+	route := g.Route{
+		RouteRef: "retained", ProfileRef: "fixture", RouteRevision: 1,
+		Policy: revision, RouterBuild: digest, GraphDigest: digest, Evidence: revision,
+		Harness: "fake", Protocol: "responses", SettingsDigest: digest,
+		Isolation: "macos-sandbox-exec-dev", LimitsProfile: "gateway-local-bounds-v1", LimitsAuthority: "operator",
+		Targets: []g.Target{{Provider: "fixture", Model: "fixture", Billing: "gateway-managed"}},
+	}
+	envelope := g.Envelope{
+		Repository: "repo", BaseCommit: strings.Repeat("b", 40), Brief: revision, Plan: revision, RouteDecision: revision,
+		CriterionIDs: []string{"c1"}, TaskKinds: []string{"code"}, Paths: []string{"hello.txt"},
+		Operations: []string{"read"}, Systems: []string{}, Runners: []string{runner}, Routes: []g.Route{route}, Selection: "pinned",
+		Budgets:     g.Budgets{Requests: 1, Attempts: 1, Subattempts: 1, Concurrency: 1, RequestBytes: 1024, ResponseBytes: 4096, TotalMS: 60000, AttemptMS: 30000, FirstOutputMS: 5000, IdleMS: 5000},
+		NotBeforeMS: 1, ExpiresMS: time.Now().Add(time.Hour).UnixMilli(),
+	}
+	facts := sc.Eligibility{
+		ID: "retained", Revision: 1, Enabled: true, RunnerBoot: uuid(),
+		Repository:  r.Selection{Repository: "repo", Revision: 1, ProfileDigest: digest, Remote: "file:///not-used", BaseCommit: envelope.BaseCommit, RunnerRoot: r.RunnerRoot{RunnerID: runner, Root: "/not-used"}},
+		LocalPolicy: revision, LocalEnvelope: envelope, Config: revision, Route: route,
+		Paths: []sc.PathEvidence{}, Capabilities: []string{},
+		Isolation: sc.IsolationProfile{ID: route.Isolation, Revision: revision, RuntimeDigest: digest, ObservedDigest: digest, Kind: "native", Supported: false, Qualification: "development", Controls: sc.DevelopmentIsolationControls()},
+		Capacity:  sc.Resources{CPU: 1000, MemoryBytes: 4096, DiskBytes: 8192, Processes: 8}, Concurrency: 1,
+		RouterAuthenticated: true, Availability: "unknown", ValidUntilMS: envelope.ExpiresMS,
+	}
+	must(t, facts.Validate())
 	request := store.DispatchRequest{ID: f.dispatch, Request: g.Request{TaskID: f.identity.TaskID, GrantID: grantID}}
 	in := struct {
 		store.DispatchRequest

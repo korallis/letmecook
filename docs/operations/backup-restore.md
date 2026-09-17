@@ -181,17 +181,19 @@ assignment acknowledgements and lease/result control messages are refused
 never a current head. `TestRestoreIssueLeaseFencesOldGeneration` additionally
 invokes the actual lease issuance entry point: a retained pre-restore session
 must fail `session_stale`, then an old-generation request over a fresh session
-must fail `stale_generation` with no lease row created. It skips only while S1's
-`IssueLease` returns `ErrNotImplemented` on the seams base.
+must fail `stale_generation` with no lease row created. Both sessions are created
+through `RunnerSession` against validated persisted eligibility facts, and this
+regression runs against the real execution-channel implementation without a skip.
 Historical acknowledged-receipt replay is quarantined by the integrated store's
 retained-receipt generation check, covered by
 `TestRestoreQuarantinesAlreadyAcknowledgedReceiptReplay`. Normal store startup
 refuses `.restore-incomplete` before opening or initializing its database, covered
-by `TestDaemonRefusesIncompleteRestoreMarker`. Historical events must still retain
-their original generation; the legacy snapshot reader needs the separate
-historical-generation projection update, so
-`TestRestoredSnapshotPreservesHistoricalEventGenerations` remains skipped. No
-successful response here grants execution, review or publication.
+by `TestDaemonRefusesIncompleteRestoreMarker`. Historical events retain their
+original generation in the immutable log; the bounded snapshot projects only
+current-generation events, so reads succeed after restore without presenting
+retired events as current. This is covered by the active
+`TestRestoredSnapshotPreservesHistoricalEventGenerations` regression. No successful
+response here grants execution, review or publication.
 
 ## Recovery point, retention and limits
 
