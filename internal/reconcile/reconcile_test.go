@@ -197,7 +197,7 @@ func TestLeaseLapseWithoutEvidenceStaysBlocked(t *testing.T) {
 	if err != nil || len(in.StopTargets) != 1 || in.StopRequests[0].Request.Cause != "lease_expired" || in.StopRequests[0].Actor != "lease-clock" || in.Dispatch.Released {
 		t.Fatalf("%+v %v", in, err)
 	}
-	if in.StopRequests[0].Request.ID != in.StopTargets[0].Cancel.StopID || in.LastLease.Request.Nonce != lease.Request.Nonce {
+	if in.StopRequests[0].Request.ID != execwire.ExpiryStopID(lease.Request.Nonce) || in.StopRequests[0].Request.ID != in.StopTargets[0].Cancel.StopID || in.LastLease.Request.Nonce != lease.Request.Nonce {
 		t.Fatal("fence latched a foreign stop")
 	}
 	other := f.newTask(t)

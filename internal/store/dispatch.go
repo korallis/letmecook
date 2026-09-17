@@ -326,8 +326,8 @@ func dispatchAllowed(ctx context.Context, tx *sql.Tx, request g.Request, now int
 	if paused {
 		return g.Deny("paused", "daemon")
 	}
-	var stopped bool
-	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=?)", request.TaskID).Scan(&stopped); err != nil {
+	stopped, err := dispatchStopped(ctx, tx, request.TaskID)
+	if err != nil {
 		return err
 	}
 	if stopped {
@@ -336,7 +336,7 @@ func dispatchAllowed(ctx context.Context, tx *sql.Tx, request g.Request, now int
 	if err := checkExecution(ctx, tx, request, now); err != nil {
 		return err
 	}
-	stopped, err := controlSuppressed(ctx, tx, request.TaskID, request.GrantID)
+	stopped, err = controlSuppressed(ctx, tx, request.TaskID, request.GrantID)
 	if err != nil {
 		return err
 	}
@@ -344,6 +344,15 @@ func dispatchAllowed(ctx context.Context, tx *sql.Tx, request g.Request, now int
 		return g.Deny("stop_latched", "dispatch")
 	}
 	return nil
+}
+
+// dispatchStopped retains legacy stop history while honouring the same immutable
+// owner clearance as its pause_task marker. Admission and runtime fencing agree.
+func dispatchStopped(ctx context.Context, tx *sql.Tx, taskID string) (bool, error) {
+	var stopped bool
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=?
+ AND NOT EXISTS(SELECT 1 FROM reconcile_reports WHERE id=?))`, taskID, latchClearedPrefix+dispatchID(taskID, "legacy-stop")).Scan(&stopped)
+	return stopped, err
 }
 
 func placement(ctx context.Context, tx *sql.Tx, facts sc.Eligibility) error {

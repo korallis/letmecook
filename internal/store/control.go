@@ -237,9 +237,11 @@ func (s *Store) RequestStop(ctx context.Context, actor string, request c.Request
 
 func controlSuppressed(ctx context.Context, tx *sql.Tx, task, grant string) (bool, error) {
 	var stopped bool
-	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM control_stops s WHERE kind='global_stop' OR
- (kind IN ('pause_task','cancel_attempt') AND task_id=?) OR
- (kind='authority_supersession' AND (grant_id=? OR (task_id=? AND EXISTS(SELECT 1 FROM control_targets t WHERE t.stop_id=s.id)))))`, task, grant, task).Scan(&stopped)
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM control_stops s WHERE
+ `+rcActiveStopFilter+` AND
+ (kind='global_stop' OR (kind='pause_task' AND task_id=?) OR
+ (kind='cancel_attempt' AND task_id=?) OR
+ (kind='authority_supersession' AND (grant_id=? OR (task_id=? AND EXISTS(SELECT 1 FROM control_targets t WHERE t.stop_id=s.id))))))`, task, task, grant, task).Scan(&stopped)
 	return stopped, err
 }
 
@@ -253,9 +255,12 @@ func controlResultFenced(ctx context.Context, tx *sql.Tx, identity p.Identity) (
 	if err != nil || stopped {
 		return stopped, err
 	}
-	err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=?) OR
- EXISTS(SELECT 1 FROM execution_invalidations WHERE grant_id=?) OR
- EXISTS(SELECT 1 FROM execution_grants WHERE id=? AND expires_ms<=?)`, identity.TaskID, grant, grant, time.Now().UnixMilli()).Scan(&stopped)
+	stopped, err = dispatchStopped(ctx, tx, identity.TaskID)
+	if err != nil || stopped {
+		return stopped, err
+	}
+	err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM execution_invalidations WHERE grant_id=?) OR
+ EXISTS(SELECT 1 FROM execution_grants WHERE id=? AND expires_ms<=?)`, grant, grant, time.Now().UnixMilli()).Scan(&stopped)
 	return stopped, err
 }
 

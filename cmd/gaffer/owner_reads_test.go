@@ -268,8 +268,8 @@ func TestOwnerHTTPSReadsReviewVerificationAndRetry(t *testing.T) {
 	if err = db.QueryRow("SELECT count(*) FROM dispatches").Scan(&before); err != nil {
 		t.Fatal(err)
 	}
-	raw, _ = postWorkflow(t, client, endpoint, "/api/v1/tasks/"+taskID+"/retry", commandBody("reads-retry"), 422)
-	if !bytes.Contains(raw, []byte(`"error":"retry_unavailable"`)) || !bytes.Contains(raw, []byte(`"detail":"reconcile"`)) {
+	raw, _ = postWorkflow(t, client, endpoint, "/api/v1/tasks/"+taskID+"/retry", commandBody("reads-retry"), 409)
+	if !bytes.Contains(raw, []byte(`"error":"current_assignment"`)) || !bytes.Contains(raw, []byte(`"detail":"task"`)) {
 		t.Fatal(string(raw))
 	}
 	if err = db.QueryRow("SELECT count(*) FROM dispatches").Scan(&after); err != nil || before != after {

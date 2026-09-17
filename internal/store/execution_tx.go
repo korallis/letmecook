@@ -18,6 +18,7 @@ import (
 
 	g "github.com/korallis/letmecook/internal/authority"
 	c "github.com/korallis/letmecook/internal/control"
+	"github.com/korallis/letmecook/internal/execwire"
 	p "github.com/korallis/letmecook/schemas/execution"
 )
 
@@ -75,7 +76,7 @@ func (s *Store) issueLeaseTx(ctx context.Context, tx *sql.Tx, provenance, dispat
 		return c.Lease{}, priorErr
 	}
 	if priorErr == nil && (prior.Issued.Boot != now.Boot || now.ElapsedNS < prior.Issued.ElapsedNS || now.ElapsedNS >= prior.DeadlineNS) {
-		stop := c.Request{ID: dispatchID(prior.Request.Nonce, "expired"), Kind: c.CancelAttempt, TaskID: request.Identity.TaskID, AttemptID: request.Identity.AttemptID, Cause: "lease_expired"}
+		stop := c.Request{ID: execwire.ExpiryStopID(prior.Request.Nonce), Kind: c.CancelAttempt, TaskID: request.Identity.TaskID, AttemptID: request.Identity.AttemptID, Cause: "lease_expired"}
 		if _, err := latchStop(ctx, tx, "lease-clock", stop, now); err != nil {
 			return c.Lease{}, err
 		}

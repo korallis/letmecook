@@ -39,7 +39,7 @@ latest report through `reconcile.Reader`.
 | `assigned_undelivered` | no acknowledgement (or accepted with no lease ever issued) | live outbox: none; stop latched, grant dead, daemon restart or runner restart: release `not_started` (`expired` for grant expiry), actor the stop requester when it is a principal | no |
 | `terminated_confirmed` | current-boot `control_observations` row: process `terminated`/`not_started`, remote work quiescent, settled boundary | fence to `stopping` if needed, release `cancelled` or `expired` by stop cause | no |
 | `terminated_old_boot` | the same evidence from another boot (retained by `ReportTermination` or observed before a restart) **and** the replacement barrier elapsed | release as above | no |
-| `lease_lapsed_unconfirmed` | every lease past the barrier, no termination evidence | `FenceAttempt` to `stopping` under the lease-clock stop `dispatchID(nonce, "expired")`; reservation held | yes |
+| `lease_lapsed_unconfirmed` | every lease past the barrier, no termination evidence | `FenceAttempt` to `stopping` under the lease-clock stop `execwire.ExpiryStopID(nonce)`; reservation held | yes |
 | `remote_work_unknown` | termination reported without quiescent remote work or with an unsettled boundary | none; reservation held | yes |
 | `custody_committed_pending_finalization` | non-quarantined current-generation receipt, no finalize | `unknown` or lapsed `result_pending` **with a durable quiescence proof**: `CompleteFinalization` from stored evidence (exit observation at exactly the sink watermark and digest, no boundary receipt in flight, no latch, live grant); without proof the reservation stays held | yes once the barrier elapses without proof |
 | `result_pending_remote` | the daemon's exit observation (or, as a hint only, the runner's journal says `result_pending`), no receipt | `unknown` without a stop **and with the exit observed**: `RecoverResultPending` so the runner's upload is admitted; a journal alone changes nothing (the runner re-proposes with its exit evidence) | no |
@@ -137,17 +137,14 @@ terminal and its reservation released. Reconcile then appends a clearing record
 the stop, its targets and observations are never deleted. `pause_task` (`gaffer
 task stop`, `StopDispatch`), `global_stop` and `authority_supersession` are never
 cleared by reconcile: the owner's `gaffer task resume` and `gaffer daemon resume`
-append the same record for them. One predicate decides whether any latch is
-still in force, whatever its kind (`rcActiveStopFilter` in
-`internal/store/reconcile.go`, over `control_stops s`): `store.TaskLatched`,
-`ClearLatches`, `RetryInputs.Latched`, `PlanRetry`'s `stop_latched` refusal and
-every classification that treats a task-level or global latch as blocking use
-it, and the sticky `dispatch_stops` flag follows its own `pause_task` latch
-(`dispatchID(task, "legacy-stop")`). The admission check in
-`internal/store/control.go` (`controlSuppressed`) must consult the same
-predicate for `store.Dispatch` to admit work again; until it does, a retry after
-a same-boot cancel or an owner resume is refused `stop_latched` while
-`PlanRetry` succeeds.
+append clearance records for task pauses and global stops respectively, not
+authority supersession. One predicate decides whether any latch is still in
+force, whatever its kind (`rcActiveStopFilter` in `internal/store/reconcile.go`,
+over `control_stops s`): `store.TaskLatched`, `ClearLatches`, `RetryInputs.Latched`,
+`PlanRetry` and admission/runtime fencing all use it. The sticky `dispatch_stops`
+flag follows its own `pause_task` latch (`dispatchID(task, "legacy-stop")`).
+Terminal release alone does not clear a cancellation latch: reconciliation must
+record its clearance before another dispatch can be admitted.
 
 ## Retry
 

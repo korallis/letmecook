@@ -679,7 +679,7 @@ func rcCurrentEvent(ctx context.Context, tx *sql.Tx, attemptID string, revision 
 
 // FenceAttempt moves an assigned|starting|running|result_pending|unknown attempt to
 // stopping and latches its cancel with cause: lease_expired uses the lease-clock
-// stop id dispatchID(last nonce, "expired") that issueLeaseTx also uses, so a
+// stop id execwire.ExpiryStopID(last nonce) that issueLeaseTx also uses, so a
 // lapse latched by a late renewal and a lapse latched by reconcile are one stop;
 // operator uses dispatchID(attempt, "reconcile-fence"). Durable point: the latch,
 // the attempts CAS and its event committed together; the transition that made
@@ -717,7 +717,7 @@ func (s *Store) FenceAttempt(ctx context.Context, attemptID, cause string) (p.Me
 		if err != nil {
 			return p.Message{}, err
 		}
-		stopID, actor = dispatchID(lease.Request.Nonce, "expired"), rcLeaseClockActor
+		stopID, actor = execwire.ExpiryStopID(lease.Request.Nonce), rcLeaseClockActor
 	}
 	if _, err := latchStop(ctx, tx, actor, c.Request{ID: stopID, Kind: c.CancelAttempt, TaskID: identity.TaskID, AttemptID: attemptID, Cause: cause}, s.controlStamp()); err != nil {
 		return p.Message{}, err
