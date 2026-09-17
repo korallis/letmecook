@@ -24,11 +24,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	g "github.com/korallis/letmecook/internal/authority"
@@ -195,8 +193,7 @@ type UsageReport struct {
 
 // TaskInput is the GET /x/v1/input reply: the retained task brief the dispatch
 // was admitted for, bound to the grant by BriefSHA256. Harness is the dispatch
-// route's harness (grant-bound); Settings is the harness settings object, an
-// empty object until a durable settings source exists.
+// route's harness (grant-bound); Settings is the retained harness settings object.
 type TaskInput struct {
 	DispatchID  string          `json:"dispatch_id"`
 	TaskID      string          `json:"task_id"`
@@ -429,32 +426,19 @@ func runtimeBody(v runtimeRecord) ([]byte, error) {
 	return body, nil
 }
 
-// streamSinks keys the daemon's sink set by state directory so a store reopened
-// in the same process (tests, restart paths) reuses the open journals instead of
-// colliding on their exclusive locks. A crashed process releases them itself.
-var streamSinks = struct {
-	sync.Mutex
-	byDir map[string]*runstream.Sinks
-}{byDir: map[string]*runstream.Sinks{}}
-
 // Streams is the read-only face of the daemon's per-attempt output sink set at
-// <state-dir>/streams: owner reads and routes see watermarks, digests and
-// windows; only AppendStream writes, serialized per attempt with finalization.
-func (s *Store) Streams() runstream.SinkView { return s.sinks().View() }
-
-// sinks is the writable sink set, reachable only through the store's own
-// serialized append and finalize paths.
-func (s *Store) sinks() *runstream.Sinks {
-	dir := filepath.Join(s.dir, "streams")
-	streamSinks.Lock()
-	defer streamSinks.Unlock()
-	k := streamSinks.byDir[dir]
-	if k == nil {
-		k = runstream.NewSinks(dir)
-		streamSinks.byDir[dir] = k
+// <state-dir>/streams. Each persistent Store owns its sinks through Close;
+// fixture stores have no execution sinks. Only AppendStream writes, serialized
+// per attempt with finalization.
+func (s *Store) Streams() runstream.SinkView {
+	if s.streams == nil {
+		return nil
 	}
-	return k
+	return s.streams.View()
 }
+
+// sinks is writable only inside the store's serialized append/finalize paths.
+func (s *Store) sinks() *runstream.Sinks { return s.streams }
 
 // RunnerSession binds an authenticated runner hello to a session. Durable point:
 // the runner_sessions row (mode normal|recovery_only) committed before the reply;
@@ -657,10 +641,8 @@ func (s *Store) TaskInput(ctx context.Context, fingerprint, session, dispatchID 
 	if v.Operations == nil {
 		v.Operations = []string{}
 	}
-	digest, err := briefDigest(v.Brief, v.Criteria, v.Paths, v.Operations, v.Harness, v.Settings)
-	if err != nil {
-		return TaskInput{}, g.Deny("corrupt_record", "task_brief")
-	}
+	digest := BriefDigest(TaskBrief{Brief: v.Brief, Criteria: v.Criteria, Paths: v.Paths,
+		Operations: v.Operations, Harness: v.Harness, Settings: v.Settings})
 	envelope := d.Request.Envelope
 	if digest != stored || digest != envelope.Brief.SHA256 || v.Repository != envelope.Repository || v.BaseCommit != envelope.BaseCommit {
 		return TaskInput{}, g.Deny("reconciliation_required", "brief_digest")
@@ -685,44 +667,6 @@ func canonicalSettings(raw string) (json.RawMessage, error) {
 		return nil, errors.New("trailing settings content")
 	}
 	return json.Marshal(v)
-}
-
-// briefDigest is the brief revision digest grants bind: SHA-256 over the
-// canonical JSON object {brief, criteria, paths, operations, harness, settings}
-// in that key order, with every list present and settings canonicalized. S4's
-// exported store.BriefDigest is the shared implementation used when briefs and
-// grants are created; this copy only verifies retained rows.
-func briefDigest(brief string, criteria []Criterion, paths, operations []string, harness string, settings json.RawMessage) (string, error) {
-	canonical := struct {
-		Brief      string          `json:"brief"`
-		Criteria   []Criterion     `json:"criteria"`
-		Paths      []string        `json:"paths"`
-		Operations []string        `json:"operations"`
-		Harness    string          `json:"harness"`
-		Settings   json.RawMessage `json:"settings"`
-	}{brief, criteria, paths, operations, harness, settings}
-	if canonical.Criteria == nil {
-		canonical.Criteria = []Criterion{}
-	}
-	if canonical.Paths == nil {
-		canonical.Paths = []string{}
-	}
-	if canonical.Operations == nil {
-		canonical.Operations = []string{}
-	}
-	if len(canonical.Settings) == 0 {
-		canonical.Settings = json.RawMessage("{}")
-	}
-	var err error
-	if canonical.Settings, err = canonicalSettings(string(canonical.Settings)); err != nil {
-		return "", err
-	}
-	body, err := json.Marshal(canonical)
-	if err != nil {
-		return "", err
-	}
-	sum := sha256.Sum256(body)
-	return hex.EncodeToString(sum[:]), nil
 }
 
 // PendingCancels lists the retained cancel outbox messages (control_targets) for

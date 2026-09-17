@@ -414,16 +414,13 @@ func TestTaskInputBindsBriefDigest(t *testing.T) {
 	paths := []string{"greeting.txt"}
 	operations := []string{"read", "write"}
 	settings := json.RawMessage(`{"edits":[{"content":"hello, gaffer\n","path":"greeting.txt"}],"mode":"edit"}`)
-	digest, err := briefDigest(brief, criteria, paths, operations, "fake", settings)
-	if err != nil {
-		t.Fatal(err)
-	}
+	digest := BriefDigest(TaskBrief{Brief: brief, Criteria: criteria, Paths: paths, Operations: operations, Harness: "fake", Settings: settings})
 	x := executionFixtureFor(t, func(f *dispatchFixture) {
 		f.grant.Envelope.Brief.SHA256 = digest
 		f.facts.LocalEnvelope.Brief.SHA256 = digest
 		f.request.Decision.Assessment.Brief.SHA256 = digest
 	})
-	_, err = x.s.TaskInput(ctx, x.runner, x.session.SessionID, x.d.ID)
+	_, err := x.s.TaskInput(ctx, x.runner, x.session.SessionID, x.d.ID)
 	requireReason(t, err, "reconciliation_required")
 	// Stored with unsorted keys and whitespace: the canonical form is what binds.
 	stored := `{"mode": "edit", "edits": [{"path": "greeting.txt", "content": "hello, gaffer\n"}]}`
@@ -1060,5 +1057,41 @@ func TestExecutionSIGKILLAroundTransitionCommit(t *testing.T) {
 			rowCount(t, s, "runtime_observations WHERE kind='stop'", 1)
 			consistent(t, s)
 		})
+	}
+}
+
+func TestStoreOwnsStreamsLifecycle(t *testing.T) {
+	x := executionFixtureFor(t, nil)
+	x.run(t, "durable output")
+	attempt := x.d.Assignment.Identity.AttemptID
+	old := x.s.Streams()
+	before, err := old.Watermark(attempt)
+	if err != nil || before.Through == 0 {
+		t.Fatal(before, err)
+	}
+	if err = x.s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = old.Watermark(attempt); !errors.Is(err, runstream.ErrUnavailable) {
+		t.Fatal("closed store kept its sink alive", err)
+	}
+	reopened, err := Open(ctx, x.s.dir, x.artifacts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	if reopened.Streams() == old {
+		t.Fatal("reopen reused a previous Store's sink set")
+	}
+	after, err := reopened.Streams().Watermark(attempt)
+	if err != nil || after != before {
+		t.Fatal("reopen did not release locks and recover durable output", before, after, err)
+	}
+	// Repeated close of the old store must not close the new instance's sinks.
+	if err = x.s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = reopened.Streams().Watermark(attempt); err != nil {
+		t.Fatal(err)
 	}
 }

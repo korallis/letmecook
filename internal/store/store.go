@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/korallis/letmecook/internal/runstream"
 	sc "github.com/korallis/letmecook/internal/scheduler"
 	p "github.com/korallis/letmecook/schemas/execution"
 	a "github.com/korallis/letmecook/schemas/readapi"
@@ -28,6 +29,7 @@ type Store struct {
 	lock         *os.File
 	dir          string
 	artifacts    string
+	streams      *runstream.Sinks // owned for this persistent Store lifetime; nil for fixtures
 	meta         a.Metadata
 	fixture      bool
 	admission    sc.AdmissionPolicy
@@ -151,6 +153,7 @@ func OpenWithOptions(ctx context.Context, dir, artifactsDir string, o Options) (
 	}
 	s.artifacts = artifactsDir
 	s.admission = o.Admission
+	s.streams = runstream.NewSinks(filepath.Join(dir, "streams"))
 	return s, nil
 }
 
@@ -611,8 +614,11 @@ func (s *Store) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	var err error
+	if s.streams != nil {
+		err = s.streams.Close()
+	}
 	if s.db != nil {
-		err = s.db.Close()
+		err = errors.Join(err, s.db.Close())
 		s.db = nil
 	}
 	if s.lock != nil {

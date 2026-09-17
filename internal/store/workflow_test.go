@@ -259,3 +259,46 @@ func TestWorkflowTaskListDoesNotOpenCandidateBlobs(t *testing.T) {
 	}
 	rowCount(t, s, "review_decisions", 1)
 }
+
+func TestWorkflowOpenCodeDigestThroughRunnerInput(t *testing.T) {
+	var created Task
+	x := executionFixtureFor(t, func(f *dispatchFixture) {
+		brief := TaskBrief{TaskID: f.grant.TaskID, Repository: f.grant.Envelope.Repository,
+			BaseCommit: f.grant.Envelope.BaseCommit, Brief: "Update fixture & preserve Unicode: café.",
+			Criteria: []Criterion{{"c2", "tests pass"}, {"c1", "fixture changed"}},
+			Paths:    []string{"src/main.go", "a.txt"}, Operations: []string{"write", "verify", "read"},
+			Harness: "opencode", Settings: json.RawMessage(`{ "variant": "high", "model": "fixture/model-with-variant" }`)}
+		var err error
+		created, err = f.s.CreateTask(ctx, f.owner, brief)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.grant.Envelope.Brief.SHA256 = created.Brief.BriefSHA256
+		f.grant.Envelope.Plan.SHA256 = created.Brief.PlanSHA256
+		f.facts.LocalEnvelope.Brief = f.grant.Envelope.Brief
+		f.facts.LocalEnvelope.Plan = f.grant.Envelope.Plan
+		f.request.Decision.Assessment.Brief = f.grant.Envelope.Brief
+		f.request.Decision.Assessment.Plan = f.grant.Envelope.Plan
+		f.facts.Route.Harness = "opencode"
+		f.facts.LocalEnvelope.Routes[0].Harness = "opencode"
+		f.grant.Envelope.Routes[0].Harness = "opencode"
+		f.request.Decision.Selected.Harness = "opencode"
+	})
+	brief, err := x.s.BriefInput(ctx, created.Brief.TaskID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ownerDigest, _ := workflow.TaskDigests(brief)
+	runner, err := x.s.TaskInput(ctx, x.runner, x.session.SessionID, x.d.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.Brief.BriefSHA256 != ownerDigest || ownerDigest != runner.BriefSHA256 ||
+		BriefDigest(created.Brief) != runner.BriefSHA256 || len(runner.BriefSHA256) != 64 {
+		t.Fatalf("digest divergence: created=%s owner=%s runner=%s", created.Brief.BriefSHA256, ownerDigest, runner.BriefSHA256)
+	}
+	if runner.Harness != "opencode" || string(runner.Settings) != `{"model":"fixture/model-with-variant","variant":"high"}` ||
+		!reflect.DeepEqual(runner.Settings, created.Brief.Settings) || !reflect.DeepEqual(brief.Settings, runner.Settings) {
+		t.Fatalf("settings were not retained canonically: created=%s owner=%s runner=%s", created.Brief.Settings, brief.Settings, runner.Settings)
+	}
+}

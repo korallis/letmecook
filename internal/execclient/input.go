@@ -3,8 +3,6 @@ package execclient
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/url"
@@ -14,26 +12,10 @@ import (
 	"github.com/korallis/letmecook/internal/store"
 )
 
-type Criterion struct {
-	ID   string `json:"id"`
-	Text string `json:"text"`
-}
+type Criterion = w.Criterion
 
-// TaskInput mirrors the S1 input route; the canonical brief hash binds settings.
-type TaskInput struct {
-	Version     string          `json:"version"`
-	DispatchID  string          `json:"dispatch_id"`
-	TaskID      string          `json:"task_id"`
-	Repository  string          `json:"repository"`
-	BaseCommit  string          `json:"base_commit"`
-	BriefSHA256 string          `json:"brief_sha256"`
-	Brief       string          `json:"brief"`
-	Criteria    []Criterion     `json:"criteria"`
-	Paths       []string        `json:"paths"`
-	Operations  []string        `json:"operations"`
-	Harness     string          `json:"harness"`
-	Settings    json.RawMessage `json:"settings"`
-}
+// TaskInput uses the definitive wire shape and adds client-side validation.
+type TaskInput w.TaskInput
 
 func (v TaskInput) Digest() (string, error) {
 	var settings map[string]json.RawMessage
@@ -46,19 +28,16 @@ func (v TaskInput) Digest() (string, error) {
 	if err := dec.Decode(&canonical); err != nil {
 		return "", err
 	}
-	b, err := json.Marshal(struct {
-		Brief      string      `json:"brief"`
-		Criteria   []Criterion `json:"criteria"`
-		Paths      []string    `json:"paths"`
-		Operations []string    `json:"operations"`
-		Harness    string      `json:"harness"`
-		Settings   any         `json:"settings"`
-	}{v.Brief, v.Criteria, v.Paths, v.Operations, v.Harness, canonical})
+	settingsJSON, err := json.Marshal(canonical)
 	if err != nil {
 		return "", err
 	}
-	sum := sha256.Sum256(b)
-	return hex.EncodeToString(sum[:]), nil
+	criteria := make([]store.Criterion, len(v.Criteria))
+	for n, c := range v.Criteria {
+		criteria[n] = store.Criterion{ID: c.ID, Text: c.Text}
+	}
+	return store.BriefDigest(store.TaskBrief{Brief: v.Brief, Criteria: criteria,
+		Paths: v.Paths, Operations: v.Operations, Harness: v.Harness, Settings: settingsJSON}), nil
 }
 func (v TaskInput) Validate(d store.Dispatch) error {
 	digest, err := v.Digest()
