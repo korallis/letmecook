@@ -1,0 +1,7 @@
+{
+  "result": "expected-rejection",
+  "testCase": "runtime-drift",
+  "profileHash": "6dae35b418d12d293a4bd2a82919c19ac821097475752577e0eee9fd93ed57da",
+  "unattendedSupported": false,
+  "repositoryStarted": false
+}

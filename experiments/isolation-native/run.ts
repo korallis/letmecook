@@ -341,8 +341,8 @@ export function unitProperties(p: Profile, role: Role, runId: string, testCase: 
   const tmpfs = (path: string, size: number, inodes: number, exec = false) => `${path}:rw,nosuid,nodev,noswap,${exec ? 'exec' : 'noexec'},size=${size},nr_inodes=${inodes},mode=0700,uid=${uid},gid=${gid}`;
   const properties = [
     `Description=gaffer-native-${runId}-${role}`, 'Slice=system.slice', `RootDirectory=${BASE}/rootfs`,
-    `User=${uid}`, `Group=${gid}`, `SupplementaryGroups=${p.ids.socketGid}`, 'PrivateUsers=identity',
-    'PrivatePIDs=yes', 'PrivateIPC=yes', 'PrivateNetwork=yes', 'PrivateDevices=yes', 'ProtectControlGroups=strict',
+    `User=${uid}`, `Group=${gid}`, `SupplementaryGroups=${p.ids.socketGid}`, 'PrivateUsersEx=identity',
+    'PrivatePIDs=yes', 'PrivateIPC=yes', 'PrivateNetwork=yes', 'PrivateDevices=yes', 'ProtectControlGroupsEx=strict',
     'ProtectSystem=strict', 'ProtectHome=yes', 'NoNewPrivileges=yes', 'CapabilityBoundingSet=', 'AmbientCapabilities=',
     'RestrictNamespaces=yes', 'RestrictAddressFamilies=AF_UNIX', 'SystemCallArchitectures=native',
     'SystemCallFilter=~@privileged @mount @debug @obsolete @reboot @swap @raw-io @module io_uring_setup io_uring_enter io_uring_register',

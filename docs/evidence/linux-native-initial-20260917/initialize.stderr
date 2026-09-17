@@ -1,0 +1,7 @@
+Running as unit: gaffer-native-controller.service
+{"result":"blocked","unattendedSupported":false,"error":"AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert.ok(fs.existsSync('/sys/fs/cgroup/cgroup.kill'))\n"}
+Finished with result: exit-code
+Main processes terminated with: code=exited, status=1/FAILURE
+Service runtime: 4.201s
+CPU time consumed: 5.031s
+Memory peak: 42.1M (swap: 0B)

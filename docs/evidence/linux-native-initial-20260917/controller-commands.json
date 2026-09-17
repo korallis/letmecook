@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "commands": [
+    {
+      "purpose": "first initialization refused before journal",
+      "argv": [
+        "/usr/bin/systemd-run",
+        "--unit=gaffer-native-controller",
+        "--slice=gaffer89.slice",
+        "--service-type=exec",
+        "--property=Restart=no",
+        "--wait",
+        "--pipe",
+        "/usr/bin/node",
+        "/var/lib/gaffer-native/controller/run.ts",
+        "--initialize-journal",
+        "--profile",
+        "/var/lib/gaffer-native/profile.json",
+        "--profile-sha256",
+        "6811fc7d6fd167022c3f5855e6a362c7618672b84aee3c914f9a049df25a1e4a"
+      ]
+    },
+    {
+      "purpose": "reviewed initialization",
+      "argv": [
+        "/usr/bin/systemd-run",
+        "--unit=gaffer-native-controller",
+        "--slice=gaffer89.slice",
+        "--service-type=exec",
+        "--property=Restart=no",
+        "--wait",
+        "--pipe",
+        "/usr/bin/node",
+        "/var/lib/gaffer-native/controller/run.ts",
+        "--initialize-journal",
+        "--profile",
+        "/var/lib/gaffer-native/profile-v2.json",
+        "--profile-sha256",
+        "6dae35b418d12d293a4bd2a82919c19ac821097475752577e0eee9fd93ed57da"
+      ]
+    },
+    {
+      "purpose": "runtime-drift",
+      "argv": [
+        "/usr/bin/systemd-run",
+        "--unit=gaffer-native-controller",
+        "--slice=gaffer89.slice",
+        "--service-type=exec",
+        "--property=Restart=no",
+        "--wait",
+        "--pipe",
+        "/usr/bin/node",
+        "/var/lib/gaffer-native/controller/run.ts",
+        "--execute",
+        "--profile",
+        "/var/lib/gaffer-native/profile-v2.json",
+        "--profile-sha256",
+        "6dae35b418d12d293a4bd2a82919c19ac821097475752577e0eee9fd93ed57da",
+        "--run-id",
+        "890917000000000000000000",
+        "--case",
+        "runtime-drift"
+      ]
+    },
+    {
+      "purpose": "missing-pids-limit",
+      "argv": [
+        "/usr/bin/systemd-run",
+        "--unit=gaffer-native-controller",
+        "--slice=gaffer89.slice",
+        "--service-type=exec",
+        "--property=Restart=no",
+        "--wait",
+        "--pipe",
+        "/usr/bin/node",
+        "/var/lib/gaffer-native/controller/run.ts",
+        "--execute",
+        "--profile",
+        "/var/lib/gaffer-native/profile-v2.json",
+        "--profile-sha256",
+        "6dae35b418d12d293a4bd2a82919c19ac821097475752577e0eee9fd93ed57da",
+        "--run-id",
+        "890917000000000000000001",
+        "--case",
+        "missing-pids-limit"
+      ]
+    },
+    {
+      "purpose": "demonstrate next-launch quarantine rejection",
+      "argv": [
+        "/usr/bin/systemd-run",
+        "--unit=gaffer-native-controller",
+        "--slice=gaffer89.slice",
+        "--service-type=exec",
+        "--property=Restart=no",
+        "--wait",
+        "--pipe",
+        "/usr/bin/node",
+        "/var/lib/gaffer-native/controller/run.ts",
+        "--execute",
+        "--profile",
+        "/var/lib/gaffer-native/profile-v2.json",
+        "--profile-sha256",
+        "6dae35b418d12d293a4bd2a82919c19ac821097475752577e0eee9fd93ed57da",
+        "--run-id",
+        "890917000000000000000002",
+        "--case",
+        "baseline"
+      ]
+    }
+  ],
+  "note": "Invoked as trusted root in the dedicated VM; not permission to replay. Baseline was only a rejected admission request."
+}

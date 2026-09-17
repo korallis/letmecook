@@ -126,6 +126,11 @@ test('journal supports bounded full case campaign without a sixteen-run/file-cou
 test('prepare emits bounded argv data, refuses injection; no native execution', async () => {
   const p = validateProfile(synthetic()), output = prepare(p, identity.profileHash, runId, 'missing-pids-limit');
   assert.equal(output.result, 'NOT RUN'); assert.equal(output.unattendedSupported, false);
+  for (const service of output.services) {
+    assert.ok(service.properties.includes('PrivateUsersEx=identity'));
+    assert.ok(service.properties.includes('ProtectControlGroupsEx=strict'));
+    assert.ok(!service.properties.some(p => /^(PrivateUsers|ProtectControlGroups)=/.test(p)), 'v257 legacy transient fields only accept booleans');
+  }
   assert.throws(() => prepare(p, identity.profileHash, 'x; touch /tmp/unsafe', 'baseline'));
   await assert.rejects(main(['--execute', '--force']), /unknown option/);
   if (process.platform !== 'linux') {

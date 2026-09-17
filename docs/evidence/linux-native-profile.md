@@ -1,4 +1,4 @@
-# Docker-free Linux confinement: source only, proof NOT RUN
+# Docker-free Linux confinement: initial attempt failed, profile quarantined
 
 Issue **#89**, follow-up to #5. Authored **15 September 2026** against the locked
 `astra89-proof-procedure-v2.md`, SHA256
@@ -7,8 +7,10 @@ Fresh satisfied procedure review: `opus89-v2-review.md`, SHA256
 `9027887408ebb52e7067e600f813e3917484126caddb14ac74b5874d59c539bf`.
 The lock authorizes no host selection, setup or execution.
 
-**A dedicated local Debian 13 amd64 VM has now been selected and provisioning is
-in progress. Every native proof criterion remains NOT RUN and unproven.** Offline tests below validate source logic using synthetic objects and
+**The initial dedicated-VM campaign failed and remains quarantined.** Trusted
+initialization and runtime-drift rejection were observed; the missing-limit case
+failed at transient property parsing before its intended measurement. Baseline
+and all containment/pressure/lifecycle cases remain NOT RUN and unproven. Offline tests below validate source logic using synthetic objects and
 task-owned temporary files on macOS. They establish no Linux enforcement, native
 compatibility, successful confinement, installation or unattended support.
 
@@ -75,7 +77,7 @@ power-cycle authority require a later operator transaction. This source does not
 install tools, provision a VM, open SSH, select Matilda, discover credentials,
 mount an operator's filesystem implicitly or repair an unsupported runtime.
 
-## Native path — not executed
+## Native entrypoints and admission
 
 `--prepare` validates a measured profile and prints bounded JSON containing
 prerequisites, property lists and argument arrays. It performs no setup. The
@@ -161,8 +163,8 @@ ENOSPC cannot substitute. CPU, task, swap and actual log-append flood cases are 
 | Cases | Native operation/evidence required | Status |
 | --- | --- | --- |
 | `baseline` | Synthetic host sentinels; symlink/proc escape; actual independent Git repository and hostile pre-commit; descendant and executable plugin; scoped inference negatives/positives | NOT RUN |
-| `missing-pids-limit` | Owned worker service with `TasksMax=infinity`; actual `pids.max=max` rejects before repository-start; durable rejection and positive-owned cleanup receipt | NOT RUN |
-| `runtime-drift` | Mutate copied expected kernel identity only; actual host comparison rejects before allocation | NOT RUN |
+| `missing-pids-limit` | Owned worker service with `TasksMax=infinity`; actual `pids.max=max` rejects before repository-start; durable rejection and positive-owned cleanup receipt | FAILED before intended measurement; quarantined |
+| `runtime-drift` | Mutate copied expected kernel identity only; actual host comparison rejects before allocation | EXPECTED REJECTION, initial packet |
 | `cpu`, `pids`, `swap`, `oom` | Throttling, EAGAIN/task events, zero swap under touched allocation, separate anonymous OOM counters | NOT RUN |
 | `bytes-{work,tmp,shm,log,socket,mock-log}` | Independent byte ENOSPC per mount; zero OOM; external statfs | NOT RUN |
 | `inodes-{work,tmp,shm,log,socket,mock-log}` | Independent inode ENOSPC per mount; free byte capacity; zero OOM | NOT RUN |
@@ -232,7 +234,7 @@ not fabricated by the offline journal tests or the fault injection entrypoint.
 | Three-path fixed HTTP fixture, token/epoch/route/envelope negatives | None. Native scoped UDS ownership, outsider denial, gate-instance separation and egress positive controls NOT RUN | #24 inference/adapter integration; full accepted boundary contracts remain controlling |
 | CPU/PID/OOM ideas, tightened to separate native byte/inode/OOM evidence | None. Native pressure, shmem/controller accounting and log bounds NOT RUN | #47/#57 integration and readiness evidence |
 | TERM-resistant detached process tree | None. Native stop, expiry, interruption, controller loss, observation loss and real reboot NOT RUN | #60/#61 operational/installation evidence |
-| Docker result retained solely as comparison | None. Disk-backed native journal/quarantine, cleanup and independent reproduction NOT RUN | #62 maintenance/support guide; #63 independent installation/recovery evidence |
+| Docker result retained solely as comparison | Initial disk-backed failure/quarantine and next-launch rejection observed; positive-owned cleanup and independent reproduction NOT RUN | #62 maintenance/support guide; #63 independent installation/recovery evidence |
 
 #89 prerequisites #2/#5 remain controlling. #9 still requires #71/#1/#8 and its
 foundation decision before durable application core work. Source implementation
@@ -280,6 +282,47 @@ tests also cover confined relative symlinks, and the kernel validator permits th
 normal Debian plus suffix while requiring an unchanged exact profile digest.
 
 This evidence document is not an input to `docs/build-reader.ts`; no reader source,
-layout or generated `docs/index.html` changed. Fresh independent exact-head source
-review, applicable CI, measured Linux execution, fault/reboot observations and
-independent reproduction remain root's gates before any merge or proof claim.
+layout or generated `docs/index.html` changed. Fresh independent review cleared source head `1d9371b` for the initial bounded
+campaign. Further source changes require renewed review. Measured enforcement,
+fault/reboot observations and independent reproduction remain gates before any
+proof claim.
+
+## Initial dedicated-VM evidence — 17 September 2026
+
+The [immutable failure packet](linux-native-initial-20260917/manifest.json) records
+source `1d9371b6e5e7cb5fec9eee06624dd9aafa55c6b6` and profile SHA256
+`6dae35b418d12d293a4bd2a82919c19ac821097475752577e0eee9fd93ed57da`.
+The measured target was Debian 13.7 amd64, Linux `6.12.107+deb13-amd64`,
+systemd `257.13-1~deb13u1`, Node `v24.21.0`, in a dedicated QEMU 11.1.1 TCG
+VM with ext4 evidence storage. Exact provenance, tools, identifiers and bounds
+are in the packet's profile. Guest networking was restricted; the worker launcher
+uses no Docker. Docker on the unrelated macOS host was not modified.
+
+The first trusted initialization refused because the launcher tested
+`cgroup.kill` at the unified root, where Linux intentionally omits it. After
+independent review, checking the frozen non-root controller slice allowed
+initialization. The copied-kernel-expectation drift case then returned an expected
+rejection before allocation. Both observations are retained, not replaced.
+
+The intended missing-PID-limit case failed with `Failed to parse PrivateUsers:
+identity`. A durable failure receipt retains the exact attempted argv and uncertain
+worker unit. The installed systemd 257 static directive accepts `identity`, but
+its transient API's old `PrivateUsers` property is boolean. The equivalent string
+properties are `PrivateUsersEx=identity` and `ProtectControlGroupsEx=strict`;
+they set the same internal modes as the reviewed static directives. Source now
+uses those exact encodings. Boolean substitutes would weaken/change the boundary
+and are not used. This correction has not been executed on the quarantined profile.
+
+Independent read-only observations found both deterministic worker/mock units and
+cgroups absent and no matching reserved-UID/cgroup processes. These snapshots do
+not establish that an uncertain launch never happened. A real subsequent baseline
+launch request was rejected by the retained journal's unresolved quarantine before
+fixture allocation. No baseline fixture ran and no quarantine was cleared.
+
+The failure packet includes raw observations, immutable journal bytes, failure
+receipt, exact frozen profile and case plan, external process/unit snapshot, and
+the next-launch rejection. It contains public/synthetic data only. Full effective
+controls, pressure, scoped-inference containment, lifecycle/reboot reconciliation
+and independent reproduction remain unproven. Setup was not a complete measured
+staging/cache-accounting campaign, so no controller headroom qualification follows
+from the recorded initialization memory peaks either.

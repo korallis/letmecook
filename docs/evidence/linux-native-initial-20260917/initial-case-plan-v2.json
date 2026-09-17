@@ -1,0 +1,22 @@
+{
+  "sourceHead": "1d9371b6e5e7cb5fec9eee06624dd9aafa55c6b6",
+  "profileSha256": "6dae35b418d12d293a4bd2a82919c19ac821097475752577e0eee9fd93ed57da",
+  "bootId": "542a7bed-a781-4c0b-a023-c19267e49d9c",
+  "scope": "Dedicated disposable VM only; synthetic inference only; no live product/router/provider requests",
+  "initialCases": [
+    {
+      "case": "runtime-drift",
+      "runId": "890917000000000000000000"
+    },
+    {
+      "case": "missing-pids-limit",
+      "runId": "890917000000000000000001"
+    },
+    {
+      "case": "baseline",
+      "runId": "890917000000000000000002"
+    }
+  ],
+  "stopRule": "Stop campaign on unexpected failure, unknown observation, missing control or quarantine. Do not clear quarantine or raise bounds to continue.",
+  "prepareSha256": "a7746a3304358bd115b232087bcc62dba729a0799208c5f98d4e8fb2ab210237"
+}

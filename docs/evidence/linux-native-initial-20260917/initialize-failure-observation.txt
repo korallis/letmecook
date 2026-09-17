@@ -1,0 +1,8 @@
+regular empty file 200 0:0 /sys/fs/cgroup/gaffer89.slice/cgroup.kill
+total 8
+drwx------ 2 root root 4096 Sep 17 07:40 .
+drwx------ 6 root root 4096 Sep 17 07:46 ..
+Result=exit-code
+ExecMainStatus=1
+ControlGroup=
+ActiveState=failed
