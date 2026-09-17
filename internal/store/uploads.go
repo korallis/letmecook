@@ -343,6 +343,20 @@ func (s *Store) BeginUpload(ctx context.Context, fingerprint, session, attemptID
 	}
 	defer root.Close()
 	rel := uploadRel(id)
+	// Nothing is removed or created until every existing component is a real
+	// directory: a symbolic link anywhere here is refused untouched.
+	for _, name := range []string{"upload", rel} {
+		info, err := root.Lstat(name)
+		if errors.Is(err, os.ErrNotExist) {
+			break
+		}
+		if err != nil {
+			return UploadSession{}, err
+		}
+		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+			return UploadSession{}, g.Deny("corrupt_record", "upload_staging")
+		}
+	}
 	if err := root.RemoveAll(rel); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return UploadSession{}, err
 	}

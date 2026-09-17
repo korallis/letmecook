@@ -285,6 +285,14 @@ func (s *Store) FinalizeAttempt(ctx context.Context, fingerprint, session, attem
 	if err := s.step("before_finalize_commit"); err != nil {
 		return FinalizeReply{}, err
 	}
+	// Appends serialize on the store lock (AppendStream), and the sink is read
+	// again immediately before commit so an acknowledged record that reached the
+	// sink by any other path still refuses the finalization.
+	if again, err := s.Streams().Watermark(attemptID); err != nil {
+		return FinalizeReply{}, err
+	} else if again.Through != completion.Stream.Through || again.Digest != completion.Stream.Digest {
+		return FinalizeReply{}, p.ReconciliationRequired
+	}
 	if err := tx.Commit(); err != nil {
 		return FinalizeReply{}, err
 	}

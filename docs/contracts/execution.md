@@ -132,10 +132,10 @@ selected ALPN read from the connection is what the store checks with
 | `POST /session` | `Hello` → `Session{session_id, generation, daemon_boot, runner_id, mode, drift_ms 2000, termination_ms 5000, lease_validity_ms 20000, renew_every_ms 5000, paused}` | `runner_sessions` row; same `message_id` → same row, changed hello → 409 `identity_conflict`. `mode` is `normal` only when the hello cites the runner's latest published eligibility revision and that record carries the hello's `runner_boot`; otherwise `recovery_only` (evidence accepted, nothing delivered). |
 | `GET /state?dispatch_id=` | → `State{attempt_state, revision, acknowledged, released, last_lease, stream{through, expected, bytes}, receipt_id, head, stop_targets[], paused}` | read |
 | `GET /input?dispatch_id=` | → `TaskInput{version, dispatch_id, task_id, repository, base_commit, brief_sha256, brief, criteria[], paths[], operations[], harness, settings}` | read; `brief_sha256` recomputed from the retained brief must equal the stored digest and the grant's `brief.sha256`, else 409 `reconciliation_required` |
-| `GET /inbox?wait_ms≤25000` | → `Inbox{assignments[], cancels[], paused, poll_after_ms}` | `Delivery` commits grant expiry; refused deliveries are logged, never sent; long-poll wakes on the daemon's notify hub; a paused daemon or a `recovery_only` session delivers no assignment but still delivers cancels |
+| `GET /inbox?wait_ms≤25000` | → `Inbox{assignments[], cancels[], paused, poll_after_ms}` | `Delivery` commits grant expiry; refused deliveries are logged, never sent; the pending outbox is paged (up to 8 × 128) until a deliverable dispatch is found; long-poll wakes on the daemon's notify hub; a paused daemon or a `recovery_only` session delivers no assignment but still delivers cancels |
 | `POST /messages` | `MessageEnvelope{version, message_id, dispatch_id, message, evidence?, boundary?, measurement?}` → `{outcome, message?}` or, for `terminated`, `{outcome, released}` | one transaction per kind (below) |
 | `POST /lease` | `LeaseEnvelope` → `lease_reply` | `control_leases` row; refusals fenced in `control_fenced` and committed before the 409 |
-| `POST /streams/{attempt_id}` | `StreamBatch{version, records[]}` ≤ 64 KiB, contiguous → `StreamAck{through, expected, bytes}` | sink append fsynced per record; 409 `stream_sequence_gap` / `stream_record_conflict` carry the expected sequence in `detail`; duplicates replay the retained acknowledgement |
+| `POST /streams/{attempt_id}` | `StreamBatch{version, records[]}` ≤ 64 KiB, contiguous → `StreamAck{through, expected, bytes}` | sink append fsynced per record, serialized with finalization on the store lock; 409 `stream_sequence_gap` / `stream_record_conflict` carry the expected sequence in `detail`; duplicates replay the retained acknowledgement |
 | `POST /attempts/{id}/uploads` | `UploadBegin` → 201 `UploadSession{upload_id, missing[], bytes_allowed}` | manifest file plus `upload_sessions`/`upload_blobs` rows; replay by `message_id` |
 | `PUT /uploads/{id}/blobs/{sha256}` | raw bytes → 201 new / 200 duplicate `{sha256, bytes, duplicate}` | temp file hashed, fsynced, renamed, directory fsynced, row marked staged; 422 `digest_mismatch` removes the temp file; 413 `oversized` over 256 MiB per attempt |
 | `POST /uploads/{id}/commit` | `{version, message_id}` → `CommitReply{ack, receipt, quarantined}` | custody promotion and metadata commit (`CustodyResult`), then the session mark; 409 `upload_incomplete` lists missing digests (at most 32) in `detail`; a lost reply replays the byte-identical acknowledgement |
@@ -189,10 +189,20 @@ for a `lease_expired` stop) only when the reported boundary is settled
 `remote_work` is `quiescent`, `confirmed_process` is `terminated` or
 `not_started`, and the attempt is `stopping` or `unknown`; the runner principal
 is the release actor. Otherwise the observation is retained and the reply is
-`{outcome:"observed", released:false}`. A `stop_id` equal to
+`{outcome:"observed", released:false}`; a later report under a new
+`message_id` that attests the same or stronger termination (remote_work may
+move from unknown to quiescent) is an observation revision, retained in
+`runtime_observations` and released on its own boundary, while the first
+`control_observations` row stays immutable; different evidence conflicts. A `stop_id` equal to
 `ExpiryStopID(last lease nonce)` first latches the `lease_expired` cancel under
 actor `lease-clock`. Evidence carrying another daemon or runner boot is retained
 in `runtime_observations` for reconcile (`{outcome:"retained"}`), never promoted.
+A `stop_id` equal to `LocalStopID(attempt_id, cause)` for a cause in
+`LocalStopCauses` (`runner_shutdown`, `launch_failed`, `containment_unconfirmed`,
+`local_policy_drift`) is latched the same way under actor `runner-local` and
+releases to `cancelled` under the same rule; the runner proposes `stopping`
+first (citing its lease nonce, or the derived target once one exists). Any
+other unknown `stop_id` has no target and is `reconciliation_required`.
 A report with `confirmed_process: unknown` (containment not confirmable:
 detached child, EPERM, escape) carries no observation timestamp, is retained in
 `runtime_observations` only and replies `{outcome:"observed", released:false}`;

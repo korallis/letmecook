@@ -26,6 +26,7 @@ import (
 	"io"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -141,6 +142,7 @@ type RuntimeEvidence struct {
 	PGIDEmpty      bool   `json:"pgid_empty"`
 	ObservedUnixNS int64  `json:"observed_unix_ns"`
 	StreamThrough  int64  `json:"stream_through"`
+	Cause          string `json:"cause,omitempty"`
 }
 
 // BoundaryState mirrors the inference boundary's reservation accounting at the
@@ -791,6 +793,55 @@ func (s *Store) StreamIdentity(ctx context.Context, fingerprint, session, attemp
 	return d.Assignment.Identity, nil
 }
 
+// AppendStream is the store half of POST /x/v1/streams/{attempt_id}: it binds
+// the batch to the attempt's identity (owner, current generation, non-terminal)
+// and appends it to the daemon sink while holding the store lock, so no record
+// can land between a finalization's watermark check and its commit. Durable
+// point: the sink's fsync per record; the acknowledgement follows it.
+func (s *Store) AppendStream(ctx context.Context, fingerprint, session, attemptID string, records []runstream.Record) (runstream.Ack, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	tx, err := s.grantTransaction(ctx)
+	if err != nil {
+		return runstream.Ack{}, err
+	}
+	who, _, err := s.runnerSession(ctx, tx, fingerprint, session)
+	if err != nil {
+		tx.Rollback()
+		return runstream.Ack{}, err
+	}
+	d, err := runnerDispatch(ctx, tx, who, attemptID)
+	if err != nil {
+		tx.Rollback()
+		return runstream.Ack{}, err
+	}
+	state, _, err := attemptState(ctx, tx, attemptID)
+	tx.Rollback()
+	if err != nil {
+		return runstream.Ack{}, err
+	}
+	if d.Assignment.Identity.Generation != s.meta.Generation {
+		return runstream.Ack{}, p.StaleGeneration
+	}
+	if terminalState(state) {
+		return runstream.Ack{}, p.StaleAttempt
+	}
+	return s.Streams().Receive(attemptID, d.Assignment.Identity, records)
+}
+
+// terminationRevision reports whether a later terminated message (new message
+// id) attests the same or stronger termination as the retained observation: the
+// same stop, identity, boots, digest and confirmed process, with remote_work
+// allowed to move from unknown to quiescent, never back.
+func terminationRevision(retained, now c.Evidence) bool {
+	a, b := retained.Terminated, now.Terminated
+	a.MessageID, b.MessageID = "", ""
+	if a.RemoteWork == "unknown" && b.RemoteWork == "quiescent" {
+		a.RemoteWork = "quiescent"
+	}
+	return a == b
+}
+
 // RecordRefusal retains a runner's refuse of its assignment as a
 // runtime_observations row of kind refused, which reconcile classifies as
 // refused_before_accept. Durable point: the committed row; identical replays
@@ -910,6 +961,24 @@ func (s *Store) transitionEvidence(ctx context.Context, tx *sql.Tx, taskID, atte
 	case p.Stopping:
 		if e.Kind != "stop" {
 			return p.Malformed
+		}
+		if e.Cause != "" {
+			// A runner-local stop names its cause; the daemon latches the derived
+			// cancel (actor runner-local) so the later terminated report observes
+			// and releases against a retained target.
+			if !slices.Contains(execwire.LocalStopCauses, e.Cause) {
+				return p.Malformed
+			}
+			stopID := execwire.LocalStopID(attemptID, e.Cause)
+			var latched bool
+			if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM control_targets WHERE stop_id=? AND attempt_id=?)", stopID, attemptID).Scan(&latched); err != nil {
+				return err
+			}
+			if latched {
+				return nil
+			}
+			_, err := latchStop(ctx, tx, "runner-local", c.Request{ID: stopID, Kind: c.CancelAttempt, TaskID: taskID, AttemptID: attemptID, Cause: e.Cause}, now)
+			return err
 		}
 		var latched bool
 		if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM control_targets WHERE attempt_id=?)", attemptID).Scan(&latched); err != nil {
@@ -1210,7 +1279,9 @@ func (s *Store) IssueLease(ctx context.Context, fingerprint, session, dispatchKe
 
 // ReportTermination records runner termination evidence through
 // observeTerminationTx. For stop_id == ExpiryStopID(nonce) it first latches the
-// lease_expired cancel (actor "lease-clock"). Durable point: the
+// lease_expired cancel (actor "lease-clock"); for stop_id == LocalStopID(attempt,
+// cause) with a LocalStopCauses cause it latches that cancel (actor
+// "runner-local"). Durable point: the
 // control_observations row; and, only when boundary.Quiescent and the attempt is
 // stopping|unknown, the releaseDispatchTx release to cancelled|expired with the
 // runner principal as actor, all in one committed transaction. Otherwise the
@@ -1290,18 +1361,33 @@ func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, sel
 	if m.DaemonBoot != s.meta.DaemonBoot || m.RunnerBoot != d.Facts.RunnerBoot || sess.RunnerBoot != m.RunnerBoot {
 		return commit(TerminationReply{Outcome: "retained"})
 	}
+	// Derived stop identities a runner may report without an owner stop: the
+	// lease clock (ExpiryStopID of its last lease, cause lease_expired, actor
+	// lease-clock) and its own local stops (LocalStopID of the attempt and one of
+	// LocalStopCauses, actor runner-local). Each is latched on first sight so the
+	// cancel is visible history; any other unknown stop id has no target and is
+	// reconciliation_required below.
 	lease, err := lastControlLease(ctx, tx, identity.AttemptID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return TerminationReply{}, err
 	}
+	derived := c.Request{ID: m.StopID, Kind: c.CancelAttempt, TaskID: identity.TaskID, AttemptID: identity.AttemptID}
+	actor := ""
 	if err == nil && m.StopID == execwire.ExpiryStopID(lease.Request.Nonce) {
+		derived.Cause, actor = "lease_expired", "lease-clock"
+	}
+	for _, cause := range execwire.LocalStopCauses {
+		if m.StopID == execwire.LocalStopID(identity.AttemptID, cause) {
+			derived.Cause, actor = cause, "runner-local"
+		}
+	}
+	if actor != "" {
 		var latched bool
 		if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM control_targets WHERE stop_id=? AND attempt_id=?)", m.StopID, identity.AttemptID).Scan(&latched); err != nil {
 			return TerminationReply{}, err
 		}
 		if !latched {
-			stop := c.Request{ID: m.StopID, Kind: c.CancelAttempt, TaskID: identity.TaskID, AttemptID: identity.AttemptID, Cause: "lease_expired"}
-			if _, err := latchStop(ctx, tx, "lease-clock", stop, now); err != nil {
+			if _, err := latchStop(ctx, tx, actor, derived, now); err != nil {
 				return TerminationReply{}, err
 			}
 		}
@@ -1334,12 +1420,49 @@ func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, sel
 		}
 		return commit(TerminationReply{Outcome: "observed"})
 	}
-	target, err := s.observeTerminationTx(ctx, tx, selected, evidence)
-	if errors.Is(err, sql.ErrNoRows) {
-		return TerminationReply{}, p.ReconciliationRequired
-	}
-	if err != nil {
+	// The first observation of a stop is immutable. A later report under a new
+	// message id that attests the same or stronger termination is an observation
+	// revision: retained in runtime_observations, released on its own boundary.
+	var target c.Target
+	var retainedBody string
+	err = tx.QueryRowContext(ctx, "SELECT body FROM control_observations WHERE stop_id=? AND attempt_id=?", m.StopID, identity.AttemptID).Scan(&retainedBody)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return TerminationReply{}, err
+	}
+	var retained c.Evidence
+	if err == nil {
+		if err := decodeControl(retainedBody, &retained); err != nil {
+			return TerminationReply{}, err
+		}
+	}
+	if err == nil && retained.Terminated.MessageID != m.MessageID {
+		if !terminationRevision(retained, evidence) {
+			return TerminationReply{}, p.IdentityConflict
+		}
+		var targetBody string
+		if err := tx.QueryRowContext(ctx, "SELECT body FROM control_targets WHERE stop_id=? AND attempt_id=?", m.StopID, identity.AttemptID).Scan(&targetBody); err != nil {
+			return TerminationReply{}, err
+		}
+		if err := decodeControl(targetBody, &target); err != nil {
+			return TerminationReply{}, err
+		}
+		if r := p.CheckSession(m, target.Cancel.Identity, selected); r != p.OK {
+			return TerminationReply{}, r
+		}
+		if m.RunnerBoot != target.Cancel.RunnerBoot || m.DaemonBoot != target.Cancel.DaemonBoot {
+			return TerminationReply{}, p.BootMismatch
+		}
+		if err := controlMessage(ctx, tx, m); err != nil {
+			return TerminationReply{}, err
+		}
+	} else {
+		target, err = s.observeTerminationTx(ctx, tx, selected, evidence)
+		if errors.Is(err, sql.ErrNoRows) {
+			return TerminationReply{}, p.ReconciliationRequired
+		}
+		if err != nil {
+			return TerminationReply{}, err
+		}
 	}
 	state, revision, err := attemptState(ctx, tx, identity.AttemptID)
 	if err != nil {

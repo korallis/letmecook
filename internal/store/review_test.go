@@ -531,3 +531,203 @@ func TestLocalPolicyRefusalIsRecorded(t *testing.T) {
 		t.Fatal("refusal acknowledged or released", err)
 	}
 }
+
+// Runner-local stops: a terminated report whose stop id derives from the
+// attempt and one of the local causes is latched under actor runner-local on
+// first sight, observed, and released only under the confirmed-and-quiescent
+// rule; an unconfirmed containment report latches without releasing and the
+// stopping proposal is admitted once that target exists.
+func TestRunnerLocalStopsLatchObserveAndRelease(t *testing.T) {
+	for _, cause := range execwire.LocalStopCauses {
+		t.Run(cause, func(t *testing.T) {
+			x := executionFixtureFor(t, nil)
+			attempt := x.d.Assignment.Identity.AttemptID
+			lease := x.lease(t)
+			x.propose(t, p.Starting, launchIntent(lease.Request.Nonce))
+			x.propose(t, p.Running, launchedEvidence())
+			stopID := execwire.LocalStopID(attempt, cause)
+			if cause == "containment_unconfirmed" {
+				// Unconfirmed containment: the report latches the local stop and is
+				// retained; nothing releases until containment is confirmed.
+				unknown := terminatedFor(&x, stopID, "unknown")
+				unknown.Terminated.ConfirmedProcess = "unknown"
+				unknown.Measurement.ObservedAt, unknown.Measurement.AckToObservedNS = nil, nil
+				reply, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, unknown, BoundaryState{})
+				if err != nil || reply.Outcome != "observed" || reply.Released {
+					t.Fatal(reply, err)
+				}
+				rowCount(t, x.s, "control_targets", 1)
+				rowCount(t, x.s, "control_observations", 0)
+				rowCount(t, x.s, "dispatch_releases", 0)
+				if cancels, err := x.s.PendingCancels(ctx, x.runner, x.session.SessionID); err != nil || len(cancels) != 1 || cancels[0].StopID != stopID {
+					t.Fatal("local stop not pending", cancels, err)
+				}
+				// The derived target admits the stopping proposal without a nonce.
+				x.propose(t, p.Stopping, RuntimeEvidence{Kind: "stop"})
+			} else {
+				// Before any report there is no target: a bare stop is refused, an
+				// unknown cause is malformed, and a local cause latches the derived
+				// cancel under actor runner-local before the edge is applied.
+				if _, err := x.s.ProposeTransition(ctx, x.runner, x.session.SessionID, p.FencedVersion, x.proposal(t, p.Stopping), RuntimeEvidence{Kind: "stop"}); !errors.Is(err, p.ReconciliationRequired) {
+					t.Fatal("stopping admitted without a target or the lease nonce", err)
+				}
+				if _, err := x.s.ProposeTransition(ctx, x.runner, x.session.SessionID, p.FencedVersion, x.proposal(t, p.Stopping), RuntimeEvidence{Kind: "stop", Cause: "operator"}); !errors.Is(err, p.Malformed) {
+					t.Fatal("non-local cause accepted", err)
+				}
+				rowCount(t, x.s, "control_stops", 0)
+				x.propose(t, p.Stopping, RuntimeEvidence{Kind: "stop", Cause: cause})
+				rowCount(t, x.s, "control_targets", 1)
+				if cancels, err := x.s.PendingCancels(ctx, x.runner, x.session.SessionID); err != nil || len(cancels) != 1 || cancels[0].StopID != stopID {
+					t.Fatal("proposal did not latch the local stop", cancels, err)
+				}
+				_ = lease
+			}
+			confirmed := terminatedFor(&x, stopID, "quiescent")
+			reply, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, confirmed, quiescent())
+			if err != nil || reply.Outcome != "observed" || !reply.Released {
+				t.Fatal(reply, err)
+			}
+			view, err := x.s.StopStatus(ctx, stopID, attempt)
+			if err != nil || view.Receipt.Actor != "runner-local" || view.Receipt.Request.Cause != cause || view.Receipt.Request.Kind != c.CancelAttempt || view.Status != c.TerminationObserved {
+				t.Fatal(view, err)
+			}
+			if state, _ := attemptRow(t, x.s, attempt); state != p.Cancelled {
+				t.Fatal(state)
+			}
+			var actor string
+			if err := x.s.db.QueryRow("SELECT actor FROM dispatch_releases WHERE dispatch_id=?", x.d.ID).Scan(&actor); err != nil || actor != x.session.RunnerID {
+				t.Fatal("release actor", actor, err)
+			}
+			if again, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, confirmed, quiescent()); err != nil || !reflect.DeepEqual(again, reply) {
+				t.Fatal("identical replay changed", again, err)
+			}
+			if _, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, confirmed, BoundaryState{InFlight: 1}); !errors.Is(err, p.IdentityConflict) {
+				t.Fatal("changed boundary under the same message id accepted", err)
+			}
+			rowCount(t, x.s, "control_stops", 1)
+		})
+	}
+	// A local stop id derived for another attempt, or any other unknown id, has
+	// no target and latches nothing.
+	y := executionFixtureFor(t, nil)
+	lease := y.run(t)
+	y.propose(t, p.Stopping, RuntimeEvidence{Kind: "stop", Nonce: lease.Request.Nonce})
+	for _, stopID := range []string{execwire.LocalStopID(newID(), "runner_shutdown"), execwire.LocalStopID(y.d.Assignment.Identity.AttemptID, "not_a_cause"), newID()} {
+		if _, err := y.s.ReportTermination(ctx, y.runner, y.session.SessionID, p.FencedVersion, terminatedFor(&y, stopID, "quiescent"), quiescent()); !errors.Is(err, p.ReconciliationRequired) {
+			t.Fatalf("foreign stop id %s: %v", stopID, err)
+		}
+	}
+	rowCount(t, y.s, "control_stops", 0)
+	rowCount(t, y.s, "dispatch_releases", 0)
+	if state, _ := attemptRow(t, y.s, y.d.Assignment.Identity.AttemptID); state != p.Stopping {
+		t.Fatal(state)
+	}
+}
+
+// Second review: a confirmed report whose boundary was unsettled can settle
+// later under a new message id (an observation revision); the first control
+// observation stays immutable, weaker or different evidence conflicts.
+func TestTerminationRevisionSettlesUnderNewMessageID(t *testing.T) {
+	x := executionFixtureFor(t, nil)
+	x.run(t)
+	stop := stopRequest(c.CancelAttempt, x.d)
+	if _, err := x.s.RequestStop(ctx, x.owner, stop); err != nil {
+		t.Fatal(err)
+	}
+	x.propose(t, p.Stopping, RuntimeEvidence{Kind: "stop"})
+	first := terminatedFor(&x, stop.ID, "unknown")
+	if reply, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, first, BoundaryState{Reservations: 1, InFlight: 1}); err != nil || reply.Released {
+		t.Fatal(reply, err)
+	}
+	var retained string
+	if err := x.s.db.QueryRow("SELECT body FROM control_observations WHERE stop_id=?", stop.ID).Scan(&retained); err != nil {
+		t.Fatal(err)
+	}
+	// Different evidence under a new id conflicts; weaker remote_work conflicts.
+	other := terminatedFor(&x, stop.ID, "quiescent")
+	other.Terminated.EvidenceDigest = strings.Repeat("f", 64)
+	if _, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, other, quiescent()); !errors.Is(err, p.IdentityConflict) {
+		t.Fatal("different evidence accepted as a revision", err)
+	}
+	settled := terminatedFor(&x, stop.ID, "quiescent")
+	reply, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, settled, quiescent())
+	if err != nil || !reply.Released {
+		t.Fatal("stronger revision did not release", reply, err)
+	}
+	var after string
+	if err := x.s.db.QueryRow("SELECT body FROM control_observations WHERE stop_id=?", stop.ID).Scan(&after); err != nil || after != retained {
+		t.Fatal("first observation rewritten", err)
+	}
+	rowCount(t, x.s, "control_observations", 1)
+	rowCount(t, x.s, "runtime_observations WHERE kind='terminated'", 2)
+	if state, _ := attemptRow(t, x.s, x.d.Assignment.Identity.AttemptID); state != p.Cancelled {
+		t.Fatal(state)
+	}
+	// A first observation that already attested quiescent remote work can be
+	// revised only by an equal report; unknown remote work is weaker and conflicts.
+	y := executionFixtureFor(t, nil)
+	y.run(t)
+	ystop := stopRequest(c.CancelAttempt, y.d)
+	if _, err := y.s.RequestStop(ctx, y.owner, ystop); err != nil {
+		t.Fatal(err)
+	}
+	y.propose(t, p.Stopping, RuntimeEvidence{Kind: "stop"})
+	if reply, err := y.s.ReportTermination(ctx, y.runner, y.session.SessionID, p.FencedVersion, terminatedFor(&y, ystop.ID, "quiescent"), BoundaryState{Reservations: 1, InFlight: 1}); err != nil || reply.Released {
+		t.Fatal(reply, err)
+	}
+	if _, err := y.s.ReportTermination(ctx, y.runner, y.session.SessionID, p.FencedVersion, terminatedFor(&y, ystop.ID, "unknown"), quiescent()); !errors.Is(err, p.IdentityConflict) {
+		t.Fatal("weaker revision accepted", err)
+	}
+	rowCount(t, y.s, "dispatch_releases", 0)
+	if reply, err := y.s.ReportTermination(ctx, y.runner, y.session.SessionID, p.FencedVersion, terminatedFor(&y, ystop.ID, "quiescent"), quiescent()); err != nil || !reply.Released {
+		t.Fatal("equal revision with a settled boundary did not release", reply, err)
+	}
+}
+
+// Second review: stream appends serialize with finalization on the store lock
+// and finalization re-reads the sink before commit, so an append can never
+// slip between the watermark check and the release.
+func TestAppendStreamSerializesWithFinalize(t *testing.T) {
+	x := executionFixtureFor(t, nil)
+	x.run(t, "first")
+	attempt := x.d.Assignment.Identity.AttemptID
+	_, custody := x.upload(t, "succeeded", map[string]string{"a.txt": "bytes"})
+	records := spooledRecords(t, x.d.Assignment.Identity, "first", "trailing")
+	late := make(chan error, 1)
+	x.s.controlHook = func(step string) error {
+		if step != "before_finalize_commit" {
+			return nil
+		}
+		go func() {
+			_, err := x.s.AppendStream(ctx, x.runner, x.session.SessionID, attempt, records[1:])
+			late <- err
+		}()
+		select {
+		case err := <-late:
+			t.Errorf("append ran while finalization held the store: %v", err)
+			late <- err
+		case <-time.After(300 * time.Millisecond):
+		}
+		return nil
+	}
+	reply, err := x.s.FinalizeAttempt(ctx, x.runner, x.session.SessionID, attempt, x.completion(t, custody.Receipt.ReceiptID, 1))
+	x.s.controlHook = nil
+	if err != nil || !reply.Released {
+		t.Fatal(reply, err)
+	}
+	select {
+	case err := <-late:
+		if !errors.Is(err, p.StaleAttempt) {
+			t.Fatal("append after finalization was not refused", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("blocked append never completed")
+	}
+	watermark, err := x.s.Streams().Watermark(attempt)
+	if err != nil || watermark.Through != 1 {
+		t.Fatal("finalized sink moved", watermark, err)
+	}
+	if _, err := x.s.AppendStream(ctx, x.runner, newID(), attempt, records[1:]); err == nil {
+		t.Fatal("append without a session")
+	}
+}
