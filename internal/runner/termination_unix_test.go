@@ -4,6 +4,7 @@ package runner
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -119,7 +120,7 @@ func TestObservedProcessTreeTerminationWithinFiveSeconds(t *testing.T) {
 			if err := apply(f.r, f.o.Session, reply(req)); !errors.Is(err, ErrStopped) {
 				t.Fatal("late lease resumed cancelled work", err)
 			}
-			if !errors.Is(f.r.Launch(), ErrExecutionDisabled) {
+			if !errors.Is(f.r.Launch(context.Background(), LaunchRequest{}), ErrExecutionDisabled) {
 				t.Fatal("launch enabled")
 			}
 			if err := f.r.Close(); err != nil {
@@ -247,6 +248,43 @@ func TestTerminationObservationWriteFailureAndTimeout(t *testing.T) {
 			defer r.Close()
 			if r.Status().Termination.Stage != c.StopAcknowledged || r.Status().Termination.Terminated != nil || !r.Status().Quarantined {
 				t.Fatal("reopen invented lost observation", r.Status())
+			}
+		})
+	}
+}
+
+func TestInitialTERM_EPERMStillEscalates(t *testing.T) {
+	for _, gone := range []bool{false, true} {
+		t.Run(fmt.Sprint(gone), func(t *testing.T) {
+			var signals []syscall.Signal
+			killed := false
+			get := func(pid int) (int, error) {
+				if pid == 0 {
+					return 7, nil
+				}
+				return pid, nil
+			}
+			kill := func(pid int, sig syscall.Signal) error {
+				if pid != -42 {
+					t.Fatalf("wrong group %d", pid)
+				}
+				if sig != 0 {
+					signals = append(signals, sig)
+				}
+				if sig == syscall.SIGKILL {
+					killed = true
+				}
+				if sig == 0 && killed && gone {
+					return syscall.ESRCH
+				}
+				return syscall.EPERM
+			}
+			escalated, err := terminateGroupWithSignals(42, time.Millisecond, time.Now().Add(20*time.Millisecond), get, kill)
+			if !escalated || !reflect.DeepEqual(signals, []syscall.Signal{syscall.SIGTERM, syscall.SIGKILL}) {
+				t.Fatalf("no escalation: %v %v %v", signals, escalated, err)
+			}
+			if gone && err != nil || !gone && !errors.Is(err, ErrTerminationUnconfirmed) {
+				t.Fatalf("EPERM treated as disappearance: %v", err)
 			}
 		})
 	}

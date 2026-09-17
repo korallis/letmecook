@@ -9,23 +9,28 @@ import (
 )
 
 func terminateGroup(group int, grace time.Duration, deadline time.Time) (bool, error) {
-	own, err := syscall.Getpgid(0)
+	return terminateGroupWithSignals(group, grace, deadline, syscall.Getpgid, syscall.Kill)
+}
+
+// Instance-local signal seam lets tests exercise EPERM without requiring another UID.
+func terminateGroupWithSignals(group int, grace time.Duration, deadline time.Time, getpgid func(int) (int, error), kill func(int, syscall.Signal) error) (bool, error) {
+	own, err := getpgid(0)
 	if err != nil || group <= 1 || group == own {
 		return false, ErrTerminationUnconfirmed
 	}
-	actual, err := syscall.Getpgid(group)
+	actual, err := getpgid(group)
 	// Missing leader is not evidence that its descendants ever belonged to the
 	// supplied group. No arbitrary negative-PID signal without this local check.
 	if err != nil || actual != group {
 		return false, ErrTerminationUnconfirmed
 	}
-	if err := syscall.Kill(-group, syscall.SIGTERM); err != nil && !errors.Is(err, syscall.ESRCH) {
+	if err := kill(-group, syscall.SIGTERM); err != nil && !errors.Is(err, syscall.ESRCH) && !errors.Is(err, syscall.EPERM) {
 		return false, err
 	}
 	escalateAt := time.Now().Add(grace)
 	escalated := false
 	for {
-		err := syscall.Kill(-group, 0)
+		err := kill(-group, 0)
 		if errors.Is(err, syscall.ESRCH) {
 			return escalated, nil
 		}
@@ -38,7 +43,7 @@ func terminateGroup(group int, grace time.Duration, deadline time.Time) (bool, e
 		}
 		now := time.Now()
 		if !escalated && (!now.Before(escalateAt) || !now.Before(deadline)) {
-			if err := syscall.Kill(-group, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) && !errors.Is(err, syscall.EPERM) {
+			if err := kill(-group, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) && !errors.Is(err, syscall.EPERM) {
 				return escalated, err
 			}
 			escalated = true

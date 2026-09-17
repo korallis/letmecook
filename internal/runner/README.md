@@ -1,102 +1,72 @@
-# Provisional runner admission and lease journal (#16)
+# Durable runner supervision
 
-This reversible **local library** advances [#16](https://github.com/korallis/letmecook/issues/16).
-It does not close that issue or qualify an execution runtime. No executable,
-network connection, provider access, process launcher or sandbox integration is
-added. `Launch` always returns `runner_execution_unqualified`; no hidden enable
-flag exists. #9/#10 reconciliation, #89 measured confinement and #6 real adapter
-acceptance remain outstanding. Existing live-trial state is untouched.
+`Create`, `Accept`, `RequestLease` and `ApplyLease` preserve the original
+provisional admission/journal semantics. S2 adds an explicitly development-only
+launcher, guardian and transport outbox; it does not qualify a supported runtime.
 
-## Inputs and trust
+`Options.Policy` is an independent local eligibility loader. `Options.Admission`
+is the supervisor's own development-profile flag, not a policy supplied by the
+daemon. `Options.Boot` gives all journals of one supervisor the published process
+boot. `Open` never resumes a lease, clears quarantine or adopts new generation
+identity: it retains recovery evidence, writes a fresh restart boot and stops.
 
-`Create` takes an authenticated `Session`, explicit timing bounds, a trusted
-monotonic clock, wall clock, and independent runner-local policy loader. Session
-generation, peer fingerprint and daemon boot come from a future authenticated
-control-plane exchange, never from an assignment. The fresh runner boot is exposed
-through `Status` for local-policy publication before accepting work. These are
-trusted in-process interfaces, **not authentication endpoints**.
+`PrepareLaunch(ctx, LaunchRequest)` refuses absent/currently expired lease,
+unqualified profiles and mismatched checkout/profile. Runtime HOME, TMP and
+configuration are siblings of the candidate. It prepares an inference boundary;
+fake skips inference entirely and is the only harness allowed a nil boundary. Gateway tokens
+and credentials are never put into the journal. The job receives only its scoped
+token; receipts reserve durably before sending upstream.
 
-`Accept` consumes existing `store.Dispatch` inputs after authenticated daemon
-`Delivery`; reading historical `Assignment` records is not delivery permission.
-The caller must authenticate/revalidate current daemon authority. The runner
-independently compares the entire locally loaded eligibility tuple against the
-supplied mirror, checks repository/root/runner/route and resource policy using
-the existing scheduler checks, validates the input/decision/route digests, and
-checks finite single-attempt allowances. No new account router or quota ledger.
-Synthetic test facts describe no qualified real profile.
+`Launch(ctx, LaunchRequest) error` requires durable intent and acknowledged
+starting. The guardian is outside the job's process group and sandbox, in its own
+session. A supplied `Launcher.Wrap` transforms the adapter command into a guardian
+command without changing the job's stdout/stderr. Adapters must use `exec.Command`
+(not context-triggered guardian KILL), configure the command before `Wrap`, and
+leave stdin/extra files/process attributes untouched afterwards. Descriptor 3 is
+private guardian control and is CLOEXEC before starting any subprocess. Every
+inherited descriptor at or above 3 is closed on job exec; control decoding rejects
+unknown fields. Pipe frames are advisory, never evidence of termination. The job uses its own PGID and inherited rlimits.
 
-Acceptance persists complete immutable dispatch input and the stable v2 `accept`
-message before returning it. Exact retransmission returns that acknowledgement;
-new message IDs for the same assignment are retained as aliases. Changed message,
-assignment or attempt identity refuses. This first slice admits at most **one
-assignment for the lifetime of a journal**. Terminal release/new attempts await
-supervisor evidence and reconciliation; there is no tombstone deletion or reset.
+The remaining deadline is recalculated after adapter Start, immediately before
+sending the initial specification; an absolute wall cap also accounts for delivery
+latency. Guardian cutoff is elapsed monotonic duration, capped by a conservative wall-clock
+cutoff so wake after suspend cannot extend the lease. Renewal cannot undo an
+already latched stop. Supervisor EOF or cutoff sends TERM, KILL at two seconds,
+then observes until ESRCH or the five-second bound. EPERM stays unknown. A
+process-table observation every 100 ms tracks descendants/escaped sessions; detected escapes
+never produce positive whole-tree evidence. Short-lived ancestry changes between samples can escape observation. Sampling is **not** an adversarial
+OS process boundary, and the development profile does not claim otherwise.
 
-## Lease and stop behavior
+Existing `TerminateProcessGroup` remains the normal cancellation evidence path.
+The guardian separately writes a file+directory-synced receipt; `WaitGuardian`
+reads that protected receipt on the live path too, validates PID/PGID/start identity,
+and journals it. `Open` retains it after supervisor death. A missing, malformed,
+linked or mismatched receipt never turns a pipe report into positive evidence. Re-signaling recovery
+requires matching PID and OS start token; a missing leader is not proof of tree
+termination. `RecoveredBoundaryState` counts durable request reservations and
+terminal receipts; missing terminal receipts remain remote-work unknown.
 
-`RequestLease` persists one nonce and its original send timestamp before returning
-the request; retries retain both. `ApplyLease` uses the existing v2 `CheckLease`
-with retained identity, boots, outstanding nonce and prior cutoff. Responses are
-never anchored to receipt time. Duplicate/changed replies cannot extend a lease;
-late replies, clock regression, expiry, policy drift and operator stop latch
-quarantine and discard pending nonce/deadline authority. An attempt's finite time
-allowance caps renewals; grant and local-evidence expiry are checked at admission
-and subsequent operations. Failed persistence poisons the handle and signals stop.
+New journal events: `launch_intent`, `starting_ack`, `launched`,
+`guardian_observed`, `outbox`, `outbox_ack`, `outbox_refused`, `fenced`. Immutable outbox keys retain
+exact request bytes and acknowledgments. A terminal refusal retains bytes and
+its reason separately, never as an acknowledgment. Typed Tick errors distinguish
+lease expiry, local policy/grant invalidation, attempt-budget expiry and invalid
+clocks; only actual lease expiry can use a lease-clock stop identity. Existing hash chaining, private
+ownership/inode checks, exclusive locks, 128 KiB payload / 8 MiB journal bounds,
+and fsync-before-ack are unchanged. A persistence failure poisons the handle;
+there is no automatic truncation or reset.
 
-`Tick` is an explicit metadata check, **not an autonomous watchdog**. Its returned
-deadline is not installed in a production supervisor and cannot authorize launch.
-The explicit `TerminateProcessGroup` library experiment can separately journal
-observed disappearance of an externally owned process group; see
-[`internal/control`](../control/README.md) for its trust and containment limits.
-It does not install a watchdog. Local stop never implies remote quiescence.
-Future integration must enforce measured suspend-inclusive timing and complete
-process-tree termination outside untrusted job code. The clock/bounds callbacks
-are testable seams, not measurement evidence or safe production defaults.
+See [the executable's README](../../cmd/gaffer-runner/README.md) for the boot/facts
+lifecycle, CLI flags, evidence sequence and limitations, and
+[runnerjournal](../runnerjournal) for the storage primitive. Tests retain the
+original admission/lease coverage and add real subprocess/TLS/sandbox failures
+under `cmd/gaffer-runner`. A nil/unqualified `LaunchRequest` always refuses. `Close` revokes the scoped
+boundary while receipt callbacks can still journal; closing the handle never
+claims quiescence. A reopened/quarantined handle reports execution disabled.
 
-`Open` always allocates and persists a fresh supervisor boot, marks the journal
-quarantined and clears old nonce/deadline authority, including after clean close.
-It never silently adopts caller-supplied new session/generation authority. There
-is no resume, generation update or quarantine-clearing API. Reconciliation must
-eventually account for old process identities, unknown remote work, artifacts,
-reservations and retired namespaces before admitting replacement work.
-
-## Storage and verification
-
-`internal/runnerjournal` owns an append-only, SHA-256 chained log in a new mode0700
-owned directory, with a mode0600 single-link regular file and exclusive OS lock on
-the directory inode. Creation refuses existing state; opening refuses missing,
-torn, corrupt, oversized or unsafe state. Paths must be absolute, canonical and
-free of symlink aliases. Filesystem support follows the provisional store's local
-allowlist: Linux ext4/XFS/Btrfs, macOS APFS. Other mounts/platforms fail closed.
-One record is bounded to 256 KiB, payload to 128 KiB and total history to 8 MiB.
-Exhaustion requires intervention; there is no truncation or automatic compaction.
-
-Append acknowledges only after file **and directory** sync; create also syncs the
-parent directory. Unknown outcomes poison the handle. Before replaying positive
-responses, retained file/directory ownership, inode, permissions and size are
-rechecked. Directory/file replacement or ownership loss refuses further work.
-Hash chaining detects corruption; it does not authenticate a hostile OS owner,
-detect a valid-prefix backup rollback, or qualify hardware power-loss durability.
-Only a future paused restore protocol can replace journal state safely.
-
-Run:
-
-```sh
-go test -race -count=1 ./internal/runner ./internal/runnerjournal
-CGO_ENABLED=0 go test -count=1 ./internal/runner ./internal/runnerjournal
-go vet ./internal/runner ./internal/runnerjournal
-```
-
-Tests cover concurrent acceptance/lost acknowledgements, identity collisions,
-independent local-policy refusals, send-time lease cutoffs, nonce/boot/version
-errors, late/duplicate renewals, finite budgets, restart quarantine, real
-subprocess SIGKILL/reopen, ownership/replacement and torn log refusal. File and
-directory sync failures are injected independently; unacknowledged persisted
-bytes remain recovery input rather than being silently discarded. The existing
-Go foundation CI includes both packages on Linux and macOS.
-
-Still missing: real transport/bootstrap integration, qualified watchdog and
-contained process identity/launch/stop, no-launch evidence, real adapter smoke, suspension
-and reboot measurements, result custody, full output spooling and reconciliation.
-Passing these tests establishes library behavior only, not supported execution
-or original M1 acceptance.
+`RecordHarnessWatermark` retains the complete, acknowledged harness sequence.
+`ReleaseHarness` supports the adapter's optional `Release(context.Context,
+harness.RunHandle, int64) error` method only after that watermark and an
+acknowledged finalize/terminated message. It calls at most once. `Close` also
+releases a remaining eligible handle on shutdown; incomplete output/custody is
+retained rather than silently released. The fake adapter also implements this bounded-retention release contract.

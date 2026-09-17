@@ -1,18 +1,23 @@
 package runner
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/korallis/letmecook/internal/isolation"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
 	g "github.com/korallis/letmecook/internal/authority"
+	"github.com/korallis/letmecook/internal/inference"
 	repo "github.com/korallis/letmecook/internal/repositories"
 	sc "github.com/korallis/letmecook/internal/scheduler"
 	"github.com/korallis/letmecook/internal/store"
@@ -117,7 +122,7 @@ func TestConcurrentAcceptanceLostAckAndCollision(t *testing.T) {
 	if _, e = f.r.Accept(f.o.Session, changed); e == nil {
 		t.Fatal("concurrent writer")
 	}
-	if !errors.Is(f.r.Launch(), ErrExecutionDisabled) || f.r.Status().ExecutionEnabled {
+	if !errors.Is(f.r.Launch(context.Background(), LaunchRequest{}), ErrExecutionDisabled) || f.r.Status().ExecutionEnabled {
 		t.Fatal("production launch enabled")
 	}
 	// Persisted acceptance contains immutable input and ack, not only a hash.
@@ -429,5 +434,359 @@ func TestAcceptedInputDoesNotAliasCallerMemory(t *testing.T) {
 	retry, err := f.r.RequestLease(f.o.Session)
 	if err != nil || *retry.SentMS != sent {
 		t.Fatal("returned message mutated retained lease request", err)
+	}
+}
+
+// A boundary's Close may synchronously persist terminal receipt accounting.
+// Closing/locking the journal first would lose evidence or deadlock this path.
+type closingBoundary struct{ onClose func() }
+
+func (*closingBoundary) Addr() string           { return "127.0.0.1:1" }
+func (*closingBoundary) State() inference.State { return inference.State{} }
+func (b *closingBoundary) Close(context.Context) inference.State {
+	if b.onClose != nil {
+		b.onClose()
+		b.onClose = nil
+	}
+	return inference.State{Quiescent: true}
+}
+func TestCloseBoundaryBeforeJournalAndRuntimeClockRegression(t *testing.T) {
+	f := setup(t)
+	accept(t, f)
+	if err := f.r.Enqueue("evidence", "first", map[string]string{"state": "retained"}); err != nil {
+		t.Fatal(err)
+	}
+	f.now--
+	if err := f.r.Enqueue("evidence", "regressed", map[string]bool{"bad": true}); !errors.Is(err, p.DelayedReply) {
+		t.Fatal("clock regression accepted", err)
+	}
+	f.now++
+	f.r.prepared = &preparedLaunch{boundary: &closingBoundary{onClose: func() {
+		if err := f.r.Enqueue("usage-complete", "closing", map[string]bool{"terminal": true}); err != nil {
+			t.Error(err)
+		}
+	}}}
+	if err := f.r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Open(f.path, f.o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	found := false
+	for _, entry := range r.Outbox() {
+		found = found || entry.Key == "closing"
+		if entry.Key == "regressed" {
+			t.Fatal("regressed event persisted")
+		}
+	}
+	if !found {
+		t.Fatal("boundary completion not durable")
+	}
+}
+
+func TestOpenIntentWithoutStartingDoesNotWaitForGuardian(t *testing.T) {
+	f := setup(t)
+	accept(t, f)
+	if err := f.r.commit(event{Kind: "launch_intent", At: f.now, Runtime: &LaunchRecord{Qualification: "development", ReceiptPath: filepath.Join(t.TempDir(), "never-created.json")}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	start := time.Now()
+	reopened, err := Open(f.path, f.o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+		t.Fatalf("intent-only recovery waited for nonexistent guardian: %s", elapsed)
+	}
+	if reopened.Status().ExecutionEnabled {
+		t.Fatal("old intent resumed")
+	}
+}
+
+type guardianTestLauncher struct{}
+
+func (guardianTestLauncher) Wrap(*exec.Cmd) error               { return nil }
+func (guardianTestLauncher) Observation() isolation.Observation { return isolation.Observation{} }
+func (guardianTestLauncher) Cleanup() error                     { return nil }
+func TestGuardianInitialSpecSerializedWithRenewals(t *testing.T) {
+	receipt := filepath.Join(t.TempDir(), "receipt")
+	l := &guardianLauncher{inner: guardianTestLauncher{}, executable: "/usr/bin/true", receipt: receipt, deadline: func() int64 { return 1000 }, limits: ResourceLimits{1024, 64 << 20, 10}}
+	cmd := exec.Command("/bin/sleep", "60")
+	cmd.Dir = t.TempDir()
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "LARGE=" + strings.Repeat("x", 128<<10)}
+	if err := l.Wrap(cmd); err != nil {
+		t.Fatal(err)
+	}
+	// Duplicate the child's ends, like Start does; closing the parent copies must
+	// not terminate this independent decoder/control writer.
+	inputFD, err := syscall.Dup(int(l.childInput.Fd()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	controlFD, err := syscall.Dup(int(l.childControl.Fd()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := os.NewFile(uintptr(inputFD), "child-in")
+	control := os.NewFile(uintptr(controlFD), "child-control")
+	defer input.Close()
+	defer control.Close()
+	defer l.CloseInput()
+	if err := l.Renew(999); !errors.Is(err, ErrStopped) {
+		t.Fatal("renewal preceded launch frame", err)
+	}
+	decoded := make(chan error, 1)
+	go func() {
+		dec := json.NewDecoder(input)
+		var got LaunchSpec
+		if err := dec.Decode(&got); err != nil {
+			decoded <- err
+			return
+		}
+		if len(got.Env) != 2 || len(got.Env[1]) != (128<<10)+6 {
+			decoded <- errors.New("initial spec corrupted")
+			return
+		}
+		enc := json.NewEncoder(control)
+		enc.Encode(GuardianStarted{PID: 2, PGID: 2})
+		for i := 0; i < 16; i++ {
+			var renewal Renewal
+			if err := dec.Decode(&renewal); err != nil {
+				decoded <- err
+				return
+			}
+			if renewal.DeadlineMS != 999 {
+				decoded <- errors.New("bad renewal")
+				return
+			}
+		}
+		enc.Encode(GuardianReport{GuardianStarted: GuardianStarted{PID: 2, PGID: 2}, PGIDEmpty: true})
+		decoded <- nil
+	}()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := l.startedHandle(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < 16; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := l.Renew(999); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	wg.Wait()
+	select {
+	case err := <-decoded:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	<-l.done
+}
+
+func TestGuardianFailedStartClosesParentPipes(t *testing.T) {
+	l := &guardianLauncher{inner: guardianTestLauncher{}, executable: "/usr/bin/true", receipt: filepath.Join(t.TempDir(), "receipt"), deadline: func() int64 { return 1000 }, limits: ResourceLimits{1024, 64 << 20, 10}}
+	cmd := exec.Command("/bin/sleep", "60")
+	cmd.Env = []string{"PATH=/usr/bin:/bin"}
+	cmd.Dir = t.TempDir()
+	if err := l.Wrap(cmd); err != nil {
+		t.Fatal(err)
+	}
+	files := []*os.File{l.pipe, l.childInput, l.control, l.childControl}
+	l.abortStart()
+	l.abortStart()
+	for _, f := range files {
+		if _, err := f.Stat(); err == nil {
+			t.Fatal("failed Start retained parent descriptor")
+		}
+	}
+	select {
+	case <-l.done:
+	default:
+		t.Fatal("failed Start still awaiting nonexistent guardian")
+	}
+}
+
+func TestTickRetainsDistinctStopErrors(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		want   error
+		mutate func(*fixture)
+	}{
+		{"lease_expired", ErrLeaseExpired, func(f *fixture) { f.now = *f.r.state.StopBy }},
+		{"local_policy_changed", ErrPolicyChanged, func(f *fixture) { f.local.Enabled = false }},
+		{"grant_expired", ErrGrantExpired, func(f *fixture) { f.r.state.Input.Request.Envelope.ExpiresMS = 99999 }},
+		{"attempt_budget_expired", ErrAttemptBudgetExpired, func(f *fixture) { f.now = *f.r.state.AttemptBy }},
+		{"clock_invalid", ErrClockInvalid, func(f *fixture) { f.now = -1 }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := setup(t)
+			accept(t, f)
+			req, err := f.r.RequestLease(f.o.Session)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err = apply(f.r, f.o.Session, reply(req)); err != nil {
+				t.Fatal(err)
+			}
+			tc.mutate(f)
+			for range 2 {
+				status, err := f.r.Tick()
+				if !errors.Is(err, tc.want) || !status.StopRequired || status.Reason != tc.name {
+					t.Fatalf("want %v, got %v %+v", tc.want, err, status)
+				}
+			}
+		})
+	}
+}
+
+func TestWaitGuardianRequiresPrivateMatchingReceipt(t *testing.T) {
+	f := setup(t)
+	now := time.Now().UnixNano()
+	rec := &LaunchRecord{ReceiptPath: filepath.Join(t.TempDir(), "guardian.json"), PID: 42, PGID: 42, StartUnixNS: now, StartToken: "unique"}
+	rep := GuardianReport{GuardianStarted: GuardianStarted{PID: 42, PGID: 42, StartUnixNS: now, StartToken: "unique"}, ObservedUnixNS: now + 1000, StopUnixNS: now + 1, StopToObservedNS: 999, PGIDEmpty: true}
+	f.r.state.Runtime = rec
+	f.r.guardian = &guardianLauncher{done: make(chan struct{}), report: rep}
+	close(f.r.guardian.done)
+	if _, err := f.r.WaitGuardian(context.Background()); !errors.Is(err, ErrTerminationUnconfirmed) {
+		t.Fatal("pipe alone trusted", err)
+	}
+	wrong := rep
+	wrong.StartUnixNS++
+	if err := DurableFile(rec.ReceiptPath, wrong); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.r.WaitGuardian(context.Background()); !errors.Is(err, ErrTerminationUnconfirmed) {
+		t.Fatal("wrong launch receipt trusted", err)
+	}
+	if err := DurableFile(rec.ReceiptPath, rep); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := f.r.WaitGuardian(context.Background()); err != nil || got != rep {
+		t.Fatalf("private receipt ignored: %+v %v", got, err)
+	}
+}
+
+func TestGuardianDeadlineRecomputedAfterAdapterStart(t *testing.T) {
+	remaining := int64(1000)
+	l := &guardianLauncher{inner: guardianTestLauncher{}, executable: "/usr/bin/true", receipt: filepath.Join(t.TempDir(), "receipt"), deadline: func() int64 { return remaining }}
+	cmd := exec.Command("/bin/sleep", "60")
+	cmd.Dir = t.TempDir()
+	cmd.Env = []string{"PATH=/usr/bin:/bin"}
+	if err := l.Wrap(cmd); err != nil {
+		t.Fatal(err)
+	}
+	inputFD, _ := syscall.Dup(int(l.childInput.Fd()))
+	controlFD, _ := syscall.Dup(int(l.childControl.Fd()))
+	input := os.NewFile(uintptr(inputFD), "input")
+	control := os.NewFile(uintptr(controlFD), "control")
+	defer input.Close()
+	defer control.Close()
+	defer l.CloseInput()
+	remaining = 100 // model time spent in Harness.Start after Wrap
+	got := make(chan LaunchSpec, 1)
+	go func() {
+		var spec LaunchSpec
+		json.NewDecoder(input).Decode(&spec)
+		got <- spec
+		json.NewEncoder(control).Encode(GuardianStarted{PID: 42, PGID: 42})
+		control.Close()
+	}()
+	if _, err := l.startedHandle(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	spec := <-got
+	if spec.DeadlineMS != 100 || time.Until(time.Unix(0, spec.CutoffUnixNS)) > 100*time.Millisecond {
+		t.Fatalf("startup latency extended deadline: %+v", spec)
+	}
+	<-l.done
+}
+
+func TestOutboxRefusalPersistsWithoutAcknowledging(t *testing.T) {
+	f := setup(t)
+	if err := f.r.Enqueue("message", "request", map[string]string{"value": "retained"}); err != nil {
+		t.Fatal(err)
+	}
+	original := f.r.Outbox()[0].Body
+	if err := f.r.Refuse("request", "409 revision_conflict"); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.r.Acknowledge("request"); err == nil {
+		t.Fatal("refusal became ACK")
+	}
+	f.r.Close()
+	r, err := Open(f.path, f.o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	e := r.Outbox()[0]
+	if e.Acknowledged || e.Refused != "409 revision_conflict" || !reflect.DeepEqual(e.Body, original) {
+		t.Fatalf("refusal changed bytes/outcome: %+v", e)
+	}
+}
+
+func TestGuardianControlRejectsUnknownFields(t *testing.T) {
+	l := &guardianLauncher{inner: guardianTestLauncher{}, executable: "/usr/bin/true", receipt: filepath.Join(t.TempDir(), "receipt"), deadline: func() int64 { return 1000 }}
+	cmd := exec.Command("/bin/sleep", "60")
+	cmd.Dir = t.TempDir()
+	cmd.Env = []string{"PATH=/usr/bin:/bin"}
+	if err := l.Wrap(cmd); err != nil {
+		t.Fatal(err)
+	}
+	inputFD, _ := syscall.Dup(int(l.childInput.Fd()))
+	controlFD, _ := syscall.Dup(int(l.childControl.Fd()))
+	input := os.NewFile(uintptr(inputFD), "input")
+	control := os.NewFile(uintptr(controlFD), "control")
+	defer input.Close()
+	defer control.Close()
+	defer l.CloseInput()
+	go func() {
+		var spec LaunchSpec
+		json.NewDecoder(input).Decode(&spec)
+		control.Write([]byte("{\"pid\":42,\"pgid\":42,\"untrusted\":true}\n"))
+		control.Close()
+	}()
+	if _, err := l.startedHandle(context.Background()); err == nil {
+		t.Fatal("unknown control field accepted")
+	}
+	<-l.done
+}
+
+func TestStoppedClockStillRetainsTerminalEvidence(t *testing.T) {
+	for _, now := range []int64{-1, 1, p.MaxInteger + 1} {
+		t.Run(fmt.Sprint(now), func(t *testing.T) {
+			f := setup(t)
+			accept(t, f)
+			last := f.r.state.Last
+			f.now = now
+			if _, err := f.r.Tick(); !errors.Is(err, ErrClockInvalid) {
+				t.Fatal("clock did not stop authority", err)
+			}
+			if f.r.state.Last != last {
+				t.Fatal("invalid clock changed retained evidence time")
+			}
+			if err := f.r.Enqueue("termination", "after-stop", map[string]string{"cause": "clock_invalid"}); err != nil {
+				t.Fatal("stopped clock prevented terminal evidence", err)
+			}
+			if err := f.r.Acknowledge("after-stop"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := f.r.RequestLease(f.o.Session); !errors.Is(err, ErrClockInvalid) {
+				t.Fatal("evidence restored execution authority", err)
+			}
+		})
 	}
 }

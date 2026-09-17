@@ -1,10 +1,9 @@
-// Package runner owns provisional, non-executing runner admission and lease state.
-// No method launches a process or qualifies a runtime. Trusted transport, measured
-// watchdog integration and evidence-authorized reconciliation are still required.
+// Package runner owns durable admission and explicitly development-only supervision.
 package runner
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
@@ -21,9 +20,14 @@ import (
 )
 
 var (
-	ErrStopped           = errors.New("runner_reconciliation_required")
-	ErrPolicy            = errors.New("runner_local_policy_refused")
-	ErrExecutionDisabled = errors.New("runner_execution_unqualified")
+	ErrStopped              = errors.New("runner_reconciliation_required")
+	ErrPolicy               = errors.New("local_policy_denied")
+	ErrExecutionDisabled    = errors.New("runner_execution_unqualified")
+	ErrLeaseExpired         = fmt.Errorf("lease_expired: %w", ErrStopped)
+	ErrPolicyChanged        = fmt.Errorf("local_policy_changed: %w: %w", ErrPolicy, ErrStopped)
+	ErrGrantExpired         = fmt.Errorf("grant_expired: %w: %w", ErrPolicy, ErrStopped)
+	ErrAttemptBudgetExpired = fmt.Errorf("attempt_budget_expired: %w", ErrStopped)
+	ErrClockInvalid         = fmt.Errorf("clock_invalid: %w", ErrStopped)
 )
 
 // Session comes from authenticated control-plane reconciliation, never a wire
@@ -71,6 +75,10 @@ type event struct {
 	At           int64              `json:"at"`
 	Reason       string             `json:"reason,omitempty"`
 	Termination  *TerminationRecord `json:"termination,omitempty"`
+	Runtime      *LaunchRecord      `json:"runtime,omitempty"`
+	Guardian     *GuardianReport    `json:"guardian,omitempty"`
+	Outbox       *OutboxEntry       `json:"outbox,omitempty"`
+	Key          string             `json:"key,omitempty"`
 }
 type state struct {
 	Session      Session
@@ -88,6 +96,10 @@ type state struct {
 	Last         int64
 	Messages     map[string]p.Message
 	Termination  *TerminationRecord
+	Runtime      *LaunchRecord
+	Guardian     *GuardianReport
+	Starting     bool
+	Outbox       []OutboxEntry
 }
 
 type Runner struct {
@@ -96,6 +108,8 @@ type Runner struct {
 	options                 Options
 	state                   state
 	failed                  bool
+	prepared                *preparedLaunch
+	guardian                *guardianLauncher
 	beforeTerminationCommit func() // instance-local failure seam; nil in normal use
 }
 type Status struct {
@@ -105,9 +119,11 @@ type Status struct {
 	StopRequired bool
 	Quarantined  bool
 	Reason       string
-	// Always false. Lease metadata is never a process launch capability.
+	// True only after a locally authorized development launch.
 	ExecutionEnabled bool
 	Termination      *TerminationRecord
+	Runtime          *LaunchRecord
+	Guardian         *GuardianReport
 }
 
 func id() string {
@@ -191,6 +207,10 @@ func Open(path string, o Options) (*Runner, error) {
 		log.Close()
 		return nil, j.ErrUnavailable
 	}
+	if err = r.recoverLaunch(); err != nil {
+		log.Close()
+		return nil, err
+	}
 	if err = r.commit(event{Kind: "restart", Boot: id(), At: o.MonotonicMS(), Reason: "supervisor_restart"}); err != nil {
 		log.Close()
 		return nil, err
@@ -224,6 +244,9 @@ func reduce(old state, e event) (state, error) {
 	}
 	if s.Boot == "" {
 		return old, p.Malformed
+	}
+	if handled, next, err := reduceRuntime(s, e); handled {
+		return next, err
 	}
 	if e.Kind == "restart" {
 		if !p.ValidID(e.Boot) || e.Boot == s.Boot {
@@ -341,6 +364,9 @@ func reduce(old state, e event) (state, error) {
 }
 
 func (r *Runner) commit(e event) error {
+	if r.failed || r.log == nil {
+		return j.ErrUnavailable
+	}
 	s, err := reduce(r.state, e)
 	if err != nil {
 		return err
@@ -374,24 +400,40 @@ func (r *Runner) session(s Session) error {
 	}
 	return nil
 }
-func (r *Runner) stop(at int64, reason string) error {
-	if r.state.Stopped {
+func stopError(reason string) error {
+	switch reason {
+	case "lease_expired":
+		return ErrLeaseExpired
+	case "local_policy_changed":
+		return ErrPolicyChanged
+	case "grant_expired":
+		return ErrGrantExpired
+	case "attempt_budget_expired":
+		return ErrAttemptBudgetExpired
+	case "clock_invalid":
+		return ErrClockInvalid
+	default:
 		return ErrStopped
 	}
-	if at < 0 || at > p.MaxInteger {
+}
+func (r *Runner) stop(at int64, reason string) error {
+	if r.state.Stopped {
+		return stopError(r.state.Reason)
+	}
+	if at < r.state.Last || at > p.MaxInteger {
 		at = r.state.Last
 	}
 	if err := r.commit(event{Kind: "stop", At: at, Reason: reason}); err != nil {
 		return err
 	}
-	return ErrStopped
+	return stopError(r.state.Reason)
 }
 func (r *Runner) check() (int64, error) {
 	if r.failed || r.log == nil {
 		return 0, j.ErrUnavailable
 	}
 	if r.state.Stopped {
-		return 0, ErrStopped
+		return 0, stopError(r.state.Reason)
 	}
 	if err := r.log.Check(); err != nil {
 		r.failed = true
@@ -400,6 +442,9 @@ func (r *Runner) check() (int64, error) {
 	now := r.options.MonotonicMS()
 	if now < r.state.Last || now < 0 || now > p.MaxInteger {
 		return now, r.stop(now, "clock_invalid")
+	}
+	if r.state.AttemptBy != nil && now >= *r.state.AttemptBy {
+		return now, r.stop(now, "attempt_budget_expired")
 	}
 	if r.state.StopBy != nil && now >= *r.state.StopBy {
 		return now, r.stop(now, "lease_expired")
@@ -413,9 +458,6 @@ func (r *Runner) check() (int64, error) {
 		wall := r.options.WallTime().UnixMilli()
 		if r.state.Input == nil || wall < r.state.Input.Request.Envelope.NotBeforeMS || wall >= r.state.Input.Request.Envelope.ExpiresMS {
 			return now, r.stop(now, "grant_expired")
-		}
-		if r.state.AttemptBy != nil && now >= *r.state.AttemptBy {
-			return now, r.stop(now, "attempt_budget_expired")
 		}
 	}
 	r.state.Last = now
@@ -590,7 +632,7 @@ func (r *Runner) Stop() error {
 	return r.stop(r.options.MonotonicMS(), "operator_stop")
 }
 func (r *Runner) status() Status {
-	s := Status{RunnerBoot: r.state.Boot, StopRequired: r.state.Stopped || r.failed, Quarantined: r.state.Stopped || r.failed, Reason: r.state.Reason}
+	s := Status{Runtime: clone(r.state.Runtime), Guardian: clone(r.state.Guardian), ExecutionEnabled: !r.state.Stopped && !r.failed && r.state.Runtime != nil && r.state.Runtime.PID > 0 && r.state.Guardian == nil, RunnerBoot: r.state.Boot, StopRequired: r.state.Stopped || r.failed, Quarantined: r.state.Stopped || r.failed, Reason: r.state.Reason}
 	if r.state.Termination != nil {
 		v := clone(*r.state.Termination)
 		s.Termination = &v
@@ -608,8 +650,19 @@ func (r *Runner) status() Status {
 	return s
 }
 func (r *Runner) Status() Status { r.mu.Lock(); defer r.mu.Unlock(); return r.status() }
-func (r *Runner) Launch() error  { return ErrExecutionDisabled }
 func (r *Runner) Close() error {
+	r.StopGuardian()
+	// Revoke the scoped boundary on every error path while its receipt callbacks
+	// can still journal terminal accounting. Close never implies quiescence.
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+	r.CloseBoundary(ctx)
+	r.mu.Lock()
+	through, releasable := r.releasableHarness()
+	r.mu.Unlock()
+	if releasable {
+		_ = r.ReleaseHarness(ctx, through)
+	}
+	cancel()
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.failed = true
