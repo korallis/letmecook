@@ -176,7 +176,7 @@ func TestIdentityMigrationAndFixtureRefusal(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer r.Close()
-	if r.meta.SchemaVersion != 6 || r.meta.Generation != generation {
+	if r.meta.SchemaVersion != 7 || r.meta.Generation != generation {
 		t.Fatal("v2 migration")
 	}
 	if ok, err := r.IdentityConfigured(ctx); err != nil || ok {

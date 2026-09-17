@@ -222,7 +222,7 @@ func TestRepositoryConcurrentApprovalAndSchemaFourMigration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer reopened.Close()
-	if reopened.meta.SchemaVersion != 6 {
+	if reopened.meta.SchemaVersion != 7 {
 		t.Fatal("migration")
 	}
 	var wg sync.WaitGroup
