@@ -177,6 +177,7 @@ type RetryInputs struct {
 	Dispatched   int64            `json:"dispatched"`
 	FirstMS      int64            `json:"first_ms,omitempty"`
 	Ceiling      g.Budgets        `json:"ceiling,omitzero"`
+	Reserved     g.Budgets        `json:"reserved,omitzero"`
 }
 
 // BoundaryAttestation is a runner's durable statement that an attempt's
@@ -1776,6 +1777,27 @@ func (s *Store) RetryInputs(ctx context.Context, taskID string) (RetryInputs, er
 	v.Ceiling = v.Last.Request.Envelope.Budgets
 	if v.Grant.ID != "" {
 		v.Ceiling = v.Grant.Envelope.Budgets
+	}
+	// Read exact immutable allowances in this same snapshot. Failed/stopped
+	// attempts retain their entire charge; usage receipts are not refunds.
+	for _, attempt := range v.Attempts {
+		if attempt.DispatchID == "" {
+			continue
+		}
+		prior, err := loadDispatch(ctx, tx, attempt.DispatchID)
+		if err != nil {
+			return RetryInputs{}, err
+		}
+		b := prior.Allowance
+		v.Reserved.Requests += b.Requests
+		v.Reserved.Subattempts += b.Subattempts
+		v.Reserved.ProviderOutputTokens += b.ProviderOutputTokens
+		if b.ProviderCostMicros != nil {
+			if v.Reserved.ProviderCostMicros == nil {
+				v.Reserved.ProviderCostMicros = new(int64)
+			}
+			*v.Reserved.ProviderCostMicros += *b.ProviderCostMicros
+		}
 	}
 	if v.Cause, err = rcTerminalCause(ctx, tx, v.Last, last.State, s.meta.DaemonBoot); err != nil {
 		return RetryInputs{}, err

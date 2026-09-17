@@ -232,13 +232,9 @@ func BuildDispatch(ctx context.Context, source Reader, proposal Proposal, messag
 		return execwire.DispatchRequest{}, err
 	}
 	grant := proposal.Grant
-	b := grant.Envelope.Budgets
-	b.Attempts = 1
-	b.Retries = 0
-	b.Concurrency = 1
-	b.AttemptMS = attemptMS
-	b.TotalMS = attemptMS
-	b.FirstOutputMS = min(b.FirstOutputMS, attemptMS)
-	b.IdleMS = min(b.IdleMS, attemptMS)
+	b, err := g.AttemptAllowance(grant.Envelope.Budgets, g.Budgets{}, 0, attemptMS)
+	if err != nil {
+		return execwire.DispatchRequest{}, err
+	}
 	return execwire.DispatchRequest{ID: messageID, Request: g.Request{GrantID: grant.ID, TaskID: grant.TaskID, GrantRevision: grant.Revision, Action: "execute", Envelope: grant.Envelope}, Decision: proposal.Decision, Allowance: b}, nil
 }

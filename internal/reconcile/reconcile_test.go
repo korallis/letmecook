@@ -18,6 +18,7 @@ import (
 	c "github.com/korallis/letmecook/internal/control"
 	"github.com/korallis/letmecook/internal/execwire"
 	"github.com/korallis/letmecook/internal/store"
+	"github.com/korallis/letmecook/internal/workflow"
 	p "github.com/korallis/letmecook/schemas/execution"
 )
 
@@ -1077,4 +1078,47 @@ func TestReconcileCrashChild(t *testing.T) {
 	// Hold the store open until the parent kills this process.
 	_, _ = bufio.NewReader(os.Stdin).ReadByte()
 	t.Fatal("crash child escaped")
+}
+
+func TestOwnerAllowanceSurvivesConfirmedStopResumeRetries(t *testing.T) {
+	f := newFixture(t)
+	grant := f.grant()
+	b := &grant.Envelope.Budgets
+	b.Requests, b.Subattempts, b.Attempts, b.Retries = 12, 12, 3, 2
+	b.TotalMS, b.AttemptMS = 360000, 120000
+	f.facts.Revision++
+	f.facts.LocalEnvelope.Budgets = *b
+	if err := f.s.PublishEligibility(ctx, f.owner, f.facts.Revision-1, f.facts); err != nil {
+		t.Fatal(err)
+	}
+	k := f.newTaskWithGrant(t, grant)
+	request, err := workflow.BuildDispatch(ctx, f.s, workflow.Proposal{Grant: k.grant, Decision: k.request.Decision}, uuid(), 120000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	k.request = store.DispatchRequest{ID: request.ID, Request: request.Request, Decision: request.Decision, Allowance: request.Allowance}
+	for epoch := int64(1); epoch <= 3; epoch++ {
+		k.start(t)
+		stop := c.Request{ID: uuid(), Kind: c.PauseTask, TaskID: k.id().TaskID, Cause: "operator"}
+		if _, err := f.s.RequestStop(ctx, f.owner, stop); err != nil {
+			t.Fatal(err)
+		}
+		k.report(t, k.terminated(stop.ID, "terminated", "quiescent"), quiescent())
+		f.sweep(t, false)
+		if !f.released(t, k.d.ID) {
+			t.Fatal("confirmed stop retained reservation")
+		}
+		if _, err := f.s.ResumeLatches(ctx, f.owner, k.id().TaskID, uuid()); err != nil {
+			t.Fatal(err)
+		}
+		next, err := PlanRetry(ctx, f.deps(), k.id().TaskID)
+		if epoch == 3 {
+			requireCode(t, err, "attempt_ceiling")
+			break
+		}
+		if err != nil {
+			t.Fatal(epoch, err)
+		}
+		k.request = next
+	}
 }
