@@ -12,6 +12,7 @@ import (
 	"time"
 
 	g "github.com/korallis/letmecook/internal/authority"
+	c "github.com/korallis/letmecook/internal/control"
 	sc "github.com/korallis/letmecook/internal/scheduler"
 	p "github.com/korallis/letmecook/schemas/execution"
 )
@@ -326,7 +327,17 @@ func dispatchAllowed(ctx context.Context, tx *sql.Tx, request g.Request, now int
 	if stopped {
 		return g.Deny("stopped", "task")
 	}
-	return checkExecution(ctx, tx, request, now)
+	if err := checkExecution(ctx, tx, request, now); err != nil {
+		return err
+	}
+	stopped, err := controlSuppressed(ctx, tx, request.TaskID, request.GrantID)
+	if err != nil {
+		return err
+	}
+	if stopped {
+		return g.Deny("stop_latched", "dispatch")
+	}
+	return nil
 }
 
 func placement(ctx context.Context, tx *sql.Tx, facts sc.Eligibility) error {
@@ -668,6 +679,9 @@ func (s *Store) StopDispatch(ctx context.Context, actor, taskID string) error {
 			return err
 		}
 		if _, err := tx.ExecContext(ctx, "INSERT INTO dispatch_stops VALUES(?,?) ON CONFLICT(task_id) DO NOTHING", taskID, who.ID); err != nil {
+			return err
+		}
+		if _, err := latchStop(ctx, tx, actor, c.Request{ID: dispatchID(taskID, "legacy-stop"), Kind: c.PauseTask, TaskID: taskID, Cause: "operator"}, s.controlStamp()); err != nil {
 			return err
 		}
 		m := p.Message{Version: p.FencedVersion, Kind: "transition", Identity: p.Identity{Generation: s.meta.Generation, TaskID: taskID}, From: p.Assigned, To: p.Stopping}

@@ -465,7 +465,7 @@ func TestExecutionGrantSchemaThreeMigration(t *testing.T) {
 	}
 	defer r.Close()
 	after := snapshot(t, r)
-	if after.SchemaVersion != 7 || after.Generation != before.Generation || len(after.Events) != 0 {
+	if after.SchemaVersion != 8 || after.Generation != before.Generation || len(after.Events) != 0 {
 		t.Fatal(after)
 	}
 	grant := approve(t, r, "", grantFixture())
