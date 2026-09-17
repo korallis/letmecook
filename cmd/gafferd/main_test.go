@@ -230,3 +230,35 @@ func TestFailedStartupNoReadyClaim(t *testing.T) {
 		t.Fatal("failed startup claimed ready")
 	}
 }
+
+func TestExecutionFlagValidation(t *testing.T) {
+	dir := t.TempDir()
+	base := []string{"--state-dir", filepath.Join(dir, "state"), "--artifacts-dir", filepath.Join(dir, "artifacts"), "--listen", "127.0.0.1:0"}
+	for name, extra := range map[string][]string{
+		"no TLS":                   {"--execution-listen", "127.0.0.1:0"},
+		"TLS requires execution":   {"--tls-cert", "missing", "--tls-key", "missing", "--endpoint", "https://127.0.0.1:7443"},
+		"execution hostname":       {"--execution-listen", "localhost:7444", "--tls-cert", "missing"},
+		"execution port":           {"--execution-listen", "127.0.0.1:07444", "--tls-cert", "missing"},
+		"profile empty":            {"--allow-development-profile="},
+		"profile invalid":          {"--allow-development-profile=not/a/profile"},
+		"profile duplicate":        {"--allow-development-profile=macos-sandbox-exec-dev", "--allow-development-profile=macos-sandbox-exec-dev"},
+		"verification unknown":     {"--verification-isolation-profile=unknown"},
+		"verification not allowed": {"--verification-isolation-profile=macos-sandbox-exec-dev"},
+		"relative backup":          {"--backup-dir=relative"},
+		"unclean backup":           {"--backup-dir=/private/tmp/../backups"},
+		"gateway missing":          {"--gateway-config=missing"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var out bytes.Buffer
+			if err := run(context.Background(), append(append([]string{}, base...), extra...), &out); err == nil || out.Len() != 0 {
+				t.Fatal("invalid flags admitted")
+			}
+		})
+	}
+	for _, extra := range [][]string{{"--execution-listen=127.0.0.1:0"}, {"--auto-retry"}, {"--allow-development-profile=macos-sandbox-exec-dev"}, {"--verification-isolation-profile=unqualified"}, {"--backup-dir=" + filepath.Join(dir, "backup")}} {
+		var out bytes.Buffer
+		if err := run(context.Background(), append([]string{"--fixture"}, extra...), &out); err == nil || out.Len() != 0 {
+			t.Fatal("fixture accepted install seams")
+		}
+	}
+}

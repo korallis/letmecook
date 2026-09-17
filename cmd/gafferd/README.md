@@ -61,6 +61,12 @@ Installation configuration is **flags only**:
 | `--state-dir` | Absolute clean path on local disk. Creates final directory only, under an existing parent; private owned mode 0700. Holds `state.db`, WAL/SHM and directory-inode ownership lock. |
 | `--artifacts-dir` | Same path, ownership and creation requirements as `--state-dir`, validated on each startup. May change on reopen or share/nest with other configured directories; no artifact lock or persisted path binding. Reserved location only: no uploads, artifact writes, custody or acknowledgements. |
 | `--listen` | Explicit IP:port, 0..65535; plaintext requires exact `127.0.0.1`. HTTPS permits an operator-selected IP (including explicit wildcard); no DNS discovery or proxy exception. 0 requests an ephemeral port. |
+| `--execution-listen` | Explicit IP:port for the separate execution listener; required together with `--tls-cert`, `--tls-key` and `--endpoint`. Refused in plaintext and fixture modes. 0 requests an ephemeral port. |
+| `--allow-development-profile` | Repeatable explicit profile IDs, default none. Parsed and validated here; admission wiring awaits the S0a merge. Never grants supported-runtime status. |
+| `--verification-isolation-profile` | Default `unqualified` (refuses execution). The provisional `macos-sandbox-exec-dev` name also requires an explicit matching development-profile allow flag; verification implementation remains pending. |
+| `--auto-retry` | Boolean, default false. Passed to the refusing reconcile seam; no automatic retry exists in this slice. |
+| `--gateway-config` | Optional explicit `gateway-config-v1` JSON file. Validates HTTPS endpoint, file credential reference, protocols and models without reading the credential or contacting the gateway. |
+| `--backup-dir` | Optional absolute clean destination root; parsed only until the backup service is composed. |
 | `--fixture` | Exclusive alternative to install flags: creates/seeds fresh disposable public #94 data and serves the existing shell. Graceful exit removes only this owned fixture directory. |
 
 Choose any operator-controlled host meeting the local storage requirements. No
@@ -84,6 +90,24 @@ application identities, checked before migration; no version relabelling/import.
 
 [Identity setup, API and recovery](IDENTITY.md) owns the provisional #13 boundary.
 Follow it for local owner commands, HTTPS configuration and runner enrollment.
+
+## Execution listener (provisional)
+
+HTTPS installs now also require `--execution-listen IP:port`. Startup retains its
+existing owner line and prints `execution https://<ip>:<port>/x/v1` on a second line.
+The second listener uses the same client pins with **only** ALPN
+`execution-provisional-v2`, then serves HTTP/1.1 through an opaque, pre-authenticated
+TLS connection. Ordinary `http/1.1`, h2 and missing-ALPN clients never reach a request
+handler. Requests require a current enabled runner; owner credentials do not grant
+runner authority. Host must match the accepted socket's IP:port; no Origin,
+forwarding or proxy exception is added. Use an explicit IP SAN for that endpoint.
+Handshake and header budgets are 5 seconds, read/write 150 seconds, idle 60 seconds,
+headers 8192 bytes. Control/long/bulk pools are 16/8/2 with 2/30/120-second context
+budgets. The existing owner listener keeps its short timeouts. This slice mounts an
+empty execution route set: it adds transport and interface seams, **not** route
+bodies, a supported runtime, launch, finalization or retry. Startup calls the
+reconcile seam before opening either listener; only its explicit not-implemented
+result is temporarily tolerated. A real recovery error prevents startup.
 
 ## Read contract for #95
 

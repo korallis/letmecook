@@ -95,7 +95,7 @@ func TestIdentityCLI(t *testing.T) {
 	}
 	addr := listener.Addr().String()
 	listener.Close()
-	args := append(append([]string{}, base...), "--listen", addr, "--endpoint", "https://"+addr, "--tls-cert", serverFile, "--tls-key", serverKey)
+	args := append(append([]string{}, base...), "--listen", addr, "--execution-listen", "127.0.0.1:0", "--endpoint", "https://"+addr, "--tls-cert", serverFile, "--tls-key", serverKey)
 	live, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	reader, writer := io.Pipe()
@@ -111,6 +111,9 @@ func TestIdentityCLI(t *testing.T) {
 	scanner := bufio.NewScanner(reader)
 	if !scanner.Scan() || scanner.Text() != "store-only https://"+addr+"/api/v1/status" {
 		t.Fatal("TLS startup")
+	}
+	if !scanner.Scan() || !strings.HasPrefix(scanner.Text(), "execution https://127.0.0.1:") || !strings.HasSuffix(scanner.Text(), "/x/v1") {
+		t.Fatal("execution startup", scanner.Text())
 	}
 	roots := x509.NewCertPool()
 	roots.AddCert(server.Leaf)
