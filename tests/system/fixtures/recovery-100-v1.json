@@ -1,0 +1,5003 @@
+{
+  "version": 1,
+  "fixture": "recovery-100-v1",
+  "scenario": "S-13",
+  "purpose": "100-task recovery load: SIGKILL gafferd 10 times with --auto-retry enabled and measure restart-to-admission and restart-to-full-classification.",
+  "repos": {
+    "greeting": {
+      "profile": "greeting-echo-v1",
+      "base_commit": "479eec44aa5cda0a5f91a48b2e5b6119c18570ba"
+    },
+    "calc": {
+      "profile": "calc-go-v1",
+      "base_commit": "cd739784278eb03050235d38d07c327c7811b36b"
+    },
+    "notes": {
+      "profile": "notes-links-v1",
+      "base_commit": "82cabef608abfb716d1415eb14e9dcb2044f6712"
+    }
+  },
+  "base_policy": "Same pinned initial commits as corpus-v1.json; every task bases on its repository initial commit (no chaining, no merge route).",
+  "sequencing": {
+    "mode": "sequential",
+    "detail": "One active attempt at a time in id order, as in S-12; recovery pressure comes from daemon kills, not concurrency."
+  },
+  "restart_schedule": {
+    "target": "gafferd (the daemon), SIGKILL",
+    "kills": [
+      {
+        "seq": 1,
+        "signal": "SIGKILL",
+        "during_task_index": 8,
+        "task_id": "recovery-task-008",
+        "detail": "Kill the daemon while this task is in flight; the runner, guardian and job keep running across the restart."
+      },
+      {
+        "seq": 2,
+        "signal": "SIGKILL",
+        "during_task_index": 18,
+        "task_id": "recovery-task-018",
+        "detail": "Kill the daemon while this task is in flight; the runner, guardian and job keep running across the restart."
+      },
+      {
+        "seq": 3,
+        "signal": "SIGKILL",
+        "during_task_index": 28,
+        "task_id": "recovery-task-028",
+        "detail": "Kill the daemon while this task is in flight; the runner, guardian and job keep running across the restart."
+      },
+      {
+        "seq": 4,
+        "signal": "SIGKILL",
+        "during_task_index": 38,
+        "task_id": "recovery-task-038",
+        "detail": "Kill the daemon while this task is in flight; the runner, guardian and job keep running across the restart."
+      },
+      {
+        "seq": 5,
+        "signal": "SIGKILL",
+        "during_task_index": 48,
+        "task_id": "recovery-task-048",
+        "detail": "Kill the daemon while this task is in flight; the runner, guardian and job keep running across the restart."
+      },
+      {
+        "seq": 6,
+        "signal": "SIGKILL",
+        "during_task_index": 58,
+        "task_id": "recovery-task-058",
+        "detail": "Kill the daemon while this task is in flight; the runner, guardian and job keep running across the restart."
+      },
+      {
+        "seq": 7,
+        "signal": "SIGKILL",
+        "during_task_index": 68,
+        "task_id": "recovery-task-068",
+        "detail": "Kill the daemon while this task is in flight; the runner, guardian and job keep running across the restart."
+      },
+      {
+        "seq": 8,
+        "signal": "SIGKILL",
+        "during_task_index": 78,
+        "task_id": "recovery-task-078",
+        "detail": "Kill the daemon while this task is in flight; the runner, guardian and job keep running across the restart."
+      },
+      {
+        "seq": 9,
+        "signal": "SIGKILL",
+        "during_task_index": 88,
+        "task_id": "recovery-task-088",
+        "detail": "Kill the daemon while this task is in flight; the runner, guardian and job keep running across the restart."
+      },
+      {
+        "seq": 10,
+        "signal": "SIGKILL",
+        "during_task_index": 98,
+        "task_id": "recovery-task-098",
+        "detail": "Kill the daemon while this task is in flight; the runner, guardian and job keep running across the restart."
+      }
+    ],
+    "kill_count": 10,
+    "auto_retry": "--auto-retry is enabled for this scenario only (harness_crash, lease_expired, runner_restarted, daemon_restart classes).",
+    "after_each_kill": [
+      "Start a fresh gafferd against the same state/artifacts dirs (new daemon_boot, same generation).",
+      "Run reconcile startup; wait for every non-terminal attempt to be classified.",
+      "Re-import runner facts if the runner restarted; otherwise reuse the live session.",
+      "Resume dispatching from the first non-terminal task."
+    ],
+    "repeat_for_samples": "S-13 asserts p95 over at least 20 restarts; run this 100-task cycle twice (20 kills total) when 10 samples are insufficient."
+  },
+  "timing_method": {
+    "timestamps_per_restart": [
+      {
+        "name": "kill_unix_ns",
+        "source": "test harness clock at SIGKILL"
+      },
+      {
+        "name": "restart_ready_unix_ns",
+        "source": "first successful authenticated owner API response from the new daemon"
+      },
+      {
+        "name": "first_admitted_dispatch_unix_ns",
+        "source": "first dispatch returning 201 after restart (daemon event log)"
+      },
+      {
+        "name": "all_classified_unix_ns",
+        "source": "first moment no attempt is non-terminal and no reconcile classification is pending (daemon event log)"
+      }
+    ],
+    "metrics": [
+      {
+        "name": "recovery_ms",
+        "formula": "first_admitted_dispatch_unix_ns - restart_ready_unix_ns"
+      },
+      {
+        "name": "classify_ms",
+        "formula": "all_classified_unix_ns - restart_ready_unix_ns"
+      }
+    ],
+    "percentiles": "Nearest-rank over the sorted samples: p50 = ceil(0.5*n)-th, p95 = ceil(0.95*n)-th, max = n-th. With n=10, p95 is the 10th (max) sample; reach n>=20 by repeating the cycle.",
+    "old_lease_barrier": "The measured recovery window deliberately includes the 30 s old-lease barrier (lease validity 20 s plus drift/termination margin) whenever a pre-restart lease must lapse before its dispatch is releasable; no timing sample may subtract it.",
+    "unknown_is_blocking": "Attempts classified unknown (remote work or process unconfirmed) count as blocking: all_classified is not reached while any attempt is unknown, and such tasks are not counted as recovered."
+  },
+  "tasks": [
+    {
+      "id": "recovery-task-001",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 1.",
+      "criteria": [
+        {
+          "id": "r001-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-002",
+      "repo": "calc",
+      "brief": "Apply the run-002.md change for recovery task 2.",
+      "criteria": [
+        {
+          "id": "r002-edit-applied",
+          "text": "run-002.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-002.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-002.md",
+                "content": "# Run 2\n\nRecovery run marker for task 2.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-003",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-003.md change for recovery task 3.",
+      "criteria": [
+        {
+          "id": "r003-edit-applied",
+          "text": "docs/recovery-003.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-003.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-003.md",
+                "content": "# Recovery 3\n\nSynthetic recovery marker page for task 3.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-004",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 4.",
+      "criteria": [
+        {
+          "id": "r004-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-005",
+      "repo": "calc",
+      "brief": "Apply the run-005.md change for recovery task 5.",
+      "criteria": [
+        {
+          "id": "r005-edit-applied",
+          "text": "run-005.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-005.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-005.md",
+                "content": "# Run 5\n\nRecovery run marker for task 5.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-006",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-006.md change for recovery task 6.",
+      "criteria": [
+        {
+          "id": "r006-edit-applied",
+          "text": "docs/recovery-006.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-006.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-006.md",
+                "content": "# Recovery 6\n\nSynthetic recovery marker page for task 6.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-007",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 7.",
+      "criteria": [
+        {
+          "id": "r007-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-008",
+      "repo": "calc",
+      "brief": "Apply the run-008.md change for recovery task 8.",
+      "criteria": [
+        {
+          "id": "r008-edit-applied",
+          "text": "run-008.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-008.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-008.md",
+                "content": "# Run 8\n\nRecovery run marker for task 8.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-009",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-009.md change for recovery task 9.",
+      "criteria": [
+        {
+          "id": "r009-edit-applied",
+          "text": "docs/recovery-009.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-009.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-009.md",
+                "content": "# Recovery 9\n\nSynthetic recovery marker page for task 9.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-010",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 10; the first attempt crashes and --auto-retry must complete it.",
+      "criteria": [
+        {
+          "id": "r010-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "crash",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          },
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "retry_then_succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Crash-then-succeed pair: exercises auto-retry (S-13 only) across the restart barrier."
+    },
+    {
+      "id": "recovery-task-011",
+      "repo": "calc",
+      "brief": "Apply the run-011.md change for recovery task 11.",
+      "criteria": [
+        {
+          "id": "r011-edit-applied",
+          "text": "run-011.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-011.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-011.md",
+                "content": "# Run 11\n\nRecovery run marker for task 11.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-012",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-012.md change for recovery task 12.",
+      "criteria": [
+        {
+          "id": "r012-edit-applied",
+          "text": "docs/recovery-012.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-012.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-012.md",
+                "content": "# Recovery 12\n\nSynthetic recovery marker page for task 12.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-013",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 13.",
+      "criteria": [
+        {
+          "id": "r013-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-014",
+      "repo": "calc",
+      "brief": "Apply the run-014.md change for recovery task 14.",
+      "criteria": [
+        {
+          "id": "r014-edit-applied",
+          "text": "run-014.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-014.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-014.md",
+                "content": "# Run 14\n\nRecovery run marker for task 14.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-015",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-015.md change for recovery task 15.",
+      "criteria": [
+        {
+          "id": "r015-edit-applied",
+          "text": "docs/recovery-015.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-015.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-015.md",
+                "content": "# Recovery 15\n\nSynthetic recovery marker page for task 15.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-016",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 16.",
+      "criteria": [
+        {
+          "id": "r016-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-017",
+      "repo": "calc",
+      "brief": "Apply the run-017.md change for recovery task 17.",
+      "criteria": [
+        {
+          "id": "r017-edit-applied",
+          "text": "run-017.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-017.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-017.md",
+                "content": "# Run 17\n\nRecovery run marker for task 17.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-018",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-018.md change for recovery task 18.",
+      "criteria": [
+        {
+          "id": "r018-edit-applied",
+          "text": "docs/recovery-018.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-018.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-018.md",
+                "content": "# Recovery 18\n\nSynthetic recovery marker page for task 18.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-019",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 19.",
+      "criteria": [
+        {
+          "id": "r019-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-020",
+      "repo": "calc",
+      "brief": "Apply the run-020.md change for recovery task 20; the first attempt crashes and --auto-retry must complete it.",
+      "criteria": [
+        {
+          "id": "r020-edit-applied",
+          "text": "run-020.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-020.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "crash",
+            "edits": [
+              {
+                "path": "run-020.md",
+                "content": "# Run 20\n\nRecovery run marker for task 20.\n"
+              }
+            ]
+          },
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-020.md",
+                "content": "# Run 20\n\nRecovery run marker for task 20.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "retry_then_succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Crash-then-succeed pair: exercises auto-retry (S-13 only) across the restart barrier."
+    },
+    {
+      "id": "recovery-task-021",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-021.md change for recovery task 21.",
+      "criteria": [
+        {
+          "id": "r021-edit-applied",
+          "text": "docs/recovery-021.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-021.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-021.md",
+                "content": "# Recovery 21\n\nSynthetic recovery marker page for task 21.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-022",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 22.",
+      "criteria": [
+        {
+          "id": "r022-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-023",
+      "repo": "calc",
+      "brief": "Apply the run-023.md change for recovery task 23.",
+      "criteria": [
+        {
+          "id": "r023-edit-applied",
+          "text": "run-023.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-023.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-023.md",
+                "content": "# Run 23\n\nRecovery run marker for task 23.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-024",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-024.md change for recovery task 24.",
+      "criteria": [
+        {
+          "id": "r024-edit-applied",
+          "text": "docs/recovery-024.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-024.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-024.md",
+                "content": "# Recovery 24\n\nSynthetic recovery marker page for task 24.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-025",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 25.",
+      "criteria": [
+        {
+          "id": "r025-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-026",
+      "repo": "calc",
+      "brief": "Apply the run-026.md change for recovery task 26.",
+      "criteria": [
+        {
+          "id": "r026-edit-applied",
+          "text": "run-026.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-026.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-026.md",
+                "content": "# Run 26\n\nRecovery run marker for task 26.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-027",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-027.md change for recovery task 27.",
+      "criteria": [
+        {
+          "id": "r027-edit-applied",
+          "text": "docs/recovery-027.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-027.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-027.md",
+                "content": "# Recovery 27\n\nSynthetic recovery marker page for task 27.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-028",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 28.",
+      "criteria": [
+        {
+          "id": "r028-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-029",
+      "repo": "calc",
+      "brief": "Apply the run-029.md change for recovery task 29.",
+      "criteria": [
+        {
+          "id": "r029-edit-applied",
+          "text": "run-029.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-029.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-029.md",
+                "content": "# Run 29\n\nRecovery run marker for task 29.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-030",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-030.md change for recovery task 30; the first attempt crashes and --auto-retry must complete it.",
+      "criteria": [
+        {
+          "id": "r030-edit-applied",
+          "text": "docs/recovery-030.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-030.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "crash",
+            "edits": [
+              {
+                "path": "docs/recovery-030.md",
+                "content": "# Recovery 30\n\nSynthetic recovery marker page for task 30.\n"
+              }
+            ]
+          },
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-030.md",
+                "content": "# Recovery 30\n\nSynthetic recovery marker page for task 30.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "retry_then_succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Crash-then-succeed pair: exercises auto-retry (S-13 only) across the restart barrier."
+    },
+    {
+      "id": "recovery-task-031",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 31.",
+      "criteria": [
+        {
+          "id": "r031-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-032",
+      "repo": "calc",
+      "brief": "Apply the run-032.md change for recovery task 32.",
+      "criteria": [
+        {
+          "id": "r032-edit-applied",
+          "text": "run-032.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-032.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-032.md",
+                "content": "# Run 32\n\nRecovery run marker for task 32.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-033",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-033.md change for recovery task 33.",
+      "criteria": [
+        {
+          "id": "r033-edit-applied",
+          "text": "docs/recovery-033.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-033.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-033.md",
+                "content": "# Recovery 33\n\nSynthetic recovery marker page for task 33.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-034",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 34.",
+      "criteria": [
+        {
+          "id": "r034-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-035",
+      "repo": "calc",
+      "brief": "Apply the run-035.md change for recovery task 35.",
+      "criteria": [
+        {
+          "id": "r035-edit-applied",
+          "text": "run-035.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-035.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-035.md",
+                "content": "# Run 35\n\nRecovery run marker for task 35.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-036",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-036.md change for recovery task 36.",
+      "criteria": [
+        {
+          "id": "r036-edit-applied",
+          "text": "docs/recovery-036.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-036.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-036.md",
+                "content": "# Recovery 36\n\nSynthetic recovery marker page for task 36.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-037",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 37.",
+      "criteria": [
+        {
+          "id": "r037-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-038",
+      "repo": "calc",
+      "brief": "Apply the run-038.md change for recovery task 38.",
+      "criteria": [
+        {
+          "id": "r038-edit-applied",
+          "text": "run-038.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-038.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-038.md",
+                "content": "# Run 38\n\nRecovery run marker for task 38.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-039",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-039.md change for recovery task 39.",
+      "criteria": [
+        {
+          "id": "r039-edit-applied",
+          "text": "docs/recovery-039.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-039.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-039.md",
+                "content": "# Recovery 39\n\nSynthetic recovery marker page for task 39.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-040",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 40; the first attempt crashes and --auto-retry must complete it.",
+      "criteria": [
+        {
+          "id": "r040-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "crash",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          },
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "retry_then_succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Crash-then-succeed pair: exercises auto-retry (S-13 only) across the restart barrier."
+    },
+    {
+      "id": "recovery-task-041",
+      "repo": "calc",
+      "brief": "Apply the run-041.md change for recovery task 41.",
+      "criteria": [
+        {
+          "id": "r041-edit-applied",
+          "text": "run-041.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-041.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-041.md",
+                "content": "# Run 41\n\nRecovery run marker for task 41.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-042",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-042.md change for recovery task 42.",
+      "criteria": [
+        {
+          "id": "r042-edit-applied",
+          "text": "docs/recovery-042.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-042.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-042.md",
+                "content": "# Recovery 42\n\nSynthetic recovery marker page for task 42.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-043",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 43.",
+      "criteria": [
+        {
+          "id": "r043-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-044",
+      "repo": "calc",
+      "brief": "Apply the run-044.md change for recovery task 44.",
+      "criteria": [
+        {
+          "id": "r044-edit-applied",
+          "text": "run-044.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-044.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-044.md",
+                "content": "# Run 44\n\nRecovery run marker for task 44.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-045",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-045.md change for recovery task 45.",
+      "criteria": [
+        {
+          "id": "r045-edit-applied",
+          "text": "docs/recovery-045.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-045.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-045.md",
+                "content": "# Recovery 45\n\nSynthetic recovery marker page for task 45.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-046",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 46.",
+      "criteria": [
+        {
+          "id": "r046-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-047",
+      "repo": "calc",
+      "brief": "Apply the run-047.md change for recovery task 47.",
+      "criteria": [
+        {
+          "id": "r047-edit-applied",
+          "text": "run-047.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-047.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-047.md",
+                "content": "# Run 47\n\nRecovery run marker for task 47.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-048",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-048.md change for recovery task 48.",
+      "criteria": [
+        {
+          "id": "r048-edit-applied",
+          "text": "docs/recovery-048.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-048.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-048.md",
+                "content": "# Recovery 48\n\nSynthetic recovery marker page for task 48.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-049",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 49.",
+      "criteria": [
+        {
+          "id": "r049-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-050",
+      "repo": "calc",
+      "brief": "Apply the run-050.md change for recovery task 50; the first attempt crashes and --auto-retry must complete it.",
+      "criteria": [
+        {
+          "id": "r050-edit-applied",
+          "text": "run-050.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-050.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "crash",
+            "edits": [
+              {
+                "path": "run-050.md",
+                "content": "# Run 50\n\nRecovery run marker for task 50.\n"
+              }
+            ]
+          },
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-050.md",
+                "content": "# Run 50\n\nRecovery run marker for task 50.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "retry_then_succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Crash-then-succeed pair: exercises auto-retry (S-13 only) across the restart barrier."
+    },
+    {
+      "id": "recovery-task-051",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-051.md change for recovery task 51.",
+      "criteria": [
+        {
+          "id": "r051-edit-applied",
+          "text": "docs/recovery-051.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-051.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-051.md",
+                "content": "# Recovery 51\n\nSynthetic recovery marker page for task 51.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-052",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 52.",
+      "criteria": [
+        {
+          "id": "r052-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-053",
+      "repo": "calc",
+      "brief": "Apply the run-053.md change for recovery task 53.",
+      "criteria": [
+        {
+          "id": "r053-edit-applied",
+          "text": "run-053.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-053.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-053.md",
+                "content": "# Run 53\n\nRecovery run marker for task 53.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-054",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-054.md change for recovery task 54.",
+      "criteria": [
+        {
+          "id": "r054-edit-applied",
+          "text": "docs/recovery-054.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-054.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-054.md",
+                "content": "# Recovery 54\n\nSynthetic recovery marker page for task 54.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-055",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 55.",
+      "criteria": [
+        {
+          "id": "r055-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-056",
+      "repo": "calc",
+      "brief": "Apply the run-056.md change for recovery task 56.",
+      "criteria": [
+        {
+          "id": "r056-edit-applied",
+          "text": "run-056.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-056.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-056.md",
+                "content": "# Run 56\n\nRecovery run marker for task 56.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-057",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-057.md change for recovery task 57.",
+      "criteria": [
+        {
+          "id": "r057-edit-applied",
+          "text": "docs/recovery-057.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-057.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-057.md",
+                "content": "# Recovery 57\n\nSynthetic recovery marker page for task 57.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-058",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 58.",
+      "criteria": [
+        {
+          "id": "r058-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-059",
+      "repo": "calc",
+      "brief": "Apply the run-059.md change for recovery task 59.",
+      "criteria": [
+        {
+          "id": "r059-edit-applied",
+          "text": "run-059.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-059.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-059.md",
+                "content": "# Run 59\n\nRecovery run marker for task 59.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-060",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-060.md change for recovery task 60; the first attempt crashes and --auto-retry must complete it.",
+      "criteria": [
+        {
+          "id": "r060-edit-applied",
+          "text": "docs/recovery-060.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-060.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "crash",
+            "edits": [
+              {
+                "path": "docs/recovery-060.md",
+                "content": "# Recovery 60\n\nSynthetic recovery marker page for task 60.\n"
+              }
+            ]
+          },
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-060.md",
+                "content": "# Recovery 60\n\nSynthetic recovery marker page for task 60.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "retry_then_succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Crash-then-succeed pair: exercises auto-retry (S-13 only) across the restart barrier."
+    },
+    {
+      "id": "recovery-task-061",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 61.",
+      "criteria": [
+        {
+          "id": "r061-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-062",
+      "repo": "calc",
+      "brief": "Apply the run-062.md change for recovery task 62.",
+      "criteria": [
+        {
+          "id": "r062-edit-applied",
+          "text": "run-062.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-062.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-062.md",
+                "content": "# Run 62\n\nRecovery run marker for task 62.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-063",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-063.md change for recovery task 63.",
+      "criteria": [
+        {
+          "id": "r063-edit-applied",
+          "text": "docs/recovery-063.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-063.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-063.md",
+                "content": "# Recovery 63\n\nSynthetic recovery marker page for task 63.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-064",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 64.",
+      "criteria": [
+        {
+          "id": "r064-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-065",
+      "repo": "calc",
+      "brief": "Apply the run-065.md change for recovery task 65.",
+      "criteria": [
+        {
+          "id": "r065-edit-applied",
+          "text": "run-065.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-065.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-065.md",
+                "content": "# Run 65\n\nRecovery run marker for task 65.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-066",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-066.md change for recovery task 66.",
+      "criteria": [
+        {
+          "id": "r066-edit-applied",
+          "text": "docs/recovery-066.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-066.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-066.md",
+                "content": "# Recovery 66\n\nSynthetic recovery marker page for task 66.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-067",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 67.",
+      "criteria": [
+        {
+          "id": "r067-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-068",
+      "repo": "calc",
+      "brief": "Apply the run-068.md change for recovery task 68.",
+      "criteria": [
+        {
+          "id": "r068-edit-applied",
+          "text": "run-068.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-068.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-068.md",
+                "content": "# Run 68\n\nRecovery run marker for task 68.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-069",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-069.md change for recovery task 69.",
+      "criteria": [
+        {
+          "id": "r069-edit-applied",
+          "text": "docs/recovery-069.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-069.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-069.md",
+                "content": "# Recovery 69\n\nSynthetic recovery marker page for task 69.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-070",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 70; the first attempt crashes and --auto-retry must complete it.",
+      "criteria": [
+        {
+          "id": "r070-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "crash",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          },
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "retry_then_succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Crash-then-succeed pair: exercises auto-retry (S-13 only) across the restart barrier."
+    },
+    {
+      "id": "recovery-task-071",
+      "repo": "calc",
+      "brief": "Apply the run-071.md change for recovery task 71.",
+      "criteria": [
+        {
+          "id": "r071-edit-applied",
+          "text": "run-071.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-071.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-071.md",
+                "content": "# Run 71\n\nRecovery run marker for task 71.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-072",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-072.md change for recovery task 72.",
+      "criteria": [
+        {
+          "id": "r072-edit-applied",
+          "text": "docs/recovery-072.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-072.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-072.md",
+                "content": "# Recovery 72\n\nSynthetic recovery marker page for task 72.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-073",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 73.",
+      "criteria": [
+        {
+          "id": "r073-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-074",
+      "repo": "calc",
+      "brief": "Apply the run-074.md change for recovery task 74.",
+      "criteria": [
+        {
+          "id": "r074-edit-applied",
+          "text": "run-074.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-074.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-074.md",
+                "content": "# Run 74\n\nRecovery run marker for task 74.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-075",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-075.md change for recovery task 75.",
+      "criteria": [
+        {
+          "id": "r075-edit-applied",
+          "text": "docs/recovery-075.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-075.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-075.md",
+                "content": "# Recovery 75\n\nSynthetic recovery marker page for task 75.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-076",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 76.",
+      "criteria": [
+        {
+          "id": "r076-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-077",
+      "repo": "calc",
+      "brief": "Apply the run-077.md change for recovery task 77.",
+      "criteria": [
+        {
+          "id": "r077-edit-applied",
+          "text": "run-077.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-077.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-077.md",
+                "content": "# Run 77\n\nRecovery run marker for task 77.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-078",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-078.md change for recovery task 78.",
+      "criteria": [
+        {
+          "id": "r078-edit-applied",
+          "text": "docs/recovery-078.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-078.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-078.md",
+                "content": "# Recovery 78\n\nSynthetic recovery marker page for task 78.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-079",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 79.",
+      "criteria": [
+        {
+          "id": "r079-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-080",
+      "repo": "calc",
+      "brief": "Apply the run-080.md change for recovery task 80; the first attempt crashes and --auto-retry must complete it.",
+      "criteria": [
+        {
+          "id": "r080-edit-applied",
+          "text": "run-080.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-080.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "crash",
+            "edits": [
+              {
+                "path": "run-080.md",
+                "content": "# Run 80\n\nRecovery run marker for task 80.\n"
+              }
+            ]
+          },
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-080.md",
+                "content": "# Run 80\n\nRecovery run marker for task 80.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "retry_then_succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Crash-then-succeed pair: exercises auto-retry (S-13 only) across the restart barrier."
+    },
+    {
+      "id": "recovery-task-081",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-081.md change for recovery task 81.",
+      "criteria": [
+        {
+          "id": "r081-edit-applied",
+          "text": "docs/recovery-081.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-081.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-081.md",
+                "content": "# Recovery 81\n\nSynthetic recovery marker page for task 81.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-082",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 82.",
+      "criteria": [
+        {
+          "id": "r082-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-083",
+      "repo": "calc",
+      "brief": "Apply the run-083.md change for recovery task 83.",
+      "criteria": [
+        {
+          "id": "r083-edit-applied",
+          "text": "run-083.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-083.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-083.md",
+                "content": "# Run 83\n\nRecovery run marker for task 83.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-084",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-084.md change for recovery task 84.",
+      "criteria": [
+        {
+          "id": "r084-edit-applied",
+          "text": "docs/recovery-084.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-084.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-084.md",
+                "content": "# Recovery 84\n\nSynthetic recovery marker page for task 84.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-085",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 85.",
+      "criteria": [
+        {
+          "id": "r085-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-086",
+      "repo": "calc",
+      "brief": "Apply the run-086.md change for recovery task 86.",
+      "criteria": [
+        {
+          "id": "r086-edit-applied",
+          "text": "run-086.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-086.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-086.md",
+                "content": "# Run 86\n\nRecovery run marker for task 86.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-087",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-087.md change for recovery task 87.",
+      "criteria": [
+        {
+          "id": "r087-edit-applied",
+          "text": "docs/recovery-087.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-087.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-087.md",
+                "content": "# Recovery 87\n\nSynthetic recovery marker page for task 87.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-088",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 88.",
+      "criteria": [
+        {
+          "id": "r088-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-089",
+      "repo": "calc",
+      "brief": "Apply the run-089.md change for recovery task 89.",
+      "criteria": [
+        {
+          "id": "r089-edit-applied",
+          "text": "run-089.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-089.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-089.md",
+                "content": "# Run 89\n\nRecovery run marker for task 89.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-090",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-090.md change for recovery task 90; the first attempt crashes and --auto-retry must complete it.",
+      "criteria": [
+        {
+          "id": "r090-edit-applied",
+          "text": "docs/recovery-090.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-090.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "crash",
+            "edits": [
+              {
+                "path": "docs/recovery-090.md",
+                "content": "# Recovery 90\n\nSynthetic recovery marker page for task 90.\n"
+              }
+            ]
+          },
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-090.md",
+                "content": "# Recovery 90\n\nSynthetic recovery marker page for task 90.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "retry_then_succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Crash-then-succeed pair: exercises auto-retry (S-13 only) across the restart barrier."
+    },
+    {
+      "id": "recovery-task-091",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 91.",
+      "criteria": [
+        {
+          "id": "r091-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-092",
+      "repo": "calc",
+      "brief": "Apply the run-092.md change for recovery task 92.",
+      "criteria": [
+        {
+          "id": "r092-edit-applied",
+          "text": "run-092.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-092.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-092.md",
+                "content": "# Run 92\n\nRecovery run marker for task 92.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-093",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-093.md change for recovery task 93.",
+      "criteria": [
+        {
+          "id": "r093-edit-applied",
+          "text": "docs/recovery-093.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-093.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-093.md",
+                "content": "# Recovery 93\n\nSynthetic recovery marker page for task 93.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-094",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 94.",
+      "criteria": [
+        {
+          "id": "r094-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-095",
+      "repo": "calc",
+      "brief": "Apply the run-095.md change for recovery task 95.",
+      "criteria": [
+        {
+          "id": "r095-edit-applied",
+          "text": "run-095.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-095.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-095.md",
+                "content": "# Run 95\n\nRecovery run marker for task 95.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-096",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-096.md change for recovery task 96.",
+      "criteria": [
+        {
+          "id": "r096-edit-applied",
+          "text": "docs/recovery-096.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-096.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-096.md",
+                "content": "# Recovery 96\n\nSynthetic recovery marker page for task 96.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-097",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 97.",
+      "criteria": [
+        {
+          "id": "r097-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-098",
+      "repo": "calc",
+      "brief": "Apply the run-098.md change for recovery task 98.",
+      "criteria": [
+        {
+          "id": "r098-edit-applied",
+          "text": "run-098.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "run-098.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "run-098.md",
+                "content": "# Run 98\n\nRecovery run marker for task 98.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-099",
+      "repo": "notes",
+      "brief": "Apply the docs/recovery-099.md change for recovery task 99.",
+      "criteria": [
+        {
+          "id": "r099-edit-applied",
+          "text": "docs/recovery-099.md exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "docs/recovery-099.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/recovery-099.md",
+                "content": "# Recovery 99\n\nSynthetic recovery marker page for task 99.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Trivial deterministic edit; every trusted check must stay green."
+    },
+    {
+      "id": "recovery-task-100",
+      "repo": "greeting",
+      "brief": "Apply the greeting.txt change for recovery task 100; the first attempt crashes and --auto-retry must complete it.",
+      "criteria": [
+        {
+          "id": "r100-edit-applied",
+          "text": "greeting.txt exists with exactly the pinned deterministic content"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "crash",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          },
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "retry_then_succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Crash-then-succeed pair: exercises auto-retry (S-13 only) across the restart barrier."
+    }
+  ],
+  "evidence": "None. Generated plan data for the S-13 system test; nothing here is evidence of execution."
+}
