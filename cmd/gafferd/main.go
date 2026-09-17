@@ -4,7 +4,9 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"errors"
 	"flag"
 	"fmt"
@@ -183,9 +185,10 @@ func run(ctx context.Context, args []string, out io.Writer) (err error) {
 	defer listener.Close()
 	d := httpapi.Deps{Store: s, Hub: &notify.Hub{}, Gateway: gateway, Policy: admission}
 	if secure {
-		if d.DaemonFingerprint, err = i.Fingerprint(executionTLS.Certificates[0].Leaf); err != nil {
-			return err
-		}
+		// The listener pin is the SHA-256 of the server leaf DER; identity.Fingerprint
+		// validates client leaves only, so the digest is computed directly.
+		sum := sha256.Sum256(executionTLS.Certificates[0].Leaf.Raw)
+		d.DaemonFingerprint = hex.EncodeToString(sum[:])
 	}
 	var executionServer *http.Server
 	var executionListener net.Listener
