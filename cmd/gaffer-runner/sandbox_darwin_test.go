@@ -16,8 +16,12 @@ import (
 )
 
 func TestDarwinSandboxCanaries(t *testing.T) {
-	root, _ := filepath.EvalSymlinks(t.TempDir())
 	home, _ := os.UserHomeDir()
+	root, err := os.MkdirTemp(home, ".gaffer-sandbox-canary-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.RemoveAll(root) })
 	config := filepath.Join(home, ".config")
 	if err := os.MkdirAll(config, 0700); err != nil {
 		t.Fatal(err)
@@ -61,7 +65,7 @@ func TestDarwinSandboxCanaries(t *testing.T) {
 	defer closeDenied()
 	_, port, _ := net.SplitHostPort(allowed)
 	n, _ := strconv.Atoi(port)
-	profile := isolation.MacOSSandboxExecDev{BoundaryPort: n, CredentialPath: credential, RunnerStateDir: state, SecretPaths: []string{identityKey}}
+	profile := isolation.MacOSSandboxExecDev{BoundaryPort: n, CredentialPath: credential, RunnerStateDir: state, SecretPaths: []string{identityKey}, RepositoryRoot: root}
 	launcher, err := profile.Prepare(context.Background(), w)
 	if err != nil {
 		t.Fatal(err)
@@ -88,6 +92,28 @@ func TestDarwinSandboxCanaries(t *testing.T) {
 	if b, e := run("/usr/bin/touch", forbidden.Name()); e == nil {
 		t.Fatalf("outside write permitted %q", b)
 	}
+	for _, parent := range []string{"/private/tmp", os.TempDir(), root} {
+		file, e := os.CreateTemp(parent, "gaffer-outside-write-")
+		if e != nil {
+			t.Fatal(e)
+		}
+		file.Close()
+		t.Cleanup(func() { os.Remove(file.Name()) })
+		if b, e := run("/usr/bin/touch", file.Name()); e == nil {
+			t.Fatalf("outside temporary/repository write allowed %s: %s", file.Name(), b)
+		}
+	}
+	sleeper := exec.Command("/bin/sleep", "60")
+	if err := sleeper.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { sleeper.Process.Kill(); sleeper.Wait() })
+	if b, e := run("/bin/kill", "-0", strconv.Itoa(sleeper.Process.Pid)); e == nil {
+		t.Fatalf("outside process signal allowed: %s", b)
+	}
+	if b, e := run("/bin/sh", "-c", `sleep 60 & child=$!; kill -0 "$child" && kill -TERM "$child" || exit 1; wait "$child"; exit 0`); e != nil {
+		t.Fatalf("same-sandbox signal denied %q: %v", b, e)
+	}
 	if b, e := run("/usr/bin/touch", filepath.Join(w.Root, "allowed")); e != nil {
 		t.Fatalf("workspace write denied %q %v", b, e)
 	}
@@ -100,7 +126,7 @@ func TestDarwinSandboxCanaries(t *testing.T) {
 	if profile.Qualification() != "development" {
 		t.Fatal("incorrect qualification")
 	}
-	t.Log("real sandbox-exec denied HOME canary, credential, runner state, outside write and second loopback; permitted workspace write and boundary port")
+	t.Log("real sandbox-exec denied HOME canary, credentials, runner state, outside signal, temporary/repository writes and second loopback; permitted workspace write and boundary port")
 }
 func TestSandboxEscapesQuotedPaths(t *testing.T) {
 	root, _ := filepath.EvalSymlinks(t.TempDir())

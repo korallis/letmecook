@@ -20,6 +20,7 @@ type MacOSSandboxExecDev struct {
 	BoundaryPort                   int
 	CredentialPath, RunnerStateDir string
 	SecretPaths                    []string
+	RepositoryRoot                 string
 }
 
 func init()                                       { developmentFactory = func(c SandboxConfig) Profile { return MacOSSandboxExecDev(c) } }

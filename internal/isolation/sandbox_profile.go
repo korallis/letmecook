@@ -23,6 +23,7 @@ type SandboxConfig struct {
 	BoundaryPort                   int
 	CredentialPath, RunnerStateDir string
 	SecretPaths                    []string
+	RepositoryRoot                 string
 }
 
 var developmentFactory func(SandboxConfig) Profile
@@ -59,12 +60,19 @@ func profileText(c SandboxConfig, w Workspace) (string, error) {
 		return "", errors.New("invalid boundary port")
 	}
 	var b strings.Builder
-	b.WriteString("(version 1)\n(allow default)\n(deny network*)\n")
+	b.WriteString("(version 1)\n(allow default)\n(deny network*)\n(deny signal)\n(allow signal (target same-sandbox))\n")
 	if c.BoundaryPort > 0 {
 		fmt.Fprintf(&b, "(allow network-outbound (remote ip \"localhost:%d\"))\n", c.BoundaryPort)
 	}
 	b.WriteString("(deny file-write*)\n")
-	for _, path := range []string{w.Root, w.PrivateHome, w.TempDir, w.RuntimeDir, "/private/var/folders", "/private/tmp", "/dev/null", "/dev/tty", "/dev/ttys"} {
+	if c.RepositoryRoot != "" {
+		q, e := quoteSB(c.RepositoryRoot)
+		if e != nil {
+			return "", e
+		}
+		fmt.Fprintf(&b, "(deny file-write* (subpath %s))\n", q)
+	}
+	for _, path := range []string{w.Root, w.PrivateHome, w.TempDir, w.RuntimeDir, "/dev/null", "/dev/tty", "/dev/ttys"} {
 		q, e := quoteSB(path)
 		if e != nil {
 			return "", e
@@ -106,5 +114,5 @@ func developmentControls() []string {
 	return v
 }
 func observation(profile, runtimeDigest string) Observation {
-	return Observation{ProfileDigest: profile, RuntimeDigest: runtimeDigest, OS: runtime.GOOS, Arch: runtime.GOARCH, Controls: developmentControls(), Limitations: []string{DevelopmentLimitation, "allow-default compatibility profile; system temporary directories remain writable; escaped sessions cannot be proven terminated"}}
+	return Observation{ProfileDigest: profile, RuntimeDigest: runtimeDigest, OS: runtime.GOOS, Arch: runtime.GOARCH, Controls: developmentControls(), Limitations: []string{DevelopmentLimitation, "allow-default compatibility profile; mach-lookup remains open, including securityd/keychain IPC; sampled escaped sessions cannot be proven terminated"}}
 }

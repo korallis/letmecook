@@ -54,8 +54,10 @@ profile previously prevented startup and is not silently substituted.
 
 * Deny network access except the attempt boundary's one loopback port; the fake
   no-boundary case denies all network. Another loopback port is not an exception.
-* Deny file writes except candidate/private HOME/TMP/runtime directories,
-  `/private/var/folders`, `/private/tmp` and the necessary null/TTY devices.
+* Deny signals to outside processes; permit signals only to same-sandbox children.
+* Deny file writes to the repository root and everywhere else except the attempt's
+  candidate/private HOME/TMP/runtime directories and the necessary null/TTY devices.
+  Neither `/private/var/folders` nor `/private/tmp` is a general write exception.
 * Deny read-data and writes to real HOME `.config`, `.claude`, `.codex`, `.ssh`,
   OpenCode local data/state, the gateway credential file, runner mTLS key, gateway
   configuration and runner state directory.
@@ -67,14 +69,15 @@ profile previously prevented startup and is not silently substituted.
 
 The profile is emitted with escaped paths for every attempt. Native tests really
 run sandbox-exec: they deny a synthetic HOME-secret canary, credential/state
-canaries, an outside write and a second loopback listener, while allowing the
-candidate write and selected boundary listener.
+canaries, outside signals, unrelated temporary/repository writes and a second
+loopback listener, while allowing same-sandbox signals, a HOME-rooted candidate
+write and the selected boundary listener.
 
 ## What it does not prove
 
 Allow-default is a compatibility profile, not comprehensive least privilege.
-System temporary-directory write exceptions are broader than the candidate, and
-unlisted host data remains readable. This is not a VM/container, a complete secret
+Unlisted host data remains readable. `mach-lookup` remains open, including
+securityd/keychain IPC; path canaries do not prove isolation from those services. This is not a VM/container, a complete secret
 inventory, a provider-cost/token guarantee, or measured adversarial confinement.
 Resource rlimits do not establish a hard memory or aggregate-process reservation.
 A worktree alone remains no security boundary.

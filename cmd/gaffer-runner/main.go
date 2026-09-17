@@ -146,7 +146,7 @@ func profileFor(c config) (isolation.Profile, error) {
 	if c.Isolation != isolation.DevelopmentProfileID {
 		return nil, isolation.ErrExecutionUnqualified
 	}
-	config := isolation.SandboxConfig{RunnerStateDir: c.StateDir, SecretPaths: []string{c.Key, c.GatewayConfig}}
+	config := isolation.SandboxConfig{RepositoryRoot: c.RepositoryRoot, RunnerStateDir: c.StateDir, SecretPaths: []string{c.Key, c.GatewayConfig}}
 	if c.GatewayConfig != "" {
 		gateway, err := inference.LoadGatewayConfig(c.GatewayConfig)
 		if err != nil {
