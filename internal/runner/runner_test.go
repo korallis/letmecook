@@ -482,3 +482,26 @@ func TestCloseBoundaryBeforeJournalAndRuntimeClockRegression(t *testing.T) {
 		t.Fatal("boundary completion not durable")
 	}
 }
+
+func TestOpenIntentWithoutStartingDoesNotWaitForGuardian(t *testing.T) {
+	f := setup(t)
+	accept(t, f)
+	if err := f.r.commit(event{Kind: "launch_intent", At: f.now, Runtime: &LaunchRecord{Qualification: "development", ReceiptPath: filepath.Join(t.TempDir(), "never-created.json")}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	start := time.Now()
+	reopened, err := Open(f.path, f.o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reopened.Close()
+	if elapsed := time.Since(start); elapsed > 500*time.Millisecond {
+		t.Fatalf("intent-only recovery waited for nonexistent guardian: %s", elapsed)
+	}
+	if reopened.Status().ExecutionEnabled {
+		t.Fatal("old intent resumed")
+	}
+}

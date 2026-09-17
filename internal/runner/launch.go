@@ -379,7 +379,7 @@ func (r *Runner) StopGuardian() {
 	}
 }
 func (r *Runner) recoverLaunch() error {
-	if r.state.Runtime == nil || r.state.Guardian != nil {
+	if r.state.Runtime == nil || r.state.Guardian != nil || (r.state.Runtime.PID == 0 && !r.state.Starting) {
 		return nil
 	}
 	rec := r.state.Runtime

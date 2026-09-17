@@ -196,7 +196,7 @@ func Guardian(ctx context.Context, input io.Reader, control, stdout, stderr io.W
 	report := GuardianReport{GuardianStarted: started, ExitCode: -1}
 	known := map[int]bool{started.PID: true}
 	escaped := map[int]bool{}
-	ticker := time.NewTicker(10 * time.Millisecond)
+	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 	var stopping time.Time
 	reaped := false
@@ -299,9 +299,13 @@ type guardianLauncher struct {
 	report                   GuardianReport
 	done                     chan struct{}
 	once                     sync.Once
+	spec                     LaunchSpec
+	specSent                 bool
 }
 
 func (l *guardianLauncher) Wrap(cmd *exec.Cmd) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	if err := l.inner.Wrap(cmd); err != nil {
 		return err
 	}
@@ -343,12 +347,22 @@ func (l *guardianLauncher) Wrap(cmd *exec.Cmd) error {
 	l.childInput = read
 	l.childControl = cw
 	l.done = make(chan struct{})
-	go func() { _ = json.NewEncoder(write).Encode(spec) }()
+	l.spec = spec
 	return nil
 }
 func (l *guardianLauncher) startedHandle(ctx context.Context) (GuardianStarted, error) {
+	l.mu.Lock()
 	l.childInput.Close()
 	l.childControl.Close()
+	// Start has installed a reader. Serialize the entire initial frame with renewals;
+	// writing before Start could block forever on a spec larger than the pipe buffer.
+	err := json.NewEncoder(l.pipe).Encode(l.spec)
+	l.specSent = err == nil
+	l.mu.Unlock()
+	if err != nil {
+		close(l.done)
+		return GuardianStarted{}, err
+	}
 	type result struct {
 		v   GuardianStarted
 		err error
@@ -382,7 +396,7 @@ func (l *guardianLauncher) startedHandle(ctx context.Context) (GuardianStarted, 
 func (l *guardianLauncher) Renew(ms int64) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.pipe == nil {
+	if l.pipe == nil || !l.specSent {
 		return ErrStopped
 	}
 	return json.NewEncoder(l.pipe).Encode(Renewal{ms})

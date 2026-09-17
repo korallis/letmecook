@@ -29,8 +29,8 @@ Guardian cutoff is elapsed monotonic duration, capped by a conservative wall-clo
 cutoff so wake after suspend cannot extend the lease. Renewal cannot undo an
 already latched stop. Supervisor EOF or cutoff sends TERM, KILL at two seconds,
 then observes until ESRCH or the five-second bound. EPERM stays unknown. A
-process-table observation tracks descendants/escaped sessions; detected escapes
-never produce positive whole-tree evidence. Sampling is **not** an adversarial
+process-table observation every 100 ms tracks descendants/escaped sessions; detected escapes
+never produce positive whole-tree evidence. Short-lived ancestry changes between samples can escape observation. Sampling is **not** an adversarial
 OS process boundary, and the development profile does not claim otherwise.
 
 Existing `TerminateProcessGroup` remains the normal cancellation evidence path.
@@ -60,4 +60,4 @@ claims quiescence. A reopened/quarantined handle reports execution disabled.
 harness.RunHandle, int64) error` method only after that watermark and an
 acknowledged finalize/terminated message. It calls at most once. `Close` also
 releases a remaining eligible handle on shutdown; incomplete output/custody is
-retained rather than silently released. The fake adapter need not implement it.
+retained rather than silently released. The fake adapter also implements this bounded-retention release contract.
