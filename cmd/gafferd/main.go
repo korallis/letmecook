@@ -28,6 +28,7 @@ import (
 	"github.com/korallis/letmecook/internal/inference"
 	"github.com/korallis/letmecook/internal/notify"
 	"github.com/korallis/letmecook/internal/reconcile"
+	sc "github.com/korallis/letmecook/internal/scheduler"
 	"github.com/korallis/letmecook/internal/store"
 )
 
@@ -69,6 +70,7 @@ func run(ctx context.Context, args []string, out io.Writer) (err error) {
 	if err = flags.Parse(args); err != nil {
 		return i.Invalid
 	}
+	admission := sc.AdmissionPolicy{DevelopmentProfiles: slices.Clone([]string(developmentProfiles))}
 	if flags.NArg() != 0 {
 		return fmt.Errorf("positional arguments are not supported")
 	}
@@ -154,9 +156,9 @@ func run(ctx context.Context, args []string, out io.Writer) (err error) {
 	if *fixture {
 		s, err = store.New(ctx)
 	} else {
-		// S0a: replace with store.OpenWithOptions once merged
-		// developmentProfiles is parsed/validated above but grants no admission here.
-		s, err = store.Open(ctx, *state, *artifacts)
+		// Development profiles named on the command line are the only admission
+		// relaxation; the default policy refuses every unsupported profile.
+		s, err = store.OpenWithOptions(ctx, *state, *artifacts, store.Options{Admission: admission})
 	}
 	if err != nil {
 		return err
@@ -179,7 +181,7 @@ func run(ctx context.Context, args []string, out io.Writer) (err error) {
 		return err
 	}
 	defer listener.Close()
-	d := httpapi.Deps{Store: s, Hub: &notify.Hub{}, Gateway: gateway}
+	d := httpapi.Deps{Store: s, Hub: &notify.Hub{}, Gateway: gateway, Policy: admission}
 	var executionServer *http.Server
 	var executionListener net.Listener
 	if secure {

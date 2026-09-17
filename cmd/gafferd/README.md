@@ -116,10 +116,12 @@ result is temporarily tolerated. A real recovery error prevents startup.
 
 `schemas/readapi/types.go` / `types.ts` retain `read-provisional-v1`, extending its
 closed mode/schema combinations: `fixture-only` / schema 1, `store-only` / schema 2,
-3, 4, 5, 6, 7, 8 or 9 (current). New persistent opens migrate to 9; clients retain historical
-schema 2/3/4/5/6/7/8 reads. Schema 8 adds provisional durable stop metadata and schema 9 adds
-provisional verification/local-review metadata only; neither response exposes grants,
-repository profiles or dispatch input records.
+3, 4, 5, 6, 7, 8, 9 or 10 (current). New persistent opens migrate to 10; clients retain
+historical schema 2/3/4/5/6/7/8/9 reads. Schema 8 adds provisional durable stop metadata,
+schema 9 adds provisional verification/local-review metadata and schema 10 adds the M1
+execution seams (task briefs, sessions, uploads, result heads, jobs, daemon state, backup and
+reconcile records; see the [integration record](../../docs/decisions/0002-m1-end-to-end-integration.md));
+neither response exposes grants, repository profiles or dispatch input records.
 Older strict clients refuse unsupported mode/schema combinations rather than
 misreading persistent state as fixture data.
 Go validates projections before JSON; TypeScript `decode(bytes, 'status' | 'snapshot')`

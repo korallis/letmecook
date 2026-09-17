@@ -23,6 +23,7 @@ import (
 	"github.com/korallis/letmecook/internal/notify"
 	"github.com/korallis/letmecook/internal/reconcile"
 	"github.com/korallis/letmecook/internal/runstream"
+	sc "github.com/korallis/letmecook/internal/scheduler"
 	"github.com/korallis/letmecook/internal/store"
 	p "github.com/korallis/letmecook/schemas/execution"
 	a "github.com/korallis/letmecook/schemas/readapi"
@@ -82,7 +83,7 @@ type Deps struct {
 	Reconcile reconcile.Reader
 	Hub       *notify.Hub
 	Gateway   inference.Gateway
-	Policy    any // S0a: replace with scheduler.AdmissionPolicy once merged.
+	Policy    sc.AdmissionPolicy
 	Backup    backup.Service
 }
 
