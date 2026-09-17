@@ -64,9 +64,42 @@ type Sinks struct {
 	mu     sync.Mutex
 	open   map[string]*Sink
 	closed bool
+	locks  sync.Map // attempt id -> *sync.Mutex, the per-attempt append/finalize lock
 }
 
 var _ SinkReader = (*Sinks)(nil)
+
+// SinkView is the read-only face of Sinks: what the store hands to owner reads
+// and routes, so nothing outside the store's serialized append path can write.
+type SinkView interface {
+	SinkReader
+	Watermark(attempt string) (Watermark, error)
+	Digest(attempt string, through int64) (string, error)
+}
+
+type sinkView struct{ k *Sinks }
+
+func (v sinkView) Window(attempt string, after, limit int64) ([]Record, Ack, error) {
+	return v.k.Window(attempt, after, limit)
+}
+func (v sinkView) Watermark(attempt string) (Watermark, error) { return v.k.Watermark(attempt) }
+func (v sinkView) Digest(attempt string, through int64) (string, error) {
+	return v.k.Digest(attempt, through)
+}
+
+// View returns the read-only face of the sink set.
+func (k *Sinks) View() SinkView { return sinkView{k} }
+
+// Serialize takes the per-attempt append/finalize lock and returns its release.
+// Appends and finalizations of one attempt run one at a time, holding this lock
+// across their file and directory syncs; other attempts and the caller's own
+// locks are unaffected. Callers take it before any coarser lock.
+func (k *Sinks) Serialize(attempt string) func() {
+	lock, _ := k.locks.LoadOrStore(attempt, &sync.Mutex{})
+	mu := lock.(*sync.Mutex)
+	mu.Lock()
+	return mu.Unlock
+}
 
 // NewSinks roots sinks under dir (created 0700 on first use).
 func NewSinks(dir string) *Sinks {

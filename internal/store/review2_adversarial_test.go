@@ -99,7 +99,7 @@ func TestReview2FinalizeCannotRaceAlreadyAdmittedStream(t *testing.T) {
 	through := int64(0)
 	x.s.controlHook = func(step string) error {
 		if step == "before_finalize_commit" {
-			ack, err := x.s.Streams().Receive(attempt, identity, records[1:])
+			ack, err := x.s.sinks().Receive(attempt, identity, records[1:])
 			through = ack.Through
 			return err
 		}

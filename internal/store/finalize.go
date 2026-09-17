@@ -112,11 +112,16 @@ func retainedCompletion(ctx context.Context, tx *sql.Tx, attemptID string) (Comp
 // the same completion and refuses a changed one; a different message_id for the
 // same receipt replays only when it attests the retained completion.
 func (s *Store) FinalizeAttempt(ctx context.Context, fingerprint, session, attemptID string, completion Completion) (FinalizeReply, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if completion.Version != execwire.Version || !p.ValidID(completion.MessageID) || !p.ValidID(completion.ReceiptID) || completion.Stream.Through < 0 || completion.Stream.Through > p.MaxInteger || !validHex(completion.Stream.Digest) {
+	if completion.Version != execwire.Version || !p.ValidID(completion.MessageID) || !p.ValidID(completion.ReceiptID) || !p.ValidID(attemptID) || completion.Stream.Through < 0 || completion.Stream.Through > p.MaxInteger || !validHex(completion.Stream.Digest) {
 		return FinalizeReply{}, p.Malformed
 	}
+	// The attempt's append lock is held across the whole finalization (taken
+	// before the store lock, as AppendStream does), so no stream append can land
+	// between the watermark check and the commit.
+	unlock := s.sinks().Serialize(attemptID)
+	defer unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	tx, err := s.grantTransaction(ctx)
 	if err != nil {
 		return FinalizeReply{}, err
@@ -224,15 +229,18 @@ func (s *Store) FinalizeAttempt(ctx context.Context, fingerprint, session, attem
 	}
 	// The claim, the exit observation and the durable sink must agree exactly:
 	// nothing streamed after the exit, nothing attested beyond the sink.
-	watermark, err := s.Streams().Watermark(attemptID)
+	watermark, err := s.sinks().Watermark(attemptID)
 	if err != nil {
 		return FinalizeReply{}, err
 	}
 	if watermark.Through != completion.Stream.Through || watermark.Digest != completion.Stream.Digest {
 		return FinalizeReply{}, p.ReconciliationRequired
 	}
+	// A success needs the process to have exited 0: a manifest that claims
+	// succeeded over a non-zero exit finalizes failed, never becomes the head,
+	// and parks the task for review of the retained completion.
 	to := p.Failed
-	if manifest.Outcome == "succeeded" {
+	if manifest.Outcome == "succeeded" && completion.Exit.Code == 0 {
 		to = p.Succeeded
 	}
 	m := p.Message{Version: p.FencedVersion, Kind: "transition", MessageID: terminalID, Identity: identity, ExpectedRevision: &revision, From: p.ResultPending, To: to}
@@ -285,10 +293,10 @@ func (s *Store) FinalizeAttempt(ctx context.Context, fingerprint, session, attem
 	if err := s.step("before_finalize_commit"); err != nil {
 		return FinalizeReply{}, err
 	}
-	// Appends serialize on the store lock (AppendStream), and the sink is read
-	// again immediately before commit so an acknowledged record that reached the
-	// sink by any other path still refuses the finalization.
-	if again, err := s.Streams().Watermark(attemptID); err != nil {
+	// Appends serialize on the attempt lock (AppendStream), and the sink is read
+	// again immediately before commit so a record that reached the sink by any
+	// other path still refuses the finalization.
+	if again, err := s.sinks().Watermark(attemptID); err != nil {
 		return FinalizeReply{}, err
 	} else if again.Through != completion.Stream.Through || again.Digest != completion.Stream.Digest {
 		return FinalizeReply{}, p.ReconciliationRequired

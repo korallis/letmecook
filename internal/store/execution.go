@@ -437,10 +437,14 @@ var streamSinks = struct {
 	byDir map[string]*runstream.Sinks
 }{byDir: map[string]*runstream.Sinks{}}
 
-// Streams is the daemon's per-attempt output sink set at <state-dir>/streams.
-// The execution channel appends to it and FinalizeAttempt/ProposeTransition
-// check claimed watermarks against it; owner reads use it as runstream.SinkReader.
-func (s *Store) Streams() *runstream.Sinks {
+// Streams is the read-only face of the daemon's per-attempt output sink set at
+// <state-dir>/streams: owner reads and routes see watermarks, digests and
+// windows; only AppendStream writes, serialized per attempt with finalization.
+func (s *Store) Streams() runstream.SinkView { return s.sinks().View() }
+
+// sinks is the writable sink set, reachable only through the store's own
+// serialized append and finalize paths.
+func (s *Store) sinks() *runstream.Sinks {
 	dir := filepath.Join(s.dir, "streams")
 	streamSinks.Lock()
 	defer streamSinks.Unlock()
@@ -601,7 +605,7 @@ func (s *Store) ExecutionState(ctx context.Context, fingerprint, session, dispat
 	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
 		return ExecutionState{}, err
 	}
-	watermark, err := s.Streams().Watermark(identity.AttemptID)
+	watermark, err := s.sinks().Watermark(identity.AttemptID)
 	if err != nil {
 		return ExecutionState{}, err
 	}
@@ -761,6 +765,43 @@ func (s *Store) PendingCancels(ctx context.Context, fingerprint, session string)
 	return out, rows.Err()
 }
 
+// PendingAssignmentsFor lists the unacknowledged, unreleased dispatches this
+// session may be offered: admitted for its runner under the eligibility revision
+// and runner boot the hello cited, in id order, at most limit. Filtering in the
+// query means a backlog for other runners or incarnations, however large, never
+// hides them. Durable point: none (read); delivery is a separate admission.
+func (s *Store) PendingAssignmentsFor(ctx context.Context, fingerprint, session string, limit int) ([]string, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if limit < 1 || limit > 128 {
+		return nil, g.Deny("malformed", "limit")
+	}
+	tx, err := s.grantTransaction(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	who, sess, err := s.runnerSession(ctx, tx, fingerprint, session)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT id FROM dispatches d WHERE runner_id=? AND eligibility_id=? AND eligibility_revision=? AND json_extract(input,'$.facts.runner_boot')=?
+ AND NOT EXISTS(SELECT 1 FROM dispatch_acks a WHERE a.dispatch_id=d.id) AND NOT EXISTS(SELECT 1 FROM dispatch_releases r WHERE r.dispatch_id=d.id) ORDER BY id LIMIT ?`, who.ID, sess.EligibilityID, sess.EligibilityRevision, sess.RunnerBoot, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 // StreamIdentity binds POST /x/v1/streams/{attempt_id} to the attempt's real
 // identity: the runner must own the dispatch, the generation must be current
 // and the attempt non-terminal. Durable point: none (read).
@@ -793,40 +834,63 @@ func (s *Store) StreamIdentity(ctx context.Context, fingerprint, session, attemp
 	return d.Assignment.Identity, nil
 }
 
-// AppendStream is the store half of POST /x/v1/streams/{attempt_id}: it binds
-// the batch to the attempt's identity (owner, current generation, non-terminal)
-// and appends it to the daemon sink while holding the store lock, so no record
-// can land between a finalization's watermark check and its commit. Durable
-// point: the sink's fsync per record; the acknowledgement follows it.
+// AppendStream is the store half of POST /x/v1/streams/{attempt_id}. The
+// per-attempt lock is held across the append (so finalization of that attempt
+// cannot interleave with it) while the store lock covers only the admission
+// transaction, so slow storage never blocks unrelated attempts, leases or
+// stops. After the attempt is terminal only retained records replay their
+// acknowledgement; new records are refused stale_attempt. Durable point: the
+// sink's fsync per record; the acknowledgement follows it.
 func (s *Store) AppendStream(ctx context.Context, fingerprint, session, attemptID string, records []runstream.Record) (runstream.Ack, error) {
+	if !p.ValidID(attemptID) || len(records) == 0 {
+		return runstream.Ack{}, p.Malformed
+	}
+	unlock := s.sinks().Serialize(attemptID)
+	defer unlock()
+	identity, terminal, err := s.appendAdmit(ctx, fingerprint, session, attemptID)
+	if err != nil {
+		return runstream.Ack{}, err
+	}
+	if err := s.step("append_stream_io"); err != nil {
+		return runstream.Ack{}, err
+	}
+	if terminal {
+		watermark, err := s.sinks().Watermark(attemptID)
+		if err != nil {
+			return runstream.Ack{}, err
+		}
+		if records[len(records)-1].Sequence > watermark.Through {
+			return runstream.Ack{}, p.StaleAttempt
+		}
+	}
+	return s.sinks().Receive(attemptID, identity, records)
+}
+
+// appendAdmit binds a batch to its attempt under the store lock only.
+func (s *Store) appendAdmit(ctx context.Context, fingerprint, session, attemptID string) (p.Identity, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tx, err := s.grantTransaction(ctx)
 	if err != nil {
-		return runstream.Ack{}, err
+		return p.Identity{}, false, err
 	}
+	defer tx.Rollback()
 	who, _, err := s.runnerSession(ctx, tx, fingerprint, session)
 	if err != nil {
-		tx.Rollback()
-		return runstream.Ack{}, err
+		return p.Identity{}, false, err
 	}
 	d, err := runnerDispatch(ctx, tx, who, attemptID)
 	if err != nil {
-		tx.Rollback()
-		return runstream.Ack{}, err
+		return p.Identity{}, false, err
 	}
 	state, _, err := attemptState(ctx, tx, attemptID)
-	tx.Rollback()
 	if err != nil {
-		return runstream.Ack{}, err
+		return p.Identity{}, false, err
 	}
 	if d.Assignment.Identity.Generation != s.meta.Generation {
-		return runstream.Ack{}, p.StaleGeneration
+		return p.Identity{}, false, p.StaleGeneration
 	}
-	if terminalState(state) {
-		return runstream.Ack{}, p.StaleAttempt
-	}
-	return s.Streams().Receive(attemptID, d.Assignment.Identity, records)
+	return d.Assignment.Identity, terminalState(state), nil
 }
 
 // terminationRevision reports whether a later terminated message (new message
@@ -839,7 +903,63 @@ func terminationRevision(retained, now c.Evidence) bool {
 	if a.RemoteWork == "unknown" && b.RemoteWork == "quiescent" {
 		a.RemoteWork = "quiescent"
 	}
-	return a == b
+	return a == b && reflect.DeepEqual(retained.Measurement, now.Measurement)
+}
+
+// strongestTermination returns the strongest termination retained for a stop:
+// the immutable control observation upgraded by any accepted revision under
+// the current daemon boot that attested quiescent remote work. Revisions are
+// validated against it, so a weaker later report never regresses history.
+func (s *Store) strongestTermination(ctx context.Context, tx *sql.Tx, attemptID, stopID string, base c.Evidence) (c.Evidence, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT body FROM runtime_observations WHERE attempt_id=? AND kind='terminated'", attemptID)
+	if err != nil {
+		return base, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var body string
+		var v runtimeRecord
+		if err := rows.Scan(&body); err != nil {
+			return base, err
+		}
+		if json.Unmarshal([]byte(body), &v) != nil || v.Termination == nil {
+			continue
+		}
+		t := v.Termination.Terminated
+		if t.StopID != stopID || t.DaemonBoot != s.meta.DaemonBoot || t.ConfirmedProcess == "unknown" || t.RemoteWork != "quiescent" {
+			continue
+		}
+		if terminationRevision(base, *v.Termination) {
+			return *v.Termination, nil
+		}
+	}
+	return base, rows.Err()
+}
+
+// TerminationView is the effective termination of one stop: the immutable
+// control observation upgraded by its strongest accepted revision. Owner reads
+// (StopStatus) that only consult control_observations see the first
+// observation; this is the settled view. Durable point: none (read).
+func (s *Store) TerminationView(ctx context.Context, stopID, attemptID string) (c.Evidence, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !p.ValidID(stopID) || !p.ValidID(attemptID) {
+		return c.Evidence{}, g.Deny("malformed", "stop")
+	}
+	tx, err := s.grantTransaction(ctx)
+	if err != nil {
+		return c.Evidence{}, err
+	}
+	defer tx.Rollback()
+	var body string
+	if err := tx.QueryRowContext(ctx, "SELECT body FROM control_observations WHERE stop_id=? AND attempt_id=?", stopID, attemptID).Scan(&body); err != nil {
+		return c.Evidence{}, err
+	}
+	var base c.Evidence
+	if err := decodeControl(body, &base); err != nil {
+		return c.Evidence{}, err
+	}
+	return s.strongestTermination(ctx, tx, attemptID, stopID, base)
 }
 
 // RecordRefusal retains a runner's refuse of its assignment as a
@@ -951,7 +1071,7 @@ func (s *Store) transitionEvidence(ctx context.Context, tx *sql.Tx, taskID, atte
 		if e.Kind != "exit" || !e.PGIDEmpty || e.PGID <= 0 || e.ObservedUnixNS <= 0 || e.StreamThrough < 0 {
 			return p.Malformed
 		}
-		watermark, err := s.Streams().Watermark(attemptID)
+		watermark, err := s.sinks().Watermark(attemptID)
 		if err != nil {
 			return err
 		}
@@ -1011,11 +1131,15 @@ func (s *Store) transitionEvidence(ctx context.Context, tx *sql.Tx, taskID, atte
 // the tasks.state update in one committed transaction; the recorded message is
 // returned. Proposals to terminal states or unknown are invalid_transition.
 func (s *Store) ProposeTransition(ctx context.Context, fingerprint, session, selected string, m p.Message, evidence RuntimeEvidence) (p.Message, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if m.Kind != "transition" || m.ExpectedRevision == nil {
+	if m.Kind != "transition" || m.ExpectedRevision == nil || !p.ValidID(m.Identity.AttemptID) {
 		return p.Message{}, p.Malformed
 	}
+	// Exit evidence is checked against the sink: hold the attempt's append lock
+	// (before the store lock, as AppendStream does) so no append interleaves.
+	unlock := s.sinks().Serialize(m.Identity.AttemptID)
+	defer unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if terminalState(m.To) || m.To == p.Unknown {
 		return p.Message{}, p.InvalidTransition
 	}
@@ -1436,7 +1560,11 @@ func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, sel
 		}
 	}
 	if err == nil && retained.Terminated.MessageID != m.MessageID {
-		if !terminationRevision(retained, evidence) {
+		strongest, err := s.strongestTermination(ctx, tx, identity.AttemptID, m.StopID, retained)
+		if err != nil {
+			return TerminationReply{}, err
+		}
+		if !terminationRevision(strongest, evidence) {
 			return TerminationReply{}, p.IdentityConflict
 		}
 		var targetBody string
@@ -1592,7 +1720,11 @@ func (s *Store) RunnerReceipt(ctx context.Context, fingerprint, session, attempt
 		return nil, err
 	}
 	defer tx.Rollback()
-	if _, _, err := s.runnerSession(ctx, tx, fingerprint, session); err != nil {
+	who, _, err := s.runnerSession(ctx, tx, fingerprint, session)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := runnerDispatch(ctx, tx, who, attemptID); err != nil {
 		return nil, err
 	}
 	response, found, err := retainedReceipt(ctx, tx, attemptID, route, messageID, digest)
@@ -1624,8 +1756,11 @@ func (s *Store) RecordRunnerReceipt(ctx context.Context, fingerprint, session, a
 		return err
 	}
 	defer tx.Rollback()
-	_, sess, err := s.runnerSession(ctx, tx, fingerprint, session)
+	who, sess, err := s.runnerSession(ctx, tx, fingerprint, session)
 	if err != nil {
+		return err
+	}
+	if _, err := runnerDispatch(ctx, tx, who, attemptID); err != nil {
 		return err
 	}
 	if err := recordReceipt(ctx, tx, attemptID, route, messageID, digest, response, sess.RunnerBoot, s.meta.DaemonBoot, time.Now().UnixMilli()); err != nil {

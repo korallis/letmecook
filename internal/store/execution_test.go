@@ -125,7 +125,7 @@ func (x *executionFixture) run(t *testing.T, texts ...string) c.Lease {
 	through := int64(0)
 	if len(texts) > 0 {
 		records := spooledRecords(t, x.d.Assignment.Identity, texts...)
-		ack, err := x.s.Streams().Receive(x.d.Assignment.Identity.AttemptID, x.d.Assignment.Identity, records)
+		ack, err := x.s.sinks().Receive(x.d.Assignment.Identity.AttemptID, x.d.Assignment.Identity, records)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -392,7 +392,7 @@ func TestPausedDaemonStillDrainsEvidence(t *testing.T) {
 		t.Fatal(err)
 	}
 	records := spooledRecords(t, identity, "before pause", "after pause")
-	if ack, err := x.s.Streams().Receive(identity.AttemptID, identity, records); err != nil || ack.Through != 2 {
+	if ack, err := x.s.sinks().Receive(identity.AttemptID, identity, records); err != nil || ack.Through != 2 {
 		t.Fatal(ack, err)
 	}
 	x.propose(t, p.Stopping, RuntimeEvidence{Kind: "stop"})

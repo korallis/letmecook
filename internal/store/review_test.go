@@ -65,7 +65,7 @@ func TestFinalizeRequiresTheExitWatermarkExactly(t *testing.T) {
 		}
 	}
 	records := spooledRecords(t, x.d.Assignment.Identity, "one", "two", "late")
-	if _, err := x.s.Streams().Receive(attempt, x.d.Assignment.Identity, records[2:]); err != nil {
+	if _, err := x.s.sinks().Receive(attempt, x.d.Assignment.Identity, records[2:]); err != nil {
 		t.Fatal(err)
 	}
 	for _, through := range []int64{2, 3} {
@@ -649,7 +649,9 @@ func TestTerminationRevisionSettlesUnderNewMessageID(t *testing.T) {
 	if _, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, other, quiescent()); !errors.Is(err, p.IdentityConflict) {
 		t.Fatal("different evidence accepted as a revision", err)
 	}
-	settled := terminatedFor(&x, stop.ID, "quiescent")
+	settled := first
+	settled.Terminated.MessageID = newID()
+	settled.Terminated.RemoteWork = "quiescent"
 	reply, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, settled, quiescent())
 	if err != nil || !reply.Released {
 		t.Fatal("stronger revision did not release", reply, err)
@@ -672,14 +674,19 @@ func TestTerminationRevisionSettlesUnderNewMessageID(t *testing.T) {
 		t.Fatal(err)
 	}
 	y.propose(t, p.Stopping, RuntimeEvidence{Kind: "stop"})
-	if reply, err := y.s.ReportTermination(ctx, y.runner, y.session.SessionID, p.FencedVersion, terminatedFor(&y, ystop.ID, "quiescent"), BoundaryState{Reservations: 1, InFlight: 1}); err != nil || reply.Released {
+	yfirst := terminatedFor(&y, ystop.ID, "quiescent")
+	if reply, err := y.s.ReportTermination(ctx, y.runner, y.session.SessionID, p.FencedVersion, yfirst, BoundaryState{Reservations: 1, InFlight: 1}); err != nil || reply.Released {
 		t.Fatal(reply, err)
 	}
-	if _, err := y.s.ReportTermination(ctx, y.runner, y.session.SessionID, p.FencedVersion, terminatedFor(&y, ystop.ID, "unknown"), quiescent()); !errors.Is(err, p.IdentityConflict) {
+	weaker := yfirst
+	weaker.Terminated.MessageID, weaker.Terminated.RemoteWork = newID(), "unknown"
+	if _, err := y.s.ReportTermination(ctx, y.runner, y.session.SessionID, p.FencedVersion, weaker, quiescent()); !errors.Is(err, p.IdentityConflict) {
 		t.Fatal("weaker revision accepted", err)
 	}
 	rowCount(t, y.s, "dispatch_releases", 0)
-	if reply, err := y.s.ReportTermination(ctx, y.runner, y.session.SessionID, p.FencedVersion, terminatedFor(&y, ystop.ID, "quiescent"), quiescent()); err != nil || !reply.Released {
+	equal := yfirst
+	equal.Terminated.MessageID = newID()
+	if reply, err := y.s.ReportTermination(ctx, y.runner, y.session.SessionID, p.FencedVersion, equal, quiescent()); err != nil || !reply.Released {
 		t.Fatal("equal revision with a settled boundary did not release", reply, err)
 	}
 }
@@ -711,7 +718,6 @@ func TestAppendStreamSerializesWithFinalize(t *testing.T) {
 		return nil
 	}
 	reply, err := x.s.FinalizeAttempt(ctx, x.runner, x.session.SessionID, attempt, x.completion(t, custody.Receipt.ReceiptID, 1))
-	x.s.controlHook = nil
 	if err != nil || !reply.Released {
 		t.Fatal(reply, err)
 	}
@@ -723,6 +729,8 @@ func TestAppendStreamSerializesWithFinalize(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("blocked append never completed")
 	}
+	// The queued append has finished reading the hook; only now may it change.
+	x.s.controlHook = nil
 	watermark, err := x.s.Streams().Watermark(attempt)
 	if err != nil || watermark.Through != 1 {
 		t.Fatal("finalized sink moved", watermark, err)
