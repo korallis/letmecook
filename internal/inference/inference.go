@@ -4,12 +4,9 @@ package inference
 
 import (
 	"context"
-	"errors"
 	p "github.com/korallis/letmecook/schemas/execution"
 	"time"
 )
-
-var ErrNotImplemented = errors.New("inference_not_implemented")
 
 // CredentialRef names supervisor-only material; it never contains a credential.
 type CredentialRef struct {
@@ -18,6 +15,7 @@ type CredentialRef struct {
 }
 type Gateway struct {
 	ID, BaseURL       string
+	CABundle          string
 	CredentialRef     CredentialRef
 	Protocols, Models []string
 	ProfileDigest     string
