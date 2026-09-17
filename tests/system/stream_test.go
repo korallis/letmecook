@@ -31,8 +31,15 @@ func (r *installation) streamEvidence(id string, identity object, terminal bool)
 	var after, offset int64
 	var ack object
 	valid := true
+	limit := 128
 	for page := 0; page < 1024; page++ {
-		window := obj(r.get(fmt.Sprintf("/api/v1/attempts/%s/stream?after=%d&limit=128", id, after)))
+		window := obj(r.get(fmt.Sprintf("/api/v1/attempts/%s/stream?after=%d&limit=%d", id, after, limit)))
+		if window["error"] != nil && limit > 8 {
+			// The failed documented page remains an assertion failure. A bounded
+			// retry preserves the remaining custody evidence for diagnosis.
+			limit = 8
+			continue
+		}
 		ack = obj(window["ack"])
 		chunk := arr(window["records"])
 		if len(chunk) == 0 {

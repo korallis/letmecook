@@ -12,6 +12,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/pem"
@@ -32,6 +33,7 @@ import (
 	"syscall"
 	"testing"
 	"time"
+	"unicode/utf8"
 )
 
 type object = map[string]any
@@ -183,6 +185,17 @@ func redact(v any) any {
 	walk = func(v any) any {
 		switch x := v.(type) {
 		case map[string]any:
+			// Native stream bytes and command prefixes are base64 JSON fields.
+			// Redact UTF-8 payloads too; digest assertions run on original bytes
+			// before serialization, so redacted payloads are not replay inputs.
+			for _, key := range []string{"data", "prefix"} {
+				if encoded, ok := x[key].(string); ok {
+					if raw, err := base64.StdEncoding.DecodeString(encoded); err == nil && utf8.Valid(raw) {
+						clean := walk(string(raw)).(string)
+						x[key] = base64.StdEncoding.EncodeToString([]byte(clean))
+					}
+				}
+			}
 			for k, val := range x {
 				if strings.EqualFold(k, "token") || strings.EqualFold(k, "apiKey") || strings.EqualFold(k, "authorization") || strings.EqualFold(k, "credential") {
 					x[k] = "<redacted>"

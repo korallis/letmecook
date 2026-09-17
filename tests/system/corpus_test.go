@@ -3,6 +3,7 @@
 package system
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -18,6 +19,10 @@ func s11(t *testing.T, s *scenario) {
 		mode := str(row["mode"])
 		t.Run(mode, func(t *testing.T) {
 			r := newInstall(t, s, mode, false)
+			if mode == "hang" {
+				r.inferenceHang(row)
+				return
+			}
 			w := r.readyWorker("greeting")
 			settings := fakeSettings(mode)
 			paths := []string{"greeting.txt"}
@@ -34,12 +39,9 @@ func s11(t *testing.T, s *scenario) {
 			settings["attempts"].([]object)[0]["edits"] = edits
 			d := r.task(w, "Synthetic fault matrix "+mode, []object{{"id": "check", "text": "Observe declared fault outcome"}}, paths, settings)
 			id := identity(d)
-			if mode == "ignore_term" || mode == "hang" {
+			if mode == "ignore_term" || mode == "detached_child" {
 				r.waitAttempt(str(id["attempt_id"]), 20*time.Second, func(v object) bool { return str(v["state"]) == "running" })
-				if mode == "hang" {
-					out := r.observe(d, w)
-					s.check(t, "inference hang has real upstream reservation", len(arr(out["usage"])) > 0, object{"usage": out["usage"], "finding": "fake harness skips inference; mock-gateway has no --hang or request-hang flag. This row cannot exercise the fixture's inference fault through these public binaries."})
-				}
+
 				r.mustCLI("task", "stop", str(id["task_id"]))
 			}
 			var a object
@@ -57,6 +59,11 @@ func s11(t *testing.T, s *scenario) {
 			if str(row["receipt"]) == "none" || strings.Contains(str(row["receipt"]), "no custody receipt") {
 				s.check(t, mode+" fixture expects no custody receipt", str(obj(out["execution"])["receipt_id"]) == "", obj(out["execution"])["receipt_id"])
 			}
+			for _, assertion := range arr(row["assertions"]) {
+				if str(assertion) == "no_head_promoted" {
+					s.check(t, "failed custody never promoted to head", str(obj(obj(out["task"])["head"])["receipt_id"]) == "", out["task"])
+				}
+			}
 			if mode == "create_empty" || mode == "delete" {
 				r.assertEdits(out, edits)
 			}
@@ -64,11 +71,12 @@ func s11(t *testing.T, s *scenario) {
 				g := assertGuardian(w, d, 5*time.Second)
 				s.check(t, "TERM ignore escalates within five seconds", boolean(g["escalated"]) && num(g["stop_to_observed_ns"]) <= int64(5*time.Second), g)
 			}
+			streamJSON, _ := json.Marshal(out["stream"])
 			if mode == "huge_output" {
-				s.check(t, "terminal spool_full retained", strings.Contains(compact(out["stream"]), "spool_full"), out["stream"])
+				s.check(t, "terminal spool_full retained", strings.Contains(string(streamJSON), "spool_full"), out["stream"])
 			}
 			if mode == "approval" {
-				s.check(t, "approval_required retained and never answered", strings.Contains(compact(out["stream"]), "approval_required") && !strings.Contains(compact(out["stream"]), "approval_granted"), out["stream"])
+				s.check(t, "approval_required retained and never answered", strings.Contains(string(streamJSON), "approval_required") && !strings.Contains(string(streamJSON), "approval_granted"), out["stream"])
 			}
 			if !boolean(a["released"]) {
 				retry := r.cli("task", "retry", str(id["task_id"]))
@@ -123,15 +131,14 @@ func s12(t *testing.T, s *scenario) {
 				if len(attempts) > 0 {
 					r.assertEdits(out, asObjects(obj(attempts[len(attempts)-1])["edits"]))
 				}
-				final := r.verifyReview(str(id["task_id"]), expected != "failed_verification")
-				r.assertVerification(final, obj(row["verification"]))
+				final := r.verifyReview(str(id["task_id"]), expected != "failed_verification", obj(row["verification"]))
 				if expected == "failed_verification" {
-					s.check(t, "failed verification explicitly rejected", !boolean(obj(obj(final["verification"])["status"])["verified"]) && str(final["phase"]) == "rejected", final)
+					s.check(t, "failed verification explicitly rejected", !boolean(obj(obj(final["verification"])["status"])["verified"]) && !boolean(obj(final["review"])["accepted"]) && str(obj(obj(final["review"])["decision"])["action"]) == "reject", final)
 				} else {
-					s.check(t, "corpus accepted", str(final["phase"]) == "accepted", final)
+					s.check(t, "corpus accepted", boolean(obj(final["review"])["accepted"]) && str(obj(obj(final["review"])["decision"])["action"]) == "accept", final)
 				}
 			case "approval_blocked":
-				s.check(t, "approval blocked not accepted", str(a["state"]) == "failed" && str(obj(out["task"])["phase"]) != "accepted", out)
+				s.check(t, "approval blocked not accepted", str(a["state"]) == "failed" && !boolean(obj(obj(out["task"])["review"])["accepted"]), out)
 			case "stopped":
 				s.check(t, "stopped corpus task", str(a["state"]) == "cancelled" && boolean(a["released"]), a)
 			case "rejected":
@@ -171,7 +178,10 @@ func s13(t *testing.T, s *scenario) {
 					r.t = t
 					defer func() { r.t = old }()
 					w := workers[str(row["repo"])]
+					var sample object
 					if kills[str(row["id"])] {
+						sample = object{"cycle": cycle, "task": row["id"], "kill_scheduled": true, "kill_performed": false, "blocking": true, "failure": "dispatch not admitted; no restart fabricated"}
+						defer func() { samples = append(samples, sample) }()
 						w.proxy.armRunning()
 						defer w.proxy.releaseRunningReply()
 					}
@@ -188,15 +198,17 @@ func s13(t *testing.T, s *scenario) {
 						running = obj(r.get("/api/v1/attempts/" + str(id["attempt_id"])))
 						return str(running["state"]) == "running" || terminal(running)
 					})
-					sample := object{"cycle": cycle, "task": row["id"], "identity": id, "kill_scheduled": true}
-					defer func() { samples = append(samples, sample) }()
+					sample["identity"] = id
+					delete(sample, "failure")
 					if !seen || str(running["state"]) != "running" {
 						sample["blocking"] = true
 						sample["failure"] = "task never reached persisted running before terminal/deadline; no crash sample fabricated"
 						s.check(t, "scheduled kill hits running task", false, running)
 						return
 					}
+					sample["pre_kill_event_sequence"] = num(obj(r.get("/api/v1/events?task_id=" + str(id["task_id"]) + "&limit=50"))["next_after"])
 					sample["kill_unix_ns"] = time.Now().UnixNano()
+					sample["kill_performed"] = true
 					r.daemon.stop(true)
 					w.proxy.releaseRunningReply()
 					r.startDaemon()
@@ -217,6 +229,7 @@ func s13(t *testing.T, s *scenario) {
 							sample["first_admitted_dispatch_unix_ns"] = time.Now().UnixNano()
 							sample["admission_timestamp_source"] = "first observed committed dispatch via owner API; event API has no timestamp field"
 							sample["recovery_ms"] = time.Since(ready).Milliseconds()
+							sample["first_admitted_event_sequence"] = num(obj(r.get("/api/v1/events?task_id=" + str(id["task_id"]) + "&limit=50"))["next_after"])
 						}
 						return terminal(last) && boolean(last["released"]) && str(last["state"]) == "succeeded"
 					})
@@ -228,6 +241,7 @@ func s13(t *testing.T, s *scenario) {
 						sample["classification_timestamp_source"] = "first owner read showing terminal released attempt; event API has no timestamp field"
 						assertGuardian(w, d, 5*time.Second)
 						sample["classify_ms"] = time.Since(ready).Milliseconds()
+						sample["all_classified_event_sequence"] = num(obj(r.get("/api/v1/events?task_id=" + str(id["task_id"]) + "&limit=50"))["next_after"])
 					}
 					s.check(t, "auto-retry safely recovers within sixty seconds", ok && num(sample["recovery_ms"]) < 60000 && num(sample["classify_ms"]) < 60000, sample)
 				})
@@ -236,8 +250,11 @@ func s13(t *testing.T, s *scenario) {
 	}
 	report["recovery_samples"] = samples
 	recovery, classify := []int64{}, []int64{}
-	blocking := 0
+	blocking, restarts := 0, 0
 	for _, v := range samples {
+		if boolean(v["kill_performed"]) {
+			restarts++
+		}
 		if boolean(v["blocking"]) {
 			blocking++
 			continue
@@ -245,9 +262,9 @@ func s13(t *testing.T, s *scenario) {
 		recovery = append(recovery, num(v["recovery_ms"]))
 		classify = append(classify, num(v["classify_ms"]))
 	}
-	stats := object{"scheduled": 20, "samples": len(samples), "successful_samples": len(recovery), "blocking": blocking, "recovery_ms": object{"p50": percentile(recovery, .5), "p95": percentile(recovery, .95), "max": percentile(recovery, 1)}, "classify_ms": object{"p50": percentile(classify, .5), "p95": percentile(classify, .95), "max": percentile(classify, 1)}, "method": "nearest-rank; blocking samples retained and fail the gate; no lease barrier subtracted"}
+	stats := object{"scheduled": 20, "samples": len(samples), "real_restarts": restarts, "successful_samples": len(recovery), "blocking": blocking, "recovery_ms": object{"p50": percentile(recovery, .5), "p95": percentile(recovery, .95), "max": percentile(recovery, 1)}, "classify_ms": object{"p50": percentile(classify, .5), "p95": percentile(classify, .95), "max": percentile(classify, 1)}, "method": "nearest-rank; blocking samples retained and fail the gate; no lease barrier subtracted"}
 	report["recovery_statistics"] = stats
-	s.add("fixture-discrepancy", "recovery timestamp observability", time.Now(), object{"required": "daemon event log timestamps for admitted dispatch and full classification", "observed": "GET /api/v1/events exposes sequence, revision and message only; no timestamp", "measurement": "owner-read upper bounds, not exact event timestamps"})
+	s.add("measurement", "recovery timestamp observability", time.Now(), object{"required": "harness observation timestamps plus event sequence, per corrected fixture", "observed": "GET /api/v1/events exposes sequence, revision and message only; no timestamp", "measurement": "owner-read upper bounds, not exact event timestamps"})
 	s.add("statistics", "recovery", time.Now(), stats)
 	s.check(t, "at least twenty successful real restarts with no blocking cases", len(recovery) >= 20 && blocking == 0, stats)
 }
@@ -281,7 +298,7 @@ func s14(t *testing.T, s *scenario) {
 		receipt := obj(v)
 		s.check(t, "pinned model and gateway usage source", str(receipt["model"]) == "gpt-6-astra" && (str(receipt["source"]) == "gateway_usage" || str(receipt["source"]) == "gateway_usage_unknown"), receipt)
 	}
-	s.check(t, "job-side credential read denial probe retained", strings.Contains(compact(out["stream"]), "credential_unreadable"), out["stream"])
+	s.check(t, "job-side credential read denial probe retained", credentialProbeEvidence(obj(out["stream"])), out["stream"])
 	s.check(t, "live execution succeeded", str(a["state"]) == "succeeded", a)
 	r.assertEdits(out, []object{{"path": "greeting.txt", "content": "hello, gaffer\n"}})
 	r.verifyReview(str(identity(d)["task_id"]), true)

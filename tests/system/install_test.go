@@ -26,6 +26,7 @@ type installation struct {
 	dispatches                                                  []object
 	proxies                                                     []*faultProxy
 	readyAt                                                     time.Time
+	attemptMS                                                   int64
 }
 type worker struct {
 	r                                                                  *installation
@@ -44,7 +45,7 @@ func newInstall(t *testing.T, s *scenario, suffix string, auto bool) *installati
 		root = filepath.Join(root, suffix)
 	}
 	s.require(t, "fresh scenario installation", os.MkdirAll(root, 0700) == nil, root)
-	r := &installation{t: t, s: s, root: root, state: filepath.Join(root, "state"), artifacts: filepath.Join(root, "artifacts"), ownerURL: "https://" + freeAddress(t), execURL: "https://" + freeAddress(t), auto: auto, reads: map[string]string{}}
+	r := &installation{t: t, s: s, root: root, state: filepath.Join(root, "state"), artifacts: filepath.Join(root, "artifacts"), ownerURL: "https://" + freeAddress(t), execURL: "https://" + freeAddress(t), auto: auto, reads: map[string]string{}, attemptMS: 120000}
 	t.Cleanup(func() {
 		// Capture public persisted state even when an earlier prerequisite failed.
 		for _, d := range r.dispatches {
@@ -87,7 +88,11 @@ func newInstall(t *testing.T, s *scenario, suffix string, auto bool) *installati
 		key := filepath.Join(root, "mock-token")
 		s.require(t, "synthetic mock key", os.WriteFile(key, []byte("synthetic-"+uuid()), 0600) == nil, "private synthetic token")
 		var e error
-		r.mock, e = startProcess(filepath.Join(binDir, "gaffer-runner"), "mock-gateway", "--listen", "127.0.0.1:0", "--key-file", key, "--models", "gpt-6-astra")
+		mockArgs := []string{"mock-gateway", "--listen", "127.0.0.1:0", "--key-file", key, "--models", "gpt-6-astra"}
+		if s.ID == "S-11" && suffix == "hang" {
+			mockArgs = append(mockArgs, "--hang-after", "0")
+		}
+		r.mock, e = startProcess(filepath.Join(binDir, "gaffer-runner"), mockArgs...)
 		s.require(t, "start mock gateway", e == nil, fmt.Sprint(e))
 		var info object
 		ok := waitFor(10*time.Second, func() bool {
@@ -145,6 +150,9 @@ func (r *installation) get(path string) any {
 	now := time.Now()
 	code, b, e := request(r.client, "GET", r.ownerURL+path, nil, nil)
 	v := parse(b)
+	if code != 200 || e != nil {
+		r.s.check(r.t, "public read succeeds: "+path, false, object{"status": code, "body": v, "error": fmt.Sprint(e)})
+	}
 	key := fmt.Sprintf("%d:%s:%v", code, b, e)
 	if r.reads[path] != key {
 		r.s.add("read", path, now, object{"status": code, "body": v, "error": fmt.Sprint(e)})
@@ -258,6 +266,14 @@ func (w *worker) start(profile string) {
 		return str(obj(readJSON(filepath.Join(w.state, "boot.json")))["runner_boot"]) != old || !w.p.alive()
 	})
 	r.s.require(r.t, "new runner boot persisted", ok && w.p.alive(), w.p.logs())
+	if w.harness == "opencode" {
+		var probe object
+		ok = waitFor(55*time.Second, func() bool {
+			probe = obj(readJSON(filepath.Join(w.state, "probe.json")))
+			return boolean(probe["passed"]) || !w.p.alive()
+		})
+		r.s.require(r.t, "pinned OpenCode configuration-isolation probe", ok && boolean(probe["passed"]), object{"probe": probe, "process": w.p.logs()})
+	}
 }
 func (w *worker) session() object {
 	for _, v := range arr(w.r.get("/api/v1/runners")) {
@@ -321,9 +337,11 @@ func (r *installation) task(w *worker, brief string, criteria []object, paths []
 		args = append(args, "--path", p)
 	}
 	r.mustCLI(args...)
-	a := r.mustCLI("task", "approve", id, "--eligibility", w.eligibility, "--allow-development-isolation")
+	budgets := filepath.Join(r.root, id+"-budgets.json")
+	r.s.require(r.t, "explicit bounded multi-attempt grant budgets", writeJSON(budgets, obj(obj(readJSON(w.policy))["local_envelope"])["budgets"]) == nil, "three attempts, two retries, 360 seconds total; no wider than runner-local policy")
+	a := r.mustCLI("task", "approve", id, "--eligibility", w.eligibility, "--allow-development-isolation", "--budgets-file", budgets)
 	g := obj(a["grant"])
-	d := r.mustCLI("task", "dispatch", id, "--grant-id", str(g["id"]), "--grant-revision", fmt.Sprint(num(g["revision"])), "--attempt-ms", "120000")
+	d := r.mustCLI("task", "dispatch", id, "--grant-id", str(g["id"]), "--grant-revision", fmt.Sprint(num(g["revision"])), "--attempt-ms", fmt.Sprint(r.attemptMS))
 	r.dispatches = append(r.dispatches, d)
 	return d
 }
@@ -365,7 +383,7 @@ func (r *installation) observe(d object, w *worker) object {
 		}
 		view := obj(r.get("/api/v1/stops/" + stopID + "?attempt_id=" + id))
 		stops = append(stops, view)
-		if remote := str(view["RemoteWork"]); remote != "" {
+		if remote := str(view["RemoteWork"]); remote != "" && view["Evidence"] != nil {
 			out["remote_work"] = remote
 		}
 	}
@@ -387,7 +405,7 @@ func (r *installation) observe(d object, w *worker) object {
 	r.s.check(r.t, "contiguous durable event revisions", monotonic && revision >= num(a["revision"]) && revision > 0, object{"attempt_revision": a["revision"], "last_event_revision": revision})
 	return out
 }
-func (r *installation) verifyReview(task string, accept bool) object {
+func (r *installation) verifyReview(task string, accept bool, expected ...object) object {
 	r.t.Helper()
 	job := r.mustCLI("verify", "run", task)
 	j := r.job(str(job["job_id"]))
@@ -397,6 +415,9 @@ func (r *installation) verifyReview(task string, accept bool) object {
 	reportID := str(summary["id"])
 	if reportID != "" {
 		r.get("/api/v1/verifications/" + reportID)
+	}
+	if len(expected) > 0 {
+		r.assertVerification(current, expected[0])
 	}
 	if accept {
 		r.s.check(r.t, "verification is verified", boolean(obj(summary["status"])["verified"]), summary)
