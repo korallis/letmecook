@@ -16,7 +16,9 @@ Modes: `edit`, `noop`, `delete`, `create_empty`, `binary_edit`, `hang`, `crash`,
 `detached_child`, `crash_after_edit`. Edits have `path`, optional `content`,
 `content_base64` or `delete:true`; optional `delay_ms` and `stream_bytes` are
 bounded. Unknown/null fields, traversal and `.git` edits refuse. Hang/crash/
-approval do not apply declared edits; crash_after_edit does.
+approval do not apply declared edits; crash_after_edit does. Delete mode also
+applies each edit as declared: only `delete:true` removes a file, while `content`
+or `content_base64` writes it. A missing-file deletion fails `edit_failed`.
 
 Approval emits an event then waits, never grants itself permission. Ignore-term
 and forked children are real signal targets. Detached-child calls setsid; the
