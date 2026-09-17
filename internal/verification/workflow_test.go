@@ -129,10 +129,22 @@ func (lyingLauncher) Observation() isolation.Observation {
 	return isolation.Observation{ProfileDigest: strings.Repeat("a", 64), RuntimeDigest: strings.Repeat("b", 64), Controls: scheduler.DevelopmentIsolationControls(), Limitations: []string{"test-only observation limitation"}}
 }
 func TestWorkflowCanaryDriftRetainsUnqualifiedRefusal(t *testing.T) {
-	if _, err := NewDevelopmentProfile(isolation.Unqualified{}, time.Second); err == nil {
+	if _, err := NewDevelopmentProfile(isolation.Unqualified{}, time.Second, t.TempDir()); err == nil {
 		t.Fatal("unqualified constructor accepted")
 	}
-	profile, err := NewDevelopmentProfile(lyingDevelopment{}, time.Second)
+	// /var/tmp is outside the launcher's /tmp and per-user temp exceptions;
+	// this disposable explicit state root never writes into the real HOME.
+	state, err := os.MkdirTemp("/var/tmp", "gaffer-verify-state-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(state)
+	state, err = filepath.EvalSymlinks(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", filepath.Join(t.TempDir(), "must-not-create-home"))
+	profile, err := NewDevelopmentProfile(lyingDevelopment{}, time.Second, state)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,6 +161,13 @@ func TestWorkflowCanaryDriftRetainsUnqualifiedRefusal(t *testing.T) {
 	if _, err := os.Stat(marker); !os.IsNotExist(err) {
 		t.Fatal("trusted check ran after escape canary", err)
 	}
+	if _, err := os.Stat(os.Getenv("HOME")); !os.IsNotExist(err) {
+		t.Fatal("HOME was touched", err)
+	}
+	entries, err := os.ReadDir(filepath.Join(state, "verification-canary"))
+	if err != nil || len(entries) != 0 {
+		t.Fatal("canary cleanup", entries, err)
+	}
 }
 func TestWorkflowDevelopmentCommandTimeoutKillsGroup(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
@@ -161,5 +180,37 @@ func TestWorkflowDevelopmentCommandTimeoutKillsGroup(t *testing.T) {
 	}
 	if time.Since(start) > 2*time.Second {
 		t.Fatal("unbounded termination")
+	}
+}
+
+func TestDevelopmentCanaryRefusesUnsafeStateRoots(t *testing.T) {
+	for _, state := range []string{"", "relative", "/tmp", "/private/tmp", t.TempDir()} {
+		if _, err := NewDevelopmentProfile(lyingDevelopment{}, time.Second, state); err == nil {
+			t.Fatal("unsafe state accepted", state)
+		}
+	}
+	state, err := os.MkdirTemp("/var/tmp", "gaffer-canary-roots-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(state)
+	state, err = filepath.EvalSymlinks(state)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.Symlink(t.TempDir(), filepath.Join(state, "verification-canary")); err != nil {
+		t.Fatal(err)
+	}
+	workspace := t.TempDir()
+	w := isolation.Workspace{Root: workspace, PrivateHome: workspace, TempDir: workspace, RuntimeDir: workspace}
+	if err = verificationCanary(context.Background(), lyingLauncher{}, w, state); err == nil {
+		t.Fatal("symlink canary root accepted")
+	}
+	if err = os.Remove(filepath.Join(state, "verification-canary")); err != nil {
+		t.Fatal(err)
+	}
+	w.Root = state
+	if err = verificationCanary(context.Background(), lyingLauncher{}, w, state); err == nil {
+		t.Fatal("canary inside workspace accepted")
 	}
 }

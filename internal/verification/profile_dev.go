@@ -21,14 +21,15 @@ import (
 )
 
 type developmentProfile struct {
-	profile isolation.Profile
-	timeout time.Duration
+	profile  isolation.Profile
+	timeout  time.Duration
+	stateDir string
 }
 
 // NewDevelopmentProfile is an explicit development-only constructor. A profile
 // label alone is insufficient: every invocation measures escape canaries before
 // running the trusted command through the same launcher.
-func NewDevelopmentProfile(profile isolation.Profile, timeout time.Duration) (Profile, error) {
+func NewDevelopmentProfile(profile isolation.Profile, timeout time.Duration, stateDir string) (Profile, error) {
 	if profile == nil || profile.ID() != "macos-sandbox-exec-dev" || profile.Kind() != "native" || profile.Qualification() != isolation.QualificationDevelopment || timeout <= 0 || timeout > time.Hour {
 		return nil, isolation.ErrExecutionUnqualified
 	}
@@ -37,7 +38,18 @@ func NewDevelopmentProfile(profile isolation.Profile, timeout time.Duration) (Pr
 			return nil, isolation.ErrExecutionUnqualified
 		}
 	}
-	return developmentProfile{profile, timeout}, nil
+	if !filepath.IsAbs(stateDir) {
+		return nil, isolation.ErrExecutionUnqualified
+	}
+	canonical, err := filepath.EvalSymlinks(stateDir)
+	if err != nil || canonical != filepath.Clean(stateDir) || systemTempException(canonical) {
+		return nil, isolation.ErrExecutionUnqualified
+	}
+	info, err := os.Lstat(canonical)
+	if err != nil || !info.IsDir() || info.Mode().Perm()&0077 != 0 {
+		return nil, isolation.ErrExecutionUnqualified
+	}
+	return developmentProfile{profile: profile, timeout: timeout, stateDir: canonical}, nil
 }
 func (developmentProfile) id() string { return "macos-sandbox-exec-dev" }
 
@@ -101,7 +113,7 @@ func (p developmentProfile) run(ctx context.Context, root string, check Check) (
 		o.failure = "missing isolation digests"
 		return o
 	}
-	if err = verificationCanary(ctx, launcher, w); err != nil {
+	if err = verificationCanary(ctx, launcher, w, p.stateDir); err != nil {
 		// Drift is recorded rather than turned into an executed passing report. The
 		// labelled environment remains the expected profile; failure carries drift.
 		o.environment = observe(p.id(), "canary-failed", check.Env["PATH"])
@@ -146,24 +158,39 @@ func (p developmentProfile) run(ctx context.Context, root string, check Check) (
 	o.stderr = stderr.stream()
 	return o
 }
-func verificationCanary(ctx context.Context, launcher isolation.Launcher, w isolation.Workspace) error {
-	// The development launcher explicitly permits system-temp writes. A sibling
-	// of a temporary workspace is therefore not a meaningful outside-write test.
-	// Use a private disposable directory under the real home, never real secrets.
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	home, err = filepath.EvalSymlinks(home)
-	if err != nil {
-		return err
-	}
-	for _, prefix := range []string{"/private/tmp", "/private/var/folders", "/tmp", "/var/folders"} {
-		if home == prefix || strings.HasPrefix(home, prefix+string(os.PathSeparator)) {
-			return fmt.Errorf("home is inside system-temp exception")
+func pathWithin(root, path string) bool {
+	return root == path || strings.HasPrefix(path, root+string(os.PathSeparator))
+}
+func systemTempException(path string) bool {
+	for _, root := range []string{"/private/tmp", "/private/var/folders", "/tmp", "/var/folders"} {
+		if pathWithin(root, path) {
+			return true
 		}
 	}
-	parent, err := os.MkdirTemp(home, ".gaffer-verify-canary-")
+	return false
+}
+func verificationCanary(ctx context.Context, launcher isolation.Launcher, w isolation.Workspace, stateDir string) error {
+	// Explicit daemon state only: never infer HOME or place the canary in the
+	// verification workspace or any known launcher system-temp write exception.
+	canonical, err := filepath.EvalSymlinks(stateDir)
+	if err != nil || canonical != stateDir || systemTempException(canonical) {
+		return fmt.Errorf("unsafe canary state")
+	}
+	canaryRoot := filepath.Join(stateDir, "verification-canary")
+	for _, allowed := range []string{w.Root, w.PrivateHome, w.TempDir, w.RuntimeDir} {
+		resolved, err := filepath.EvalSymlinks(allowed)
+		if err != nil || pathWithin(resolved, canaryRoot) || pathWithin(canaryRoot, resolved) {
+			return fmt.Errorf("canary overlaps workspace")
+		}
+	}
+	if err = os.Mkdir(canaryRoot, 0700); err != nil && !os.IsExist(err) {
+		return err
+	}
+	info, err := os.Lstat(canaryRoot)
+	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm()&0077 != 0 {
+		return fmt.Errorf("unsafe canary root")
+	}
+	parent, err := os.MkdirTemp(canaryRoot, "probe-")
 	if err != nil {
 		return err
 	}
