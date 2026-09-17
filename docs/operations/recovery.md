@@ -96,20 +96,38 @@ nothing to wait for. `store.SetControlClock` exists for tests and diagnostics;
 production waits.
 
 Termination evidence is *current* only when it was validated on arrival (a
-`control_observations` row), under this daemon boot, and the runner's latest
-session still runs the incarnation that executed the attempt. A retained report,
-a report from another daemon boot, or any report once the runner has restarted
-is non-current: `ReleaseAttempt` re-checks all three inside its transaction and
-requires the barrier, whatever the classifier decided.
+`control_observations` row), under this daemon boot, and the runner has never
+run under another boot since the dispatch was admitted. Restart history is
+monotonic (`rcRunnerRestarted`: any `runner_sessions` row for the runner with a
+different boot and `created_ms` at or after the dispatch); a later hello that
+reasserts the original boot does not restore currency, because the session rows
+are immutable. A retained report, a report from another daemon boot, or any
+report once the runner has restarted is non-current: `ReleaseAttempt` re-checks
+all three inside its transaction and requires the barrier, whatever the
+classifier decided. The runner's journal entries are read with one rule
+(`store.SelectJournal`): within a hello a corrupt entry for a dispatch wins over
+an intact one in either order; across hellos the latest hello mentioning the
+dispatch wins (`rcLatestJournal`); a hello from another runner never applies.
+A retained finalize attestation (proof 1 above) must carry the dispatch's runner
+boot and the attempt's receipt, else `boot_mismatch` / `identity_conflict`.
 
 ### Reports and retry admission
 
-Startup always retains its report. A hello or sweep retains one only when its
-entries differ from the last retained report of this boot, so identical hello
-replays and idle sweeps do not accrete rows. Auto-retry admission re-derives the
-terminal cause of the task's last attempt from durable records and requires
-that attempt to be the one this run released or unlatched; a stale cause never
-retries a later attempt that ended otherwise.
+Startup always retains its report. Every hello and sweep classifies every
+non-terminal attempt (a hello's journals apply only to the calling runner's
+dispatches), so their outcomes share one key; a report is retained only when
+its entries differ from the last retained report of this boot, whatever trigger
+produced that one, so identical hello replays and idle hello/sweep pairs do not
+accrete rows. Retry admission is a compare-and-dispatch: `PlanRetry` narrows the
+request envelope's `attempts`/`retries` ceilings to the predecessor's epoch, so
+`store.Dispatch` admits the request inside its own transaction only while that
+attempt is still the task's last one and refuses `attempt_ceiling` otherwise;
+automatic retries additionally use one intent key per released attempt
+(`retryIntent`), re-derive the predecessor's durable cause immediately before
+admission and refuse when it is not the allowlisted cause they observed. A
+runner journal that claims `result_pending` without the daemon's exit
+observation changes nothing: lease-lapse fencing applies exactly as if the
+runner had said nothing.
 
 ### Stop latches
 
