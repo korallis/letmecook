@@ -185,6 +185,9 @@ func Open(path string, o Options) (*Runner, error) {
 func clone[T any](v T) T { b, _ := json.Marshal(v); var out T; _ = json.Unmarshal(b, &out); return out }
 
 func reduce(old state, e event) (state, error) {
+	// Events cross a caller ownership boundary. Retained pointers/slices must be
+	// detached as well as the previous state; Go structs do not copy nested data.
+	e = clone(e)
 	s := clone(old)
 	if e.At < 0 || e.At > p.MaxInteger {
 		return old, p.Malformed

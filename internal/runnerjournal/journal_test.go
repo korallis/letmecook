@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func pathFor(t *testing.T) string {
@@ -128,8 +129,12 @@ func TestChildCrashHelper(t *testing.T) {
 	}
 	// SIGKILL without Close: OS ownership is released, retained history survives.
 	self, _ := os.FindProcess(os.Getpid())
-	_ = self.Kill()
-	os.Exit(99)
+	if self.Kill() != nil {
+		os.Exit(99)
+	}
+	for {
+		time.Sleep(time.Second)
+	}
 }
 func TestProcessLossReopenAndBound(t *testing.T) {
 	path := pathFor(t)

@@ -296,8 +296,13 @@ func TestCrashHelper(t *testing.T) {
 		os.Exit(4)
 	}
 	self, _ := os.FindProcess(os.Getpid())
-	_ = self.Kill()
-	os.Exit(99)
+	if self.Kill() != nil {
+		os.Exit(99)
+	}
+	// Do not race normal exit against asynchronous SIGKILL delivery.
+	for {
+		time.Sleep(time.Second)
+	}
 }
 func TestRealProcessLossAfterLeaseNeverResumes(t *testing.T) {
 	parent, e := filepath.EvalSymlinks(t.TempDir())
@@ -391,5 +396,38 @@ func TestLocalResourceCeilingWithConsistentlyBoundDaemonInput(t *testing.T) {
 	f.d.Assignment.InputDigest = ih
 	if _, e := f.r.Accept(f.o.Session, f.d); !errors.Is(e, ErrPolicy) {
 		t.Fatal("daemon exceeded independently loaded capacity", e)
+	}
+}
+
+func TestAcceptedInputDoesNotAliasCallerMemory(t *testing.T) {
+	f := setup(t)
+	original := clone(f.d)
+	ack := accept(t, f)
+	f.d.Assignment.Route.RouteRef = "caller-change"
+	f.d.Request.Envelope.Paths[0] = "caller-change.txt"
+	f.d.Facts.Paths[0].Capabilities[0] = "caller-change"
+	if !reflect.DeepEqual(*f.r.state.Input, original) || !reflect.DeepEqual(*f.r.state.Assignment, original.Assignment) {
+		t.Fatal("caller mutated retained accepted authority without a journal append")
+	}
+	replayed, err := f.r.Accept(f.o.Session, original)
+	if err != nil || !reflect.DeepEqual(replayed, ack) {
+		t.Fatal("caller mutation changed durable retransmission", err)
+	}
+	var retained event
+	if err = json.Unmarshal(f.r.log.Records()[1], &retained); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(retained.Input, f.r.state.Input) {
+		t.Fatal("memory differs from committed acceptance")
+	}
+	request, err := f.r.RequestLease(f.o.Session)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sent := *request.SentMS
+	*request.SentMS = sent + 5000
+	retry, err := f.r.RequestLease(f.o.Session)
+	if err != nil || *retry.SentMS != sent {
+		t.Fatal("returned message mutated retained lease request", err)
 	}
 }
