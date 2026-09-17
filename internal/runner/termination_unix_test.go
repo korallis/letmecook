@@ -4,6 +4,7 @@ package runner
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -119,7 +120,7 @@ func TestObservedProcessTreeTerminationWithinFiveSeconds(t *testing.T) {
 			if err := apply(f.r, f.o.Session, reply(req)); !errors.Is(err, ErrStopped) {
 				t.Fatal("late lease resumed cancelled work", err)
 			}
-			if !errors.Is(f.r.Launch(), ErrExecutionDisabled) {
+			if !errors.Is(f.r.Launch(context.Background(), LaunchRequest{}), ErrExecutionDisabled) {
 				t.Fatal("launch enabled")
 			}
 			if err := f.r.Close(); err != nil {

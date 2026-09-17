@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	g "github.com/korallis/letmecook/internal/authority"
+	"github.com/korallis/letmecook/internal/inference"
 	repo "github.com/korallis/letmecook/internal/repositories"
 	sc "github.com/korallis/letmecook/internal/scheduler"
 	"github.com/korallis/letmecook/internal/store"
@@ -117,7 +119,7 @@ func TestConcurrentAcceptanceLostAckAndCollision(t *testing.T) {
 	if _, e = f.r.Accept(f.o.Session, changed); e == nil {
 		t.Fatal("concurrent writer")
 	}
-	if !errors.Is(f.r.Launch(), ErrExecutionDisabled) || f.r.Status().ExecutionEnabled {
+	if !errors.Is(f.r.Launch(context.Background(), LaunchRequest{}), ErrExecutionDisabled) || f.r.Status().ExecutionEnabled {
 		t.Fatal("production launch enabled")
 	}
 	// Persisted acceptance contains immutable input and ack, not only a hash.
@@ -429,5 +431,54 @@ func TestAcceptedInputDoesNotAliasCallerMemory(t *testing.T) {
 	retry, err := f.r.RequestLease(f.o.Session)
 	if err != nil || *retry.SentMS != sent {
 		t.Fatal("returned message mutated retained lease request", err)
+	}
+}
+
+// A boundary's Close may synchronously persist terminal receipt accounting.
+// Closing/locking the journal first would lose evidence or deadlock this path.
+type closingBoundary struct{ onClose func() }
+
+func (*closingBoundary) Addr() string           { return "127.0.0.1:1" }
+func (*closingBoundary) State() inference.State { return inference.State{} }
+func (b *closingBoundary) Close(context.Context) inference.State {
+	if b.onClose != nil {
+		b.onClose()
+		b.onClose = nil
+	}
+	return inference.State{Quiescent: true}
+}
+func TestCloseBoundaryBeforeJournalAndRuntimeClockRegression(t *testing.T) {
+	f := setup(t)
+	accept(t, f)
+	if err := f.r.Enqueue("evidence", "first", map[string]string{"state": "retained"}); err != nil {
+		t.Fatal(err)
+	}
+	f.now--
+	if err := f.r.Enqueue("evidence", "regressed", map[string]bool{"bad": true}); !errors.Is(err, p.DelayedReply) {
+		t.Fatal("clock regression accepted", err)
+	}
+	f.now++
+	f.r.prepared = &preparedLaunch{boundary: &closingBoundary{onClose: func() {
+		if err := f.r.Enqueue("usage-complete", "closing", map[string]bool{"terminal": true}); err != nil {
+			t.Error(err)
+		}
+	}}}
+	if err := f.r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Open(f.path, f.o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	found := false
+	for _, entry := range r.Outbox() {
+		found = found || entry.Key == "closing"
+		if entry.Key == "regressed" {
+			t.Fatal("regressed event persisted")
+		}
+	}
+	if !found {
+		t.Fatal("boundary completion not durable")
 	}
 }
