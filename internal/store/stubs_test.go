@@ -44,7 +44,7 @@ func TestSeamStubsRefuseUntilImplemented(t *testing.T) {
 	errs = append(errs, err)
 	_, err = s.Eligibility(ctx, "")
 	errs = append(errs, err)
-	_, err = s.SetPaused(ctx, "", true, "")
+	_, err = s.SetPaused(ctx, "", "", true, "", false)
 	errs = append(errs, err)
 	_, err = s.Paused(ctx)
 	errs = append(errs, err)
@@ -74,7 +74,9 @@ func TestSeamStubsRefuseUntilImplemented(t *testing.T) {
 	_, err = s.ReconcileReport(ctx, "")
 	errs = append(errs, err)
 	errs = append(errs, s.PutReconcileReport(ctx, ReconcileReport{}))
-	if len(errs) != 30 {
+	_, err = s.ReconciliationInputs(ctx, "")
+	errs = append(errs, err)
+	if len(errs) != 31 {
 		t.Fatalf("stub inventory drifted: %d", len(errs))
 	}
 	for i, err := range errs {
@@ -106,6 +108,8 @@ func TestSeamTypesMarshalWithoutNull(t *testing.T) {
 		"gateway":     GatewayProfile{},
 		"restore":     RestoreEntry{},
 		"reconcile":   ReconcileReport{},
+		"inputs":      ReconciliationInputs{},
+		"observation": RuntimeObservation{},
 		"hello":       HelloRecord{},
 	} {
 		raw, err := json.Marshal(v)
@@ -120,5 +124,19 @@ func TestSeamTypesMarshalWithoutNull(t *testing.T) {
 	raw, err := json.Marshal(UploadBegin{Manifest: []byte("{}")})
 	if err != nil || !bytes.Contains(raw, []byte(`"manifest_base64":"e30="`)) {
 		t.Fatal(string(raw), err)
+	}
+	// Required evidence numbers are present even when zero: an exit code of 0 and
+	// a stream watermark of 0 are evidence, never omissions.
+	raw, err = json.Marshal(RuntimeEvidence{Kind: "exit"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{`"boundary_port":0`, `"guardian_pid":0`, `"pid":0`, `"pgid":0`, `"start_unix_ns":0`, `"code":0`, `"pgid_empty":false`, `"observed_unix_ns":0`, `"stream_through":0`} {
+		if !bytes.Contains(raw, []byte(field)) {
+			t.Fatalf("required evidence field omitted: %s in %s", field, raw)
+		}
+	}
+	if bytes.Contains(raw, []byte(`"workspace"`)) || bytes.Contains(raw, []byte(`"nonce"`)) {
+		t.Fatalf("optional strings emitted when empty: %s", raw)
 	}
 }

@@ -84,22 +84,25 @@ type ExecutionState struct {
 }
 
 // RuntimeEvidence accompanies a transition proposal and is retained verbatim in
-// runtime_observations. Kind selects the populated fields: launch_intent
+// runtime_observations. Kind selects the meaningful fields: launch_intent
 // (workspace, boundary_port, guardian_pid, nonce), launched (pid, pgid,
 // start_unix_ns) and exit (code, pgid_empty, observed_unix_ns, stream_through).
+// Numeric and boolean fields are always emitted, zero included, so an exit code
+// of 0 or a stream watermark of 0 is evidence rather than an omission; only the
+// two strings are optional.
 type RuntimeEvidence struct {
 	Kind           string `json:"kind"`
 	Workspace      string `json:"workspace,omitempty"`
-	BoundaryPort   int    `json:"boundary_port,omitempty"`
-	GuardianPID    int    `json:"guardian_pid,omitempty"`
+	BoundaryPort   int    `json:"boundary_port"`
+	GuardianPID    int    `json:"guardian_pid"`
 	Nonce          string `json:"nonce,omitempty"`
-	PID            int    `json:"pid,omitempty"`
-	PGID           int    `json:"pgid,omitempty"`
-	StartUnixNS    int64  `json:"start_unix_ns,omitempty"`
-	Code           int    `json:"code,omitempty"`
-	PGIDEmpty      bool   `json:"pgid_empty,omitempty"`
-	ObservedUnixNS int64  `json:"observed_unix_ns,omitempty"`
-	StreamThrough  int64  `json:"stream_through,omitempty"`
+	PID            int    `json:"pid"`
+	PGID           int    `json:"pgid"`
+	StartUnixNS    int64  `json:"start_unix_ns"`
+	Code           int    `json:"code"`
+	PGIDEmpty      bool   `json:"pgid_empty"`
+	ObservedUnixNS int64  `json:"observed_unix_ns"`
+	StreamThrough  int64  `json:"stream_through"`
 }
 
 // BoundaryState mirrors the inference boundary's reservation accounting at the
