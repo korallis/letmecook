@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "observedAt": "2026-09-17T07:57:47.897Z",
+  "bootId": "542a7bed-a781-4c0b-a023-c19267e49d9c",
+  "profileSha256": "6dae35b418d12d293a4bd2a82919c19ac821097475752577e0eee9fd93ed57da",
+  "units": [
+    {
+      "role": "worker",
+      "unit": "gaffer-native-890917000000000000000001-worker.service",
+      "cgroup": "/system.slice/gaffer-native-890917000000000000000001-worker.service",
+      "cgroupPresent": false,
+      "properties": "MainPID=0\nControlGroup=\nId=gaffer-native-890917000000000000000001-worker.service\nLoadState=not-found\nActiveState=inactive\nSubState=dead\nInvocationID="
+    },
+    {
+      "role": "mock",
+      "unit": "gaffer-native-890917000000000000000001-mock.service",
+      "cgroup": "/system.slice/gaffer-native-890917000000000000000001-mock.service",
+      "cgroupPresent": false,
+      "properties": "MainPID=0\nControlGroup=\nId=gaffer-native-890917000000000000000001-mock.service\nLoadState=not-found\nActiveState=inactive\nSubState=dead\nInvocationID="
+    }
+  ],
+  "matchingProcesses": [],
+  "journalSha256": "6682ef4466274a71b38fe615c0ba6c5623a2ff5a21e307d11d85f908e7680f6e",
+  "baselineRunDirectoryExists": false,
+  "quarantineCleared": false,
+  "scope": "Independent read-only snapshot; absence is not a no-launch attestation or confinement proof"
+}

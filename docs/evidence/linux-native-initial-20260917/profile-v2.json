@@ -1,0 +1,145 @@
+{
+  "sourceHead": "1d9371b6e5e7cb5fec9eee06624dd9aafa55c6b6",
+  "profileSha256": "6dae35b418d12d293a4bd2a82919c19ac821097475752577e0eee9fd93ed57da",
+  "profile": {
+    "schema": 1,
+    "id": "m0-debian13-amd64-systemd-native-v1",
+    "status": "measured",
+    "unattendedSupported": false,
+    "procedureSha256": "fbc0b408d2023a769a24a8b48e856b52a6744c5efc4e91869775be65a4ec6b59",
+    "identity": {
+      "osReleaseSha256": "e249e69c32d81350fdd6b05ac5575255f14e380ba14b8454acea14e49f088bfa",
+      "kernelRelease": "6.12.107+deb13-amd64",
+      "kernelConfigSha256": "9b460f1003db4d417288e9c14caecfa14245dab07186df948fef0f3661e38ceb",
+      "bootId": "542a7bed-a781-4c0b-a023-c19267e49d9c",
+      "machineIdSha256": "684f40e565c24924342c0298be496023f39172394f411ff4c80ef74987318bbb",
+      "systemdVersion": "systemd 257 (257.13-1~deb13u1)\n+PAM +AUDIT +SELINUX +APPARMOR +IMA +IPE +SMACK +SECCOMP +GCRYPT -GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBCRYPTSETUP_PLUGINS +LIBFDISK +PCRE2 +PWQUALITY +P11KIT +QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD +BPF_FRAMEWORK +BTF -XKBCOMMON -UTMP +SYSVINIT +LIBARCHIVE",
+      "nodeVersion": "v24.21.0",
+      "architecture": "x64",
+      "imageSha256": "b6e3a4dac69b38d55a763b1752e8fd7bb12e3948672a79fee4ef13fa53839d2f",
+      "hypervisorSha256": "25afcb2986e4a0f2c567de17273f55de3c99792b78a07c99e923bb62024c088f",
+      "rootfsSha256": "62cc4dd0565bd13c1a3821b5c95caf8781f786034d9bdc3d43a4ba1fc8cdbbf6",
+      "controllerNamespaces": {
+        "user": "user:[4026531837]",
+        "pid": "pid:[4026531836]",
+        "net": "net:[4026531840]",
+        "ipc": "ipc:[4026531839]",
+        "mnt": "mnt:[4026531841]",
+        "cgroup": "cgroup:[4026531835]"
+      }
+    },
+    "ids": {
+      "workerUid": 61001,
+      "workerGid": 61001,
+      "mockUid": 61002,
+      "mockGid": 61002,
+      "socketGid": 61003
+    },
+    "storage": {
+      "evidenceDevice": 65025,
+      "evidenceInode": 137176,
+      "evidenceFsType": 61267,
+      "rootfsDevice": 65025,
+      "rootfsInode": 137175
+    },
+    "artifacts": [
+      {
+        "path": "/usr/bin/systemctl",
+        "sha256": "848c70d7e2c2f43f4f93287897ac8946e8eda45e7daa5f2975d9728071856b1a"
+      },
+      {
+        "path": "/usr/bin/systemd-run",
+        "sha256": "fb8ee22411b3c0cdd56547df9915f387a5d5c7af3e05bbfe5332fda220d4732b"
+      },
+      {
+        "path": "/usr/bin/systemd-analyze",
+        "sha256": "d89a879c2c87c4465e3a09588e18f27a14dd9228898679bbdbbc978802f64dce"
+      },
+      {
+        "path": "/usr/bin/node",
+        "sha256": "7fde7b8afa198da66257f42ee2001d874c7355631e6d1579a5fb5ef1f246df4c"
+      },
+      {
+        "path": "/usr/bin/git",
+        "sha256": "356db14e102d68a1a37d8a1ac577dfd678d45d46e92f468bef8b7154e7bfdc60"
+      },
+      {
+        "path": "/usr/bin/unshare",
+        "sha256": "e7d3961bd874d5a4fe531efe6feb61b358b8000bd8c5fe91c5f1bdd9af81a002"
+      },
+      {
+        "path": "/usr/bin/nsenter",
+        "sha256": "09ea3a612a16b59c04aa55d894a1e868deaddb8a6a9927c4f1993827a3554de1"
+      },
+      {
+        "path": "/usr/bin/mount",
+        "sha256": "2f36342bd2fef42343c4fa4a2a396a7f56c7c8f4ddcbd31c43205c62e152e6d4"
+      },
+      {
+        "path": "/usr/bin/ping",
+        "sha256": "b51f3f92619a4ba05a66cb432c970ab275d0a5cf4b9b8cada543e4bcc1aa22dd"
+      },
+      {
+        "path": "/usr/bin/true",
+        "sha256": "b381cc8c55ec524b9fa92897f0882e855357468b4a763519cec47e05994d61ff"
+      },
+      {
+        "path": "/usr/bin/sleep",
+        "sha256": "0637e6d47579929cb72efa46f361861b319d62c62fe8a9d10731fd7655eb5936"
+      },
+      {
+        "path": "/usr/bin/dash",
+        "sha256": "a6f559e00b69a4aa4d8cb607be18d9386c5aee55c509e2c075549dcf00e00fc7"
+      },
+      {
+        "path": "/usr/bin/env",
+        "sha256": "eb1c64bbc9908afcdf8cb48524f17112d8dd76a249f80dee2f01da14747b3b6e"
+      },
+      {
+        "path": "/var/lib/gaffer-native/rootfs/fixture/probe.ts",
+        "sha256": "f1cf2e9edc8b38d69ca7329b2428b136cbad20eeba09e959d92ac66023e71957"
+      },
+      {
+        "path": "/var/lib/gaffer-native/controller/run.ts",
+        "sha256": "4e824ab36fb37b44684f033a141c9301196e39de9453058d75813b89dfdc3f49"
+      },
+      {
+        "path": "/var/lib/gaffer-native/image-provenance.json",
+        "sha256": "20da084971d86bd4e3687febebe56c282d0f4fd39d25a94640750e7518c0d600"
+      },
+      {
+        "path": "/var/lib/gaffer-native/hypervisor-provenance.json",
+        "sha256": "d500c333ee7c0b7ad0e6fa11f8bd6b3883599e3f81589c11ee01dc2eb1ad76e5"
+      }
+    ],
+    "controls": {
+      "cpuMax": "50000 100000",
+      "memoryMax": "134217728",
+      "swapMax": "0",
+      "pidsMax": "64",
+      "nofile": 256,
+      "core": 0,
+      "runtimeSeconds": 60,
+      "stopSeconds": 1,
+      "emptySeconds": 5,
+      "workerBytes": 47185920,
+      "mockBytes": 2097152,
+      "allowanceBytes": 33554432,
+      "reserveBytes": 16777216,
+      "evidenceBytes": 16777216,
+      "evidenceFiles": 128,
+      "journalBytes": 1048576,
+      "journalFiles": 16
+    },
+    "headroom": {
+      "controllerBytes": 536870912,
+      "osBytes": 536870912,
+      "diskReserveBytes": 67108864,
+      "inodeReserve": 1024,
+      "controllerSliceDevice": 27,
+      "controllerSliceInode": 71
+    }
+  },
+  "previousProfileSha256": "6811fc7d6fd167022c3f5855e6a362c7618672b84aee3c914f9a049df25a1e4a",
+  "reason": "Reviewed non-root cgroup.kill preflight correction; previous initialization refused before journal/worker allocation"
+}

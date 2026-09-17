@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "status": "failed-quarantined",
+  "sourceHead": "1d9371b6e5e7cb5fec9eee06624dd9aafa55c6b6",
+  "profileSha256": "6dae35b418d12d293a4bd2a82919c19ac821097475752577e0eee9fd93ed57da",
+  "notProven": [
+    "confinement",
+    "missing-limit effective rejection",
+    "baseline",
+    "pressure",
+    "egress",
+    "termination",
+    "reboot recovery",
+    "independent reproduction",
+    "adapter integration",
+    "unattended support"
+  ],
+  "observations": {
+    "initialPreflight": "blocked before initialization because root cgroup.kill is absent; reviewed source correction retained",
+    "initialization": "succeeded",
+    "runtimeDrift": "expected-rejection before repository execution",
+    "missingPidsLimit": "failed at systemd-run PrivateUsers identity parsing; quarantined",
+    "subsequentBaselineRequest": "blocked by retained quarantine before fixture allocation",
+    "resourceSnapshot": "both named units/cgroups absent; no matching reserved-UID/cgroup processes; not a no-launch attestation",
+    "quarantineCleared": false
+  },
+  "files": [
+    {
+      "path": "initialize.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "initialize.stderr",
+      "bytes": 420,
+      "sha256": "218153ef0ab8b3f512ec9feb381adfa95910beafa423476fb95bfb74fc3d0017"
+    },
+    {
+      "path": "initialize-failure-observation.txt",
+      "bytes": 231,
+      "sha256": "b7a86cc0cb8c39f64dad1f51c278c3cec9c60fd9cfb38be405a0c72bc2d717f5"
+    },
+    {
+      "path": "initialize-v2.stdout",
+      "bytes": 62,
+      "sha256": "99c4c7236eeb26d079d3657a7818a2d0748f22a5c0bbad8bffe132c3301c7a5a"
+    },
+    {
+      "path": "initialize-v2.stderr",
+      "bytes": 222,
+      "sha256": "80c8896aa9b066bed8f59fd39983437f863271a3cfe67c10e2501f6e15fb54e0"
+    },
+    {
+      "path": "runtime-drift.stdout",
+      "bytes": 215,
+      "sha256": "68ffb5c2b3ba028dfded8a78d5e15f78f66d10a8afa541830242564d74ecb21d"
+    },
+    {
+      "path": "runtime-drift.stderr",
+      "bytes": 222,
+      "sha256": "4659006a6105cd990445679bd907dfe071303d6a7343d6bf80e37300da5dea99"
+    },
+    {
+      "path": "missing-pids.stdout",
+      "bytes": 282,
+      "sha256": "66d478560d902b052c6a5ca6fca02317f30cfe0d3cded9f0f5aaa9b3522fddf8"
+    },
+    {
+      "path": "missing-pids.stderr",
+      "bytes": 222,
+      "sha256": "71112409799a419066b38634806bab8436b1ac6e2b2526cffaa507b2baa043d2"
+    },
+    {
+      "path": "missing-pids-receipt.json",
+      "bytes": 8638,
+      "sha256": "eebcb4bf354748d70128d5105d3a40e14f9dd0551799c5a1cabd7ced4b7d23e2"
+    },
+    {
+      "path": "missing-pids-observations.jsonl",
+      "bytes": 6227,
+      "sha256": "dbddbb3c026266d8b0521c1ce86ffc6b45bf7884bcdec13f7c236d1a7e2b1ccc"
+    },
+    {
+      "path": "profile-journal.jsonl",
+      "bytes": 2029,
+      "sha256": "6682ef4466274a71b38fe615c0ba6c5623a2ff5a21e307d11d85f908e7680f6e"
+    },
+    {
+      "path": "profile-v2.json",
+      "bytes": 5498,
+      "sha256": "2223eb98efce890dd17f491fbc9463cec5dfd012c6de200f38301d00f8453ad4"
+    },
+    {
+      "path": "initial-case-plan-v2.json",
+      "bytes": 841,
+      "sha256": "2090f8c667656416b8b7633ebd98f1c57078fefef9562afa7731233a115867a5"
+    },
+    {
+      "path": "quarantine-next-launch.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "quarantine-next-launch.stderr",
+      "bytes": 359,
+      "sha256": "1329ab9e112629380c7b7508b65f87399595d0618dd6bb843304e09f69761b89"
+    },
+    {
+      "path": "quarantine-observation.json",
+      "bytes": 1305,
+      "sha256": "feaaee9eab9ec330c0972d3a3ecaa0514be5cfb6379f71f70c189b7edadb824b"
+    },
+    {
+      "path": "profile-frozen.json",
+      "bytes": 4831,
+      "sha256": "6dae35b418d12d293a4bd2a82919c19ac821097475752577e0eee9fd93ed57da"
+    },
+    {
+      "path": "controller-commands.json",
+      "bytes": 3322,
+      "sha256": "d963614b29fb05d6a1f682e5bbe7c2db8407bc2d083599f50c152887be07eb52"
+    }
+  ]
+}

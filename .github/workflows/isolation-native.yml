@@ -1,0 +1,33 @@
+name: Native confinement source checks
+on:
+  push:
+    branches: [main]
+    paths: ['experiments/isolation-native/**', 'experiments/inference-boundary/package*.json', '.github/workflows/isolation-native.yml']
+  pull_request:
+    paths: ['experiments/isolation-native/**', 'experiments/inference-boundary/package*.json', '.github/workflows/isolation-native.yml']
+permissions:
+  contents: read
+jobs:
+  offline-source:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: experiments/inference-boundary/package-lock.json
+      - run: npm --prefix experiments/inference-boundary ci --ignore-scripts
+      - name: Strict source types
+        run: >-
+          experiments/inference-boundary/node_modules/.bin/tsc --noEmit --strict
+          --target es2023 --module esnext --moduleResolution bundler
+          --allowImportingTsExtensions --types node
+          --typeRoots experiments/inference-boundary/node_modules/@types
+          experiments/isolation-native/run.ts experiments/isolation-native/probe.ts
+          experiments/isolation-native/run.test.ts
+      - name: Offline failure paths only — no native proof or setup
+        run: node --test experiments/isolation-native/run.test.ts

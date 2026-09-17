@@ -1,0 +1,218 @@
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import * as fs from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { createServer, request } from 'node:http';
+import { retireMockInstance } from './probe.ts';
+import { fileURLToPath } from 'node:url';
+import { admission, validateProfile, CONTROLS, PROCEDURE, BASE, hash, Journal, exclusive, assertEffective, assertOwned, prepare, main, json, rootfsDigest } from './run.ts';
+
+// Deliberately synthetic objects for pure logic. No host inventory, native entrypoint,
+// system service, namespace, mount, network socket or pressure operation runs here.
+function synthetic() {
+  const digest = hash('SYNTHETIC TEST BYTES, NOT MEASURED HOST EVIDENCE');
+  const paths = ['/usr/bin/systemctl', '/usr/bin/systemd-run', '/usr/bin/systemd-analyze', '/usr/bin/node', '/usr/bin/git',
+    '/usr/bin/unshare', '/usr/bin/nsenter', '/usr/bin/mount', '/usr/bin/ping', '/usr/bin/true', '/usr/bin/sleep', '/usr/bin/dash', '/usr/bin/env',
+    `${BASE}/rootfs/fixture/probe.ts`, `${BASE}/controller/run.ts`, `${BASE}/image-provenance.json`, `${BASE}/hypervisor-provenance.json`];
+  return {
+    schema: 1, id: 'm0-debian13-amd64-systemd-native-v1', status: 'measured', unattendedSupported: false, procedureSha256: PROCEDURE,
+    identity: { osReleaseSha256: digest, kernelRelease: '6.12.0-SYNTHETIC', kernelConfigSha256: digest,
+      bootId: '00000000-0000-0000-0000-000000000001', machineIdSha256: digest, systemdVersion: 'systemd 257 (SYNTHETIC)',
+      nodeVersion: 'v24.0.0', architecture: 'x64', imageSha256: digest, hypervisorSha256: digest, rootfsSha256: digest,
+      controllerNamespaces: Object.fromEntries(['user', 'pid', 'net', 'ipc', 'mnt', 'cgroup'].map(name => [name, `${name}:[1]`])) },
+    ids: { workerUid: 2001, workerGid: 2001, mockUid: 2002, mockGid: 2002, socketGid: 2003 },
+    storage: { evidenceDevice: 1, evidenceInode: 2, evidenceFsType: 0xef53, rootfsDevice: 1, rootfsInode: 3 },
+    artifacts: paths.map(path => ({ path, sha256: digest })), controls: { ...CONTROLS },
+    headroom: { controllerBytes: 128 * 1024 ** 2, osBytes: 256 * 1024 ** 2, diskReserveBytes: 16 * 1024 ** 2, inodeReserve: 256,
+      controllerSliceDevice: 1, controllerSliceInode: 4 },
+  };
+}
+function temporary(action: (directory: string) => void): void {
+  const directory = fs.mkdtempSync(join(tmpdir(), 'gaffer-89-offline-'));
+  try { return action(directory); } finally { fs.rmSync(directory, { recursive: true, force: true }); }
+}
+const identity = { profileHash: hash('SYNTHETIC PROFILE'), bootId: '00000000-0000-0000-0000-000000000001' };
+const runId = 'a'.repeat(24), nextId = 'b'.repeat(24);
+function initialized(directory: string) {
+  const path = join(directory, 'journal'); fs.mkdirSync(path, { mode: 0o700 });
+  const journal = new Journal(path, process.getuid!());
+  journal.append({ ...identity, kind: 'genesis', runId: '', detail: {} }, true);
+  return journal;
+}
+test('default, non-Linux, digest drift and all missing identity/control fields deny admission', () => {
+  const p = synthetic(), bytes = JSON.stringify(p);
+  assert.equal(admission(p, 'linux', hash(bytes), bytes).unattendedSupported, false);
+  assert.throws(() => admission(p, 'darwin', hash(bytes), bytes), /Linux/);
+  assert.throws(() => admission(p, 'linux', hash('wrong'), bytes), /digest mismatch/);
+  assert.throws(() => validateProfile(JSON.parse(fs.readFileSync(new URL('./profile.json', import.meta.url), 'utf8'))), /ineligible/);
+  for (const field of Object.keys(p.identity)) {
+    const missing = structuredClone(p); delete (missing.identity as any)[field]; assert.throws(() => validateProfile(missing), field);
+  }
+  for (const field of Object.keys(p.controls)) {
+    const missing = structuredClone(p); delete (missing.controls as any)[field]; assert.throws(() => validateProfile(missing), field);
+  }
+  for (const mutate of [
+    (p: any) => { p.identity.kernelRelease = '*'; },
+    (p: any) => { p.identity.rootfsSha256 = '0'.repeat(64); },
+    (p: any) => { p.controls.pidsMax = 'max'; },
+    (p: any) => { p.storage.evidenceFsType = 0x01021994; },
+    (p: any) => { p.ids.workerUid = 0; },
+    (p: any) => { p.ids.workerUid = p.ids.mockUid; },
+    (p: any) => { p.ids.socketGid = p.ids.workerGid; },
+    (p: any) => { p.force = true; },
+    (p: any) => { p.artifacts[0].path = '/tmp/untrusted-systemctl'; },
+  ]) { const bad = structuredClone(p); mutate(bad); assert.throws(() => validateProfile(bad)); }
+});
+test('effective pids.max=max rejects before simulated repository start; cleanup requires exact identity', () => {
+  const effective = { 'cpu.max': '50000 100000', 'memory.max': '134217728', 'memory.swap.max': '0', 'pids.max': '64' };
+  let repositoryStarted = false;
+  assert.throws(() => { assertEffective({ ...effective, 'pids.max': 'max' }); repositoryStarted = true; }, /pids.max/);
+  assert.equal(repositoryStarted, false); assertEffective(effective);
+  for (const field of Object.keys(effective)) { const missing = { ...effective }; delete (missing as any)[field]; assert.throws(() => assertEffective(missing)); }
+  const owned = { unit: 'synthetic', invocation: 'one', cgroup: '/synthetic', device: 1, inode: 2 };
+  assertOwned(owned, { ...owned });
+  for (const field of Object.keys(owned)) assert.throws(() => assertOwned(owned, { ...owned, [field]: 'reused' }));
+});
+test('missing, corrupt, torn and symlinked journals fail closed', () => temporary(directory => {
+  assert.throws(() => new Journal(join(directory, 'missing'), process.getuid!()).assertLaunch(identity.profileHash, runId));
+  const journal = initialized(directory), path = join(journal.directory, 'journal.jsonl');
+  const bytes = fs.readFileSync(path);
+  fs.appendFileSync(path, '{'); assert.throws(() => journal.assertLaunch(identity.profileHash, runId), /torn/);
+  fs.writeFileSync(path, bytes.toString().replace('genesis', 'corrupt')); assert.throws(() => journal.assertLaunch(identity.profileHash, runId));
+  fs.unlinkSync(path); const other = join(directory, 'other'); fs.writeFileSync(other, bytes); fs.symlinkSync(other, path);
+  assert.throws(() => journal.assertLaunch(identity.profileHash, runId), /unsafe file/);
+}));
+test('intent survives a new Journal instance and denies next launch, including changed boot', () => temporary(directory => {
+  const journal = initialized(directory); journal.assertLaunch(identity.profileHash, runId);
+  journal.append({ ...identity, kind: 'intent', runId, detail: { units: ['synthetic'] } });
+  const afterLoss = new Journal(journal.directory, process.getuid!());
+  assert.throws(() => afterLoss.assertLaunch(identity.profileHash, nextId), /unresolved/);
+  assert.throws(() => afterLoss.assertLaunch(identity.profileHash, runId), /replayed/);
+  assert.equal(afterLoss.read().at(-1)!.bootId, identity.bootId);
+}));
+test('stale competing admission cannot append another intent', () => temporary(directory => {
+  const first = initialized(directory), second = new Journal(first.directory, process.getuid!());
+  first.assertLaunch(identity.profileHash, runId); second.assertLaunch(identity.profileHash, nextId);
+  first.append({ ...identity, kind: 'intent', runId, detail: {} });
+  assert.throws(() => second.append({ ...identity, kind: 'intent', runId: nextId, detail: {} }), /unresolved/);
+  assert.throws(() => first.assertLaunch(identity.profileHash, nextId), /interrupted/);
+}));
+test('failed receipts remain exclusive and hash-bound; resolution never replays failed run', () => temporary(directory => {
+  const journal = initialized(directory), receipt = join(directory, 'failed.json'), body = '{"result":"failed","unattendedSupported":false}\n';
+  journal.append({ ...identity, kind: 'intent', runId, detail: {} });
+  exclusive(receipt, body);
+  journal.append({ ...identity, kind: 'failed', runId, detail: { receipt, sha256: hash(body) } });
+  assert.throws(() => exclusive(receipt, '{"result":"pass"}'), /EEXIST/);
+  assert.equal(hash(fs.readFileSync(receipt)), hash(body));
+  assert.throws(() => journal.assertLaunch(identity.profileHash, nextId), /unresolved/);
+  const failure = journal.read().at(-1)!;
+  assert.throws(() => journal.append({ ...identity, kind: 'resolution', runId, detail: { failedRecordDigest: failure.digest, replayAllowed: false,
+    cleanupVerified: true, resources: [{ populated: 0, processes: [], active: 'inactive' }] } }), /verified resource reconciliation required/);
+  assert.throws(() => journal.assertLaunch(identity.profileHash, runId));
+  assert.throws(() => journal.assertLaunch(identity.profileHash, nextId));
+  assert.equal(fs.readFileSync(receipt, 'utf8'), body);
+}));
+test('journal supports bounded full case campaign without a sixteen-run/file-count shortcut', () => temporary(directory => {
+  const journal = initialized(directory);
+  for (let n = 1; n <= 32; n++) {
+    const id = n.toString(16).padStart(24, '0'); journal.assertLaunch(identity.profileHash, id);
+    journal.append({ ...identity, kind: 'intent', runId: id, detail: {} });
+    journal.append({ ...identity, kind: 'completed', runId: id, detail: { syntheticOnly: true } });
+  }
+  assert.equal(journal.read().length, 65); assert.deepEqual(fs.readdirSync(journal.directory), ['journal.jsonl']);
+}));
+test('prepare emits bounded argv data, refuses injection; no native execution', async () => {
+  const p = validateProfile(synthetic()), output = prepare(p, identity.profileHash, runId, 'missing-pids-limit');
+  assert.equal(output.result, 'NOT RUN'); assert.equal(output.unattendedSupported, false);
+  for (const service of output.services) {
+    assert.ok(service.properties.includes('PrivateUsersEx=identity'));
+    assert.ok(service.properties.includes('ProtectControlGroupsEx=strict'));
+    assert.ok(!service.properties.some(p => /^(PrivateUsers|ProtectControlGroups)=/.test(p)), 'v257 legacy transient fields only accept booleans');
+  }
+  assert.throws(() => prepare(p, identity.profileHash, 'x; touch /tmp/unsafe', 'baseline'));
+  await assert.rejects(main(['--execute', '--force']), /unknown option/);
+  if (process.platform !== 'linux') {
+    await assert.rejects(main(['--execute', '--case', 'missing-pids-limit']), /Linux/);
+    // Real CLI subprocess reaches only platform refusal; never a native host or deployment.
+    const cli = spawnSync(process.execPath, [fileURLToPath(new URL('./run.ts', import.meta.url)), '--execute', '--case', 'missing-pids-limit'], { encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } });
+    assert.equal(cli.status, 1); assert.match(cli.stderr, /requires Linux/);
+    const probe = spawnSync(process.execPath, [fileURLToPath(new URL('./probe.ts', import.meta.url)), '--bootstrap'], { encoding: 'utf8', env: { PATH: '/usr/bin:/bin' } });
+    assert.equal(probe.status, 1); assert.match(probe.stderr, /requires Linux/);
+  }
+});
+
+test('reloaded quarantine resolutions require complete cleanup evidence even with valid hashes', () => {
+  for (const corrupt of [
+    (_detail: any) => {}, // Even plausible generic observations do not identify owned resources.
+    (detail: any) => { detail.failedRecordDigest = hash('different failed run'); },
+    (detail: any) => { detail.replayAllowed = true; },
+    (detail: any) => { detail.cleanupVerified = false; },
+    (detail: any) => { detail.resources = []; },
+    (detail: any) => { detail.resources[0].populated = 1; },
+    (detail: any) => { detail.resources[0].processes = [123]; },
+    (detail: any) => { detail.resources[0].active = 'active'; },
+    (detail: any) => { delete detail.cleanupVerified; },
+  ]) temporary(directory => {
+    const journal = initialized(directory);
+    journal.append({ ...identity, kind: 'intent', runId, detail: {} });
+    journal.append({ ...identity, kind: 'failed', runId, detail: { syntheticOnly: true } });
+    const failure = journal.read().at(-1)!;
+    const detail = { failedRecordDigest: failure.digest, replayAllowed: false, cleanupVerified: true,
+      resources: [{ populated: 0, processes: [], active: 'inactive' }] };
+    corrupt(detail);
+    // Simulate intact serialization/checksum with semantically incomplete recovery evidence.
+    // Startup must independently validate it, without trusting the previous writer's checks.
+    const entry = { ...identity, kind: 'resolution', runId, detail, sequence: failure.sequence + 1, previous: failure.digest };
+    fs.appendFileSync(join(journal.directory, 'journal.jsonl'), json({ ...entry, digest: hash(json(entry)) }) + '\n');
+    const restarted = new Journal(journal.directory, process.getuid!());
+    assert.throws(() => restarted.assertLaunch(identity.profileHash, nextId));
+  });
+});
+
+test('synthetic mock retires its actual UDS listener before restarting at the same path', async () => {
+  const directory = fs.mkdtempSync(join(tmpdir(), 'g89-'));
+  const socketPath = join(directory, 's');
+  const first = createServer((_req, response) => response.end('gate'));
+  const second = createServer((_req, response) => response.end('fixture'));
+  const exchange = () => new Promise<string>((done, fail) => {
+    const req = request({ socketPath, path: '/', agent: false }, response => {
+      let body = ''; response.on('data', chunk => { body += chunk; });
+      response.on('end', () => done(body)); response.on('error', fail);
+    });
+    req.setTimeout(1000, () => req.destroy(new Error('synthetic UDS exchange timeout')));
+    req.on('error', fail); req.end();
+  });
+  try {
+    await new Promise<void>((done, fail) => { first.once('error', fail); first.listen(socketPath, done); });
+    assert.equal(await exchange(), 'gate');
+    await new Promise<void>((done, fail) => {
+      second.once('error', fail);
+      retireMockInstance(first, () => {
+        try { assert.equal(fs.existsSync(socketPath), false); second.listen(socketPath, done); }
+        catch (error) { fail(error); }
+      });
+    });
+    assert.equal(await exchange(), 'fixture');
+  } finally {
+    for (const server of [first, second]) if (server.listening) await new Promise<void>(done => server.close(() => done()));
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('rootfs inventory accepts confined relative symlinks and rejects escape/writable targets', () => temporary(directory => {
+  fs.mkdirSync(join(directory, 'usr')); fs.mkdirSync(join(directory, 'usr', 'bin'));
+  const tool = join(directory, 'usr', 'bin', 'tool'); fs.writeFileSync(tool, 'synthetic tool', { mode: 0o555 });
+  const link = join(directory, 'bin'); fs.symlinkSync('usr/bin', link);
+  const digest = rootfsDigest(directory, process.getuid!()); assert.match(digest, /^[a-f0-9]{64}$/);
+  fs.chmodSync(tool, 0o777); assert.throws(() => rootfsDigest(directory, process.getuid!())); fs.chmodSync(tool, 0o555);
+  fs.unlinkSync(link); fs.symlinkSync('../escape', link); assert.throws(() => rootfsDigest(directory, process.getuid!()), /confined/);
+  fs.unlinkSync(link); fs.symlinkSync('/usr/bin', link); assert.throws(() => rootfsDigest(directory, process.getuid!()), /confined/);
+}));
+test('Debian kernel plus suffix remains exact-pinned rather than a wildcard', () => {
+  const p = synthetic(); p.identity.kernelRelease = '6.12.107+deb13-amd64';
+  const bytes = JSON.stringify(p); assert.equal(admission(p, 'linux', hash(bytes), bytes).identity.kernelRelease, p.identity.kernelRelease);
+  const changed = JSON.stringify({ ...p, identity: { ...p.identity, kernelRelease: '6.12.108+deb13-amd64' } });
+  assert.throws(() => admission(JSON.parse(changed), 'linux', hash(bytes), changed), /digest mismatch/);
+});

@@ -1,0 +1,6 @@
+Running as unit: gaffer-native-controller.service
+Finished with result: success
+Main processes terminated with: code=exited, status=0/SUCCESS
+Service runtime: 4.312s
+CPU time consumed: 4.934s
+Memory peak: 41.8M (swap: 0B)
