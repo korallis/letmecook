@@ -356,10 +356,22 @@ func (l *guardianLauncher) startedHandle(ctx context.Context) (GuardianStarted, 
 	l.childControl.Close()
 	// Start has installed a reader. Serialize the entire initial frame with renewals;
 	// writing before Start could block forever on a spec larger than the pipe buffer.
+	if l.pipe == nil {
+		l.control.Close()
+		close(l.done)
+		l.mu.Unlock()
+		return GuardianStarted{}, ErrStopped
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	if d, ok := ctx.Deadline(); ok && d.Before(deadline) {
+		deadline = d
+	}
+	_ = l.pipe.SetWriteDeadline(deadline)
 	err := json.NewEncoder(l.pipe).Encode(l.spec)
 	l.specSent = err == nil
 	l.mu.Unlock()
 	if err != nil {
+		l.control.Close()
 		close(l.done)
 		return GuardianStarted{}, err
 	}
@@ -369,6 +381,7 @@ func (l *guardianLauncher) startedHandle(ctx context.Context) (GuardianStarted, 
 	}
 	ch := make(chan result, 1)
 	go func() {
+		defer l.control.Close()
 		dec := json.NewDecoder(l.control)
 		var s GuardianStarted
 		err := dec.Decode(&s)
@@ -399,6 +412,7 @@ func (l *guardianLauncher) Renew(ms int64) error {
 	if l.pipe == nil || !l.specSent {
 		return ErrStopped
 	}
+	_ = l.pipe.SetWriteDeadline(time.Now().Add(time.Second))
 	return json.NewEncoder(l.pipe).Encode(Renewal{ms})
 }
 func (l *guardianLauncher) CloseInput() {

@@ -126,12 +126,17 @@ func (f *Harness) Start(ctx context.Context, r h.RunRequest) (h.RunHandle, error
 	}
 	stderr, e := cmd.StderrPipe()
 	if e != nil {
+		stdout.Close()
 		return h.RunHandle{}, e
 	}
 	if e = r.Launcher.Wrap(cmd); e != nil {
+		stdout.Close()
+		stderr.Close()
 		return h.RunHandle{}, e
 	}
 	if e = cmd.Start(); e != nil {
+		stdout.Close()
+		stderr.Close()
 		return h.RunHandle{}, e
 	}
 	stream := &events{changed: make(chan struct{}), done: make(chan struct{})}

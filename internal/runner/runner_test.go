@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/korallis/letmecook/internal/isolation"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -504,4 +506,91 @@ func TestOpenIntentWithoutStartingDoesNotWaitForGuardian(t *testing.T) {
 	if reopened.Status().ExecutionEnabled {
 		t.Fatal("old intent resumed")
 	}
+}
+
+type guardianTestLauncher struct{}
+
+func (guardianTestLauncher) Wrap(*exec.Cmd) error               { return nil }
+func (guardianTestLauncher) Observation() isolation.Observation { return isolation.Observation{} }
+func (guardianTestLauncher) Cleanup() error                     { return nil }
+func TestGuardianInitialSpecSerializedWithRenewals(t *testing.T) {
+	receipt := filepath.Join(t.TempDir(), "receipt")
+	l := &guardianLauncher{inner: guardianTestLauncher{}, executable: "/usr/bin/true", receipt: receipt, deadline: func() int64 { return 1000 }, limits: ResourceLimits{1024, 64 << 20, 10}}
+	cmd := exec.Command("/bin/sleep", "60")
+	cmd.Dir = t.TempDir()
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "LARGE=" + strings.Repeat("x", 128<<10)}
+	if err := l.Wrap(cmd); err != nil {
+		t.Fatal(err)
+	}
+	// Duplicate the child's ends, like Start does; closing the parent copies must
+	// not terminate this independent decoder/control writer.
+	inputFD, err := syscall.Dup(int(l.childInput.Fd()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	controlFD, err := syscall.Dup(int(l.childControl.Fd()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	input := os.NewFile(uintptr(inputFD), "child-in")
+	control := os.NewFile(uintptr(controlFD), "child-control")
+	defer input.Close()
+	defer control.Close()
+	defer l.CloseInput()
+	if err := l.Renew(999); !errors.Is(err, ErrStopped) {
+		t.Fatal("renewal preceded launch frame", err)
+	}
+	decoded := make(chan error, 1)
+	go func() {
+		dec := json.NewDecoder(input)
+		var got LaunchSpec
+		if err := dec.Decode(&got); err != nil {
+			decoded <- err
+			return
+		}
+		if len(got.Env) != 2 || len(got.Env[1]) != (128<<10)+6 {
+			decoded <- errors.New("initial spec corrupted")
+			return
+		}
+		enc := json.NewEncoder(control)
+		enc.Encode(GuardianStarted{PID: 2, PGID: 2})
+		for i := 0; i < 16; i++ {
+			var renewal Renewal
+			if err := dec.Decode(&renewal); err != nil {
+				decoded <- err
+				return
+			}
+			if renewal.DeadlineMS != 999 {
+				decoded <- errors.New("bad renewal")
+				return
+			}
+		}
+		enc.Encode(GuardianReport{GuardianStarted: GuardianStarted{PID: 2, PGID: 2}, PGIDEmpty: true})
+		decoded <- nil
+	}()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := l.startedHandle(ctx); err != nil {
+		t.Fatal(err)
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < 16; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := l.Renew(999); err != nil {
+				t.Error(err)
+			}
+		}()
+	}
+	wg.Wait()
+	select {
+	case err := <-decoded:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	}
+	<-l.done
 }
