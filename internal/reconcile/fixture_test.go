@@ -308,6 +308,52 @@ func (k *task) run(t *testing.T) c.Lease {
 	return lease
 }
 
+// fakeBrief seeds the task's brief naming the fake harness through a second
+// connection while the store is open: CreateTask is still a stub on this base,
+// and ProposeTransition admits a launch intent with boundary_port 0 only for
+// that harness. Only the brief row is written; every attempt edge still goes
+// through the store.
+func (k *task) fakeBrief(t *testing.T) {
+	t.Helper()
+	u := url.URL{Scheme: "file", Path: filepath.Join(k.f.dir, "state.db"), RawQuery: "_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)"}
+	db, err := sql.Open("sqlite", u.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var owner string
+	if err := db.QueryRow("SELECT id FROM principals WHERE role='owner'").Scan(&owner); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO task_briefs VALUES(?,1,?,?,?,?,?,?,?,?,?,?,?,?)", k.id().TaskID, k.f.profile.ID, k.d.Request.Envelope.BaseCommit, "brief", "[]", "[]", "[]", "fake", "{}", strings.Repeat("a", 64), strings.Repeat("a", 64), owner, time.Now().UnixMilli()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// startFake is start for a fake-harness task: the launch intent names no
+// boundary port because no inference boundary is ever created.
+func (k *task) startFake(t *testing.T) c.Lease {
+	t.Helper()
+	k.dispatch(t)
+	k.hello(t)
+	k.accept(t)
+	k.fakeBrief(t)
+	lease := k.lease(t)
+	intent := launchIntent(lease.Request.Nonce)
+	intent.BoundaryPort = 0
+	k.propose(t, p.Starting, intent)
+	k.propose(t, p.Running, launched())
+	return lease
+}
+
+// runFake continues startFake through result_pending with an empty stream.
+func (k *task) runFake(t *testing.T) c.Lease {
+	t.Helper()
+	lease := k.startFake(t)
+	k.propose(t, p.ResultPending, exited(0))
+	return lease
+}
+
 func (k *task) cancel(t *testing.T) c.Request {
 	t.Helper()
 	stop := c.Request{ID: uuid(), Kind: c.CancelAttempt, TaskID: k.id().TaskID, AttemptID: k.id().AttemptID, Cause: "operator"}
@@ -382,6 +428,86 @@ func (k *task) usage(t *testing.T, receipts ...store.UsageReceipt) {
 	if err := k.f.s.RecordUsage(ctx, k.f.runner, k.session.SessionID, store.UsageReport{Version: execwire.Version, MessageID: uuid(), Identity: k.id(), Receipts: receipts}); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// derive mirrors the store's dispatchID: a UUIDv4 shape over SHA-256(key:purpose).
+func derive(key, purpose string) string {
+	b := sha256.Sum256([]byte(key + ":" + purpose))
+	b[6] = b[6]&15 | 64
+	b[8] = b[8]&63 | 128
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
+// seedUnresolved leaves n acknowledged, never-leased attempts across n approved
+// tasks in the store: the shape a concurrent scheduler (or n interrupted
+// sequential runs) would leave behind. Sequential admission allows one
+// unresolved attempt at a time, so this population cannot be produced through
+// store.Dispatch; the rows are written directly, but each satisfies every
+// integrity check loadDispatch applies (input digest over the same canonical
+// input, assignment identity and route, foreign keys), so reconcile reads them
+// as genuine dispatches. Every task's grant is approved through the API.
+func (f *fixture) seedUnresolved(t *testing.T, n int) []string {
+	t.Helper()
+	u := url.URL{Scheme: "file", Path: filepath.Join(f.dir, "state.db"), RawQuery: "_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)"}
+	db, err := sql.Open("sqlite", u.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	attempts := make([]string, 0, n)
+	for range n {
+		k := f.newTask(t)
+		request := k.request
+		input := struct {
+			store.DispatchRequest
+			Facts sc.Eligibility `json:"facts"`
+		}{request, f.facts}
+		hash, err := sc.Digest(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, err := json.Marshal(input)
+		if err != nil {
+			t.Fatal(err)
+		}
+		route := request.Decision.Selected
+		identity := p.Identity{Generation: f.generation, TaskID: request.Request.TaskID, AttemptID: derive(request.ID, "attempt"), Epoch: 1}
+		m := p.Message{Version: p.FencedVersion, Kind: "assign", MessageID: derive(request.ID, "message"), AssignmentID: derive(request.ID, "assignment"), Identity: identity, InputDigest: hash, Route: &p.Route{RouteRef: route.RouteRef, DecisionDigest: request.Request.Envelope.RouteDecision.SHA256, PolicyDigest: route.Policy.SHA256, LimitsProfile: route.LimitsProfile}}
+		assignment, err := json.Marshal(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ack := p.Message{Version: p.FencedVersion, Kind: "accept", MessageID: uuid(), Identity: identity, AssignmentID: m.AssignmentID, RunnerBoot: f.facts.RunnerBoot, DaemonBoot: f.boot}
+		ackBody, err := json.Marshal(ack)
+		if err != nil {
+			t.Fatal(err)
+		}
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		now := time.Now().UnixMilli()
+		for _, stmt := range []struct {
+			query string
+			args  []any
+		}{
+			{"INSERT INTO tasks VALUES(?,'ready')", []any{identity.TaskID}},
+			{"INSERT INTO attempts VALUES(?,?,1,'assigned',1,?)", []any{identity.AttemptID, identity.TaskID, m.AssignmentID}},
+			{"INSERT INTO events(message_id,attempt_id,task_id,epoch,revision,message) VALUES(?,?,?,1,1,?)", []any{m.MessageID, identity.AttemptID, identity.TaskID, string(assignment)}},
+			{"INSERT INTO dispatches VALUES(?,?,?,?,?,?,?,?,?,?,?)", []any{request.ID, identity.AttemptID, identity.TaskID, request.Request.GrantID, f.runnerID, f.facts.ID, f.facts.Revision, hash, string(body), string(assignment), now}},
+			{"INSERT INTO dispatch_acks VALUES(?,?,?)", []any{request.ID, ack.MessageID, string(ackBody)}},
+		} {
+			if _, err := tx.Exec(stmt.query, stmt.args...); err != nil {
+				tx.Rollback()
+				t.Fatal(stmt.query, err)
+			}
+		}
+		if err := tx.Commit(); err != nil {
+			t.Fatal(err)
+		}
+		attempts = append(attempts, identity.AttemptID)
+	}
+	return attempts
 }
 
 // reopen simulates a daemon restart: close and open the same state directory.

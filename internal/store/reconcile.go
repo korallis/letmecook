@@ -41,7 +41,7 @@ const (
 	// stop in reconcile_reports: id = latchClearedPrefix + stop_id. control.go's
 	// admission check consults exactly this key; history is never deleted.
 	latchClearedPrefix = "latch-cleared:"
-	leaseClockActor    = "lease-clock"
+	rcLeaseClockActor  = "lease-clock"
 	// Release bases ReleaseAttempt verifies. Each names the retained evidence the
 	// store re-checks before it releases a reservation.
 	BasisRefused             = "refused"
@@ -99,6 +99,8 @@ type ReconciliationInputs struct {
 	Quarantined         bool                 `json:"quarantined"`
 	Head                ResultHead           `json:"head,omitzero"`
 	LastSession         SessionRecord        `json:"last_session,omitzero"`
+	Journal             execwire.Journal     `json:"journal,omitzero"`
+	JournalFound        bool                 `json:"journal_found"`
 	Latched             bool                 `json:"latched"`
 	GrantRefusal        string               `json:"grant_refusal,omitempty"`
 	Paused              bool                 `json:"paused"`
@@ -168,23 +170,41 @@ type RetryInputs struct {
 	Ceiling      g.Budgets        `json:"ceiling,omitzero"`
 }
 
-// retainedRuntime is the persisted runtime_observations body: the message the
-// evidence arrived with plus exactly one evidence payload. It is decoded here
-// from the stored JSON contract, not from execution.go's private type.
-type retainedRuntime struct {
-	MessageID   string             `json:"message_id"`
-	Message     *p.Message         `json:"message,omitempty"`
-	Evidence    *RuntimeEvidence   `json:"evidence,omitempty"`
-	Termination *c.Evidence        `json:"termination,omitempty"`
-	Boundary    *BoundaryState     `json:"boundary,omitempty"`
-	Completion  *Completion        `json:"completion,omitempty"`
-	Reconcile   *reconcileEvidence `json:"reconcile,omitempty"`
+// BoundaryAttestation is a runner's durable statement that an attempt's
+// inference boundary is closed: reservations equal terminal receipts and nothing
+// is in flight. Reconcile supplies it from the runner's hello journal once the
+// wire carries one; the store binds it to the dispatch's runner boot and the
+// custody receipt before it counts as quiescence proof.
+type BoundaryAttestation struct {
+	RunnerBoot string        `json:"runner_boot"`
+	ReceiptID  string        `json:"receipt_id"`
+	Boundary   BoundaryState `json:"boundary"`
 }
 
-// reconcileEvidence is the daemon-ledger snapshot retained (kind "reconcile")
+// Quiescence proof sources CompleteFinalization records on its completion.
+const (
+	QuiescenceRunnerAttestation = "runner_attestation"
+	QuiescenceNoBoundary        = "no_boundary"
+	QuiescenceRunnerJournal     = "runner_journal"
+)
+
+// rcRuntimeRecord is the persisted runtime_observations body: the message the
+// evidence arrived with plus exactly one evidence payload. It is decoded here
+// from the stored JSON contract, not from execution.go's private type.
+type rcRuntimeRecord struct {
+	MessageID   string           `json:"message_id"`
+	Message     *p.Message       `json:"message,omitempty"`
+	Evidence    *RuntimeEvidence `json:"evidence,omitempty"`
+	Termination *c.Evidence      `json:"termination,omitempty"`
+	Boundary    *BoundaryState   `json:"boundary,omitempty"`
+	Completion  *Completion      `json:"completion,omitempty"`
+	Reconcile   *rcEvidence      `json:"reconcile,omitempty"`
+}
+
+// rcEvidence is the daemon-ledger snapshot retained (kind "reconcile")
 // when a release rests on the absence of a launch capability rather than on a
 // supervisor report. Its digest is the release's evidence_digest.
-type reconcileEvidence struct {
+type rcEvidence struct {
 	Basis        string         `json:"basis"`
 	DispatchID   string         `json:"dispatch_id"`
 	Identity     p.Identity     `json:"identity"`
@@ -226,7 +246,7 @@ func (s *Store) reconcileStep(name string) error {
 	return nil
 }
 
-func attemptDispatch(ctx context.Context, tx *sql.Tx, attemptID string) (Dispatch, error) {
+func rcAttemptDispatch(ctx context.Context, tx *sql.Tx, attemptID string) (Dispatch, error) {
 	if !p.ValidID(attemptID) {
 		return Dispatch{}, g.Deny("malformed", "attempt_id")
 	}
@@ -237,22 +257,22 @@ func attemptDispatch(ctx context.Context, tx *sql.Tx, attemptID string) (Dispatc
 	return loadDispatch(ctx, tx, id)
 }
 
-func attemptCursor(ctx context.Context, tx *sql.Tx, attemptID string) (p.AttemptState, int64, error) {
+func rcAttemptCursor(ctx context.Context, tx *sql.Tx, attemptID string) (p.AttemptState, int64, error) {
 	var state p.AttemptState
 	var revision int64
 	err := tx.QueryRowContext(ctx, "SELECT state,revision FROM attempts WHERE id=?", attemptID).Scan(&state, &revision)
 	return state, revision, err
 }
 
-func isTerminal(state p.AttemptState) bool {
+func rcTerminal(state p.AttemptState) bool {
 	return state == p.Succeeded || state == p.Failed || state == p.Cancelled || state == p.Expired
 }
 
-func settledBoundary(b BoundaryState) bool {
+func rcSettledBoundary(b BoundaryState) bool {
 	return b.Quiescent && b.InFlight == 0 && b.Reservations == b.TerminalReceipts && b.Reservations >= 0
 }
 
-func runtimeRows(ctx context.Context, tx *sql.Tx, attemptID string) ([]RuntimeObservation, error) {
+func rcRuntimeRows(ctx context.Context, tx *sql.Tx, attemptID string) ([]RuntimeObservation, error) {
 	rows, err := tx.QueryContext(ctx, "SELECT attempt_id,evidence_sha256,kind,runner_boot,daemon_boot,body,recorded_ms FROM runtime_observations WHERE attempt_id=? ORDER BY recorded_ms,rowid", attemptID)
 	if err != nil {
 		return nil, err
@@ -274,17 +294,17 @@ func runtimeRows(ctx context.Context, tx *sql.Tx, attemptID string) ([]RuntimeOb
 	return out, rows.Err()
 }
 
-func decodeRuntime(body []byte) (retainedRuntime, bool) {
-	var v retainedRuntime
+func rcDecodeRuntime(body []byte) (rcRuntimeRecord, bool) {
+	var v rcRuntimeRecord
 	if json.Unmarshal(body, &v) != nil {
-		return retainedRuntime{}, false
+		return rcRuntimeRecord{}, false
 	}
 	return v, true
 }
 
-// retainRuntime keeps one evidence body keyed by its digest; identical bodies
+// rcRetainRuntime keeps one evidence body keyed by its digest; identical bodies
 // are no-ops. It is the same durable contract recordRuntime writes.
-func retainRuntime(ctx context.Context, tx *sql.Tx, attemptID, kind, runnerBoot, daemonBoot string, body []byte, now int64) (string, error) {
+func rcRetainRuntime(ctx context.Context, tx *sql.Tx, attemptID, kind, runnerBoot, daemonBoot string, body []byte, now int64) (string, error) {
 	if len(body) > maxReconcileRuntimeBody {
 		return "", p.Oversized
 	}
@@ -294,13 +314,13 @@ func retainRuntime(ctx context.Context, tx *sql.Tx, attemptID, kind, runnerBoot,
 	return digest, err
 }
 
-func pausedTx(ctx context.Context, tx *sql.Tx) (bool, error) {
+func daemonPausedTx(ctx context.Context, tx *sql.Tx) (bool, error) {
 	var paused bool
 	err := tx.QueryRowContext(ctx, "SELECT paused FROM daemon_state WHERE singleton=1").Scan(&paused)
 	return paused, err
 }
 
-func headRow(ctx context.Context, tx *sql.Tx, taskID string) (ResultHead, error) {
+func rcHeadRow(ctx context.Context, tx *sql.Tx, taskID string) (ResultHead, error) {
 	v := ResultHead{TaskID: taskID}
 	err := tx.QueryRowContext(ctx, "SELECT generation,attempt_id,epoch,manifest_id,receipt_id,finalized_ms FROM artifact_result_heads WHERE task_id=?", taskID).Scan(&v.Generation, &v.AttemptID, &v.Epoch, &v.ManifestID, &v.ReceiptID, &v.FinalizedMS)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -309,9 +329,9 @@ func headRow(ctx context.Context, tx *sql.Tx, taskID string) (ResultHead, error)
 	return v, err
 }
 
-// attemptStopCauses lists the causes of the cancel_attempt stops targeting one
+// rcStopCauses lists the causes of the cancel_attempt stops targeting one
 // attempt, in latch order.
-func attemptStopCauses(ctx context.Context, tx *sql.Tx, attemptID string) ([]string, error) {
+func rcStopCauses(ctx context.Context, tx *sql.Tx, attemptID string) ([]string, error) {
 	rows, err := tx.QueryContext(ctx, "SELECT body FROM control_stops WHERE kind='cancel_attempt' AND attempt_id=? ORDER BY rowid", attemptID)
 	if err != nil {
 		return nil, err
@@ -332,7 +352,7 @@ func attemptStopCauses(ctx context.Context, tx *sql.Tx, attemptID string) ([]str
 	return out, rows.Err()
 }
 
-func leaseNonces(ctx context.Context, tx *sql.Tx, attemptID string) ([]string, error) {
+func rcLeaseNonces(ctx context.Context, tx *sql.Tx, attemptID string) ([]string, error) {
 	rows, err := tx.QueryContext(ctx, "SELECT nonce FROM control_leases WHERE attempt_id=? ORDER BY rowid", attemptID)
 	if err != nil {
 		return nil, err
@@ -349,11 +369,11 @@ func leaseNonces(ctx context.Context, tx *sql.Tx, attemptID string) ([]string, e
 	return out, rows.Err()
 }
 
-// taskLatchedTx is admission suppression as reconcile sees it: the sticky task
+// rcTaskLatched is admission suppression as reconcile sees it: the sticky task
 // stop, global stops, task pauses, authority supersession and cancel_attempt
 // latches that have not been cleared. It mirrors control.go's controlSuppressed
 // plus the clearing record this file writes.
-func taskLatchedTx(ctx context.Context, tx *sql.Tx, taskID, grantID string) (bool, error) {
+func rcTaskLatched(ctx context.Context, tx *sql.Tx, taskID, grantID string) (bool, error) {
 	var latched bool
 	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=?) OR EXISTS(SELECT 1 FROM control_stops s WHERE kind='global_stop' OR
  (kind='pause_task' AND task_id=?) OR
@@ -362,10 +382,10 @@ func taskLatchedTx(ctx context.Context, tx *sql.Tx, taskID, grantID string) (boo
 	return latched, err
 }
 
-// grantRefusal is the live-authority check as a code: empty when the grant is
+// rcGrantRefusal is the live-authority check as a code: empty when the grant is
 // live and current for the task, else the deny code (expired, superseded,
 // revoked, unknown_grant, ...). It writes nothing.
-func grantRefusal(ctx context.Context, tx *sql.Tx, request g.Request, now int64) (string, error) {
+func rcGrantRefusal(ctx context.Context, tx *sql.Tx, request g.Request, now int64) (string, error) {
 	err := checkExecution(ctx, tx, request, now)
 	if err == nil {
 		return "", nil
@@ -377,7 +397,52 @@ func grantRefusal(ctx context.Context, tx *sql.Tx, request g.Request, now int64)
 	return "", err
 }
 
-func lastSessionFor(ctx context.Context, tx *sql.Tx, runnerID string) (SessionRecord, error) {
+// rcLatestJournal is the runner's most recent hello journal entry for a dispatch,
+// read from runner_sessions.hello: the durable record of what the supervisor
+// last said about the attempt, including that its journal is corrupt. A later
+// hello for the same dispatch supersedes an earlier one; that is the only
+// repair evidence the store accepts.
+func rcLatestJournal(ctx context.Context, tx *sql.Tx, runnerID, dispatchID string) (execwire.Journal, bool, error) {
+	rows, err := tx.QueryContext(ctx, "SELECT hello FROM runner_sessions WHERE runner_id=? ORDER BY created_ms DESC,rowid DESC", runnerID)
+	if err != nil {
+		return execwire.Journal{}, false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var hello string
+		if err := rows.Scan(&hello); err != nil {
+			return execwire.Journal{}, false, err
+		}
+		var h struct {
+			Journals []execwire.Journal `json:"journals"`
+		}
+		if json.Unmarshal([]byte(hello), &h) != nil {
+			continue
+		}
+		for _, j := range h.Journals {
+			if j.DispatchID == dispatchID {
+				return j, true, rows.Close()
+			}
+		}
+	}
+	return execwire.Journal{}, false, rows.Err()
+}
+
+// rcJournalCorrupt reports whether the runner's latest hello journal for the
+// dispatch says the supervisor's record of the attempt is corrupt. Every
+// evidence-driven mutation refuses while it does.
+func rcJournalCorrupt(ctx context.Context, tx *sql.Tx, d Dispatch) error {
+	j, found, err := rcLatestJournal(ctx, tx, d.Facts.Repository.RunnerRoot.RunnerID, d.ID)
+	if err != nil {
+		return err
+	}
+	if found && j.Corrupt {
+		return g.Deny("journal_corrupt", "runner_journal")
+	}
+	return nil
+}
+
+func rcLastSession(ctx context.Context, tx *sql.Tx, runnerID string) (SessionRecord, error) {
 	v := SessionRecord{DriftMS: SessionDriftMS, TerminationMS: SessionTerminationMS, LeaseValidityMS: LeaseValidityMS, RenewEveryMS: LeaseRenewEveryMS}
 	err := tx.QueryRowContext(ctx, "SELECT id,runner_id,runner_boot,daemon_boot,generation,mode FROM runner_sessions WHERE runner_id=? ORDER BY created_ms DESC,rowid DESC LIMIT 1", runnerID).Scan(&v.SessionID, &v.RunnerID, &v.RunnerBoot, &v.DaemonBoot, &v.Generation, &v.Mode)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -397,17 +462,17 @@ func (s *Store) ReconciliationInputs(ctx context.Context, attemptID string) (Rec
 	}
 	defer tx.Rollback()
 	v := ReconciliationInputs{Generation: s.meta.Generation, DaemonBoot: s.meta.DaemonBoot}
-	if v.State, v.Revision, err = attemptCursor(ctx, tx, attemptID); err != nil {
+	if v.State, v.Revision, err = rcAttemptCursor(ctx, tx, attemptID); err != nil {
 		return ReconciliationInputs{}, err
 	}
-	d, err := attemptDispatch(ctx, tx, attemptID)
+	d, err := rcAttemptDispatch(ctx, tx, attemptID)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return ReconciliationInputs{}, err
 	}
-	if v.Paused, err = pausedTx(ctx, tx); err != nil {
+	if v.Paused, err = daemonPausedTx(ctx, tx); err != nil {
 		return ReconciliationInputs{}, err
 	}
-	if v.RuntimeObservations, err = runtimeRows(ctx, tx, attemptID); err != nil {
+	if v.RuntimeObservations, err = rcRuntimeRows(ctx, tx, attemptID); err != nil {
 		return ReconciliationInputs{}, err
 	}
 	if d.ID == "" {
@@ -489,16 +554,19 @@ func (s *Store) ReconciliationInputs(ctx context.Context, attemptID string) (Rec
 	if err == nil {
 		v.Receipt.Identity, v.Receipt.Manifest, v.Receipt.Artifacts, v.Receipt.Metadata = identity, manifest, "verified_durable", "manifest_and_result_committed"
 	}
-	if v.Head, err = headRow(ctx, tx, identity.TaskID); err != nil {
+	if v.Head, err = rcHeadRow(ctx, tx, identity.TaskID); err != nil {
 		return ReconciliationInputs{}, err
 	}
-	if v.LastSession, err = lastSessionFor(ctx, tx, d.Facts.Repository.RunnerRoot.RunnerID); err != nil {
+	if v.LastSession, err = rcLastSession(ctx, tx, d.Facts.Repository.RunnerRoot.RunnerID); err != nil {
 		return ReconciliationInputs{}, err
 	}
-	if v.Latched, err = taskLatchedTx(ctx, tx, identity.TaskID, d.Request.GrantID); err != nil {
+	if v.Journal, v.JournalFound, err = rcLatestJournal(ctx, tx, d.Facts.Repository.RunnerRoot.RunnerID, d.ID); err != nil {
 		return ReconciliationInputs{}, err
 	}
-	if v.GrantRefusal, err = grantRefusal(ctx, tx, d.Request, s.controlNow().UnixMilli()); err != nil {
+	if v.Latched, err = rcTaskLatched(ctx, tx, identity.TaskID, d.Request.GrantID); err != nil {
+		return ReconciliationInputs{}, err
+	}
+	if v.GrantRefusal, err = rcGrantRefusal(ctx, tx, d.Request, s.controlNow().UnixMilli()); err != nil {
 		return ReconciliationInputs{}, err
 	}
 	return v, nil
@@ -534,10 +602,10 @@ func (s *Store) NonTerminalAttempts(ctx context.Context) ([]AttemptSummary, erro
 	return out, rows.Err()
 }
 
-// fenceTx moves a non-terminal attempt outside stopping|unknown to stopping so a
+// rcFence moves a non-terminal attempt outside stopping|unknown to stopping so a
 // release edge exists, recording the event and parking the task. key makes the
 // event's message id stable per (key, revision).
-func fenceTx(ctx context.Context, tx *sql.Tx, identity p.Identity, state p.AttemptState, revision int64, key string) (p.Message, int64, error) {
+func rcFence(ctx context.Context, tx *sql.Tx, identity p.Identity, state p.AttemptState, revision int64, key string) (p.Message, int64, error) {
 	m := p.Message{Version: p.FencedVersion, Kind: "transition", MessageID: dispatchID(key+":"+strconv.FormatInt(revision, 10), "fence"), Identity: identity, ExpectedRevision: &revision, From: state, To: p.Stopping}
 	if r := p.CheckTransition(m, identity, state, revision); r != p.OK {
 		return p.Message{}, revision, r
@@ -558,7 +626,7 @@ func fenceTx(ctx context.Context, tx *sql.Tx, identity p.Identity, state p.Attem
 	return m, revision + 1, nil
 }
 
-func currentEvent(ctx context.Context, tx *sql.Tx, attemptID string, revision int64) (p.Message, error) {
+func rcCurrentEvent(ctx context.Context, tx *sql.Tx, attemptID string, revision int64) (p.Message, error) {
 	var raw string
 	if err := tx.QueryRowContext(ctx, "SELECT message FROM events WHERE attempt_id=? AND revision=?", attemptID, revision).Scan(&raw); err != nil {
 		return p.Message{}, err
@@ -585,16 +653,16 @@ func (s *Store) FenceAttempt(ctx context.Context, attemptID, cause string) (p.Me
 		return p.Message{}, err
 	}
 	defer tx.Rollback()
-	d, err := attemptDispatch(ctx, tx, attemptID)
+	d, err := rcAttemptDispatch(ctx, tx, attemptID)
 	if err != nil {
 		return p.Message{}, err
 	}
 	identity := d.Assignment.Identity
-	state, revision, err := attemptCursor(ctx, tx, attemptID)
+	state, revision, err := rcAttemptCursor(ctx, tx, attemptID)
 	if err != nil {
 		return p.Message{}, err
 	}
-	if isTerminal(state) || d.Released {
+	if rcTerminal(state) || d.Released {
 		return p.Message{}, p.InvalidTransition
 	}
 	stopID, actor := dispatchID(attemptID, "reconcile-fence"), "reconcile"
@@ -606,17 +674,17 @@ func (s *Store) FenceAttempt(ctx context.Context, attemptID, cause string) (p.Me
 		if err != nil {
 			return p.Message{}, err
 		}
-		stopID, actor = dispatchID(lease.Request.Nonce, "expired"), leaseClockActor
+		stopID, actor = dispatchID(lease.Request.Nonce, "expired"), rcLeaseClockActor
 	}
 	if _, err := latchStop(ctx, tx, actor, c.Request{ID: stopID, Kind: c.CancelAttempt, TaskID: identity.TaskID, AttemptID: attemptID, Cause: cause}, s.controlStamp()); err != nil {
 		return p.Message{}, err
 	}
 	m := p.Message{}
 	if state == p.Stopping {
-		if m, err = currentEvent(ctx, tx, attemptID, revision); err != nil {
+		if m, err = rcCurrentEvent(ctx, tx, attemptID, revision); err != nil {
 			return p.Message{}, err
 		}
-	} else if m, _, err = fenceTx(ctx, tx, identity, state, revision, stopID); err != nil {
+	} else if m, _, err = rcFence(ctx, tx, identity, state, revision, stopID); err != nil {
 		return p.Message{}, err
 	}
 	if err := s.reconcileStep("before_fence_commit"); err != nil {
@@ -628,11 +696,11 @@ func (s *Store) FenceAttempt(ctx context.Context, attemptID, cause string) (p.Me
 	return m, s.reconcileStep("after_fence_commit")
 }
 
-// releaseActor resolves the principal recorded on a release: the preferred
+// rcReleaseActor resolves the principal recorded on a release: the preferred
 // fingerprint when it is a current principal, else the dispatch's runner
 // principal, else (runner revoked) the owner. releaseDispatchTx records the
 // principal id behind the fingerprint.
-func releaseActor(ctx context.Context, tx *sql.Tx, d Dispatch, preferred string) (string, error) {
+func rcReleaseActor(ctx context.Context, tx *sql.Tx, d Dispatch, preferred string) (string, error) {
 	if preferred != "" {
 		if _, err := principal(ctx, tx, preferred); err == nil {
 			return preferred, nil
@@ -653,17 +721,20 @@ func releaseActor(ctx context.Context, tx *sql.Tx, d Dispatch, preferred string)
 	return fingerprint, err
 }
 
-// terminationCheck verifies one terminated report against the dispatch and the
+// rcTerminationCheck verifies one terminated report against the dispatch and the
 // retained control records: exact session, a latched target or the attempt's own
 // lease-expiry stop id, a confirmed process outcome, quiescent remote work, a
-// settled boundary when one was retained and, for evidence from another daemon
-// boot, an elapsed replacement barrier. It returns the terminal state the stop
-// cause selects and the stop's cause (the report cause: operator cancels never
-// become auto-retryable because a daemon happened to restart). A supervisor's
-// autonomous lease-expiry stop that the daemon never latched is not latched
-// here: the retained report and the release proof are its durable record, and
-// no cancel latch is left to suppress the task's retry.
-func (s *Store) terminationCheck(ctx context.Context, tx *sql.Tx, d Dispatch, m p.Message, boundary *BoundaryState, measurement c.Measurement) (to p.AttemptState, cause string, err error) {
+// settled boundary when one was retained and, for any evidence that is not
+// current, an elapsed replacement barrier. Evidence is current only when it was
+// validated on arrival (a control observation), under this daemon boot, and the
+// runner's latest session still runs the incarnation that executed the attempt;
+// a retained report, another daemon boot or a restarted runner all wait for the
+// barrier. It returns the terminal state the stop cause selects and the stop's
+// cause (operator cancels never become auto-retryable because a daemon happened
+// to restart). A supervisor's autonomous lease-expiry stop that the daemon never
+// latched is not latched here: the retained report and the release proof are
+// its durable record, and no cancel latch is left to suppress the task's retry.
+func (s *Store) rcTerminationCheck(ctx context.Context, tx *sql.Tx, d Dispatch, m p.Message, boundary *BoundaryState, measurement c.Measurement, retained bool) (to p.AttemptState, cause string, err error) {
 	identity := d.Assignment.Identity
 	if m.Kind != "terminated" || !p.ValidID(m.StopID) || measurement.Validate(true) != nil {
 		return "", "", p.Malformed
@@ -677,14 +748,14 @@ func (s *Store) terminationCheck(ctx context.Context, tx *sql.Tx, d Dispatch, m 
 	if m.ConfirmedProcess != "terminated" && m.ConfirmedProcess != "not_started" {
 		return "", "", g.Deny("reconciliation_required", "confirmed_process")
 	}
-	if m.RemoteWork != "quiescent" || (boundary != nil && !settledBoundary(*boundary)) {
+	if m.RemoteWork != "quiescent" || (boundary != nil && !rcSettledBoundary(*boundary)) {
 		return "", "", g.Deny("reconciliation_required", "remote_work")
 	}
 	var latched bool
 	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM control_targets WHERE stop_id=? AND attempt_id=?)", m.StopID, identity.AttemptID).Scan(&latched); err != nil {
 		return "", "", err
 	}
-	nonces, err := leaseNonces(ctx, tx, identity.AttemptID)
+	nonces, err := rcLeaseNonces(ctx, tx, identity.AttemptID)
 	if err != nil {
 		return "", "", err
 	}
@@ -712,7 +783,11 @@ func (s *Store) terminationCheck(ctx context.Context, tx *sql.Tx, d Dispatch, m 
 	if cause == "lease_expired" {
 		to = p.Expired
 	}
-	if m.DaemonBoot != s.meta.DaemonBoot {
+	session, err := rcLastSession(ctx, tx, d.Facts.Repository.RunnerRoot.RunnerID)
+	if err != nil {
+		return "", "", err
+	}
+	if retained || m.DaemonBoot != s.meta.DaemonBoot || (session.SessionID != "" && session.RunnerBoot != d.Facts.RunnerBoot) {
 		expired, err := controlExpiry(ctx, tx, identity.AttemptID, s.controlStamp())
 		if err != nil {
 			return "", "", err
@@ -724,11 +799,11 @@ func (s *Store) terminationCheck(ctx context.Context, tx *sql.Tx, d Dispatch, m 
 	return to, cause, nil
 }
 
-// clearLatchesTx records clearances for cancel_attempt stops whose attempt is
+// rcClearLatches records clearances for cancel_attempt stops whose attempt is
 // terminal and whose dispatch is released, scoped to one attempt (attemptID) or
 // one task (taskID) or everything. Task pauses, global stops and authority
 // supersession are never cleared here.
-func clearLatchesTx(ctx context.Context, tx *sql.Tx, taskID, attemptID, daemonBoot string, now int64) ([]LatchClearance, error) {
+func rcClearLatches(ctx context.Context, tx *sql.Tx, taskID, attemptID, daemonBoot string, now int64) ([]LatchClearance, error) {
 	rows, err := tx.QueryContext(ctx, `SELECT s.id,s.task_id,s.attempt_id,s.body,a.state FROM control_stops s JOIN attempts a ON a.id=s.attempt_id JOIN dispatches d ON d.attempt_id=a.id
  WHERE s.kind='cancel_attempt' AND (?='' OR s.task_id=?) AND (?='' OR s.attempt_id=?)
  AND a.state IN ('succeeded','failed','cancelled','expired') AND EXISTS(SELECT 1 FROM dispatch_releases r WHERE r.dispatch_id=d.id)
@@ -782,12 +857,12 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 		return ReleaseOutcome{}, err
 	}
 	defer tx.Rollback()
-	d, err := attemptDispatch(ctx, tx, attemptID)
+	d, err := rcAttemptDispatch(ctx, tx, attemptID)
 	if err != nil {
 		return ReleaseOutcome{}, err
 	}
 	identity := d.Assignment.Identity
-	state, revision, err := attemptCursor(ctx, tx, attemptID)
+	state, revision, err := rcAttemptCursor(ctx, tx, attemptID)
 	if err != nil {
 		return ReleaseOutcome{}, err
 	}
@@ -802,14 +877,17 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 		}
 		return ReleaseOutcome{Proof: proof, Actor: actor, Replayed: true}, nil
 	}
-	if isTerminal(state) {
+	if rcTerminal(state) {
 		return ReleaseOutcome{}, p.InvalidTransition
 	}
 	if identity.Generation != s.meta.Generation {
 		return ReleaseOutcome{}, p.StaleGeneration
 	}
+	if err := rcJournalCorrupt(ctx, tx, d); err != nil {
+		return ReleaseOutcome{}, err
+	}
 	now := s.controlStamp()
-	rows, err := runtimeRows(ctx, tx, attemptID)
+	rows, err := rcRuntimeRows(ctx, tx, attemptID)
 	if err != nil {
 		return ReleaseOutcome{}, err
 	}
@@ -825,7 +903,7 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 			return ReleaseOutcome{}, g.Deny("reconciliation_required", "acknowledged")
 		}
 		for _, row := range rows {
-			if v, ok := decodeRuntime(row.Body); row.Kind == "refused" && ok && v.Message != nil && v.Message.Kind == "refuse" && v.Message.Identity == identity {
+			if v, ok := rcDecodeRuntime(row.Body); row.Kind == "refused" && ok && v.Message != nil && v.Message.Kind == "refuse" && v.Message.Identity == identity {
 				digest = row.EvidenceSHA256
 			}
 		}
@@ -851,15 +929,15 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 				return ReleaseOutcome{}, err
 			}
 		}
-		latched, err := taskLatchedTx(ctx, tx, identity.TaskID, d.Request.GrantID)
+		latched, err := rcTaskLatched(ctx, tx, identity.TaskID, d.Request.GrantID)
 		if err != nil {
 			return ReleaseOutcome{}, err
 		}
-		refusal, err := grantRefusal(ctx, tx, d.Request, now.Wall.UnixMilli())
+		refusal, err := rcGrantRefusal(ctx, tx, d.Request, now.Wall.UnixMilli())
 		if err != nil {
 			return ReleaseOutcome{}, err
 		}
-		session, err := lastSessionFor(ctx, tx, d.Facts.Repository.RunnerRoot.RunnerID)
+		session, err := rcLastSession(ctx, tx, d.Facts.Repository.RunnerRoot.RunnerID)
 		if err != nil {
 			return ReleaseOutcome{}, err
 		}
@@ -897,12 +975,12 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 		if refusal == "expired" {
 			to = p.Expired
 		}
-		evidence := reconcileEvidence{Basis: BasisNotStarted, DispatchID: d.ID, Identity: identity, State: state, Acknowledged: d.Acknowledged, Leases: leases, StopID: stopID, Cause: cause, GrantRefusal: refusal, RunnerBoot: d.Facts.RunnerBoot, SessionBoot: session.RunnerBoot, DaemonBoot: s.meta.DaemonBoot, RecordedMS: now.Wall.UnixMilli()}
-		body, err := json.Marshal(retainedRuntime{MessageID: dispatchID(d.ID, "reconcile-not-started"), Reconcile: &evidence})
+		evidence := rcEvidence{Basis: BasisNotStarted, DispatchID: d.ID, Identity: identity, State: state, Acknowledged: d.Acknowledged, Leases: leases, StopID: stopID, Cause: cause, GrantRefusal: refusal, RunnerBoot: d.Facts.RunnerBoot, SessionBoot: session.RunnerBoot, DaemonBoot: s.meta.DaemonBoot, RecordedMS: now.Wall.UnixMilli()}
+		body, err := json.Marshal(rcRuntimeRecord{MessageID: dispatchID(d.ID, "reconcile-not-started"), Reconcile: &evidence})
 		if err != nil {
 			return ReleaseOutcome{}, err
 		}
-		if digest, err = retainRuntime(ctx, tx, attemptID, "reconcile", d.Facts.RunnerBoot, s.meta.DaemonBoot, body, now.Wall.UnixMilli()); err != nil {
+		if digest, err = rcRetainRuntime(ctx, tx, attemptID, "reconcile", d.Facts.RunnerBoot, s.meta.DaemonBoot, body, now.Wall.UnixMilli()); err != nil {
 			return ReleaseOutcome{}, err
 		}
 	case BasisObservation:
@@ -926,12 +1004,12 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 		}
 		var boundary *BoundaryState
 		for _, row := range rows {
-			if v, ok := decodeRuntime(row.Body); row.Kind == "terminated" && ok && v.Termination != nil && v.Termination.Terminated.MessageID == evidence.Terminated.MessageID {
+			if v, ok := rcDecodeRuntime(row.Body); row.Kind == "terminated" && ok && v.Termination != nil && v.Termination.Terminated.MessageID == evidence.Terminated.MessageID {
 				boundary = v.Boundary
 			}
 		}
 		var stopCause string
-		if to, stopCause, err = s.terminationCheck(ctx, tx, d, evidence.Terminated, boundary, evidence.Measurement); err != nil {
+		if to, stopCause, err = s.rcTerminationCheck(ctx, tx, d, evidence.Terminated, boundary, evidence.Measurement, false); err != nil {
 			return ReleaseOutcome{}, err
 		}
 		confirmed, digest, stopID = evidence.Terminated.ConfirmedProcess, evidence.Terminated.EvidenceDigest, basis.StopID
@@ -939,9 +1017,9 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 			cause = stopCause
 		}
 	case BasisRetainedTermination:
-		var found *retainedRuntime
+		var found *rcRuntimeRecord
 		for _, row := range rows {
-			if v, ok := decodeRuntime(row.Body); row.Kind == "terminated" && ok && row.EvidenceSHA256 == basis.EvidenceSHA256 && v.Termination != nil {
+			if v, ok := rcDecodeRuntime(row.Body); row.Kind == "terminated" && ok && row.EvidenceSHA256 == basis.EvidenceSHA256 && v.Termination != nil {
 				found = &v
 			}
 		}
@@ -953,7 +1031,7 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 			return ReleaseOutcome{}, g.Deny("reconciliation_required", "boundary")
 		}
 		var stopCause string
-		if to, stopCause, err = s.terminationCheck(ctx, tx, d, m, found.Boundary, found.Termination.Measurement); err != nil {
+		if to, stopCause, err = s.rcTerminationCheck(ctx, tx, d, m, found.Boundary, found.Termination.Measurement, true); err != nil {
 			return ReleaseOutcome{}, err
 		}
 		confirmed, digest, stopID = m.ConfirmedProcess, m.EvidenceDigest, m.StopID
@@ -968,11 +1046,11 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 		if key == "" {
 			key = d.ID
 		}
-		if _, revision, err = fenceTx(ctx, tx, identity, state, revision, key); err != nil {
+		if _, revision, err = rcFence(ctx, tx, identity, state, revision, key); err != nil {
 			return ReleaseOutcome{}, err
 		}
 	}
-	actor, err := releaseActor(ctx, tx, d, preferred)
+	actor, err := rcReleaseActor(ctx, tx, d, preferred)
 	if err != nil {
 		return ReleaseOutcome{}, err
 	}
@@ -984,7 +1062,7 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 	if err != nil {
 		return ReleaseOutcome{}, err
 	}
-	cleared, err := clearLatchesTx(ctx, tx, "", attemptID, s.meta.DaemonBoot, now.Wall.UnixMilli())
+	cleared, err := rcClearLatches(ctx, tx, "", attemptID, s.meta.DaemonBoot, now.Wall.UnixMilli())
 	if err != nil {
 		return ReleaseOutcome{}, err
 	}
@@ -998,13 +1076,15 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 }
 
 // RecoverResultPending moves an unknown attempt back to result_pending so the
-// runner can upload or finalize the result it preserved: the supervised process
-// is proven exited by a retained exit observation, or the runner's hello journal
-// for this dispatch (exact identity and boot, not corrupt) reports result_pending
-// or a receipt. Refused while a stop targets the attempt, admission is latched,
-// the grant is dead or the daemon is paused. Durable point: the CAS, its event
-// and the retained recovery record in one commit; replay returns the recorded
-// transition. It never restarts the attempt.
+// runner can upload or finalize the result it preserved. The proof is the
+// daemon's own retained exit observation (the supervised process group is
+// gone); the runner's hello journal is a recovery hint only: when one is
+// supplied it must name this dispatch, identity and the boot that ran it, must
+// not be corrupt, and a receipt it cites must be the attempt's own custody
+// receipt. Refused while the latest journal is corrupt, a stop targets the
+// attempt, admission is latched, the grant is dead or the daemon is paused.
+// Durable point: the CAS, its event and the retained recovery record in one
+// commit; replay returns the recorded transition. It never restarts the attempt.
 func (s *Store) RecoverResultPending(ctx context.Context, attemptID string, journal execwire.Journal) (p.Message, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -1013,18 +1093,18 @@ func (s *Store) RecoverResultPending(ctx context.Context, attemptID string, jour
 		return p.Message{}, err
 	}
 	defer tx.Rollback()
-	d, err := attemptDispatch(ctx, tx, attemptID)
+	d, err := rcAttemptDispatch(ctx, tx, attemptID)
 	if err != nil {
 		return p.Message{}, err
 	}
 	identity := d.Assignment.Identity
-	state, revision, err := attemptCursor(ctx, tx, attemptID)
+	state, revision, err := rcAttemptCursor(ctx, tx, attemptID)
 	if err != nil {
 		return p.Message{}, err
 	}
 	m := p.Message{Version: p.FencedVersion, Kind: "transition", MessageID: dispatchID(d.ID+":"+strconv.FormatInt(revision, 10), "recovered-result-pending"), Identity: identity, ExpectedRevision: &revision, From: p.Unknown, To: p.ResultPending}
 	if state == p.ResultPending {
-		if old, err := currentEvent(ctx, tx, attemptID, revision); err == nil && old.To == p.ResultPending && old.From == p.Unknown {
+		if old, err := rcCurrentEvent(ctx, tx, attemptID, revision); err == nil && old.To == p.ResultPending && old.From == p.Unknown {
 			return old, nil
 		}
 		return p.Message{}, p.InvalidTransition
@@ -1035,7 +1115,7 @@ func (s *Store) RecoverResultPending(ctx context.Context, attemptID string, jour
 	if identity.Generation != s.meta.Generation {
 		return p.Message{}, p.StaleGeneration
 	}
-	paused, err := pausedTx(ctx, tx)
+	paused, err := daemonPausedTx(ctx, tx)
 	if err != nil {
 		return p.Message{}, err
 	}
@@ -1046,31 +1126,47 @@ func (s *Store) RecoverResultPending(ctx context.Context, attemptID string, jour
 	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM control_targets WHERE attempt_id=?)", attemptID).Scan(&targeted); err != nil {
 		return p.Message{}, err
 	}
-	latched, err := taskLatchedTx(ctx, tx, identity.TaskID, d.Request.GrantID)
+	latched, err := rcTaskLatched(ctx, tx, identity.TaskID, d.Request.GrantID)
 	if err != nil {
 		return p.Message{}, err
 	}
 	now := s.controlNow().UnixMilli()
-	refusal, err := grantRefusal(ctx, tx, d.Request, now)
+	refusal, err := rcGrantRefusal(ctx, tx, d.Request, now)
 	if err != nil {
 		return p.Message{}, err
 	}
 	if targeted || latched || refusal != "" {
 		return p.Message{}, g.Deny("stop_latched", "recover")
 	}
-	rows, err := runtimeRows(ctx, tx, attemptID)
+	if err := rcJournalCorrupt(ctx, tx, d); err != nil {
+		return p.Message{}, err
+	}
+	rows, err := rcRuntimeRows(ctx, tx, attemptID)
 	if err != nil {
 		return p.Message{}, err
 	}
 	exited := false
 	for _, row := range rows {
-		if v, ok := decodeRuntime(row.Body); row.Kind == "exit" && ok && v.Evidence != nil && v.Evidence.Kind == "exit" && v.Evidence.PGIDEmpty {
+		if v, ok := rcDecodeRuntime(row.Body); row.Kind == "exit" && ok && v.Evidence != nil && v.Evidence.Kind == "exit" && v.Evidence.PGIDEmpty && v.Evidence.PGID > 0 && v.Evidence.ObservedUnixNS > 0 {
 			exited = true
 		}
 	}
-	journaled := journal.DispatchID == d.ID && journal.Identity == identity && !journal.Corrupt && journal.RunnerBoot == d.Facts.RunnerBoot && (journal.State == p.ResultPending || journal.ReceiptID != "")
-	if !exited && !journaled {
+	if !exited {
 		return p.Message{}, g.Deny("reconciliation_required", "exit")
+	}
+	if journal != (execwire.Journal{}) {
+		if journal.DispatchID != d.ID || journal.Identity != identity || journal.RunnerBoot != d.Facts.RunnerBoot || journal.Corrupt {
+			return p.Message{}, g.Deny("reconciliation_required", "journal")
+		}
+		if journal.ReceiptID != "" {
+			var owned bool
+			if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM artifact_results WHERE receipt_id=? AND generation=? AND task_id=? AND attempt_id=? AND epoch=?)", journal.ReceiptID, identity.Generation, identity.TaskID, identity.AttemptID, identity.Epoch).Scan(&owned); err != nil {
+				return p.Message{}, err
+			}
+			if !owned {
+				return p.Message{}, p.IdentityConflict
+			}
+		}
 	}
 	if r := p.CheckTransition(m, identity, state, revision); r != p.OK {
 		return p.Message{}, r
@@ -1088,16 +1184,12 @@ func (s *Store) RecoverResultPending(ctx context.Context, attemptID string, jour
 	if _, err := tx.ExecContext(ctx, "UPDATE tasks SET state='verifying' WHERE id=?", identity.TaskID); err != nil {
 		return p.Message{}, err
 	}
-	basis := "exit_observation"
-	if !exited {
-		basis = "runner_journal"
-	}
-	evidence := reconcileEvidence{Basis: basis, DispatchID: d.ID, Identity: identity, State: state, Acknowledged: d.Acknowledged, Leases: 0, Cause: "recovered_result_pending", RunnerBoot: d.Facts.RunnerBoot, SessionBoot: journal.RunnerBoot, DaemonBoot: s.meta.DaemonBoot, RecordedMS: now}
-	body, err := json.Marshal(retainedRuntime{MessageID: m.MessageID, Reconcile: &evidence})
+	evidence := rcEvidence{Basis: "exit_observation", DispatchID: d.ID, Identity: identity, State: state, Acknowledged: d.Acknowledged, Leases: 0, Cause: "recovered_result_pending", RunnerBoot: d.Facts.RunnerBoot, SessionBoot: journal.RunnerBoot, DaemonBoot: s.meta.DaemonBoot, RecordedMS: now}
+	body, err := json.Marshal(rcRuntimeRecord{MessageID: m.MessageID, Reconcile: &evidence})
 	if err != nil {
 		return p.Message{}, err
 	}
-	if _, err := retainRuntime(ctx, tx, attemptID, "recovered", d.Facts.RunnerBoot, s.meta.DaemonBoot, body, now); err != nil {
+	if _, err := rcRetainRuntime(ctx, tx, attemptID, "recovered", d.Facts.RunnerBoot, s.meta.DaemonBoot, body, now); err != nil {
 		return p.Message{}, err
 	}
 	if err := s.reconcileStep("before_recover_commit"); err != nil {
@@ -1109,18 +1201,93 @@ func (s *Store) RecoverResultPending(ctx context.Context, attemptID string, jour
 	return m, s.reconcileStep("after_recover_commit")
 }
 
+// rcUsageCounts reports the retained boundary receipts of an attempt and how many
+// of them are still non-terminal. Received receipts never prove quiescence (a
+// reservation whose receipt was never posted is invisible here); a non-terminal
+// one does prove work in flight.
+func rcUsageCounts(ctx context.Context, tx *sql.Tx, attemptID string) (receipts, inflight int64, err error) {
+	rows, err := tx.QueryContext(ctx, "SELECT body FROM attempt_usage WHERE attempt_id=?", attemptID)
+	if err != nil {
+		return 0, 0, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var body string
+		var r UsageReceipt
+		if err := rows.Scan(&body); err != nil {
+			return 0, 0, err
+		}
+		if json.Unmarshal([]byte(body), &r) != nil {
+			return 0, 0, g.Deny("corrupt_record", "usage")
+		}
+		receipts++
+		if !r.Terminal {
+			inflight++
+		}
+	}
+	return receipts, inflight, rows.Err()
+}
+
+// rcQuiescenceProof is the positive durable evidence that no inference can still
+// be running for the attempt. Accepted, in order: the runner's retained finalize
+// attestation for this receipt (a completion record whose settled boundary,
+// stream and exit agree with the daemon's own evidence); a launch intent with
+// boundary_port 0 (the fake harness runs without an inference boundary, so no
+// reservation was ever possible and no usage row may exist); a caller-supplied
+// runner-journal attestation bound to the dispatch's runner boot and the receipt.
+// An attested boundary must cover every retained usage row. Anything else is
+// reconciliation_required: the reservation stays held.
+func rcQuiescenceProof(rows []RuntimeObservation, receiptID string, exit *RuntimeEvidence, digest string, attested *BoundaryAttestation, runnerBoot string, receipts int64) (BoundaryState, string, error) {
+	want := ExitRecord{Code: exit.Code, PGID: exit.PGID, ObservedUnixNS: exit.ObservedUnixNS}
+	for _, row := range rows {
+		v, ok := rcDecodeRuntime(row.Body)
+		if !ok || v.Completion == nil || (row.Kind != "completion" && row.Kind != "attestation") {
+			continue
+		}
+		cpl := *v.Completion
+		if cpl.ReceiptID == receiptID && cpl.Version == execwire.Version && rcSettledBoundary(cpl.Boundary) && cpl.Boundary.Reservations >= receipts && cpl.Stream.Through == exit.StreamThrough && cpl.Stream.Digest == digest && cpl.Exit == want {
+			return cpl.Boundary, QuiescenceRunnerAttestation, nil
+		}
+	}
+	for _, row := range rows {
+		if v, ok := rcDecodeRuntime(row.Body); row.Kind == "launch_intent" && ok && v.Evidence != nil && v.Evidence.Kind == "launch_intent" && v.Evidence.BoundaryPort == 0 {
+			if receipts != 0 {
+				return BoundaryState{}, "", g.Deny("reconciliation_required", "boundary")
+			}
+			return BoundaryState{Quiescent: true}, QuiescenceNoBoundary, nil
+		}
+	}
+	if attested != nil {
+		if attested.RunnerBoot != runnerBoot {
+			return BoundaryState{}, "", p.BootMismatch
+		}
+		if attested.ReceiptID != receiptID {
+			return BoundaryState{}, "", p.IdentityConflict
+		}
+		if !rcSettledBoundary(attested.Boundary) || attested.Boundary.Reservations < receipts {
+			return BoundaryState{}, "", g.Deny("reconciliation_required", "boundary")
+		}
+		return attested.Boundary, QuiescenceRunnerJournal, nil
+	}
+	return BoundaryState{}, "", g.Deny("reconciliation_required", "quiescence")
+}
+
 // CompleteFinalization finalizes an attempt whose custody committed but whose
 // finalize never did (daemon or runner crash in between) from stored evidence
 // alone: a non-quarantined current-generation receipt and committed manifest, a
 // retained exit observation whose stream_through equals the sink watermark with
-// an equal chain digest, boundary receipts in attempt_usage that are all
-// terminal, no stop latch, a live grant and an unpaused daemon. From unknown it
-// first records unknown -> result_pending (intact validated artifacts), then the
-// same terminal CAS, event id dispatchID(receipt, "terminal"), task state,
-// dispatch_releases row (actor: runner principal) and result head that
-// FinalizeAttempt writes, so a runner's replayed finalize returns the same
-// reply. Durable point: that one commit. Nothing reruns.
-func (s *Store) CompleteFinalization(ctx context.Context, attemptID string) (FinalizeReply, error) {
+// an equal chain digest, no retained boundary receipt still in flight, a
+// positive quiescence proof (rcQuiescenceProof: the runner's retained finalize
+// attestation, a fake-harness launch intent with boundary_port 0, or the
+// runner-journal attestation in attested), no stop latch, a live grant and an
+// unpaused daemon. From unknown it first records unknown -> result_pending
+// (intact validated artifacts), then the same terminal CAS, event id
+// dispatchID(receipt, "terminal"), task state, dispatch_releases row (actor:
+// runner principal) and result head that FinalizeAttempt writes, and retains the
+// completion with the proven boundary so a runner's replayed finalize attesting
+// the same state returns the same reply. Durable point: that one commit.
+// Nothing reruns; without proof the reservation stays held.
+func (s *Store) CompleteFinalization(ctx context.Context, attemptID string, attested *BoundaryAttestation) (FinalizeReply, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tx, err := s.grantTransaction(ctx)
@@ -1128,7 +1295,7 @@ func (s *Store) CompleteFinalization(ctx context.Context, attemptID string) (Fin
 		return FinalizeReply{}, err
 	}
 	defer tx.Rollback()
-	d, err := attemptDispatch(ctx, tx, attemptID)
+	d, err := rcAttemptDispatch(ctx, tx, attemptID)
 	if err != nil {
 		return FinalizeReply{}, err
 	}
@@ -1145,7 +1312,7 @@ func (s *Store) CompleteFinalization(ctx context.Context, attemptID string) (Fin
 	if err != nil {
 		return FinalizeReply{}, err
 	}
-	state, revision, err := attemptCursor(ctx, tx, attemptID)
+	state, revision, err := rcAttemptCursor(ctx, tx, attemptID)
 	if err != nil {
 		return FinalizeReply{}, err
 	}
@@ -1166,7 +1333,10 @@ func (s *Store) CompleteFinalization(ctx context.Context, attemptID string) (Fin
 	if quarantined {
 		return FinalizeReply{}, g.Deny("reconciliation_required", "quarantined")
 	}
-	paused, err := pausedTx(ctx, tx)
+	if err := rcJournalCorrupt(ctx, tx, d); err != nil {
+		return FinalizeReply{}, err
+	}
+	paused, err := daemonPausedTx(ctx, tx)
 	if err != nil {
 		return FinalizeReply{}, err
 	}
@@ -1196,13 +1366,13 @@ func (s *Store) CompleteFinalization(ctx context.Context, attemptID string) (Fin
 		}
 		return FinalizeReply{}, err
 	}
-	rows, err := runtimeRows(ctx, tx, attemptID)
+	rows, err := rcRuntimeRows(ctx, tx, attemptID)
 	if err != nil {
 		return FinalizeReply{}, err
 	}
 	var exit *RuntimeEvidence
 	for _, row := range rows {
-		if v, ok := decodeRuntime(row.Body); row.Kind == "exit" && ok && v.Evidence != nil && v.Evidence.Kind == "exit" && v.Evidence.PGIDEmpty && v.Evidence.PGID > 0 && v.Evidence.ObservedUnixNS > 0 {
+		if v, ok := rcDecodeRuntime(row.Body); row.Kind == "exit" && ok && v.Evidence != nil && v.Evidence.Kind == "exit" && v.Evidence.PGIDEmpty && v.Evidence.PGID > 0 && v.Evidence.ObservedUnixNS > 0 {
 			exit = v.Evidence
 		}
 	}
@@ -1220,34 +1390,16 @@ func (s *Store) CompleteFinalization(ctx context.Context, attemptID string) (Fin
 	if err != nil || digest != watermark.Digest {
 		return FinalizeReply{}, g.Deny("reconciliation_required", "stream_digest")
 	}
-	usage, err := tx.QueryContext(ctx, "SELECT body FROM attempt_usage WHERE attempt_id=?", attemptID)
+	receipts, inflight, err := rcUsageCounts(ctx, tx, attemptID)
 	if err != nil {
 		return FinalizeReply{}, err
 	}
-	boundary := BoundaryState{}
-	for usage.Next() {
-		var body string
-		var r UsageReceipt
-		if err := usage.Scan(&body); err != nil {
-			usage.Close()
-			return FinalizeReply{}, err
-		}
-		if json.Unmarshal([]byte(body), &r) != nil {
-			usage.Close()
-			return FinalizeReply{}, g.Deny("corrupt_record", "usage")
-		}
-		boundary.Reservations++
-		if r.Terminal {
-			boundary.TerminalReceipts++
-		}
-	}
-	if err := errors.Join(usage.Err(), usage.Close()); err != nil {
-		return FinalizeReply{}, err
-	}
-	boundary.InFlight = boundary.Reservations - boundary.TerminalReceipts
-	boundary.Quiescent = boundary.InFlight == 0
-	if !settledBoundary(boundary) {
+	if inflight > 0 {
 		return FinalizeReply{}, g.Deny("reconciliation_required", "boundary")
+	}
+	boundary, source, err := rcQuiescenceProof(rows, receiptID, exit, digest, attested, d.Facts.RunnerBoot, receipts)
+	if err != nil {
+		return FinalizeReply{}, err
 	}
 	if state == p.Unknown {
 		recovered := p.Message{Version: p.FencedVersion, Kind: "transition", MessageID: dispatchID(receiptID, "recovered"), Identity: identity, ExpectedRevision: &revision, From: p.Unknown, To: p.ResultPending}
@@ -1288,12 +1440,13 @@ func (s *Store) CompleteFinalization(ctx context.Context, attemptID string) (Fin
 		return FinalizeReply{}, err
 	}
 	completion := Completion{Version: execwire.Version, MessageID: dispatchID(receiptID, "reconcile-finalize"), ReceiptID: receiptID, Stream: StreamWatermark{Through: exit.StreamThrough, Digest: digest}, Exit: ExitRecord{Code: exit.Code, PGID: exit.PGID, ObservedUnixNS: exit.ObservedUnixNS}, Boundary: boundary}
-	body, err := json.Marshal(retainedRuntime{MessageID: completion.MessageID, Completion: &completion})
+	quiescence := rcEvidence{Basis: source, DispatchID: d.ID, Identity: identity, State: state, Acknowledged: d.Acknowledged, Leases: int(receipts), Cause: "finalized_from_evidence", RunnerBoot: d.Facts.RunnerBoot, DaemonBoot: s.meta.DaemonBoot, RecordedMS: now}
+	body, err := json.Marshal(rcRuntimeRecord{MessageID: completion.MessageID, Completion: &completion, Reconcile: &quiescence})
 	if err != nil {
 		return FinalizeReply{}, err
 	}
 	sum := sha256.Sum256(body)
-	actor, err := releaseActor(ctx, tx, d, "")
+	actor, err := rcReleaseActor(ctx, tx, d, "")
 	if err != nil {
 		return FinalizeReply{}, err
 	}
@@ -1315,7 +1468,7 @@ func (s *Store) CompleteFinalization(ctx context.Context, attemptID string) (Fin
 			return FinalizeReply{}, err
 		}
 	}
-	if _, err := retainRuntime(ctx, tx, attemptID, "completion", d.Facts.RunnerBoot, s.meta.DaemonBoot, body, now); err != nil {
+	if _, err := rcRetainRuntime(ctx, tx, attemptID, "completion", d.Facts.RunnerBoot, s.meta.DaemonBoot, body, now); err != nil {
 		return FinalizeReply{}, err
 	}
 	if err := s.reconcileStep("before_complete_commit"); err != nil {
@@ -1343,7 +1496,7 @@ func (s *Store) ClearLatches(ctx context.Context, taskID string) ([]LatchClearan
 		return nil, err
 	}
 	defer tx.Rollback()
-	cleared, err := clearLatchesTx(ctx, tx, taskID, "", s.meta.DaemonBoot, s.controlNow().UnixMilli())
+	cleared, err := rcClearLatches(ctx, tx, taskID, "", s.meta.DaemonBoot, s.controlNow().UnixMilli())
 	if err != nil {
 		return nil, err
 	}
@@ -1392,7 +1545,7 @@ func (s *Store) LatchClearances(ctx context.Context, taskID string) ([]LatchClea
 }
 
 // TaskLatched reports whether admission for the task is suppressed by a stop that
-// has not been cleared (see taskLatchedTx). Durable point: none (read).
+// has not been cleared (see rcTaskLatched). Durable point: none (read).
 func (s *Store) TaskLatched(ctx context.Context, taskID string) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -1409,13 +1562,13 @@ func (s *Store) TaskLatched(ctx context.Context, taskID string) (bool, error) {
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return false, err
 	}
-	return taskLatchedTx(ctx, tx, taskID, grant)
+	return rcTaskLatched(ctx, tx, taskID, grant)
 }
 
-// terminalCause derives the report cause of a terminal attempt from retained
+// rcTerminalCause derives the report cause of a terminal attempt from retained
 // records: the release proof, this file's reconcile evidence, the stops that
 // targeted it and the termination evidence's boots.
-func terminalCause(ctx context.Context, tx *sql.Tx, d Dispatch, state p.AttemptState, daemonBoot string) (string, error) {
+func rcTerminalCause(ctx context.Context, tx *sql.Tx, d Dispatch, state p.AttemptState, daemonBoot string) (string, error) {
 	switch state {
 	case p.Succeeded, p.Failed:
 		return string(state), nil
@@ -1426,16 +1579,16 @@ func terminalCause(ctx context.Context, tx *sql.Tx, d Dispatch, state p.AttemptS
 	if state == p.Expired {
 		return "lease_expired", nil
 	}
-	rows, err := runtimeRows(ctx, tx, d.Assignment.Identity.AttemptID)
+	rows, err := rcRuntimeRows(ctx, tx, d.Assignment.Identity.AttemptID)
 	if err != nil {
 		return "", err
 	}
 	for _, row := range rows {
-		if v, ok := decodeRuntime(row.Body); ok && row.Kind == "reconcile" && v.Reconcile != nil && v.Reconcile.Cause != "" {
+		if v, ok := rcDecodeRuntime(row.Body); ok && row.Kind == "reconcile" && v.Reconcile != nil && v.Reconcile.Cause != "" {
 			return v.Reconcile.Cause, nil
 		}
 	}
-	causes, err := attemptStopCauses(ctx, tx, d.Assignment.Identity.AttemptID)
+	causes, err := rcStopCauses(ctx, tx, d.Assignment.Identity.AttemptID)
 	if err != nil {
 		return "", err
 	}
@@ -1481,7 +1634,7 @@ func (s *Store) RetryInputs(ctx context.Context, taskID string) (RetryInputs, er
 	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
 		return RetryInputs{}, err
 	}
-	if v.Paused, err = pausedTx(ctx, tx); err != nil {
+	if v.Paused, err = daemonPausedTx(ctx, tx); err != nil {
 		return RetryInputs{}, err
 	}
 	if err := tx.QueryRowContext(ctx, "SELECT count(*),COALESCE(min(created_ms),0) FROM dispatches WHERE task_id=?", taskID).Scan(&v.Dispatched, &v.FirstMS); err != nil {
@@ -1502,7 +1655,7 @@ func (s *Store) RetryInputs(ctx context.Context, taskID string) (RetryInputs, er
 			v.GrantRefusal = refusal.Code
 		}
 	}
-	if v.Latched, err = taskLatchedTx(ctx, tx, taskID, grant.ID); err != nil {
+	if v.Latched, err = rcTaskLatched(ctx, tx, taskID, grant.ID); err != nil {
 		return RetryInputs{}, err
 	}
 	if len(v.Attempts) == 0 {
@@ -1517,7 +1670,7 @@ func (s *Store) RetryInputs(ctx context.Context, taskID string) (RetryInputs, er
 		return RetryInputs{}, err
 	}
 	v.Ceiling = v.Last.Request.Envelope.Budgets
-	if v.Cause, err = terminalCause(ctx, tx, v.Last, last.State, s.meta.DaemonBoot); err != nil {
+	if v.Cause, err = rcTerminalCause(ctx, tx, v.Last, last.State, s.meta.DaemonBoot); err != nil {
 		return RetryInputs{}, err
 	}
 	return v, nil
@@ -1535,7 +1688,7 @@ func (s *Store) ReconcileReport(ctx context.Context, id string) (ReconcileReport
 		return ReconcileReport{}, err
 	}
 	defer tx.Rollback()
-	return readReport(ctx, tx, "SELECT id,daemon_boot,created_ms,body FROM reconcile_reports WHERE id=?", id)
+	return rcReadReport(ctx, tx, "SELECT id,daemon_boot,created_ms,body FROM reconcile_reports WHERE id=?", id)
 }
 
 // LatestReconcileReport reads the newest retained report (clearing records are
@@ -1548,10 +1701,10 @@ func (s *Store) LatestReconcileReport(ctx context.Context) (ReconcileReport, err
 		return ReconcileReport{}, err
 	}
 	defer tx.Rollback()
-	return readReport(ctx, tx, "SELECT id,daemon_boot,created_ms,body FROM reconcile_reports WHERE id NOT LIKE ?||'%' ORDER BY created_ms DESC,rowid DESC LIMIT 1", latchClearedPrefix)
+	return rcReadReport(ctx, tx, "SELECT id,daemon_boot,created_ms,body FROM reconcile_reports WHERE id NOT LIKE ?||'%' ORDER BY created_ms DESC,rowid DESC LIMIT 1", latchClearedPrefix)
 }
 
-func readReport(ctx context.Context, tx *sql.Tx, query string, args ...any) (ReconcileReport, error) {
+func rcReadReport(ctx context.Context, tx *sql.Tx, query string, args ...any) (ReconcileReport, error) {
 	var v ReconcileReport
 	var body string
 	if err := tx.QueryRowContext(ctx, query, args...).Scan(&v.ID, &v.DaemonBoot, &v.CreatedMS, &body); err != nil {

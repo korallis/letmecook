@@ -1,6 +1,9 @@
 package store
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"strings"
@@ -12,13 +15,13 @@ import (
 	p "github.com/korallis/letmecook/schemas/execution"
 )
 
-// advanceControl moves the store's control clock past the reopened barrier
+// rcAdvanceControl moves the store's control clock past the reopened barrier
 // (30 s maximum validity plus the 7 s retained margin).
-func advanceControl(s *Store, d time.Duration) {
+func rcAdvanceControl(s *Store, d time.Duration) {
 	s.SetControlClock(func() time.Time { return time.Now().Add(d) })
 }
 
-func releases(t *testing.T, s *Store, want int) {
+func rcReleases(t *testing.T, s *Store, want int) {
 	t.Helper()
 	rowCount(t, s, "dispatch_releases", want)
 }
@@ -93,7 +96,7 @@ func TestReconciliationInputsSnapshot(t *testing.T) {
 	if err != nil || in.State != p.Unknown || in.LeaseBarrierPassed || in.DaemonBoot == boot {
 		t.Fatalf("%+v %v", in, err)
 	}
-	advanceControl(x.s, 40*time.Second)
+	rcAdvanceControl(x.s, 40*time.Second)
 	if in, err = x.s.ReconciliationInputs(ctx, attempt); err != nil || !in.LeaseBarrierPassed {
 		t.Fatal("barrier did not pass on the injected clock", err)
 	}
@@ -137,7 +140,7 @@ func TestReleaseAttemptRefusesWithoutEvidence(t *testing.T) {
 		if code != "" && !strings.Contains(err.Error(), code) {
 			t.Fatalf("%+v: want %s, got %v", basis, code, err)
 		}
-		releases(t, x.s, 0)
+		rcReleases(t, x.s, 0)
 	}
 	refuse(ReleaseBasis{Kind: "bogus"}, "malformed")
 	refuse(ReleaseBasis{Kind: BasisRefused}, "acknowledged")
@@ -168,12 +171,12 @@ func TestReleaseAttemptRefusesWithoutEvidence(t *testing.T) {
 	}
 	sha := retainedSHA(t, x.s, attempt, evidence.Terminated.MessageID)
 	refuse(ReleaseBasis{Kind: BasisRetainedTermination, EvidenceSHA256: sha}, "lease_barrier")
-	advanceControl(x.s, 40*time.Second)
+	rcAdvanceControl(x.s, 40*time.Second)
 	out, err := x.s.ReleaseAttempt(ctx, attempt, ReleaseBasis{Kind: BasisRetainedTermination, EvidenceSHA256: sha})
 	if err != nil || out.Replayed || out.Proof.To != p.Cancelled || out.Cause != "operator" || out.Proof.EvidenceDigest != evidence.Terminated.EvidenceDigest || out.Actor != x.session.RunnerID || len(out.Cleared) != 1 || out.Cleared[0].StopID != stop.ID {
 		t.Fatalf("%+v %v", out, err)
 	}
-	releases(t, x.s, 1)
+	rcReleases(t, x.s, 1)
 	if state, _ := attemptRow(t, x.s, attempt); state != p.Cancelled {
 		t.Fatal(state)
 	}
@@ -272,7 +275,7 @@ func TestFenceAttempt(t *testing.T) {
 	if state, revision := attemptRow(t, x.s, attempt); state != p.Stopping || revision != 4 || taskRow(t, x.s, x.d.Request.TaskID) != p.TaskReconciling {
 		t.Fatal(state, revision)
 	}
-	releases(t, x.s, 0)
+	rcReleases(t, x.s, 0)
 	again, err := x.s.FenceAttempt(ctx, attempt, "lease_expired")
 	if err != nil || !reflect.DeepEqual(again, m) {
 		t.Fatal("replay differs", again, err)
@@ -303,51 +306,145 @@ func TestFenceAttempt(t *testing.T) {
 	}
 }
 
+// rcRunFake drives a fake-harness attempt (brief seeded, launch intent without a
+// boundary port) through result_pending, streaming texts when given.
+func (x *executionFixture) rcRunFake(t *testing.T, texts ...string) c.Lease {
+	t.Helper()
+	insertBrief(t, *x, "fake", "brief", nil, nil, nil, "{}", strings.Repeat("a", 64))
+	lease := x.lease(t)
+	intent := launchIntent(lease.Request.Nonce)
+	intent.BoundaryPort = 0
+	x.propose(t, p.Starting, intent)
+	x.propose(t, p.Running, launchedEvidence())
+	through := int64(0)
+	if len(texts) > 0 {
+		ack, err := x.s.Streams().Receive(x.d.Assignment.Identity.AttemptID, x.d.Assignment.Identity, spooledRecords(t, x.d.Assignment.Identity, texts...))
+		if err != nil {
+			t.Fatal(err)
+		}
+		through = ack.Through
+	}
+	x.propose(t, p.ResultPending, exitEvidence(through))
+	return lease
+}
+
+// attest retains a runner finalize attestation for the fixture's receipt the way
+// a completion record is shaped, so rcQuiescenceProof can consume it.
+func (x *executionFixture) rcAttest(t *testing.T, receipt string, through int64, boundary BoundaryState) Completion {
+	t.Helper()
+	digest, err := x.s.Streams().Digest(x.d.Assignment.Identity.AttemptID, through)
+	if err != nil {
+		t.Fatal(err)
+	}
+	completion := Completion{Version: execwire.Version, MessageID: newID(), ReceiptID: receipt, Stream: StreamWatermark{Through: through, Digest: digest}, Exit: ExitRecord{Code: 0, PGID: 101, ObservedUnixNS: exitEvidence(0).ObservedUnixNS}, Boundary: boundary}
+	body, err := json.Marshal(rcRuntimeRecord{MessageID: completion.MessageID, Completion: &completion})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum := sha256.Sum256(body)
+	if _, err := x.s.db.Exec("INSERT INTO runtime_observations VALUES(?,?,?,?,?,?,?)", x.d.Assignment.Identity.AttemptID, hex.EncodeToString(sum[:]), "attestation", x.facts.RunnerBoot, x.s.meta.DaemonBoot, string(body), time.Now().UnixMilli()); err != nil {
+		t.Fatal(err)
+	}
+	return completion
+}
+
 // Finalization from stored evidence needs the receipt, the exit observation at
-// exactly the sink watermark, all-terminal boundary receipts, no latch and a
-// live grant; it writes what FinalizeAttempt writes so the runner's replay agrees.
+// exactly the sink watermark, no boundary receipt still in flight and a positive
+// quiescence proof: received usage rows never stand in for one. It writes what
+// FinalizeAttempt writes so the runner's replay agrees.
 func TestCompleteFinalizationEvidence(t *testing.T) {
 	x := executionFixtureFor(t, nil)
 	attempt := x.d.Assignment.Identity.AttemptID
 	x.run(t, "first", "second")
-	if _, err := x.s.CompleteFinalization(ctx, attempt); err == nil || !strings.Contains(err.Error(), "receipt") {
-		t.Fatal("finalized without custody", err)
+	refuse := func(y *executionFixture, attested *BoundaryAttestation, code string) {
+		t.Helper()
+		_, err := y.s.CompleteFinalization(ctx, y.d.Assignment.Identity.AttemptID, attested)
+		if err == nil || !strings.Contains(err.Error(), code) {
+			t.Fatalf("want %s, got %v", code, err)
+		}
+		rcReleases(t, y.s, 0)
 	}
-	if err := x.s.RecordUsage(ctx, x.runner, x.session.SessionID, UsageReport{Version: execwire.Version, MessageID: newID(), Identity: x.d.Assignment.Identity, Receipts: []UsageReceipt{{RequestID: "req-1", Protocol: "openai-chat", Model: "model-a", Source: "boundary", StartedMS: 1}}}); err != nil {
-		t.Fatal(err)
-	}
-	_, custody := x.upload(t, "succeeded", map[string]string{"greeting.txt": "hello, gaffer\n"})
-	if _, err := x.s.CompleteFinalization(ctx, attempt); err == nil || !strings.Contains(err.Error(), "boundary") {
-		t.Fatal("finalized with an in-flight reservation", err)
-	}
+	refuse(&x, nil, "receipt")
+	x.upload(t, "succeeded", map[string]string{"greeting.txt": "hello, gaffer\n"})
+	// No usage rows and no attestation: nothing proves the boundary drained.
+	refuse(&x, nil, "quiescence")
+	// Terminal receipts alone are still not proof of quiescence.
 	if err := x.s.RecordUsage(ctx, x.runner, x.session.SessionID, UsageReport{Version: execwire.Version, MessageID: newID(), Identity: x.d.Assignment.Identity, Receipts: []UsageReceipt{{RequestID: "req-1", Protocol: "openai-chat", Model: "model-a", Source: "boundary", StartedMS: 1, EndedMS: 2, Terminal: true, Status: 200}}}); err != nil {
 		t.Fatal(err)
 	}
+	refuse(&x, nil, "quiescence")
+	// A reservation without a terminal receipt is work in flight.
+	if err := x.s.RecordUsage(ctx, x.runner, x.session.SessionID, UsageReport{Version: execwire.Version, MessageID: newID(), Identity: x.d.Assignment.Identity, Receipts: []UsageReceipt{{RequestID: "req-2", Protocol: "openai-chat", Model: "model-a", Source: "boundary", StartedMS: 3}}}); err != nil {
+		t.Fatal(err)
+	}
+	refuse(&x, nil, "boundary")
 	// Records appended after the exit observation break the watermark equality.
 	extra := spooledRecords(t, x.d.Assignment.Identity, "first", "second", "late")
 	if _, err := x.s.Streams().Receive(attempt, x.d.Assignment.Identity, extra[2:]); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := x.s.CompleteFinalization(ctx, attempt); err == nil || !strings.Contains(err.Error(), "stream") {
-		t.Fatal("finalized past the exit watermark", err)
+	refuse(&x, nil, "stream")
+	// A retained runner attestation for the receipt is proof; it must agree with
+	// the exit observation, the sink and every retained usage row.
+	w := executionFixtureFor(t, nil)
+	w.run(t, "only")
+	if err := w.s.RecordUsage(ctx, w.runner, w.session.SessionID, UsageReport{Version: execwire.Version, MessageID: newID(), Identity: w.d.Assignment.Identity, Receipts: []UsageReceipt{{RequestID: "req-1", Protocol: "openai-chat", Model: "model-a", Source: "boundary", StartedMS: 1, EndedMS: 2, Terminal: true, Status: 200}}}); err != nil {
+		t.Fatal(err)
 	}
-	releases(t, x.s, 0)
-	// A fresh fixture with matching evidence finalizes from unknown after a reopen.
+	_, wCustody := w.upload(t, "succeeded", map[string]string{"greeting.txt": "hello\n"})
+	refuse(&w, nil, "quiescence")
+	w.rcAttest(t, wCustody.Receipt.ReceiptID, 1, BoundaryState{Reservations: 0, TerminalReceipts: 0, Quiescent: true}) // covers fewer receipts than retained
+	refuse(&w, nil, "quiescence")
+	w.rcAttest(t, wCustody.Receipt.ReceiptID, 1, BoundaryState{Reservations: 1, TerminalReceipts: 0, InFlight: 1})
+	refuse(&w, nil, "quiescence")
+	attested := w.rcAttest(t, wCustody.Receipt.ReceiptID, 1, BoundaryState{Reservations: 1, TerminalReceipts: 1, Quiescent: true})
+	reply, err := w.s.CompleteFinalization(ctx, w.d.Assignment.Identity.AttemptID, nil)
+	if err != nil || reply.Outcome != "succeeded" || !reply.Released {
+		t.Fatal(reply, err)
+	}
+	rcReleases(t, w.s, 1)
+	w.session = sessionFor(t, w.dispatchFixture)
+	replay := attested
+	replay.MessageID = newID()
+	if again, err := w.s.FinalizeAttempt(ctx, w.runner, w.session.SessionID, w.d.Assignment.Identity.AttemptID, replay); err != nil || !reflect.DeepEqual(again, reply) {
+		t.Fatal(again, err)
+	}
+	// A runner-journal attestation is proof only when bound to the dispatch's
+	// runner boot and receipt and itself settled.
+	v := executionFixtureFor(t, nil)
+	v.run(t)
+	_, vCustody := v.upload(t, "succeeded", map[string]string{"greeting.txt": "hello\n"})
+	vAttempt := v.d.Assignment.Identity.AttemptID
+	if _, err := v.s.CompleteFinalization(ctx, vAttempt, &BoundaryAttestation{RunnerBoot: newID(), ReceiptID: vCustody.Receipt.ReceiptID, Boundary: quiescent()}); !errors.Is(err, p.BootMismatch) {
+		t.Fatal("foreign boot attestation accepted", err)
+	}
+	if _, err := v.s.CompleteFinalization(ctx, vAttempt, &BoundaryAttestation{RunnerBoot: v.facts.RunnerBoot, ReceiptID: newID(), Boundary: quiescent()}); !errors.Is(err, p.IdentityConflict) {
+		t.Fatal("attestation for another receipt accepted", err)
+	}
+	refuse(&v, &BoundaryAttestation{RunnerBoot: v.facts.RunnerBoot, ReceiptID: vCustody.Receipt.ReceiptID, Boundary: BoundaryState{Reservations: 2, TerminalReceipts: 1, InFlight: 1}}, "boundary")
+	refuse(&v, &BoundaryAttestation{RunnerBoot: v.facts.RunnerBoot, ReceiptID: vCustody.Receipt.ReceiptID, Boundary: BoundaryState{Reservations: 2, TerminalReceipts: 1, Quiescent: true}}, "boundary")
+	reply, err = v.s.CompleteFinalization(ctx, vAttempt, &BoundaryAttestation{RunnerBoot: v.facts.RunnerBoot, ReceiptID: vCustody.Receipt.ReceiptID, Boundary: quiescent()})
+	if err != nil || reply.Outcome != "succeeded" || !reply.Released {
+		t.Fatal(reply, err)
+	}
+	v.session = sessionFor(t, v.dispatchFixture)
+	if again, err := v.s.FinalizeAttempt(ctx, v.runner, v.session.SessionID, vAttempt, v.completion(t, vCustody.Receipt.ReceiptID, 0)); err != nil || !reflect.DeepEqual(again, reply) {
+		t.Fatal(again, err)
+	}
+	// A stop latch closes the finalize path whatever the proof.
 	y := executionFixtureFor(t, nil)
-	yAttempt := y.d.Assignment.Identity.AttemptID
-	y.run(t, "only")
-	_, yCustody := y.upload(t, "succeeded", map[string]string{"greeting.txt": "hello\n"})
+	y.rcRunFake(t, "only")
+	y.upload(t, "succeeded", map[string]string{"greeting.txt": "hello\n"})
 	stop := stopRequest(c.CancelAttempt, y.d)
 	if _, err := y.s.RequestStop(ctx, y.owner, stop); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := y.s.CompleteFinalization(ctx, yAttempt); err == nil || !strings.Contains(err.Error(), "stop_latched") {
-		t.Fatal("finalized under a stop latch", err)
-	}
-	_ = custody
+	refuse(&y, nil, "stop_latched")
+	// The fake harness never had a boundary: its launch intent is the proof, and
+	// the completion commits before it is reported.
 	z := executionFixtureFor(t, nil)
 	zAttempt := z.d.Assignment.Identity.AttemptID
-	z.run(t, "only")
+	z.rcRunFake(t, "only")
 	_, zCustody := z.upload(t, "failed", map[string]string{"recovery.log": "it broke\n"})
 	reopen(t, &z)
 	for _, step := range []string{"before_complete_commit", "after_complete_commit"} {
@@ -357,7 +454,7 @@ func TestCompleteFinalizationEvidence(t *testing.T) {
 			}
 			return nil
 		}
-		if _, err := z.s.CompleteFinalization(ctx, zAttempt); err == nil {
+		if _, err := z.s.CompleteFinalization(ctx, zAttempt, nil); err == nil {
 			t.Fatal("reply after injected failure")
 		}
 		z.s.controlHook = nil
@@ -366,18 +463,18 @@ func TestCompleteFinalizationEvidence(t *testing.T) {
 			if state != p.Unknown {
 				t.Fatal("uncommitted finalization visible", state)
 			}
-			releases(t, z.s, 0)
+			rcReleases(t, z.s, 0)
 			continue
 		}
 		if state != p.Failed {
 			t.Fatal("committed finalization lost", state)
 		}
 	}
-	reply, err := z.s.CompleteFinalization(ctx, zAttempt)
+	reply, err = z.s.CompleteFinalization(ctx, zAttempt, nil)
 	if err != nil || reply.Outcome != "failed" || !reply.Released {
 		t.Fatal(reply, err)
 	}
-	releases(t, z.s, 1)
+	rcReleases(t, z.s, 1)
 	rowCount(t, z.s, "artifact_result_heads", 0)
 	rowCount(t, z.s, "runtime_observations WHERE kind='completion'", 1)
 	var terminal int
@@ -394,11 +491,15 @@ func TestCompleteFinalizationEvidence(t *testing.T) {
 	if taskRow(t, z.s, z.d.Request.TaskID) != p.TaskReconciling {
 		t.Fatal(taskRow(t, z.s, z.d.Request.TaskID))
 	}
+	var body string
+	if err := z.s.db.QueryRow("SELECT body FROM runtime_observations WHERE attempt_id=? AND kind='completion'", zAttempt).Scan(&body); err != nil || !strings.Contains(body, QuiescenceNoBoundary) {
+		t.Fatal("proof source not retained", body, err)
+	}
 	// The runner's replayed finalize under a new session returns the same reply
-	// when it attests the same stream, exit and boundary; this runner posted no
-	// usage receipts, so its boundary is empty and quiescent.
+	// when it attests the same stream, exit and boundary: the fake harness had
+	// none, so its boundary is empty and quiescent.
 	z.session = sessionFor(t, z.dispatchFixture)
-	replay := z.completion(t, zCustody.Receipt.ReceiptID, 1)
+	replay = z.completion(t, zCustody.Receipt.ReceiptID, 1)
 	replay.Boundary = BoundaryState{Quiescent: true}
 	if again, err := z.s.FinalizeAttempt(ctx, z.runner, z.session.SessionID, zAttempt, replay); err != nil || !reflect.DeepEqual(again, reply) {
 		t.Fatal(again, err)
@@ -407,7 +508,6 @@ func TestCompleteFinalizationEvidence(t *testing.T) {
 	if _, err := z.s.FinalizeAttempt(ctx, z.runner, z.session.SessionID, zAttempt, z.completion(t, zCustody.Receipt.ReceiptID, 1)); !errors.Is(err, p.IdentityConflict) {
 		t.Fatal("divergent attestation accepted after reconcile finalization", err)
 	}
-	_ = yCustody
 	consistent(t, z.s)
 }
 
@@ -443,7 +543,7 @@ func TestReleaseAttemptCrashHooks(t *testing.T) {
 				if state != p.Running || revision != 3 {
 					t.Fatal("uncommitted release visible", state, revision)
 				}
-				releases(t, x.s, 0)
+				rcReleases(t, x.s, 0)
 				if cleared, err := x.s.LatchClearances(ctx, ""); err != nil || len(cleared) != 0 {
 					t.Fatal(cleared, err)
 				}
@@ -452,7 +552,7 @@ func TestReleaseAttemptCrashHooks(t *testing.T) {
 			if state != p.Cancelled || revision != 5 {
 				t.Fatal("committed release lost", state, revision)
 			}
-			releases(t, x.s, 1)
+			rcReleases(t, x.s, 1)
 			if cleared, err := x.s.LatchClearances(ctx, ""); err != nil || len(cleared) != 1 {
 				t.Fatal(cleared, err)
 			}
@@ -586,8 +686,9 @@ func TestRetryInputsCauses(t *testing.T) {
 	}
 }
 
-// unknown -> result_pending needs proof the process exited (the exit observation
-// or the runner's exact journal) and no stop; replay returns the same event.
+// unknown -> result_pending needs the daemon's own exit observation; a runner
+// journal is a hint the store re-validates (dispatch, identity, boot, receipt
+// ownership) and never proof on its own; replay returns the same event.
 func TestRecoverResultPending(t *testing.T) {
 	x := executionFixtureFor(t, nil)
 	attempt := x.d.Assignment.Identity.AttemptID
@@ -598,41 +699,60 @@ func TestRecoverResultPending(t *testing.T) {
 		t.Fatal("recovered a live attempt", err)
 	}
 	reopen(t, &x)
-	if _, err := x.s.RecoverResultPending(ctx, attempt, execwire.Journal{}); err == nil || !strings.Contains(err.Error(), "exit") {
-		t.Fatal("recovered without exit evidence", err)
-	}
 	journal := execwire.Journal{DispatchID: x.d.ID, Identity: x.d.Assignment.Identity, RunnerBoot: x.facts.RunnerBoot, DaemonBoot: x.s.meta.DaemonBoot, State: p.ResultPending}
-	corrupt := journal
+	// No exit observation: neither a bare call nor a journal claiming
+	// result_pending moves the attempt.
+	for _, hint := range []execwire.Journal{{}, journal} {
+		if _, err := x.s.RecoverResultPending(ctx, attempt, hint); err == nil || !strings.Contains(err.Error(), "exit") {
+			t.Fatal("recovered without exit evidence", err)
+		}
+	}
+	if state, _ := attemptRow(t, x.s, attempt); state != p.Unknown {
+		t.Fatal(state)
+	}
+	// With the exit observed, the journal must still be exact when supplied.
+	y := executionFixtureFor(t, nil)
+	yAttempt := y.d.Assignment.Identity.AttemptID
+	y.run(t)
+	reopen(t, &y)
+	exact := execwire.Journal{DispatchID: y.d.ID, Identity: y.d.Assignment.Identity, RunnerBoot: y.facts.RunnerBoot, DaemonBoot: y.s.meta.DaemonBoot, State: p.ResultPending}
+	corrupt := exact
 	corrupt.Corrupt = true
-	if _, err := x.s.RecoverResultPending(ctx, attempt, corrupt); err == nil {
-		t.Fatal("recovered on a corrupt journal")
-	}
-	foreign := journal
+	foreign := exact
 	foreign.RunnerBoot = newID()
-	if _, err := x.s.RecoverResultPending(ctx, attempt, foreign); err == nil {
-		t.Fatal("recovered on another boot's journal")
+	other := exact
+	other.DispatchID = newID()
+	for _, bad := range []execwire.Journal{corrupt, foreign, other} {
+		if _, err := y.s.RecoverResultPending(ctx, yAttempt, bad); err == nil {
+			t.Fatalf("recovered on an inexact journal %+v", bad)
+		}
 	}
-	m, err := x.s.RecoverResultPending(ctx, attempt, journal)
+	cited := exact
+	cited.ReceiptID = newID()
+	if _, err := y.s.RecoverResultPending(ctx, yAttempt, cited); !errors.Is(err, p.IdentityConflict) {
+		t.Fatal("journal citing a foreign receipt accepted", err)
+	}
+	m, err := y.s.RecoverResultPending(ctx, yAttempt, exact)
 	if err != nil || m.From != p.Unknown || m.To != p.ResultPending {
 		t.Fatal(m, err)
 	}
-	if state, revision := attemptRow(t, x.s, attempt); state != p.ResultPending || revision != 5 || taskRow(t, x.s, x.d.Request.TaskID) != p.TaskVerifying {
+	if state, revision := attemptRow(t, y.s, yAttempt); state != p.ResultPending || revision != 6 || taskRow(t, y.s, y.d.Request.TaskID) != p.TaskVerifying {
 		t.Fatal(state, revision)
 	}
-	rowCount(t, x.s, "runtime_observations WHERE kind='recovered'", 1)
-	again, err := x.s.RecoverResultPending(ctx, attempt, journal)
+	rowCount(t, y.s, "runtime_observations WHERE kind='recovered'", 1)
+	again, err := y.s.RecoverResultPending(ctx, yAttempt, execwire.Journal{})
 	if err != nil || !reflect.DeepEqual(again, m) {
 		t.Fatal("replay differs", again, err)
 	}
-	// With a stop latched, a second unknown attempt is not recovered.
-	y := executionFixtureFor(t, nil)
-	y.run(t)
-	stop := stopRequest(c.CancelAttempt, y.d)
-	if _, err := y.s.RequestStop(ctx, y.owner, stop); err != nil {
+	// With a stop latched, an exited unknown attempt is not recovered.
+	z := executionFixtureFor(t, nil)
+	z.run(t)
+	stop := stopRequest(c.CancelAttempt, z.d)
+	if _, err := z.s.RequestStop(ctx, z.owner, stop); err != nil {
 		t.Fatal(err)
 	}
-	reopen(t, &y)
-	if _, err := y.s.RecoverResultPending(ctx, y.d.Assignment.Identity.AttemptID, execwire.Journal{}); err == nil || !strings.Contains(err.Error(), "stop_latched") {
+	reopen(t, &z)
+	if _, err := z.s.RecoverResultPending(ctx, z.d.Assignment.Identity.AttemptID, execwire.Journal{}); err == nil || !strings.Contains(err.Error(), "stop_latched") {
 		t.Fatal("recovered under a stop latch", err)
 	}
 }

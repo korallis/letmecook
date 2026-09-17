@@ -330,21 +330,28 @@ func TestTerminatedConfirmedReleasesFromRunning(t *testing.T) {
 	}
 }
 
-// Custody committed without finalization is completed from retained evidence at
-// startup; the runner's replayed finalize then returns the same outcome. A
-// boundary with a non-terminal receipt refuses and stays blocked.
+// Custody without finalization is completed from retained evidence only with a
+// positive quiescence proof. The fake harness never had an inference boundary
+// (launch intent boundary_port 0), so its result finalizes at startup and the
+// runner's replayed finalize agrees; a real boundary with no runner attestation
+// stays held (blocking once the barrier elapses) and a usage reservation without
+// a terminal receipt is proof of work still in flight. Received usage rows never
+// stand in for the runner's attestation.
 func TestCustodyCommittedPendingFinalization(t *testing.T) {
-	for _, mode := range []string{"succeeded", "failed", "inflight"} {
+	for _, mode := range []string{"no_proof", "inflight", "fake_succeeded", "fake_failed"} {
 		t.Run(mode, func(t *testing.T) {
 			f := newFixture(t)
 			k := f.newTask(t)
-			k.run(t)
-			outcome := mode
-			if mode == "inflight" {
-				outcome = "succeeded"
-				k.usage(t, store.UsageReceipt{RequestID: "req-1", Protocol: "openai-chat", Model: "model-a", Source: "boundary", StartedMS: 1})
+			fake := strings.HasPrefix(mode, "fake_")
+			outcome := "succeeded"
+			if fake {
+				outcome = strings.TrimPrefix(mode, "fake_")
+				k.runFake(t)
 			} else {
-				k.usage(t, store.UsageReceipt{RequestID: "req-1", Protocol: "openai-chat", Model: "model-a", Source: "boundary", StartedMS: 1, EndedMS: 2, Terminal: true, Status: 200})
+				k.run(t)
+			}
+			if mode == "inflight" {
+				k.usage(t, store.UsageReceipt{RequestID: "req-1", Protocol: "openai-chat", Model: "model-a", Source: "boundary", StartedMS: 1})
 			}
 			custody := k.upload(t, outcome, map[string]string{"greeting.txt": "hello, gaffer\n"})
 			f.reopen(t)
@@ -357,13 +364,28 @@ func TestCustodyCommittedPendingFinalization(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if mode == "inflight" {
-				if e.Released || !e.ActionRequired || !strings.Contains(e.Detail, "boundary") || in.State != p.Unknown || in.Dispatch.Released {
-					t.Fatalf("%+v", e)
+			if !fake {
+				if e.Released || e.ActionRequired || in.State != p.Unknown || in.Dispatch.Released {
+					t.Fatalf("released without quiescence proof: %+v", e)
+				}
+				f.advance(barrier)
+				for pass := range 2 {
+					report = f.sweep(t, true)
+					e = entryFor(t, report, k.id().AttemptID)
+					if e.Released || !e.ActionRequired || len(entriesOf(report, RetryDispatched)) != 0 {
+						t.Fatalf("pass %d: %+v", pass, e)
+					}
+				}
+				if in, err = f.s.ReconciliationInputs(ctx, k.id().AttemptID); err != nil || in.Dispatch.Released || in.State != p.Unknown {
+					t.Fatalf("%+v %v", in, err)
+				}
+				other := f.newTask(t)
+				if _, err := f.s.Dispatch(ctx, other.request); err == nil || !strings.Contains(err.Error(), "concurrency_ceiling") {
+					t.Fatal("held reservation did not block new work", err)
 				}
 				return
 			}
-			if !e.Released || string(e.State) != outcome || e.Cause != outcome || len(entriesOf(report, RetryDispatched)) != 0 {
+			if !e.Released || string(e.State) != outcome || e.Cause != outcome || !strings.Contains(e.Detail, store.QuiescenceNoBoundary) || len(entriesOf(report, RetryDispatched)) != 0 {
 				t.Fatalf("%+v", report.Entries)
 			}
 			if in.State != p.AttemptState(outcome) || !in.Dispatch.Released || (outcome == "succeeded") != (in.Head.AttemptID == k.id().AttemptID) {
@@ -374,9 +396,9 @@ func TestCustodyCommittedPendingFinalization(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			// The runner's finalize attests the boundary its usage receipts describe
-			// (one terminal receipt), so it matches the retained completion.
-			completion := store.Completion{Version: execwire.Version, MessageID: uuid(), ReceiptID: custody.Receipt.ReceiptID, Stream: store.StreamWatermark{Through: 0, Digest: digest}, Exit: store.ExitRecord{Code: 0, PGID: 101, ObservedUnixNS: exited(0).ObservedUnixNS}, Boundary: store.BoundaryState{Reservations: 1, TerminalReceipts: 1, Quiescent: true}}
+			// The fake harness ran without a boundary; its finalize attests an empty,
+			// quiescent one and so matches the retained completion.
+			completion := store.Completion{Version: execwire.Version, MessageID: uuid(), ReceiptID: custody.Receipt.ReceiptID, Stream: store.StreamWatermark{Through: 0, Digest: digest}, Exit: store.ExitRecord{Code: 0, PGID: 101, ObservedUnixNS: exited(0).ObservedUnixNS}, Boundary: store.BoundaryState{Quiescent: true}}
 			reply, err := f.s.FinalizeAttempt(ctx, f.runner, k.session.SessionID, k.id().AttemptID, completion)
 			if err != nil || reply.Outcome != outcome || !reply.Released {
 				t.Fatal("runner replay after reconcile finalization", reply, err)
@@ -433,15 +455,42 @@ func TestOnHelloJournalsScopeAndCorruption(t *testing.T) {
 	if other, err := OnHello(ctx, f.deps(), uuid(), hello); err != nil || len(other.Entries) != 0 {
 		t.Fatal("another runner's hello classified this runner's attempt", other, err)
 	}
-	// Without corruption, a journal that says result_pending lets reconcile
-	// restore result_pending even though the daemon never saw the exit.
+	// Without corruption, a journal that says result_pending is a hint only: the
+	// daemon never observed the exit, so the attempt stays unknown and waits.
 	hello.Journals[0].Corrupt, hello.Journals[0].State = false, p.ResultPending
 	report, err = OnHello(ctx, f.deps(), f.runnerID, hello)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if e := entryFor(t, report, k.id().AttemptID); e.Classification != ResultPendingRemote || e.State != p.ResultPending {
+	if e := entryFor(t, report, k.id().AttemptID); e.Classification != ResultPendingRemote || e.State != p.Unknown || e.Released || e.ActionRequired {
 		t.Fatalf("%+v", e)
+	}
+	// A corrupt journal persisted through the session row blocks later sweeps
+	// that carry no journals, until a later hello reports the journal intact.
+	corrupt := f.helloRecord()
+	raw, err := json.Marshal(execwire.Journal{DispatchID: k.d.ID, Identity: k.id(), RunnerBoot: f.facts.RunnerBoot, DaemonBoot: f.boot, State: p.Running, Corrupt: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	corrupt.Journals = []json.RawMessage{raw}
+	if _, err := f.s.RunnerSession(ctx, f.runner, corrupt); err != nil {
+		t.Fatal(err)
+	}
+	if e := entryFor(t, f.sweep(t, true), k.id().AttemptID); e.Classification != JournalCorrupt || !e.ActionRequired {
+		t.Fatalf("%+v", e)
+	}
+	in, err := f.s.ReconciliationInputs(ctx, k.id().AttemptID)
+	if err != nil || !in.JournalFound || !in.Journal.Corrupt {
+		t.Fatalf("%+v %v", in.Journal, err)
+	}
+	repaired := f.helloRecord()
+	raw, _ = json.Marshal(execwire.Journal{DispatchID: k.d.ID, Identity: k.id(), RunnerBoot: f.facts.RunnerBoot, DaemonBoot: f.boot, State: p.Running})
+	repaired.Journals = []json.RawMessage{raw}
+	if _, err := f.s.RunnerSession(ctx, f.runner, repaired); err != nil {
+		t.Fatal(err)
+	}
+	if e := entryFor(t, f.sweep(t, true), k.id().AttemptID); e.Classification == JournalCorrupt {
+		t.Fatalf("repaired journal still blocks: %+v", e)
 	}
 }
 
@@ -649,40 +698,42 @@ func TestRestoredStoreClassifiesWithoutActing(t *testing.T) {
 	}
 }
 
-// One hundred retained attempts (99 released through the runner's termination
-// reports, one interrupted mid-run) classify at startup well under five seconds,
-// including clearing every eligible cancel latch in one transaction.
+// One hundred unresolved attempts (acknowledged, never leased, all unknown
+// after the restart) classify and release at startup well under five seconds:
+// 100 snapshot reads, 100 not_started releases with their events, evidence
+// records and clearing scans, and one retained report.
 func TestHundredAttemptStartupUnderFiveSeconds(t *testing.T) {
 	f := newFixture(t)
-	const tasks = 100
-	var last *task
-	for n := range tasks {
-		k := f.newTask(t)
-		k.start(t)
-		if n == tasks-1 {
-			last = k
-			break
-		}
-		stop := k.cancel(t)
-		k.propose(t, p.Stopping, store.RuntimeEvidence{Kind: "stop"})
-		if reply := k.report(t, k.terminated(stop.ID, "terminated", "quiescent"), quiescent()); !reply.Released {
-			t.Fatal(n, reply)
+	const attempts = 100
+	seeded := f.seedUnresolved(t, attempts)
+	if active := f.nonTerminal(t); len(active) != attempts {
+		t.Fatalf("seeded %d unresolved attempts, store lists %d", attempts, len(active))
+	}
+	for _, id := range seeded[:3] {
+		if in, err := f.s.ReconciliationInputs(ctx, id); err != nil || in.Dispatch.ID == "" || !in.Acknowledged || in.State != p.Assigned {
+			t.Fatalf("seeded attempt is not a genuine dispatch: %+v %v", in.State, err)
 		}
 	}
 	f.reopen(t)
 	started := time.Now()
-	report := f.startup(t, true)
+	report := f.startup(t, false)
 	elapsed := time.Since(started)
 	if elapsed > 5*time.Second {
 		t.Fatalf("startup classification took %s", elapsed)
 	}
-	if e := entryFor(t, report, last.id().AttemptID); e.Classification != AwaitingEvidence || e.Released {
-		t.Fatalf("%+v", e)
+	released := 0
+	for _, e := range report.Entries {
+		if e.Classification == AssignedUndelivered && e.Released && e.State == p.Cancelled && e.Cause == CauseDaemonRestart {
+			released++
+		}
 	}
-	if cleared := entriesOf(report, LatchCleared); len(cleared) != tasks-1 {
-		t.Fatalf("cleared %d latches", len(cleared))
+	if released != attempts || len(f.nonTerminal(t)) != 0 {
+		t.Fatalf("released %d of %d; %d still active", released, attempts, len(f.nonTerminal(t)))
 	}
-	t.Logf("startup over %d attempts: %s (%d entries)", tasks, elapsed, len(report.Entries))
+	if latest, err := NewReader(f.s).Read(ctx); err != nil || latest.ID != report.ID || len(latest.Entries) != attempts {
+		t.Fatal(latest.ID, len(latest.Entries), err)
+	}
+	t.Logf("startup over %d unresolved attempts: %s (%d entries)", attempts, elapsed, len(report.Entries))
 }
 
 func TestRunSweepsStopsWithContext(t *testing.T) {

@@ -253,7 +253,7 @@ func run(ctx context.Context, d Deps, trigger, runnerID string, journals map[str
 	if err != nil {
 		return Report{}, err
 	}
-	retry := map[string]string{}
+	retry := map[string]retryCandidate{}
 	for _, a := range attempts {
 		in, err := d.Store.ReconciliationInputs(ctx, a.Identity.AttemptID)
 		if err != nil {
@@ -273,7 +273,7 @@ func run(ctx context.Context, d Deps, trigger, runnerID string, journals map[str
 		}
 		report.Entries = append(report.Entries, entry)
 		if entry.Released && AutoRetryable(entry.Cause) {
-			retry[entry.TaskID] = entry.Cause
+			retry[entry.TaskID] = retryCandidate{AttemptID: entry.AttemptID, Cause: entry.Cause}
 		}
 	}
 	cleared, err := d.Store.ClearLatches(ctx, "")
@@ -283,22 +283,25 @@ func run(ctx context.Context, d Deps, trigger, runnerID string, journals map[str
 	for _, v := range cleared {
 		entry := Entry{AttemptID: v.AttemptID, TaskID: v.TaskID, State: v.Terminal, Classification: LatchCleared, Cause: v.Cause, Detail: "cancel latch " + v.StopID + " cleared: attempt terminal and reservation released"}
 		report.Entries = append(report.Entries, entry)
-		if cause, err := releasedCause(ctx, d, v.TaskID); err != nil {
+		if cause, err := releasedCause(ctx, d, v.TaskID, v.AttemptID); err != nil {
 			return Report{}, err
 		} else if AutoRetryable(cause) {
-			retry[v.TaskID] = cause
+			retry[v.TaskID] = retryCandidate{AttemptID: v.AttemptID, Cause: cause}
 		}
 	}
 	if d.AutoRetry {
-		for _, taskID := range sortedKeys(retry) {
-			entry, err := autoRetry(ctx, d, taskID, retry[taskID])
+		for _, taskID := range slices.Sorted(maps.Keys(retry)) {
+			entry, err := autoRetryAfter(ctx, d, taskID, retry[taskID].AttemptID, retry[taskID].Cause)
 			if err != nil {
 				return Report{}, err
 			}
 			report.Entries = append(report.Entries, entry)
 		}
 	}
-	if trigger == "sweep" {
+	// Startup always retains its report; hellos and sweeps retain one only when
+	// the outcome differs from the last retained report of this boot, so
+	// identical replays and idle passes do not accrete immutable rows.
+	if trigger != "startup" {
 		same, err := unchanged(ctx, d, report)
 		if err != nil {
 			return Report{}, err
@@ -310,14 +313,23 @@ func run(ctx context.Context, d Deps, trigger, runnerID string, journals map[str
 	return report, persist(ctx, d, report)
 }
 
-// releasedCause is the terminal cause of a task's last attempt, used when a
-// latch clearing (after an S1 release) is what makes the task retryable.
-func releasedCause(ctx context.Context, d Deps, taskID string) (string, error) {
+// retryCandidate is a task whose predecessor attempt this run released or
+// unlatched for an auto-retryable cause; admission re-derives the cause from
+// durable state and checks the predecessor is still the task's last attempt.
+type retryCandidate struct {
+	AttemptID string
+	Cause     string
+}
+
+// releasedCause is the terminal cause of a task's last attempt when that attempt
+// is the one whose latch was just cleared (an S1 release made retryable); any
+// other last attempt yields no cause.
+func releasedCause(ctx context.Context, d Deps, taskID, attemptID string) (string, error) {
 	in, err := d.Store.RetryInputs(ctx, taskID)
 	if err != nil {
 		return "", err
 	}
-	if in.Last.ID == "" || !in.Last.Released {
+	if in.Last.ID == "" || !in.Last.Released || in.Last.Assignment.Identity.AttemptID != attemptID {
 		return "", nil
 	}
 	return in.Cause, nil
@@ -361,6 +373,7 @@ type retained struct {
 	Evidence    *store.RuntimeEvidence `json:"evidence,omitempty"`
 	Termination *c.Evidence            `json:"termination,omitempty"`
 	Boundary    *store.BoundaryState   `json:"boundary,omitempty"`
+	Completion  *store.Completion      `json:"completion,omitempty"`
 }
 
 func decodeRetained(row store.RuntimeObservation) (retained, bool) {
@@ -436,6 +449,29 @@ func terminationEvidence(in store.ReconciliationInputs) termination {
 	return best
 }
 
+// quiescenceKnown names the durable quiescence proof visible in the snapshot for
+// the attempt's receipt, or "" when none exists: a fake-harness launch intent
+// (boundary_port 0, no inference boundary ever existed) or a retained finalize
+// attestation for the receipt with a settled boundary. The store re-verifies the
+// proof against the exit observation and sink before it finalizes. The runner's
+// hello journal carries no boundary on this wire, so no journal proof is derived
+// here yet.
+func quiescenceKnown(in store.ReconciliationInputs) string {
+	for _, row := range in.RuntimeObservations {
+		v, ok := decodeRetained(row)
+		if !ok {
+			continue
+		}
+		if (row.Kind == "completion" || row.Kind == "attestation") && v.Completion != nil && v.Completion.ReceiptID == in.Receipt.ReceiptID && settled(&v.Completion.Boundary) && v.Completion.Boundary.Quiescent {
+			return store.QuiescenceRunnerAttestation
+		}
+		if row.Kind == "launch_intent" && v.Evidence != nil && v.Evidence.Kind == "launch_intent" && v.Evidence.BoundaryPort == 0 {
+			return store.QuiescenceNoBoundary
+		}
+	}
+	return ""
+}
+
 func hasRuntime(in store.ReconciliationInputs, kind string) (store.RuntimeObservation, bool) {
 	for _, row := range in.RuntimeObservations {
 		if row.Kind == kind {
@@ -474,8 +510,11 @@ func classify(in store.ReconciliationInputs, journal *execwire.Journal, generati
 	if id.Generation != generation {
 		return block(StaleGeneration, "attempt belongs to generation "+id.Generation+"; the restored daemon neither launches nor releases it")
 	}
-	if journal != nil && journal.Corrupt {
-		return block(JournalCorrupt, "runner journal for dispatch "+in.Dispatch.ID+" reports corruption")
+	// Journal corruption is read from the runner's latest durable hello as well
+	// as the hello being processed, so the block outlives the OnHello call and
+	// lifts only when a later hello from the runner reports the journal intact.
+	if journal != nil && journal.Corrupt || in.JournalFound && in.Journal.Corrupt {
+		return block(JournalCorrupt, "runner journal for dispatch "+in.Dispatch.ID+" reports corruption; no evidence from it is consumed until a later hello reports it intact")
 	}
 	if _, refused := hasRuntime(in, "refused"); refused && !in.Acknowledged {
 		dec.entry.Classification, dec.entry.Cause, dec.entry.Detail = RefusedBeforeAccept, CauseRefused, "runner refused the assignment before accepting; release not_started"
@@ -504,13 +543,17 @@ func classify(in store.ReconciliationInputs, journal *execwire.Journal, generati
 		return dec
 	}
 	if in.Receipt.ReceiptID != "" && !in.Quarantined {
-		dec.entry.Classification = CustodyCommittedPendingFinalization
-		if in.State == p.Unknown || in.State == p.ResultPending && in.LeaseBarrierPassed {
-			dec.entry.Detail = "custody committed without finalization; completing from retained evidence"
+		proof := quiescenceKnown(in)
+		switch {
+		case proof != "" && (in.State == p.Unknown || in.State == p.ResultPending && in.LeaseBarrierPassed):
+			dec.entry.Classification, dec.entry.Detail = CustodyCommittedPendingFinalization, "custody committed without finalization; completing from retained evidence ("+proof+")"
 			dec.act = actCompleteFinalization
 			return dec
+		case proof == "" && in.LeaseBarrierPassed:
+			return block(CustodyCommittedPendingFinalization, "custody committed but no durable proof that the inference boundary is quiescent (runner finalize attestation, fake-harness launch or runner journal); reservation held")
+		default:
+			return wait(CustodyCommittedPendingFinalization, "custody committed; awaiting the runner's finalize attestation")
 		}
-		return wait(CustodyCommittedPendingFinalization, "custody committed; awaiting the runner's finalize")
 	}
 	cause, actor, stopID := stopCause(in)
 	if !in.Acknowledged {
@@ -536,15 +579,21 @@ func classify(in store.ReconciliationInputs, journal *execwire.Journal, generati
 		return dec
 	}
 	_, exited := hasRuntime(in, "exit")
-	if exited || journal != nil && (journal.State == p.ResultPending || journal.ReceiptID != "") {
+	hinted := journal != nil && (journal.State == p.ResultPending || journal.ReceiptID != "") || in.JournalFound && (in.Journal.State == p.ResultPending || in.Journal.ReceiptID != "")
+	if exited || hinted {
 		dec.entry.Classification = ResultPendingRemote
-		if in.State == p.Unknown && len(in.StopTargets) == 0 && !in.Latched && in.GrantRefusal == "" && !in.Paused {
-			dec.entry.Detail = "process exited and result preserved by the runner; restoring result_pending for upload"
+		// Only the daemon's own exit observation moves state; a journal is a hint
+		// the store re-validates, never proof on its own.
+		if exited && in.State == p.Unknown && len(in.StopTargets) == 0 && !in.Latched && in.GrantRefusal == "" && !in.Paused {
+			dec.entry.Detail = "process exit observed and result preserved by the runner; restoring result_pending for upload"
 			dec.act = actRecoverResultPending
 			if journal != nil {
 				dec.journal = *journal
 			}
 			return dec
+		}
+		if !exited {
+			return wait(ResultPendingRemote, "runner journal reports a preserved result but the daemon holds no exit observation; awaiting the runner's exit evidence")
 		}
 		return wait(ResultPendingRemote, "process exited; awaiting the runner's upload and finalize")
 	}
@@ -604,7 +653,7 @@ func apply(ctx context.Context, d Deps, in store.ReconciliationInputs, dec decis
 		}
 	case actCompleteFinalization:
 		var reply store.FinalizeReply
-		reply, err = d.Store.CompleteFinalization(ctx, entry.AttemptID)
+		reply, err = d.Store.CompleteFinalization(ctx, entry.AttemptID, nil)
 		if err == nil {
 			entry.State, entry.Released, entry.Cause = p.AttemptState(reply.Outcome), reply.Released, reply.Outcome
 			entry.Detail += "; finalized " + reply.Outcome
@@ -716,25 +765,45 @@ func plan(ctx context.Context, d Deps, taskID string) (store.DispatchRequest, st
 }
 
 // autoRetry plans and dispatches one task under --auto-retry; the outcome is an
-// entry, never an error, unless the store itself failed.
+// entry, never an error, unless the store itself failed. The cause the caller
+// observed is only a claim: the durable terminal cause of the task's last
+// attempt must itself be auto-retryable and agree with it.
 func autoRetry(ctx context.Context, d Deps, taskID, cause string) (Entry, error) {
+	return autoRetryAfter(ctx, d, taskID, "", cause)
+}
+
+// autoRetryAfter is autoRetry bound to the released predecessor: the task's last
+// attempt must still be attemptID (when given), released, with a durable cause
+// equal to cause and on the allowlist. A later attempt with another cause, an
+// owner retry that has since completed, or a non-allowlisted durable cause
+// refuses.
+func autoRetryAfter(ctx context.Context, d Deps, taskID, attemptID, cause string) (Entry, error) {
 	entry := Entry{TaskID: taskID, Classification: RetryRefused, Cause: cause}
 	if !AutoRetryable(cause) {
 		entry.Detail = "cause is not automatically retryable"
 		return entry, nil
 	}
 	request, planned, in, err := plan(ctx, d, taskID)
+	if len(in.Attempts) > 0 {
+		last := in.Attempts[len(in.Attempts)-1]
+		entry.AttemptID, entry.Epoch, entry.State = last.Identity.AttemptID, last.Identity.Epoch, in.LastState
+	}
 	if err != nil {
 		if !refusal(err) {
 			return Entry{}, err
 		}
 		entry.Detail = "retry refused: " + err.Error()
-		if len(in.Attempts) > 0 {
-			entry.AttemptID, entry.Epoch, entry.State = in.Attempts[len(in.Attempts)-1].Identity.AttemptID, in.Attempts[len(in.Attempts)-1].Identity.Epoch, in.LastState
-		}
 		return entry, nil
 	}
 	last := in.Attempts[len(in.Attempts)-1]
+	if attemptID != "" && last.Identity.AttemptID != attemptID {
+		entry.Detail = fmt.Sprintf("retry refused: released attempt %s is no longer the task's last attempt", attemptID)
+		return entry, nil
+	}
+	if !AutoRetryable(planned) || planned != cause {
+		entry.Cause, entry.Detail = planned, fmt.Sprintf("retry refused: durable cause %q of the last attempt is not automatically retryable as %q", planned, cause)
+		return entry, nil
+	}
 	entry.AttemptID, entry.Epoch, entry.Cause = last.Identity.AttemptID, last.Identity.Epoch, planned
 	dispatched, err := d.Store.Dispatch(ctx, request)
 	if err != nil {
@@ -753,8 +822,6 @@ func autoRetry(ctx context.Context, d Deps, taskID, cause string) (Entry, error)
 func terminal(state p.AttemptState) bool {
 	return state == p.Succeeded || state == p.Failed || state == p.Cancelled || state == p.Expired
 }
-
-func sortedKeys(m map[string]string) []string { return slices.Sorted(maps.Keys(m)) }
 
 // newID mints a UUIDv4 report or intent key; crypto/rand.Read either fills the
 // buffer or terminates the process, so there is no weak fallback.
