@@ -452,6 +452,12 @@ func requestID() string {
 // The protocol envelopes are closed; tool arguments and JSON schemas remain
 // data, including nulls. Structural validation checks duplicate keys, UTF-8,
 // nesting and trailing data; authority-bearing fields are checked below.
+// RequestModel validates the closed protocol envelope and extracts its model.
+// It grants no scope or authentication; test-only gateways reuse these wire rules.
+func RequestModel(body []byte, protocol string) (string, error) {
+	return requestModel(body, protocol)
+}
+
 func requestModel(body []byte, protocol string) (string, error) {
 	var envelope map[string]json.RawMessage
 	if protocoljson.Decode(body, &envelope, len(body)) != nil || envelope == nil {

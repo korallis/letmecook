@@ -4,11 +4,9 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"flag"
@@ -20,10 +18,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
-
-	"github.com/korallis/letmecook/internal/closedjson"
 )
 
 func mockGateway(ctx context.Context, args []string, out io.Writer) error {
@@ -43,7 +38,6 @@ func mockGateway(ctx context.Context, args []string, out io.Writer) error {
 			return errors.New("hang-after requires a nonnegative integer")
 		}
 	}
-	var modelRequests atomic.Uint64
 	host, _, err := net.SplitHostPort(*listen)
 	if err != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
 		return errors.New("mock gateway requires loopback IP")
@@ -81,50 +75,12 @@ func mockGateway(ctx context.Context, args []string, out io.Writer) error {
 		return err
 	}
 	cert := tls.Certificate{Certificate: [][]byte{der}, PrivateKey: priv}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte("Bearer "+secret)) != 1 {
-			http.Error(w, "denied", 403)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method == "GET" && r.URL.Path == "/v1/models" {
-			data := []any{}
-			for _, m := range strings.Split(*models, ",") {
-				data = append(data, map[string]string{"id": m, "object": "model", "owned_by": "test-only"})
-			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"object": "list", "data": data})
-			return
-		}
-		if r.Method == "POST" && r.URL.Path == "/v1/chat/completions" {
-			body, err := io.ReadAll(io.LimitReader(r.Body, 65537))
-			var req struct {
-				Model    string `json:"model"`
-				Messages []struct {
-					Role    string `json:"role"`
-					Content string `json:"content"`
-				} `json:"messages"`
-				Stream bool `json:"stream,omitempty"`
-			}
-			if err != nil || closedjson.Decode(body, &req, 65536, nil) != nil || req.Model == "" || len(req.Messages) == 0 || req.Stream {
-				http.Error(w, "malformed", 400)
-				return
-			}
-			if *hang != "" && modelRequests.Add(1) > hangAfter {
-				// The normal five-second write timeout must not turn this fault
-				// into a response. Only mock shutdown releases accepted requests.
-				if err := http.NewResponseController(w).SetWriteDeadline(time.Time{}); err != nil {
-					return
-				}
-				<-ctx.Done()
-				panic(http.ErrAbortHandler) // never synthesize a successful empty response
-			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"id": "test-only", "object": "chat.completion", "choices": []any{map[string]any{"index": 0, "message": map[string]string{"role": "assistant", "content": "synthetic mock response"}, "finish_reason": "stop"}}, "usage": map[string]int{"prompt_tokens": 1, "completion_tokens": 1}})
-			return
-		}
-		http.NotFound(w, r)
-	})
-	server := &http.Server{Handler: mux, ReadHeaderTimeout: 2 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second}
+	var limit *uint64
+	if *hang != "" {
+		limit = &hangAfter
+	}
+	handler := mockGatewayHandler(ctx, secret, strings.Split(*models, ","), limit)
+	server := &http.Server{Handler: handler, ReadHeaderTimeout: 2 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second}
 	go func() { <-ctx.Done(); server.Close() }()
 	if err = writeJSON(out, map[string]any{"url": "https://" + ln.Addr().String(), "ca_file": caPath, "qualification": "test-only", "supported": false}); err != nil {
 		return err

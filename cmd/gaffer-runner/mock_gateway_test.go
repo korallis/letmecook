@@ -24,7 +24,9 @@ func TestMockGatewayHangAfter(t *testing.T) {
 	defer cancel()
 	var out lockedBuffer
 	done := make(chan error, 1)
-	go func() { done <- mockGateway(ctx, []string{"--key-file", key, "--hang-after", "1"}, &out) }()
+	go func() {
+		done <- mockGateway(ctx, []string{"--key-file", key, "--hang-after", "1", "--models", "fixture"}, &out)
+	}()
 	var ready struct {
 		URL    string `json:"url"`
 		CAFile string `json:"ca_file"`
