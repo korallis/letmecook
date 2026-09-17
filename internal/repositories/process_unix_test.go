@@ -21,10 +21,18 @@ func TestCancelledGitKillsOwnedTransportChild(t *testing.T) {
 	defer cancel()
 	result := make(chan error, 1)
 	go func() { _, err := (gitClient{binary: fakeGit, home: root}).run(ctx, root, "fetch"); result <- err }()
-	deadline := time.Now().Add(5 * time.Second)
+	// Parallel race builds can delay transport startup on a loaded host. Only
+	// readiness gets extra time; cancellation and the escaped-child assertion
+	// below retain their original semantics.
+	deadline := time.Now().Add(30 * time.Second)
 	for {
 		if _, err := os.Stat(ready); err == nil {
 			break
+		}
+		select {
+		case err := <-result:
+			t.Fatal("transport exited before readiness", err)
+		default:
 		}
 		if time.Now().After(deadline) {
 			t.Fatal("transport never started")
