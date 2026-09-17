@@ -414,6 +414,7 @@ func (s *supervisor) replay(ctx context.Context, r *runner.Runner) error {
 var _ = json.Valid
 
 func (s *supervisor) recoverTermination(ctx context.Context, r *runner.Runner, meta attemptMeta) error {
+	var pending *w.MessageEnvelope
 	for _, entry := range r.Outbox() {
 		if entry.Kind == "custody" {
 			var plan custodyPlan
@@ -430,9 +431,23 @@ func (s *supervisor) recoverTermination(ctx context.Context, r *runner.Runner, m
 		if entry.Kind == "message" {
 			var m w.MessageEnvelope
 			if json.Unmarshal(entry.Body, &m) == nil && m.Message.Kind == "terminated" {
-				return nil
+				if entry.Acknowledged {
+					return nil
+				}
+				// Queued is not delivered. A session-stale refusal is immutable,
+				// so resend its same old-boot proof under a fresh message ID, not
+				// by rewriting the refusal as an ACK or rebinding evidence boots.
+				if entry.Refused != "" {
+					m.Message.MessageID = uuid()
+					m.MessageID = m.Message.MessageID
+				}
+				pending = &m
 			}
 		}
+	}
+	if pending != nil {
+		_, err := s.message(ctx, r, pending.DispatchID, pending.Message, pending.Evidence, pending.Boundary, pending.Measurement)
+		return err
 	}
 	status := r.Status()
 	if status.Runtime == nil {
