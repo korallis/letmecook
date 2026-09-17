@@ -20,6 +20,11 @@ import (
 // NewTLS serves the identity control plane, never the execution ALPN/channel.
 // endpoint is the operator-selected HTTPS origin, not a discovered peer.
 func NewTLS(s *store.Store, endpoint string) (http.Handler, error) {
+	return NewTLSWithDeps(s, endpoint, Deps{Store: s})
+}
+
+// NewTLSWithDeps composes registered owner routes while preserving NewTLS.
+func NewTLSWithDeps(s *store.Store, endpoint string, d Deps) (http.Handler, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || u.String() != endpoint {
 		return nil, i.Invalid
@@ -28,7 +33,7 @@ func NewTLS(s *store.Store, endpoint string) (http.Handler, error) {
 	if err != nil || !configured {
 		return nil, i.Denied
 	}
-	return newAPI(s, u.Host, true)
+	return newAPI(s, u.Host, true, d)
 }
 
 type identityRequest struct {
