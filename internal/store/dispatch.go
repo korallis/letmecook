@@ -12,6 +12,7 @@ import (
 
 	g "github.com/korallis/letmecook/internal/authority"
 	c "github.com/korallis/letmecook/internal/control"
+	"github.com/korallis/letmecook/internal/execwire"
 	sc "github.com/korallis/letmecook/internal/scheduler"
 	p "github.com/korallis/letmecook/schemas/execution"
 )
@@ -190,6 +191,12 @@ type Dispatch struct {
 	Released     bool           `json:"released"`
 }
 
+// Wire is the exact inbox representation used both for admission sizing and
+// delivery. It is data only; converting it grants no execution authority.
+func (d Dispatch) Wire() execwire.Dispatch {
+	return execwire.Dispatch{DispatchRequest: execwire.DispatchRequest{ID: d.ID, Request: d.Request, Decision: d.Decision, Allowance: d.Allowance}, Facts: d.Facts, Assignment: d.Assignment, Acknowledged: d.Acknowledged, Released: d.Released}
+}
+
 type dispatchInput struct {
 	DispatchRequest
 	Facts sc.Eligibility `json:"facts"`
@@ -296,6 +303,16 @@ func (s *Store) Dispatch(ctx context.Context, request DispatchRequest) (Dispatch
 	if r := p.CheckCurrent(m, m.Identity); r != p.OK {
 		return Dispatch{}, r
 	}
+	dispatch := Dispatch{DispatchRequest: request, Facts: facts, Assignment: m}
+	wire, err := json.Marshal(dispatch.Wire())
+	if err != nil {
+		return Dispatch{}, err
+	}
+	// This bound relies on M1's globally single unresolved-attempt reservation.
+	// Multi-attempt inbox delivery must re-derive the complete wrapper/batch bound.
+	if len(wire) > execwire.MaxBytes-execwire.InboxWrapperBytes {
+		return Dispatch{}, g.Deny("oversized", "dispatch_record")
+	}
 	if _, err := tx.ExecContext(ctx, "INSERT INTO tasks VALUES(?,'ready') ON CONFLICT(id) DO UPDATE SET state='ready'", m.Identity.TaskID); err != nil {
 		return Dispatch{}, err
 	}
@@ -315,7 +332,7 @@ func (s *Store) Dispatch(ctx context.Context, request DispatchRequest) (Dispatch
 	if err := tx.Commit(); err != nil {
 		return Dispatch{}, err
 	}
-	return Dispatch{DispatchRequest: request, Facts: facts, Assignment: m}, nil
+	return dispatch, nil
 }
 
 func dispatchAllowed(ctx context.Context, tx *sql.Tx, request g.Request, now int64) error {
@@ -326,8 +343,8 @@ func dispatchAllowed(ctx context.Context, tx *sql.Tx, request g.Request, now int
 	if paused {
 		return g.Deny("paused", "daemon")
 	}
-	var stopped bool
-	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=?)", request.TaskID).Scan(&stopped); err != nil {
+	stopped, err := dispatchStopped(ctx, tx, request.TaskID)
+	if err != nil {
 		return err
 	}
 	if stopped {
@@ -336,7 +353,7 @@ func dispatchAllowed(ctx context.Context, tx *sql.Tx, request g.Request, now int
 	if err := checkExecution(ctx, tx, request, now); err != nil {
 		return err
 	}
-	stopped, err := controlSuppressed(ctx, tx, request.TaskID, request.GrantID)
+	stopped, err = controlSuppressed(ctx, tx, request.TaskID, request.GrantID)
 	if err != nil {
 		return err
 	}
@@ -344,6 +361,47 @@ func dispatchAllowed(ctx context.Context, tx *sql.Tx, request g.Request, now int
 		return g.Deny("stop_latched", "dispatch")
 	}
 	return nil
+}
+
+// dispatchStopped retains legacy stop history while honouring the same immutable
+// owner clearance as its pause_task marker. Admission and runtime fencing agree.
+func dispatchStopped(ctx context.Context, tx *sql.Tx, taskID string) (bool, error) {
+	var sticky bool
+	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=?)", taskID).Scan(&sticky); err != nil || !sticky {
+		return sticky, err
+	}
+	// The sticky row was created with the first retained legacy marker, whose
+	// generation may already be nonzero after unrelated pause clearances. Each
+	// generation counts cleared pauses, so it is bounded by retained pause rows.
+	// Later generations remain independently enforced by active control latches.
+	rows, err := tx.QueryContext(ctx, `SELECT s.id,EXISTS(SELECT 1 FROM reconcile_reports r WHERE r.id=?||s.id) FROM control_stops s WHERE s.kind='pause_task' AND s.task_id=?`, latchClearedPrefix, taskID)
+	if err != nil {
+		return false, err
+	}
+	markers := map[string]bool{}
+	for rows.Next() {
+		var id string
+		var cleared bool
+		if err := rows.Scan(&id, &cleared); err != nil {
+			rows.Close()
+			return false, err
+		}
+		markers[id] = cleared
+	}
+	if err := errors.Join(rows.Err(), rows.Close()); err != nil {
+		return false, err
+	}
+	for generation := 0; generation <= len(markers); generation++ {
+		key := "legacy-stop"
+		if generation > 0 {
+			key = fmt.Sprintf("legacy-stop:%d", generation)
+		}
+		if cleared, found := markers[dispatchID(taskID, key)]; found {
+			return !cleared, nil
+		}
+	}
+	// A historical row with no recoverable marker is still a stop, not resume.
+	return true, nil
 }
 
 func placement(ctx context.Context, tx *sql.Tx, facts sc.Eligibility) error {
@@ -687,7 +745,18 @@ func (s *Store) StopDispatch(ctx context.Context, actor, taskID string) error {
 		if _, err := tx.ExecContext(ctx, "INSERT INTO dispatch_stops VALUES(?,?) ON CONFLICT(task_id) DO NOTHING", taskID, who.ID); err != nil {
 			return err
 		}
-		if _, err := latchStop(ctx, tx, actor, c.Request{ID: dispatchID(taskID, "legacy-stop"), Kind: c.PauseTask, TaskID: taskID, Cause: "operator"}, s.controlStamp()); err != nil {
+		// A cleared immutable stop cannot be re-latched. Use the number of
+		// retained pause clearances as an idempotent per-resume generation:
+		// repeated stops before resume replay; the next stop after resume is new.
+		var cleared int64
+		if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM control_stops s JOIN reconcile_reports r ON r.id=?||s.id WHERE s.kind='pause_task' AND s.task_id=?", latchClearedPrefix, taskID).Scan(&cleared); err != nil {
+			return err
+		}
+		key := "legacy-stop"
+		if cleared > 0 {
+			key = fmt.Sprintf("legacy-stop:%d", cleared)
+		}
+		if _, err := latchStop(ctx, tx, actor, c.Request{ID: dispatchID(taskID, key), Kind: c.PauseTask, TaskID: taskID, Cause: "operator"}, s.controlStamp()); err != nil {
 			return err
 		}
 		m := p.Message{Version: p.FencedVersion, Kind: "transition", Identity: p.Identity{Generation: s.meta.Generation, TaskID: taskID}, From: p.Assigned, To: p.Stopping}
@@ -732,11 +801,13 @@ type Reconciliation struct {
 // and failure await real result custody. Reservations release in the same terminal
 // CAS/event transaction, but all committed budget charges remain consumed.
 func (s *Store) ReconcileDispatch(ctx context.Context, actor string, proof Reconciliation) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	if err := validReconciliation(proof); err != nil {
 		return err
 	}
+	unlock := s.sinks().Serialize(proof.Identity.AttemptID)
+	defer unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	tx, err := s.grantTransaction(ctx)
 	if err != nil {
 		return err

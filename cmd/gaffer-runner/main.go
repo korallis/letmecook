@@ -20,6 +20,7 @@ import (
 	"github.com/korallis/letmecook/internal/execclient"
 	h "github.com/korallis/letmecook/internal/harness"
 	"github.com/korallis/letmecook/internal/harness/fake"
+	"github.com/korallis/letmecook/internal/harness/opencode"
 	"github.com/korallis/letmecook/internal/inference"
 	"github.com/korallis/letmecook/internal/isolation"
 	"github.com/korallis/letmecook/internal/runner"
@@ -130,7 +131,10 @@ func parseConfig(args []string) (config, error) {
 	return c, nil
 }
 
-var harnessFactories = map[string]func(config) (h.Harness, error){"fake": func(config) (h.Harness, error) { exe, err := os.Executable(); return fake.New(exe), err }}
+var harnessFactories = map[string]func(config) (h.Harness, error){
+	"fake":     func(config) (h.Harness, error) { exe, err := os.Executable(); return fake.New(exe), err },
+	"opencode": func(c config) (h.Harness, error) { return opencode.New(c.OpenCodeBin) },
+}
 
 func harnessFor(c config) (h.Harness, error) {
 	factory := harnessFactories[c.Harness]

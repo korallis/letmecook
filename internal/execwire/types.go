@@ -17,6 +17,13 @@ import (
 const Version = "execution-channel-provisional-v1"
 const MaxBytes = 64 * 1024
 
+// InboxPollAfterMS and InboxWrapperBytes pin the non-assignment encoding of an
+// unpaused inbox with no cancels. Admission reserves these bytes so even the
+// largest single dispatch fits the runner's closed decoder. A wire-shape test
+// verifies the allowance against json.Marshal(Inbox), not just this literal.
+const InboxPollAfterMS = 500
+const InboxWrapperBytes = len(`{"assignments":[],"cancels":[],"paused":false,"poll_after_ms":500}`)
+
 // Journal summarizes retained recovery evidence, never a request to resume work.
 type Journal struct {
 	DispatchID    string         `json:"dispatch_id"`

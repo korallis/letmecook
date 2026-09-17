@@ -279,7 +279,7 @@ func TestFenceAttempt(t *testing.T) {
 	if err != nil || m.From != p.Running || m.To != p.Stopping {
 		t.Fatal(m, err)
 	}
-	stopID := dispatchID(lease.Request.Nonce, "expired")
+	stopID := execwire.ExpiryStopID(lease.Request.Nonce)
 	stop, err := x.s.StopStatus(ctx, stopID, attempt)
 	if err != nil || stop.Receipt.Actor != "lease-clock" || stop.Receipt.Request.Cause != "lease_expired" || stop.Status != c.TerminationUnconfirmed {
 		t.Fatalf("%+v %v", stop, err)
@@ -837,9 +837,7 @@ func TestRetryInputsCauses(t *testing.T) {
 		t.Fatal(in.Latched, err)
 	}
 	// A finalized attempt reports its outcome as the cause (never auto-retried).
-	// The same-boot expiry latch above still suppresses store.Dispatch until
-	// control.go consults the clearing record, so the finalized case uses its own
-	// task.
+	// Use a separate task so this case measures only the finalization cause.
 	y := executionFixtureFor(t, nil)
 	y.run(t)
 	_, custody := y.upload(t, "succeeded", map[string]string{"greeting.txt": "hello\n"})

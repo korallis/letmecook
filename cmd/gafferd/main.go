@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -25,13 +26,17 @@ import (
 	"time"
 
 	g "github.com/korallis/letmecook/internal/authority"
+	"github.com/korallis/letmecook/internal/backup"
 	"github.com/korallis/letmecook/internal/httpapi"
 	i "github.com/korallis/letmecook/internal/identity"
 	"github.com/korallis/letmecook/internal/inference"
+	"github.com/korallis/letmecook/internal/isolation"
+	"github.com/korallis/letmecook/internal/jobs"
 	"github.com/korallis/letmecook/internal/notify"
 	"github.com/korallis/letmecook/internal/reconcile"
 	sc "github.com/korallis/letmecook/internal/scheduler"
 	"github.com/korallis/letmecook/internal/store"
+	"github.com/korallis/letmecook/internal/verification"
 )
 
 type profiles []string
@@ -50,6 +55,29 @@ func listenAddress(value string, plaintext bool) bool {
 	return err == nil && net.ParseIP(host) != nil && (!plaintext || host == "127.0.0.1") && portErr == nil && n >= 0 && n <= 65535 && strconv.Itoa(n) == port
 }
 
+// prepareVerificationState keeps the verifier's canary root explicit and private.
+// Preserve the installation rule that the parent already exists, and never chmod
+// an operator's directory to make a failed preflight appear qualified.
+func prepareVerificationState(path string) error {
+	if !filepath.IsAbs(path) || filepath.Clean(path) != path || path == string(os.PathSeparator) {
+		return fmt.Errorf("verification state directory %q must be absolute, clean and non-root", path)
+	}
+	if _, err := os.Stat(filepath.Dir(path)); err != nil {
+		return fmt.Errorf("verification state parent %q must already exist: %w", filepath.Dir(path), err)
+	}
+	if err := os.MkdirAll(path, 0700); err != nil {
+		return fmt.Errorf("create verification state directory %q with required mode 0700: %w", path, err)
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return fmt.Errorf("inspect verification state directory %q: %w", path, err)
+	}
+	if !info.IsDir() || info.Mode().Perm() != 0700 {
+		return fmt.Errorf("verification state directory %q must be a real directory with mode 0700 (no group/other permission bits); existing permissions were not changed", path)
+	}
+	return nil
+}
+
 func run(ctx context.Context, args []string, out io.Writer) (err error) {
 	flags := flag.NewFlagSet("gafferd", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -63,7 +91,7 @@ func run(ctx context.Context, args []string, out io.Writer) (err error) {
 	var developmentProfiles profiles
 	flags.Var(&developmentProfiles, "allow-development-profile", "explicit development profile ID; repeatable; default none")
 	verificationProfile := flags.String("verification-isolation-profile", "unqualified", "verification isolation profile; default refuses execution")
-	autoRetry := flags.Bool("auto-retry", false, "opt in to evidence-gated automatic retries (reconcile implementation pending)")
+	autoRetry := flags.Bool("auto-retry", false, "opt in to evidence-gated automatic retries for infrastructure failures")
 	gatewayPath := flags.String("gateway-config", "", "explicit gateway-config-v1 JSON path; no credential is read")
 	backupDir := flags.String("backup-dir", "", "absolute clean backup destination root")
 	endpoint := flags.String("endpoint", "", "operator-selected HTTPS origin, matching server certificate")
@@ -154,6 +182,11 @@ func run(ctx context.Context, args []string, out io.Writer) (err error) {
 			return i.Invalid
 		}
 	}
+	if secure && *verificationProfile == isolation.DevelopmentProfileID {
+		if err = prepareVerificationState(*state); err != nil {
+			return err
+		}
+	}
 	var s *store.Store
 	if *fixture {
 		s, err = store.New(ctx)
@@ -172,24 +205,78 @@ func run(ctx context.Context, args []string, out io.Writer) (err error) {
 			err = errors.Join(err, s.Close())
 		}
 	}()
-	// The refusing S0 seam is explicit. S5 replaces it with real recovery;
-	// any other startup error prevents either listener from opening.
-	if _, err = reconcile.Startup(ctx, reconcile.Deps{Store: s, Now: time.Now, AutoRetry: *autoRetry}); err != nil && !errors.Is(err, reconcile.ErrNotImplemented) {
+	// Reconcile durable state before either listener can admit work. The sweep
+	// lifetime is joined before the store closes, including on startup failures.
+	reconcileDeps := reconcile.Deps{Store: s, Now: time.Now, AutoRetry: *autoRetry}
+	if _, err = reconcile.Startup(ctx, reconcileDeps); err != nil {
 		return err
 	}
-	err = nil
-	listener, err := net.Listen("tcp", *listen)
-	if err != nil {
-		return err
-	}
-	defer listener.Close()
-	d := httpapi.Deps{Store: s, Hub: &notify.Hub{}, Gateway: gateway, Policy: admission}
+	sweepCtx, stopSweeps := context.WithCancel(ctx)
+	sweepsDone := make(chan struct{})
+	go func() {
+		defer close(sweepsDone)
+		reconcile.RunSweeps(sweepCtx, reconcileDeps, 5*time.Second)
+	}()
+	defer func() { stopSweeps(); <-sweepsDone }()
+	d := httpapi.Deps{Store: s, Sinks: s.Streams(), Hub: &notify.Hub{}, Gateway: gateway, Policy: admission, Reconcile: reconcile.NewReader(s)}
 	if secure {
 		// The listener pin is the SHA-256 of the server leaf DER; identity.Fingerprint
 		// validates client leaves only, so the digest is computed directly.
 		sum := sha256.Sum256(executionTLS.Certificates[0].Leaf.Raw)
 		d.DaemonFingerprint = hex.EncodeToString(sum[:])
 	}
+	if secure {
+		if *backupDir != "" {
+			d.Backup, err = backup.NewService(s, *artifacts, filepath.Join(*state, "streams"), *backupDir)
+			if err != nil {
+				return err
+			}
+		}
+		var verifier verification.Profile = verification.Unqualified{}
+		if *verificationProfile == isolation.DevelopmentProfileID {
+			secretPaths := []string{}
+			for _, path := range []string{*tlsKey, *tlsCert, *gatewayPath, *backupDir, *artifacts, filepath.Join(*state, "state.db"), filepath.Join(*state, "state.db-wal"), filepath.Join(*state, "state.db-shm"), filepath.Join(*state, "streams")} {
+				if path == "" {
+					continue
+				}
+				absolute, e := filepath.Abs(path)
+				if e != nil {
+					return e
+				}
+				secretPaths = append(secretPaths, absolute)
+			}
+			// Do not deny StateDir itself: verifier checkouts live in StateDir/verify.
+			profile, e := isolation.DevelopmentProfile(isolation.SandboxConfig{BoundaryPort: 0, CredentialPath: gateway.CredentialRef.Path, SecretPaths: secretPaths})
+			if e != nil {
+				return e
+			}
+			verifier, err = verification.NewDevelopmentProfile(profile, time.Hour, *state)
+			if err != nil {
+				return fmt.Errorf("development verification refused for state directory %q: requires a canonical directory with mode 0700 outside system-temp exception roots: %w", *state, err)
+			}
+		}
+		handlers := httpapi.WorkflowJobHandlers(d, httpapi.VerificationOptions{StateDir: *state, Profile: verifier})
+		if d.Backup != nil {
+			handlers["backup"] = func(ctx context.Context, j jobs.Job) (json.RawMessage, error) {
+				manifest, e := d.Backup.Create(ctx, j.SubjectID)
+				if e != nil {
+					return nil, e
+				}
+				return json.Marshal(manifest)
+			}
+		}
+		worker, e := jobs.NewWorker(ctx, s, handlers)
+		if e != nil {
+			return e
+		}
+		d.Jobs = worker
+		defer func() { err = errors.Join(err, worker.Close()) }()
+	}
+	listener, err := net.Listen("tcp", *listen)
+	if err != nil {
+		return err
+	}
+	defer listener.Close()
 	var executionServer *http.Server
 	var executionListener net.Listener
 	if secure {
@@ -265,8 +352,9 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := run(ctx, os.Args[1:], os.Stdout); err != nil {
-		// Startup inputs/paths and library errors may contain sensitive material.
-		fmt.Fprintln(os.Stderr, "gafferd startup or shutdown failed")
+		// Preserve actionable install diagnostics. Gateway configuration errors
+		// are sanitized by the loader; never print the configuration itself.
+		fmt.Fprintf(os.Stderr, "gafferd startup or shutdown failed: %v\n", err)
 		os.Exit(1)
 	}
 }

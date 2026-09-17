@@ -2,6 +2,7 @@ package opencode
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/url"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/korallis/letmecook/internal/closedjson"
 	"github.com/korallis/letmecook/internal/harness"
 )
 
@@ -41,8 +43,8 @@ func validateRun(req harness.RunRequest) (string, error) {
 		return "", ErrRun
 	}
 	// Repository content cannot inject settings, providers, commands or plugins.
-	if len(req.Settings) > 0 && strings.TrimSpace(string(req.Settings)) != "{}" {
-		return "", ErrRun
+	if err := ValidateSettings(req.Settings, model); err != nil {
+		return "", err
 	}
 	if req.Limits.MaxStdoutBytes <= 0 || req.Limits.MaxStdoutBytes > 64<<20 {
 		return "", ErrRun
@@ -154,4 +156,23 @@ func environment(w harness.Workspace, config, token string) []string {
 }
 func argv(brief, model, root string) []string {
 	return []string{"run", brief, "--format", "json", "-m", "gaffer/" + model, "--dir", root, "--auto", "--pure", "--print-logs"}
+}
+
+// ValidateSettings checks owner-approved direct settings against an already
+// selected route model. It never chooses a model or expands the route scope.
+func ValidateSettings(raw json.RawMessage, model string) error {
+	var settings struct {
+		Model   string `json:"model"`
+		Variant string `json:"variant,omitempty"`
+	}
+	if closedjson.Decode(raw, &settings, 49152, nil) != nil || !validLabel(settings.Model, 256) {
+		return fmt.Errorf("%w: malformed_settings", ErrRun)
+	}
+	if settings.Model != model {
+		return fmt.Errorf("%w: settings_model_mismatch", ErrRun)
+	}
+	if settings.Variant != "" {
+		return fmt.Errorf("%w: unsupported_variant", ErrRun)
+	}
+	return nil
 }

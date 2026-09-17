@@ -132,15 +132,23 @@ selected ALPN read from the connection is what the store checks with
 | `POST /session` | `Hello` → `Session{session_id, generation, daemon_boot, runner_id, mode, drift_ms 2000, termination_ms 5000, lease_validity_ms 20000, renew_every_ms 5000, paused}` | `runner_sessions` row; same `message_id` → same row, changed hello → 409 `identity_conflict`. `mode` is `normal` only when the hello cites the runner's latest published eligibility revision and that record carries the hello's `runner_boot`; otherwise `recovery_only` (evidence accepted, nothing delivered). |
 | `GET /state?dispatch_id=` | → `State{attempt_state, revision, acknowledged, released, last_lease, stream{through, expected, bytes}, receipt_id, head, stop_targets[], paused}` | read |
 | `GET /input?dispatch_id=` | → `TaskInput{version, dispatch_id, task_id, repository, base_commit, brief_sha256, brief, criteria[], paths[], operations[], harness, settings}` | read; `brief_sha256` recomputed from the retained brief must equal the stored digest and the grant's `brief.sha256`, else 409 `reconciliation_required` |
-| `GET /inbox?wait_ms≤25000` | → `Inbox{assignments[], cancels[], paused, poll_after_ms}` | `Delivery` commits grant expiry; refused deliveries are logged, never sent; the store selects only dispatches admitted for this runner under the session's eligibility revision and boot (at most 128, bounded by a 48 KiB encoded budget that always offers the first); long-poll wakes on the daemon's notify hub; a paused daemon or a `recovery_only` session delivers no assignment but still delivers cancels |
+| `GET /inbox?wait_ms≤25000` | → `Inbox{assignments[], cancels[], paused, poll_after_ms}` | `Delivery` commits grant expiry; refused deliveries are logged, never sent; the store selects only dispatches admitted for this runner under the session's eligibility revision and boot (at most 128, bounded by a 48 KiB batching budget; admission first bounds each exact dispatch plus the fixed inbox wrapper to 64 KiB, so the first can always be offered; residual execution reply overflow returns 503); long-poll wakes on the daemon's notify hub; a paused daemon or a `recovery_only` session delivers no assignment but still delivers cancels |
 | `POST /messages` | `MessageEnvelope{version, message_id, dispatch_id, message, evidence?, boundary?, measurement?}` → `{outcome, message?}` or, for `terminated`, `{outcome, released}` | one transaction per kind (below) |
 | `POST /lease` | `LeaseEnvelope` → `lease_reply` | `control_leases` row; refusals fenced in `control_fenced` and committed before the 409 |
-| `POST /streams/{attempt_id}` | `StreamBatch{version, records[]}` ≤ 64 KiB, contiguous → `StreamAck{through, expected, bytes}` | sink append fsynced per record under the attempt's append lock (shared with finalization; the store lock covers only admission); after the attempt is terminal only retained records replay their acknowledgement, new ones are `stale_attempt`; 409 `stream_sequence_gap` / `stream_record_conflict` carry the expected sequence in `detail`; duplicates replay the retained acknowledgement |
+| `POST /streams/{attempt_id}` | `StreamBatch{version, records[]}` ≤ 64 KiB, contiguous → `StreamAck{through, expected, bytes}` | sink append fsynced per record under the attempt's append lock (shared with finalization, runner termination and every reconcile recovery/release writer; acquired before the store lock, which covers only append admission); after the attempt is terminal only retained records replay their acknowledgement, new ones are `stale_attempt`; 409 `stream_sequence_gap` / `stream_record_conflict` carry the expected sequence in `detail`; duplicates replay the retained acknowledgement |
 | `POST /attempts/{id}/uploads` | `UploadBegin` → 201 `UploadSession{upload_id, missing[], bytes_allowed}` | manifest file plus `upload_sessions`/`upload_blobs` rows; replay by `message_id` |
 | `PUT /uploads/{id}/blobs/{sha256}` | raw bytes → 201 new / 200 duplicate `{sha256, bytes, duplicate}` | temp file hashed, fsynced, renamed, directory fsynced, row marked staged; 422 `digest_mismatch` removes the temp file; 413 `oversized` over 256 MiB per attempt |
 | `POST /uploads/{id}/commit` | `{version, message_id}` → `CommitReply{ack, receipt, quarantined}` | custody promotion and metadata commit (`CustodyResult`), then the session mark; 409 `upload_incomplete` lists missing digests (at most 32) in `detail`; a lost reply replays the byte-identical acknowledgement |
 | `POST /attempts/{id}/finalize` | `Completion{version, message_id, receipt_id, stream{through, digest}, exit{code, pgid, observed_unix_ns}, boundary}` → `{outcome, released}` | CAS, terminal event, `dispatch_releases` and result head in one transaction (section 5) |
 | `POST /usage` | `Usage{version, message_id, identity, receipts[]}` → `{outcome:"recorded"}` | `attempt_usage` upsert per `request_id`; a terminal receipt supersedes its reservation and is never regressed |
+
+Task creation bounds the actual encoded `TaskInput` reply with a full-width
+UUID and canonical brief digest, not only the smaller owner request. The reply
+must fit `execwire.MaxBytes` (65,536 bytes); its current 141-byte overhead makes
+the normalized owner-task limit 65,395 bytes. Settings are bounded to 49,152
+bytes both before and after canonical JSON escaping. These permanent input
+errors are typed `oversized` refusals at creation, before a dispatch can become
+undeliverable; execution reply overflow is independently guarded with 503.
 
 Every runner request that changes state is keyed by its `message_id` under one
 replay rule: the daemon retains, in the transaction that applied the request,
@@ -214,10 +222,21 @@ acceptance is recorded like every other refusal.
 
 Lease service: the daemon builds `lease_reply{nonce, boots, validity_ms 20000}`
 (its `message_id` is derived from the nonce; the closed `lease_reply` field set
-carries no `in_reply_to`, so the nonce is the correlation), checks it with
-`CheckLease` under `drift_ms 2000`, `termination_ms 5000`, the prior lease's
-runner cutoff and nonce revocation, and records issuance with a 7 s margin. The
-same nonce replays the retained reply. `delayed_reply`, `boot_mismatch`,
+carries no `in_reply_to`, so the nonce is the correlation). It validates binding,
+boots, integer bounds, nonce state and the prior runner cutoff under
+`drift_ms 2000`, `termination_ms 5000`. The daemon calls `CheckLease` with
+`ReceivedMS = request.sent_ms`: these values and the prior cutoff share the
+runner boot's monotonic domain, not the daemon's wall clock. A renewal whose
+`sent_ms` is at or past that prior cutoff is refused and fenced. The runner
+separately enforces the delayed-reply cutoff using its actual local receive time.
+Monotonic, non-regressing `sent_ms` within a runner boot remains the runner's
+responsibility on this provisional wire. The daemon does not introduce a new
+regression-refusal code: nonce replay and independent daemon issuance/barrier
+bounds remain enforced, and a runner timestamp is never process-quiescence proof.
+Issuance records the daemon's own wall/boot-elapsed stamp, full validity deadline
+and 7 s margin; daemon expiry latches and reconcile barriers use that separate
+clock. The same nonce replays the retained reply and original issuance without
+extending either deadline. `delayed_reply`, `boot_mismatch`,
 `nonce_mismatch`, `stale_generation`, `paused` and `revoked_or_expired` refusals
 are fenced and committed before the 409.
 

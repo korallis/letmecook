@@ -129,6 +129,7 @@ func TestOwnerBackupRouteOverMutualTLS(t *testing.T) {
 			server.TLS = &tls.Config{MinVersion: tls.VersionTLS13, Certificates: []tls.Certificate{serverCert}, ClientAuth: tls.RequireAnyClientCert, NextProtos: []string{"http/1.1"}}
 			server.StartTLS()
 			defer server.Close()
+			var responseHeader http.Header
 			call := func(cert tls.Certificate, body string) (int, []byte) {
 				t.Helper()
 				roots := x509.NewCertPool()
@@ -145,6 +146,7 @@ func TestOwnerBackupRouteOverMutualTLS(t *testing.T) {
 				if e != nil {
 					t.Fatal(e)
 				}
+				responseHeader = response.Header.Clone()
 				return response.StatusCode, raw
 			}
 			body := `{"version":"workflow-provisional-v1","message_id":"` + messageID + `","destination":"nightly"}`
@@ -189,6 +191,20 @@ func TestOwnerBackupRouteOverMutualTLS(t *testing.T) {
 				if status != 202 || len(recorder.submitted) != 1 || recorder.submitted[0].ID != messageID || recorder.submitted[0].Kind != "backup" || recorder.submitted[0].SubjectID != "nightly" {
 					t.Fatal(status, string(raw), recorder.submitted)
 				}
+				t.Run("replay-after-resume", func(t *testing.T) {
+					original := append([]byte(nil), raw...)
+					if _, err := s.SetPaused(context.Background(), fingerprint(owner), "7c2c10cc-f7e6-4e64-a13b-57b889b21f62", false, "resume after submission", false); err != nil {
+						t.Fatal(err)
+					}
+					status, raw := call(owner, body)
+					if status != 202 || responseHeader.Get("Idempotent-Replay") != "true" || !bytes.Equal(raw, original) || len(recorder.submitted) != 1 {
+						t.Fatal("backup reply not replayed after resume", status, string(raw), responseHeader, recorder.submitted)
+					}
+					status, raw = call(owner, strings.Replace(body, `"nightly"`, `"different"`, 1))
+					if status != 409 || !bytes.Contains(raw, []byte("identity_conflict")) || len(recorder.submitted) != 1 {
+						t.Fatal("changed backup intent did not conflict", status, string(raw), recorder.submitted)
+					}
+				})
 			case "jobs-conflict":
 				if status != 409 || !bytes.Contains(raw, []byte("identity_conflict")) {
 					t.Fatal(status, string(raw))

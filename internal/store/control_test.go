@@ -18,6 +18,7 @@ import (
 	"time"
 
 	c "github.com/korallis/letmecook/internal/control"
+	"github.com/korallis/letmecook/internal/execwire"
 	p "github.com/korallis/letmecook/schemas/execution"
 	"modernc.org/sqlite"
 )
@@ -156,7 +157,7 @@ func TestControlPartitionExpiryMarginAndLateRenewal(t *testing.T) {
 	if !errors.Is(err, c.ErrFenced) {
 		t.Fatal("delayed renewal extended lease", err)
 	}
-	stopID := dispatchID(lease.Request.Nonce, "expired")
+	stopID := execwire.ExpiryStopID(lease.Request.Nonce)
 	for _, tc := range []struct {
 		delta  time.Duration
 		status c.Status
@@ -633,6 +634,128 @@ func TestControlPreDispatchLatchAndOwnerBoundary(t *testing.T) {
 				requireReason(t, err, "stop_latched")
 			} else if err != nil {
 				t.Fatal("task pause suppressed unrelated task", err)
+			}
+		})
+	}
+}
+
+func TestCancelLatchClearedOnlyAfterReleaseAdmitsNewDispatch(t *testing.T) {
+	x := executionFixtureFor(t, nil)
+	x.run(t)
+	stop := stopRequest(c.CancelAttempt, x.d)
+	if _, err := x.s.RequestStop(ctx, x.owner, stop); err != nil {
+		t.Fatal(err)
+	}
+	next := x.request
+	next.ID = newID()
+	if _, err := x.s.Dispatch(ctx, next); err == nil {
+		t.Fatal("cancel latch admitted another dispatch")
+	} else {
+		requireReason(t, err, "stop_latched")
+	}
+	if cleared, err := x.s.ClearLatches(ctx, next.Request.TaskID); err != nil || len(cleared) != 0 {
+		t.Fatal("cleared before terminal release", cleared, err)
+	}
+	x.propose(t, p.Stopping, RuntimeEvidence{Kind: "stop"})
+	if reply, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, terminatedFor(&x, stop.ID, "quiescent"), quiescent()); err != nil || !reply.Released {
+		t.Fatal(reply, err)
+	}
+	if state, _ := attemptRow(t, x.s, x.d.Assignment.Identity.AttemptID); state != p.Cancelled {
+		t.Fatal("not terminal", state)
+	}
+	// Terminal release alone is insufficient; the immutable clearance is the
+	// admission signal, and must be recorded after reconciliation.
+	_, err := x.s.Dispatch(ctx, next)
+	requireReason(t, err, "stop_latched")
+	cleared, err := x.s.ClearLatches(ctx, next.Request.TaskID)
+	if err != nil || len(cleared) != 1 || cleared[0].StopID != stop.ID {
+		t.Fatal(cleared, err)
+	}
+	var count int
+	if err := x.s.db.QueryRow("SELECT count(*) FROM reconcile_reports WHERE id=?", "latch-cleared:"+stop.ID).Scan(&count); err != nil || count != 1 {
+		t.Fatal("missing clearance report", count, err)
+	}
+	d, err := x.s.Dispatch(ctx, next)
+	if err != nil || d.Assignment.Identity.Epoch != 2 || d.Assignment.Identity.AttemptID == x.d.Assignment.Identity.AttemptID {
+		t.Fatal("retry not admitted as a fresh attempt", d, err)
+	}
+	rowCount(t, x.s, "control_stops", 1)
+	rowCount(t, x.s, "dispatch_releases", 1)
+	var active int
+	if err := x.s.db.QueryRow("SELECT count(*) FROM attempts WHERE state NOT IN ('succeeded','failed','cancelled','expired')").Scan(&active); err != nil || active != 1 {
+		t.Fatal("overlapping active attempts", active, err)
+	}
+}
+
+func TestLeaseExpirySharesStopAcrossRenewalReconcileAndRunner(t *testing.T) {
+	x := executionFixtureFor(t, nil)
+	lease := x.lease(t)
+	x.propose(t, p.Starting, launchIntent(lease.Request.Nonce))
+	x.propose(t, p.Running, launchedEvidence())
+	x.s.controlNow = func() time.Time {
+		return x.s.controlStart.Add(time.Duration(lease.DeadlineNS+lease.MarginNS) + time.Nanosecond)
+	}
+	request, reply := leaseMessages(x.dispatchFixture, x.d)
+	if _, err := x.s.RecordControlLease(ctx, x.owner, x.d.ID, p.FencedVersion, request, reply, time.Second); !errors.Is(err, c.ErrFenced) {
+		t.Fatal("late renewal was not fenced", err)
+	}
+	stopID := execwire.ExpiryStopID(lease.Request.Nonce)
+	stop, err := x.s.StopStatus(ctx, stopID, x.d.Assignment.Identity.AttemptID)
+	if err != nil || stop.Receipt.Request.Cause != "lease_expired" {
+		t.Fatal("late renewal did not use the runner's stop id", stop, err)
+	}
+	if _, err := x.s.FenceAttempt(ctx, x.d.Assignment.Identity.AttemptID, "lease_expired"); err != nil {
+		t.Fatal(err)
+	}
+	if result, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, terminatedFor(&x, stopID, "quiescent"), quiescent()); err != nil || !result.Released {
+		t.Fatal(result, err)
+	}
+	rowCount(t, x.s, "control_stops", 1)
+	rowCount(t, x.s, "control_targets", 1)
+	in, err := x.s.RetryInputs(ctx, x.d.Request.TaskID)
+	if err != nil || in.LastState != p.Expired || in.Cause != "lease_expired" || !in.Last.Released {
+		t.Fatalf("expiry classification diverged: %+v, %v", in, err)
+	}
+}
+
+func TestOwnerLatchClearanceAdmitsDispatchAndRuntime(t *testing.T) {
+	for _, kind := range []string{"global_stop", "pause_task", "legacy-stop"} {
+		t.Run(kind, func(t *testing.T) {
+			f := dispatchFixtureFor(t, nil)
+			stopID := newID()
+			want := "stop_latched"
+			if kind == "legacy-stop" {
+				stopID = dispatchID(f.grant.TaskID, "legacy-stop")
+				want = "stopped"
+				if err := f.s.StopDispatch(ctx, f.owner, f.grant.TaskID); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				stop := c.Request{ID: stopID, Kind: c.Kind(kind), Cause: "operator"}
+				if kind == "pause_task" {
+					stop.TaskID = f.grant.TaskID
+				}
+				if _, err := f.s.RequestStop(ctx, f.owner, stop); err != nil {
+					t.Fatal(err)
+				}
+			}
+			_, err := f.s.Dispatch(ctx, f.request)
+			requireReason(t, err, want)
+			// Model the owner's transactional ResumeLatches writer, not automatic
+			// cancellation clearance. History stays immutable and retained.
+			if _, err = f.s.db.Exec("INSERT INTO reconcile_reports VALUES(?,?,?,?)", "latch-cleared:"+stopID, f.s.meta.DaemonBoot, time.Now().UnixMilli(), `{}`); err != nil {
+				t.Fatal(err)
+			}
+			d := admitted(t, f)
+			session := sessionFor(t, f)
+			if err = f.s.AcknowledgeAssignment(ctx, f.runner, d.ID, acceptFor(f, d)); err != nil {
+				t.Fatal(err)
+			}
+			x := executionFixture{dispatchFixture: f, d: d, session: session}
+			x.run(t)
+			rowCount(t, f.s, "control_stops", 1)
+			if kind == "legacy-stop" {
+				rowCount(t, f.s, "dispatch_stops", 1)
 			}
 		})
 	}

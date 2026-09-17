@@ -82,6 +82,16 @@ Resume after restore requires
 `--confirm-source-fenced`; generation changes alone stop nothing. Retry delegates
 to the reconciler and remains grant-, budget-, release- and stop-gated.
 
+Owner dispatch and retry reserve an explicit per-attempt allowance. Each additive
+request, subattempt, and enforceable provider-token/cost budget is divided as
+`floor((ceiling - prior reserved allowances) / remaining permitted attempts)`, where
+remaining attempts is the smaller of the attempt and retry headroom. Remainders
+stay available for later attempts. A 12-request/12-subattempt, 3-attempt/2-retry
+grant therefore reserves 4 of each per attempt. Prior allowances remain charged
+after stop, failure, or release; measured usage never creates a refund. Duration
+and per-request byte limits retain their independent ceilings. A budget too small
+to give each remaining attempt a positive required allowance is refused.
+
 Events use durable sequence numbers, bounded pages and `poll_after_ms:500`.
 An expired retained cursor returns 410 `cursor_expired`. Streams and blob downloads
 use separate bounded routes; raw blob downloads are not JSON.

@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"syscall"
@@ -260,5 +261,213 @@ func TestExecutionFlagValidation(t *testing.T) {
 		if err := run(context.Background(), append([]string{"--fixture"}, extra...), &out); err == nil || out.Len() != 0 {
 			t.Fatal("fixture accepted install seams")
 		}
+	}
+}
+
+func TestPrepareVerificationState(t *testing.T) {
+	t.Run("creates-private-root", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "state")
+		for range 2 {
+			if err := prepareVerificationState(path); err != nil {
+				t.Fatal(err)
+			}
+			info, err := os.Lstat(path)
+			if err != nil || !info.IsDir() || info.Mode().Perm() != 0700 {
+				t.Fatal("verification root is not private", info, err)
+			}
+		}
+	})
+	t.Run("does-not-create-missing-parent", func(t *testing.T) {
+		parent := filepath.Join(t.TempDir(), "missing")
+		if err := prepareVerificationState(filepath.Join(parent, "state")); err == nil {
+			t.Fatal("missing installation parent accepted")
+		}
+		if _, err := os.Lstat(parent); !os.IsNotExist(err) {
+			t.Fatal("preflight created installation parent", err)
+		}
+	})
+	t.Run("refuses-symlink-root", func(t *testing.T) {
+		root := t.TempDir()
+		path := filepath.Join(t.TempDir(), "state")
+		if err := os.Symlink(root, path); err != nil {
+			t.Fatal(err)
+		}
+		if err := prepareVerificationState(path); err == nil || !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), "0700") {
+			t.Fatal("symlink verification root accepted", err)
+		}
+	})
+}
+
+func TestDevelopmentVerificationRefusesWideStateBeforeStartup(t *testing.T) {
+	_, cert, key := localCertificate(t, true)
+	for name, mode := range map[string]os.FileMode{"group-read": 0740, "group-execute": 0710, "other-execute": 0701, "public": 0755} {
+		t.Run(name, func(t *testing.T) {
+			root := t.TempDir()
+			state, artifacts := filepath.Join(root, "state"), filepath.Join(root, "artifacts")
+			if err := os.Mkdir(state, 0700); err != nil {
+				t.Fatal(err)
+			}
+			// Set the precise existing mode independent of the test process umask.
+			if err := os.Chmod(state, mode); err != nil {
+				t.Fatal(err)
+			}
+			args := []string{"--state-dir", state, "--artifacts-dir", artifacts, "--listen", "127.0.0.1:0", "--execution-listen", "127.0.0.1:0", "--endpoint", "https://127.0.0.1", "--tls-cert", cert, "--tls-key", key, "--allow-development-profile=macos-sandbox-exec-dev", "--verification-isolation-profile=macos-sandbox-exec-dev"}
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			var out bytes.Buffer
+			err := run(ctx, args, &out)
+			if err == nil || !strings.Contains(err.Error(), state) || !strings.Contains(err.Error(), "0700") || out.Len() != 0 {
+				t.Fatal("startup did not clearly refuse the non-private verification root", err, out.String())
+			}
+			info, err := os.Lstat(state)
+			if err != nil || info.Mode().Perm() != mode {
+				t.Fatal("operator permissions changed", info, err)
+			}
+			for _, path := range []string{filepath.Join(state, "state.db"), artifacts} {
+				if _, err := os.Lstat(path); !os.IsNotExist(err) {
+					t.Fatal("refusal happened after store initialization", path, err)
+				}
+			}
+		})
+	}
+}
+
+// Invoke the real main in an owned child so its stderr and os.Exit are observable.
+func TestDaemonDiagnosticProcess(t *testing.T) {
+	if os.Getenv("GAFFER_DIAGNOSTIC_PROCESS") != "1" {
+		return
+	}
+	for n, arg := range os.Args {
+		if arg == "--" {
+			os.Args = append([]string{os.Args[0]}, os.Args[n+1:]...)
+			main()
+			return
+		}
+	}
+	t.Fatal("diagnostic child requires an argument separator")
+}
+
+func TestMainStartupDiagnostics(t *testing.T) {
+	_, cert, key := localCertificate(t, true)
+	cases := []struct {
+		name string
+		mode os.FileMode
+		want string
+	}{
+		{"missing-install-flags", 0, "configure --state-dir, --artifacts-dir and --listen"},
+		{"state-permissions", 0755, "mode 0700"},
+	}
+	if runtime.GOOS == "darwin" {
+		// The native development verifier rejects macOS system-temp exceptions.
+		cases = append(cases, struct {
+			name string
+			mode os.FileMode
+			want string
+		}{"system-temp-state", 0700, "outside system-temp exception roots"}, struct {
+			name string
+			mode os.FileMode
+			want string
+		}{"symlink-parent", 0700, "requires a canonical directory"})
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			args := []string{"-test.run=^TestDaemonDiagnosticProcess$", "--"}
+			state := ""
+			if tc.mode != 0 {
+				parent := t.TempDir()
+				if tc.name == "system-temp-state" {
+					var err error
+					parent, err = os.MkdirTemp("/private/tmp", "gafferd-diagnostic-")
+					if err != nil {
+						t.Fatal(err)
+					}
+					t.Cleanup(func() { os.RemoveAll(parent) })
+				}
+				root, err := filepath.EvalSymlinks(parent)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if tc.name == "symlink-parent" {
+					alias := filepath.Join(t.TempDir(), "parent-link")
+					if err := os.Symlink(root, alias); err != nil {
+						t.Fatal(err)
+					}
+					root = alias
+				}
+				state = filepath.Join(root, "state")
+				if err := os.Mkdir(state, 0700); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Chmod(state, tc.mode); err != nil {
+					t.Fatal(err)
+				}
+				args = append(args, "--state-dir", state, "--artifacts-dir", filepath.Join(root, "artifacts"), "--listen", "127.0.0.1:0", "--execution-listen", "127.0.0.1:0", "--endpoint", "https://127.0.0.1", "--tls-cert", cert, "--tls-key", key, "--allow-development-profile=macos-sandbox-exec-dev", "--verification-isolation-profile=macos-sandbox-exec-dev")
+			}
+			cmd := exec.CommandContext(ctx, os.Args[0], args...)
+			cmd.Env = append(os.Environ(), "GAFFER_DIAGNOSTIC_PROCESS=1")
+			var stdout, stderr bytes.Buffer
+			cmd.Stdout, cmd.Stderr = &stdout, &stderr
+			err := cmd.Run()
+			exit, ok := err.(*exec.ExitError)
+			if !ok || exit.ExitCode() != 1 || ctx.Err() != nil {
+				t.Fatalf("startup must exit 1 without hanging: %v; stderr=%s", err, stderr.String())
+			}
+			if stdout.Len() != 0 || !strings.Contains(stderr.String(), "gafferd startup or shutdown failed: ") || !strings.Contains(stderr.String(), tc.want) || state != "" && !strings.Contains(stderr.String(), state) {
+				t.Fatalf("missing actionable diagnostic or readiness claimed: stdout=%q stderr=%q", stdout.String(), stderr.String())
+			}
+			if state != "" {
+				info, err := os.Lstat(state)
+				if err != nil || info.Mode().Perm() != tc.mode {
+					t.Fatal("diagnostic refusal changed operator permissions", info, err)
+				}
+			}
+		})
+	}
+}
+
+func TestDevelopmentVerificationComposedDaemonReady(t *testing.T) {
+	if runtime.GOOS != "darwin" {
+		t.Skip("macOS development profile only")
+	}
+	parent, err := os.MkdirTemp("/var/tmp", "gafferd-private-verifier-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(parent)
+	parent, err = filepath.EvalSymlinks(parent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := filepath.Join(parent, "state")
+	_, owner, _ := localCertificate(t, false)
+	_, cert, key := localCertificate(t, true)
+	base := []string{"--state-dir", state, "--artifacts-dir", filepath.Join(parent, "artifacts")}
+	if err := run(context.Background(), append(append([]string{}, base...), "--bootstrap-owner-cert", owner), io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	args := append(append([]string{}, base...), "--listen", "127.0.0.1:0", "--execution-listen", "127.0.0.1:0", "--endpoint", "https://127.0.0.1", "--tls-cert", cert, "--tls-key", key, "--allow-development-profile=macos-sandbox-exec-dev", "--verification-isolation-profile=macos-sandbox-exec-dev")
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	reader, writer := io.Pipe()
+	defer reader.Close()
+	done := make(chan error, 1)
+	go func() { err := run(ctx, args, writer); writer.CloseWithError(err); done <- err }()
+	defer func() {
+		cancel()
+		reader.Close()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	}()
+	scanner := bufio.NewScanner(reader)
+	for _, prefix := range []string{"store-only https://127.0.0.1/", "execution https://127.0.0.1:"} {
+		if !scanner.Scan() || !strings.HasPrefix(scanner.Text(), prefix) {
+			t.Fatal("composed development daemon did not reach readiness", scanner.Text(), scanner.Err())
+		}
+	}
+	info, err := os.Stat(state)
+	if err != nil || info.Mode().Perm() != 0700 {
+		t.Fatal("verifier state is not private", info, err)
 	}
 }

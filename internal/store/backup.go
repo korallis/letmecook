@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/korallis/letmecook/internal/runstream"
 	p "github.com/korallis/letmecook/schemas/execution"
 	a "github.com/korallis/letmecook/schemas/readapi"
 )
@@ -226,6 +227,7 @@ func OpenRestored(ctx context.Context, dir, artifactsDir string, restore Restore
 	if err = s.lock.Sync(); err != nil {
 		return nil, err
 	}
+	s.streams = runstream.NewSinks(filepath.Join(dir, "streams"))
 	return s, nil
 }
 

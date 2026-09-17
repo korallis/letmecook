@@ -383,7 +383,7 @@ func Job(path string, out io.Writer) int {
 			if st, e := os.Lstat(target); e == nil && st.Mode()&os.ModeSymlink != 0 {
 				return 4
 			}
-			if edit.Delete || s.Mode == "delete" {
+			if edit.Delete {
 				e = os.Remove(target)
 			} else {
 				content := []byte(edit.Content)

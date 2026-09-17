@@ -2,9 +2,8 @@
 
 package store
 
-// Enable after integration applies the workflowOwner/workflowDecisionTx calls to
-// grants.go. The paused-admission gate is already in the seams base. No sleeps/
-// race luck: each test revokes identity after authentication, before commit.
+// Exercise the commit-time owner and decision hooks, not just transport auth.
+// No sleeps/race luck: each revocation happens after authentication, before commit.
 import (
 	"errors"
 	"strings"
@@ -67,6 +66,9 @@ func TestOwnerCommitDecisionAtomicity(t *testing.T) {
 	grant := cloneGrant(t, f.grant)
 	grant.ID = newID()
 	grant.Revision++
+	// An unchanged envelope intentionally returns existing authority without a
+	// commit. Narrow it so this tests rollback of a new grant and its decision.
+	grant.Envelope.Budgets.Requests--
 	decision := f.request.Decision
 	decision.Assessment.TaskID = newID()
 	_, err := f.s.ApproveExecution(DecisionContext(OwnerContext(ctx, f.owner), decision), f.grant.ID, grant)
@@ -84,4 +86,30 @@ func TestOwnerCommitPausedAdmission(t *testing.T) {
 	_, err := f.s.Dispatch(OwnerContext(ctx, f.owner), f.request)
 	requireReason(t, err, "paused")
 	dispatchRows(t, f.s, 0)
+}
+
+func TestOwnerCommitWithoutOwnerContextPreservesTrustedCaller(t *testing.T) {
+	s, _ := persistent(t)
+	// Trusted, non-workflow APIs use actor strings and have no owner context.
+	// They must not acquire a new authentication requirement from these hooks.
+	grant := grantFixture()
+	got, err := s.ApproveExecution(ctx, "", grant)
+	if err != nil || got.ID != grant.ID {
+		t.Fatalf("trusted approval without owner context: %+v, %v", got, err)
+	}
+}
+
+func TestOwnerCommitRetainsDecisionAtomically(t *testing.T) {
+	f := dispatchFixtureFor(t, nil)
+	grant := cloneGrant(t, f.grant)
+	grant.ID = newID()
+	grant.Revision++
+	grant.Envelope.Budgets.Requests--
+	if _, err := f.s.ApproveExecution(DecisionContext(OwnerContext(ctx, f.owner), f.request.Decision), f.grant.ID, grant); err != nil {
+		t.Fatal(err)
+	}
+	decision, err := f.s.ExecutionDecision(ctx, grant.ID)
+	if err != nil || decision.ID != f.request.Decision.ID {
+		t.Fatalf("committed decision missing: %+v, %v", decision, err)
+	}
 }

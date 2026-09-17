@@ -18,6 +18,7 @@ import (
 	c "github.com/korallis/letmecook/internal/control"
 	"github.com/korallis/letmecook/internal/execwire"
 	"github.com/korallis/letmecook/internal/store"
+	"github.com/korallis/letmecook/internal/workflow"
 	p "github.com/korallis/letmecook/schemas/execution"
 )
 
@@ -197,7 +198,7 @@ func TestLeaseLapseWithoutEvidenceStaysBlocked(t *testing.T) {
 	if err != nil || len(in.StopTargets) != 1 || in.StopRequests[0].Request.Cause != "lease_expired" || in.StopRequests[0].Actor != "lease-clock" || in.Dispatch.Released {
 		t.Fatalf("%+v %v", in, err)
 	}
-	if in.StopRequests[0].Request.ID != in.StopTargets[0].Cancel.StopID || in.LastLease.Request.Nonce != lease.Request.Nonce {
+	if in.StopRequests[0].Request.ID != execwire.ExpiryStopID(lease.Request.Nonce) || in.StopRequests[0].Request.ID != in.StopTargets[0].Cancel.StopID || in.LastLease.Request.Nonce != lease.Request.Nonce {
 		t.Fatal("fence latched a foreign stop")
 	}
 	other := f.newTask(t)
@@ -206,6 +207,42 @@ func TestLeaseLapseWithoutEvidenceStaysBlocked(t *testing.T) {
 	}
 	if _, err := PlanRetry(ctx, f.deps(), k.id().TaskID); err == nil || !strings.Contains(err.Error(), "current_assignment") {
 		t.Fatal(err)
+	}
+}
+
+// No renewal (or runner clock tick) is needed for the daemon's own issuance
+// clock to expire the lease and latch the canonical stop at the sweep barrier.
+func TestLeaseRunnerClockExpiresOnDaemonClockWithoutRenewal(t *testing.T) {
+	f := newFixture(t)
+	k := f.newTask(t)
+	k.dispatch(t)
+	k.hello(t)
+	k.accept(t)
+	clock := time.Now().UTC()
+	f.s.SetControlClock(func() time.Time { return clock })
+	sent := int64(661)
+	request := p.Message{Version: p.FencedVersion, Kind: "lease_request", MessageID: uuid(), Identity: k.id(), Nonce: uuid(), RunnerBoot: f.facts.RunnerBoot, DaemonBoot: f.boot, SentMS: &sent}
+	lease, err := f.s.IssueLease(ctx, f.runner, k.session.SessionID, k.d.ID, p.FencedVersion, request)
+	if err != nil {
+		t.Fatal("boot-local first lease refused", err)
+	}
+	k.propose(t, p.Starting, launchIntent(lease.Request.Nonce))
+	k.propose(t, p.Running, launched())
+	// The inclusive boundary remains blocked: expiry requires strictly after
+	// daemon issuance + full validity + the retained seven-second margin.
+	clock = lease.Issued.Wall.Add(time.Duration(lease.DeadlineNS - lease.Issued.ElapsedNS + lease.MarginNS))
+	e := entryFor(t, f.sweep(t, false), k.id().AttemptID)
+	if e.Classification != AwaitingEvidence || e.Released || e.ActionRequired {
+		t.Fatalf("expired before daemon barrier: %+v", e)
+	}
+	clock = clock.Add(time.Nanosecond)
+	e = entryFor(t, f.sweep(t, false), k.id().AttemptID)
+	if e.Classification != LeaseLapsedUnconfirmed || e.Released || !e.ActionRequired || e.State != p.Stopping || e.Cause != CauseLeaseExpired {
+		t.Fatalf("daemon clock failed to latch expiry: %+v", e)
+	}
+	in, err := f.s.ReconciliationInputs(ctx, k.id().AttemptID)
+	if err != nil || in.LeaseCount != 1 || !in.LeaseBarrierPassed || len(in.StopTargets) != 1 || in.StopTargets[0].Cancel.StopID != execwire.ExpiryStopID(request.Nonce) || in.Dispatch.Released {
+		t.Fatalf("expiry was renewed, misidentified or released without evidence: %+v, %v", in, err)
 	}
 }
 
@@ -1041,4 +1078,47 @@ func TestReconcileCrashChild(t *testing.T) {
 	// Hold the store open until the parent kills this process.
 	_, _ = bufio.NewReader(os.Stdin).ReadByte()
 	t.Fatal("crash child escaped")
+}
+
+func TestOwnerAllowanceSurvivesConfirmedStopResumeRetries(t *testing.T) {
+	f := newFixture(t)
+	grant := f.grant()
+	b := &grant.Envelope.Budgets
+	b.Requests, b.Subattempts, b.Attempts, b.Retries = 12, 12, 3, 2
+	b.TotalMS, b.AttemptMS = 360000, 120000
+	f.facts.Revision++
+	f.facts.LocalEnvelope.Budgets = *b
+	if err := f.s.PublishEligibility(ctx, f.owner, f.facts.Revision-1, f.facts); err != nil {
+		t.Fatal(err)
+	}
+	k := f.newTaskWithGrant(t, grant)
+	request, err := workflow.BuildDispatch(ctx, f.s, workflow.Proposal{Grant: k.grant, Decision: k.request.Decision}, uuid(), 120000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	k.request = store.DispatchRequest{ID: request.ID, Request: request.Request, Decision: request.Decision, Allowance: request.Allowance}
+	for epoch := int64(1); epoch <= 3; epoch++ {
+		k.start(t)
+		stop := c.Request{ID: uuid(), Kind: c.PauseTask, TaskID: k.id().TaskID, Cause: "operator"}
+		if _, err := f.s.RequestStop(ctx, f.owner, stop); err != nil {
+			t.Fatal(err)
+		}
+		k.report(t, k.terminated(stop.ID, "terminated", "quiescent"), quiescent())
+		f.sweep(t, false)
+		if !f.released(t, k.d.ID) {
+			t.Fatal("confirmed stop retained reservation")
+		}
+		if _, err := f.s.ResumeLatches(ctx, f.owner, k.id().TaskID, uuid()); err != nil {
+			t.Fatal(err)
+		}
+		next, err := PlanRetry(ctx, f.deps(), k.id().TaskID)
+		if epoch == 3 {
+			requireCode(t, err, "attempt_ceiling")
+			break
+		}
+		if err != nil {
+			t.Fatal(epoch, err)
+		}
+		k.request = next
+	}
 }

@@ -16,8 +16,11 @@ import (
 // Preserve optional fields while sorting keys: the runner hashes the same bytes.
 func normalizeSettings(harness string, raw json.RawMessage) (json.RawMessage, error) {
 	refuse := func() (json.RawMessage, error) { return nil, g.Deny("malformed", "settings") }
-	if len(raw) == 0 || len(raw) > 49152 {
+	if len(raw) == 0 {
 		return refuse()
+	}
+	if len(raw) > 49152 {
+		return nil, g.Deny("oversized", "settings")
 	}
 	switch harness {
 	case "fake":
@@ -87,5 +90,12 @@ func normalizeSettings(harness string, raw json.RawMessage) (json.RawMessage, er
 	if d.Decode(&value) != nil {
 		return refuse()
 	}
-	return json.Marshal(value)
+	canonical, err := json.Marshal(value)
+	if err != nil {
+		return refuse()
+	}
+	if len(canonical) > 49152 {
+		return nil, g.Deny("oversized", "settings")
+	}
+	return canonical, nil
 }

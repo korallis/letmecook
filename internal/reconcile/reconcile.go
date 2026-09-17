@@ -768,6 +768,10 @@ func plan(ctx context.Context, d Deps, taskID string) (store.DispatchRequest, st
 		}
 		envelope.Routes = routes
 	}
+	allowance, err := g.AttemptAllowance(in.Ceiling, in.Reserved, in.Dispatched, in.Last.Allowance.AttemptMS)
+	if err != nil {
+		return store.DispatchRequest{}, "", in, err
+	}
 	// Compare-and-dispatch: the request's own attempt ceilings are narrowed to
 	// exactly the predecessor's epoch, so store.Dispatch admits it only while
 	// that attempt is still the task's last one; an attempt admitted in between
@@ -777,7 +781,7 @@ func plan(ctx context.Context, d Deps, taskID string) (store.DispatchRequest, st
 	last := in.Attempts[len(in.Attempts)-1]
 	envelope.Budgets.Attempts = min(envelope.Budgets.Attempts, last.Identity.Epoch+1)
 	envelope.Budgets.Retries = min(envelope.Budgets.Retries, last.Identity.Epoch)
-	request := store.DispatchRequest{ID: newID(), Request: g.Request{GrantID: in.Grant.ID, TaskID: taskID, GrantRevision: in.Grant.Revision, Action: "execute", Envelope: envelope}, Decision: in.Last.Decision, Allowance: in.Last.Allowance}
+	request := store.DispatchRequest{ID: newID(), Request: g.Request{GrantID: in.Grant.ID, TaskID: taskID, GrantRevision: in.Grant.Revision, Action: "execute", Envelope: envelope}, Decision: in.Last.Decision, Allowance: allowance}
 	return request, in.Cause, in, nil
 }
 

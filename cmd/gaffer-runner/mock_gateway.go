@@ -4,11 +4,9 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"flag"
@@ -18,10 +16,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
-
-	"github.com/korallis/letmecook/internal/closedjson"
 )
 
 func mockGateway(ctx context.Context, args []string, out io.Writer) error {
@@ -29,8 +26,17 @@ func mockGateway(ctx context.Context, args []string, out io.Writer) error {
 	listen := f.String("listen", "127.0.0.1:0", "loopback only")
 	keyFile := f.String("key-file", "", "0600 mock bearer credential")
 	models := f.String("models", "gpt-6-astra", "comma separated synthetic model IDs")
+	hang := f.String("hang-after", "", "test-only: respond to n model requests, then hold responses until shutdown")
 	if err := f.Parse(args); err != nil {
 		return err
+	}
+	var hangAfter uint64
+	if *hang != "" {
+		var err error
+		hangAfter, err = strconv.ParseUint(*hang, 10, 63)
+		if err != nil {
+			return errors.New("hang-after requires a nonnegative integer")
+		}
 	}
 	host, _, err := net.SplitHostPort(*listen)
 	if err != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
@@ -69,41 +75,12 @@ func mockGateway(ctx context.Context, args []string, out io.Writer) error {
 		return err
 	}
 	cert := tls.Certificate{Certificate: [][]byte{der}, PrivateKey: priv}
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte("Bearer "+secret)) != 1 {
-			http.Error(w, "denied", 403)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		if r.Method == "GET" && r.URL.Path == "/v1/models" {
-			data := []any{}
-			for _, m := range strings.Split(*models, ",") {
-				data = append(data, map[string]string{"id": m, "object": "model", "owned_by": "test-only"})
-			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"object": "list", "data": data})
-			return
-		}
-		if r.Method == "POST" && r.URL.Path == "/v1/chat/completions" {
-			body, err := io.ReadAll(io.LimitReader(r.Body, 65537))
-			var req struct {
-				Model    string `json:"model"`
-				Messages []struct {
-					Role    string `json:"role"`
-					Content string `json:"content"`
-				} `json:"messages"`
-				Stream bool `json:"stream,omitempty"`
-			}
-			if err != nil || closedjson.Decode(body, &req, 65536, nil) != nil || req.Model == "" || len(req.Messages) == 0 || req.Stream {
-				http.Error(w, "malformed", 400)
-				return
-			}
-			_ = json.NewEncoder(w).Encode(map[string]any{"id": "test-only", "object": "chat.completion", "choices": []any{map[string]any{"index": 0, "message": map[string]string{"role": "assistant", "content": "synthetic mock response"}, "finish_reason": "stop"}}, "usage": map[string]int{"prompt_tokens": 1, "completion_tokens": 1}})
-			return
-		}
-		http.NotFound(w, r)
-	})
-	server := &http.Server{Handler: mux, ReadHeaderTimeout: 2 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second}
+	var limit *uint64
+	if *hang != "" {
+		limit = &hangAfter
+	}
+	handler := mockGatewayHandler(ctx, secret, strings.Split(*models, ","), limit)
+	server := &http.Server{Handler: handler, ReadHeaderTimeout: 2 * time.Second, ReadTimeout: 5 * time.Second, WriteTimeout: 5 * time.Second}
 	go func() { <-ctx.Done(); server.Close() }()
 	if err = writeJSON(out, map[string]any{"url": "https://" + ln.Addr().String(), "ca_file": caPath, "qualification": "test-only", "supported": false}); err != nil {
 		return err

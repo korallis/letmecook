@@ -93,8 +93,22 @@ This **test-only** command refuses non-loopback binds and prints JSON containing
 `url` and `ca_file`. Its ephemeral certificate's public CA is written beside the
 key as `<key-file>.ca.crt`; the TLS private key stays in memory. A
 `gateway-config-v1` referencing that URL and synthetic key can be probed with
-`facts --gateway-ca <ca_file>`. Only authenticated models and canned
-`/v1/chat/completions` routes exist. It is not a replacement model gateway.
+`facts --gateway-ca <ca_file>`. Authenticated model discovery and canned Chat Completions, Responses and Messages
+routes exist, with JSON or SSE matching the pinned adapter probe. Requests use the
+same closed protocol envelopes as the inference boundary, a 65,536-byte body cap,
+and a model from `--models`. Bearer authentication remains mandatory except that
+Messages also accepts its standard `x-api-key` credential form (used by the
+boundary upstream). A wrong presented bearer never falls back to that header.
+For fault-injection test support,
+`--hang-after n` answers the first `n` valid authenticated model requests normally,
+then accepts and holds all later model requests without a response until mock
+shutdown. `n=0` hangs from the first model request; omitting the flag preserves
+normal behavior. Model discovery, malformed/oversized requests, out-of-scope models and rejected
+authentication do not consume the counter. Real OpenCode first requests its title,
+then its build response: `--hang-after 1` completes the first request and leaves
+the second reservation nonterminal, not an entirely completed first task. Loopback-only binding and constant-time bearer authentication remain
+mandatory. This is test support for a non-quiescent inference boundary, not a
+replacement model gateway.
 
 ## Durable sequence and failure behavior
 

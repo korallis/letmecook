@@ -113,7 +113,69 @@ func TestOwnerResumeScopeReplayAndAtomicity(t *testing.T) {
 	marker(later, false)
 	rowCount(t, f.s, "control_stops", before+2)
 	rowCount(t, f.s, "dispatch_releases", 0)
-	// TODO(integration): assert fresh admission honors these markers after the
-	// integrator updates controlSuppressed/dispatchAllowed and S5 TaskLatched.
-	// Resume never resolves this still-live attempt or its cancel_attempt latch.
+	// Resume never resolves this still-live attempt, its cancel_attempt latch,
+	// or stops created after the retained resume command.
+	next := f.request
+	next.ID = newID()
+	_, err = f.s.Dispatch(ctx, next)
+	requireReason(t, err, "stop_latched")
+	if latched, err := f.s.TaskLatched(ctx, task); err != nil || !latched {
+		t.Fatal("resume cleared unresolved cancellation or later stops", latched, err)
+	}
+}
+
+func TestOwnerResumeAllowsFreshAdmission(t *testing.T) {
+	for _, kind := range []c.Kind{c.GlobalStop, c.PauseTask} {
+		t.Run(string(kind), func(t *testing.T) {
+			f := dispatchFixtureFor(t, nil)
+			// This admission fixture predates CreateTask and otherwise inserts the
+			// task only at dispatch. Resume requires an existing owner task.
+			if _, err := f.s.db.Exec("INSERT INTO tasks VALUES(?,'ready')", f.grant.TaskID); err != nil {
+				t.Fatal(err)
+			}
+			stop := c.Request{ID: newID(), Kind: kind, Cause: "operator"}
+			if kind == c.PauseTask {
+				stop.TaskID = f.grant.TaskID
+				if err := f.s.StopDispatch(ctx, f.owner, stop.TaskID); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := f.s.RequestStop(ctx, f.owner, stop); err != nil {
+				t.Fatal(err)
+			}
+			_, err := f.s.Dispatch(ctx, f.request)
+			want := "stop_latched"
+			if kind == c.PauseTask {
+				want = "stopped"
+			}
+			requireReason(t, err, want)
+			if kind == c.GlobalStop {
+				state, err := f.s.SetPaused(ctx, f.owner, newID(), false, "owner resume", false)
+				if err != nil || len(state.ClearedLatches) != 1 || state.ClearedLatches[0] != stop.ID {
+					t.Fatal(state, err)
+				}
+			} else {
+				cleared, err := f.s.ResumeLatches(ctx, f.owner, stop.TaskID, newID())
+				if err != nil || len(cleared) != 2 {
+					t.Fatal(cleared, err)
+				}
+			}
+			if latched, err := f.s.TaskLatched(ctx, f.grant.TaskID); err != nil || latched {
+				t.Fatal("reconcile and admission disagree", latched, err)
+			}
+			d := admitted(t, f)
+			sess := sessionFor(t, f)
+			if err = f.s.AcknowledgeAssignment(ctx, f.runner, d.ID, acceptFor(f, d)); err != nil {
+				t.Fatal(err)
+			}
+			x := executionFixture{dispatchFixture: f, d: d, session: sess}
+			x.run(t)
+			if kind == c.PauseTask {
+				rowCount(t, f.s, "dispatch_stops", 1)
+				rowCount(t, f.s, "control_stops", 2)
+			} else {
+				rowCount(t, f.s, "control_stops", 1)
+			}
+		})
+	}
 }

@@ -180,6 +180,11 @@ type task struct {
 func (f *fixture) newTask(t *testing.T) *task {
 	t.Helper()
 	grant := f.grant()
+	return f.newTaskWithGrant(t, grant)
+}
+
+func (f *fixture) newTaskWithGrant(t *testing.T, grant g.Grant) *task {
+	t.Helper()
 	rev := grant.Envelope.Brief
 	decision := sc.Decision{ID: uuid(), Revision: 1, Assessment: sc.Assessment{TaskID: grant.TaskID, Brief: rev, Plan: rev, ContextDigest: rev.SHA256, Role: "worker", WorkClass: "code", Ambiguity: "low", Consequence: "high", Required: []string{"tools", "vision"}, Preferences: []string{}, EvidenceRefs: []string{"operator-brief"}, Unknowns: []string{"subscription-headroom"}, ContextTokens: 4096, AssessorVersion: "operator-v1", SelectorVersion: "deterministic-v1"}, EligibilityID: f.facts.ID, Selected: f.facts.Route, RankedAlternatives: []string{}, Authorization: "operator", Reason: "pinned", Resources: sc.Resources{CPU: 500, MemoryBytes: 2048, DiskBytes: 4096, Processes: 4}}
 	hash, err := sc.Digest(f.facts)

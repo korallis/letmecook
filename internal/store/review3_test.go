@@ -138,9 +138,8 @@ func TestStreamsViewIsReadOnly(t *testing.T) {
 }
 
 // P2-4: a runner-local cancel latch carries the attempt, actor and cause the
-// reconcile lane's clearing targets. Until controlSuppressed consults cleared
-// latches, the task stays suppressed after release; that is the pending
-// integration patch, recorded here as the current behaviour.
+// reconcile lane's clearing targets. Release alone retains suppression; an
+// immutable clearance then admits a fresh attempt without deleting the latch.
 func TestRunnerLocalLatchIsTargetable(t *testing.T) {
 	x := executionFixtureFor(t, nil)
 	lease := x.lease(t)
@@ -165,7 +164,16 @@ func TestRunnerLocalLatchIsTargetable(t *testing.T) {
 	_, err = x.s.Dispatch(ctx, x.request)
 	requireReason(t, err, "stop_latched")
 	t.Run("cleared", func(t *testing.T) {
-		t.Skip("controlSuppressed (store/control.go) does not consult reconcile_reports latch-cleared rows until the S5 integration patch lands; the latch shape above is what it will target")
+		cleared, err := x.s.ClearLatches(ctx, x.d.Request.TaskID)
+		if err != nil || len(cleared) != 1 || cleared[0].StopID != stopID {
+			t.Fatal(cleared, err)
+		}
+		next, err := x.s.Dispatch(ctx, x.request)
+		if err != nil || next.Assignment.Identity.Epoch != 2 || next.Assignment.Identity.AttemptID == attempt {
+			t.Fatal("cleared runner-local latch did not admit a new attempt", next, err)
+		}
+		rowCount(t, x.s, "control_stops", 1)
+		rowCount(t, x.s, "dispatch_releases", 1)
 	})
 }
 
@@ -234,14 +242,22 @@ func TestTerminationRevisionsCompareFullEvidenceAgainstTheStrongest(t *testing.T
 		t.Fatal("regression below the strongest revision accepted", err)
 	}
 	// P2-8: the effective view is the settled revision; the first observation
-	// row (what StopStatus reads today) is unchanged history.
+	// row remains unchanged history while both public views show settled evidence.
 	effective, err := x.s.TerminationView(ctx, stop.ID, attempt)
 	if err != nil || effective.Terminated.RemoteWork != "quiescent" || effective.Terminated.MessageID != settled.Terminated.MessageID {
 		t.Fatal(effective, err)
 	}
 	view, err := x.s.StopStatus(ctx, stop.ID, attempt)
-	if err != nil || view.RemoteWork != "unknown" {
-		t.Fatal("first observation rewritten", view, err)
+	if err != nil || view.RemoteWork != "quiescent" || view.Evidence == nil || view.Evidence.Terminated.MessageID != settled.Terminated.MessageID {
+		t.Fatal("stop view did not expose strongest evidence", view, err)
+	}
+	var body string
+	if err := x.s.db.QueryRow("SELECT body FROM control_observations WHERE stop_id=? AND attempt_id=?", stop.ID, attempt).Scan(&body); err != nil {
+		t.Fatal(err)
+	}
+	var retained c.Evidence
+	if err := decodeControl(body, &retained); err != nil || retained.Terminated.RemoteWork != "unknown" || retained.Terminated.MessageID != first.Terminated.MessageID {
+		t.Fatal("first observation rewritten", retained, err)
 	}
 	if _, err := x.s.TerminationView(ctx, newID(), attempt); err == nil {
 		t.Fatal("view of an unknown stop")

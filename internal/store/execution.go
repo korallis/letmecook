@@ -24,11 +24,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
-	"sync"
 	"time"
 
 	g "github.com/korallis/letmecook/internal/authority"
@@ -195,8 +193,7 @@ type UsageReport struct {
 
 // TaskInput is the GET /x/v1/input reply: the retained task brief the dispatch
 // was admitted for, bound to the grant by BriefSHA256. Harness is the dispatch
-// route's harness (grant-bound); Settings is the harness settings object, an
-// empty object until a durable settings source exists.
+// route's harness (grant-bound); Settings is the retained harness settings object.
 type TaskInput struct {
 	DispatchID  string          `json:"dispatch_id"`
 	TaskID      string          `json:"task_id"`
@@ -429,32 +426,19 @@ func runtimeBody(v runtimeRecord) ([]byte, error) {
 	return body, nil
 }
 
-// streamSinks keys the daemon's sink set by state directory so a store reopened
-// in the same process (tests, restart paths) reuses the open journals instead of
-// colliding on their exclusive locks. A crashed process releases them itself.
-var streamSinks = struct {
-	sync.Mutex
-	byDir map[string]*runstream.Sinks
-}{byDir: map[string]*runstream.Sinks{}}
-
 // Streams is the read-only face of the daemon's per-attempt output sink set at
-// <state-dir>/streams: owner reads and routes see watermarks, digests and
-// windows; only AppendStream writes, serialized per attempt with finalization.
-func (s *Store) Streams() runstream.SinkView { return s.sinks().View() }
-
-// sinks is the writable sink set, reachable only through the store's own
-// serialized append and finalize paths.
-func (s *Store) sinks() *runstream.Sinks {
-	dir := filepath.Join(s.dir, "streams")
-	streamSinks.Lock()
-	defer streamSinks.Unlock()
-	k := streamSinks.byDir[dir]
-	if k == nil {
-		k = runstream.NewSinks(dir)
-		streamSinks.byDir[dir] = k
+// <state-dir>/streams. Each persistent Store owns its sinks through Close;
+// fixture stores have no execution sinks. Only AppendStream writes, serialized
+// per attempt with finalization.
+func (s *Store) Streams() runstream.SinkView {
+	if s.streams == nil {
+		return nil
 	}
-	return k
+	return s.streams.View()
 }
+
+// sinks is writable only inside the store's serialized append/finalize paths.
+func (s *Store) sinks() *runstream.Sinks { return s.streams }
 
 // RunnerSession binds an authenticated runner hello to a session. Durable point:
 // the runner_sessions row (mode normal|recovery_only) committed before the reply;
@@ -657,10 +641,8 @@ func (s *Store) TaskInput(ctx context.Context, fingerprint, session, dispatchID 
 	if v.Operations == nil {
 		v.Operations = []string{}
 	}
-	digest, err := briefDigest(v.Brief, v.Criteria, v.Paths, v.Operations, v.Harness, v.Settings)
-	if err != nil {
-		return TaskInput{}, g.Deny("corrupt_record", "task_brief")
-	}
+	digest := BriefDigest(TaskBrief{Brief: v.Brief, Criteria: v.Criteria, Paths: v.Paths,
+		Operations: v.Operations, Harness: v.Harness, Settings: v.Settings})
 	envelope := d.Request.Envelope
 	if digest != stored || digest != envelope.Brief.SHA256 || v.Repository != envelope.Repository || v.BaseCommit != envelope.BaseCommit {
 		return TaskInput{}, g.Deny("reconciliation_required", "brief_digest")
@@ -685,44 +667,6 @@ func canonicalSettings(raw string) (json.RawMessage, error) {
 		return nil, errors.New("trailing settings content")
 	}
 	return json.Marshal(v)
-}
-
-// briefDigest is the brief revision digest grants bind: SHA-256 over the
-// canonical JSON object {brief, criteria, paths, operations, harness, settings}
-// in that key order, with every list present and settings canonicalized. S4's
-// exported store.BriefDigest is the shared implementation used when briefs and
-// grants are created; this copy only verifies retained rows.
-func briefDigest(brief string, criteria []Criterion, paths, operations []string, harness string, settings json.RawMessage) (string, error) {
-	canonical := struct {
-		Brief      string          `json:"brief"`
-		Criteria   []Criterion     `json:"criteria"`
-		Paths      []string        `json:"paths"`
-		Operations []string        `json:"operations"`
-		Harness    string          `json:"harness"`
-		Settings   json.RawMessage `json:"settings"`
-	}{brief, criteria, paths, operations, harness, settings}
-	if canonical.Criteria == nil {
-		canonical.Criteria = []Criterion{}
-	}
-	if canonical.Paths == nil {
-		canonical.Paths = []string{}
-	}
-	if canonical.Operations == nil {
-		canonical.Operations = []string{}
-	}
-	if len(canonical.Settings) == 0 {
-		canonical.Settings = json.RawMessage("{}")
-	}
-	var err error
-	if canonical.Settings, err = canonicalSettings(string(canonical.Settings)); err != nil {
-		return "", err
-	}
-	body, err := json.Marshal(canonical)
-	if err != nil {
-		return "", err
-	}
-	sum := sha256.Sum256(body)
-	return hex.EncodeToString(sum[:]), nil
 }
 
 // PendingCancels lists the retained cancel outbox messages (control_targets) for
@@ -937,9 +881,9 @@ func (s *Store) strongestTermination(ctx context.Context, tx *sql.Tx, attemptID,
 }
 
 // TerminationView is the effective termination of one stop: the immutable
-// control observation upgraded by its strongest accepted revision. Owner reads
-// (StopStatus) that only consult control_observations see the first
-// observation; this is the settled view. Durable point: none (read).
+// control observation upgraded by its strongest accepted revision. StopStatus
+// uses the same selection without rewriting the first observation's history.
+// Durable point: none (read).
 func (s *Store) TerminationView(ctx context.Context, stopID, attemptID string) (c.Evidence, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -1290,8 +1234,9 @@ func (s *Store) ProposeTransition(ctx context.Context, fingerprint, session, sel
 // IssueLease is RecordControlLease without owner(): the daemon builds the
 // lease_reply (validity 20000 ms, nonce-derived message id), runs p.CheckLease
 // with the contract timing (drift 2000 ms, termination 5000 ms, the prior
-// lease's runner cutoff, nonce activity) and records issuance through
-// issueLeaseTx with a 7 s margin. Durable point: the control_leases row
+// lease's runner cutoff, nonce activity) using sent_ms as the runner-domain
+// baseline. The runner checks actual reply delay. Issuance uses the daemon's
+// separate clock through issueLeaseTx with a 7 s margin. Durable point: the control_leases row
 // committed before the reply is returned; a refusal is fenced (controlFence)
 // and committed before the error (BootMismatch, c.ErrFenced, DelayedReply,
 // NonceMismatch, paused) is returned. The same nonce returns the retained reply.
@@ -1358,7 +1303,11 @@ func (s *Store) IssueLease(ctx context.Context, fingerprint, session, dispatchKe
 	}
 	validity := LeaseValidityMS
 	reply := p.Message{Version: p.FencedVersion, Kind: "lease_reply", MessageID: dispatchID(request.Nonce, "lease-reply"), Identity: identity, Nonce: request.Nonce, RunnerBoot: request.RunnerBoot, DaemonBoot: request.DaemonBoot, ValidityMS: &validity}
-	timing := p.Timing{RunnerBoot: d.Facts.RunnerBoot, DaemonBoot: s.meta.DaemonBoot, ReceivedMS: s.controlNow().UnixMilli(), DriftMS: SessionDriftMS, TerminationMS: SessionTerminationMS, NonceActive: true}
+	// sent_ms and the prior cutoff belong to one runner boot's monotonic
+	// clock, not this daemon's wall clock. Use S as the validation baseline:
+	// only the runner can check the actual reply arrival R against S and its
+	// cutoff. issueLeaseTx records the independent daemon issuance/expiry stamp.
+	timing := p.Timing{RunnerBoot: d.Facts.RunnerBoot, DaemonBoot: s.meta.DaemonBoot, ReceivedMS: *request.SentMS, DriftMS: SessionDriftMS, TerminationMS: SessionTerminationMS, NonceActive: true}
 	if sess.RunnerBoot != request.RunnerBoot {
 		timing.RunnerBoot = sess.RunnerBoot
 	}
@@ -1414,9 +1363,16 @@ func (s *Store) IssueLease(ctx context.Context, fingerprint, session, dispatchKe
 // an unconfirmed report (confirmed_process unknown) is retained without a
 // control observation or release, leaving the cancel pending.
 func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, selected string, evidence c.Evidence, boundary BoundaryState) (TerminationReply, error) {
+	m := evidence.Terminated
+	if !p.ValidID(m.Identity.AttemptID) {
+		return TerminationReply{}, p.Malformed
+	}
+	// Join append/finalize's attempt-lock -> store-lock order. A previously
+	// admitted append must be durable before release makes backup pinning legal.
+	unlock := s.sinks().Serialize(m.Identity.AttemptID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	m := evidence.Terminated
 	// An unconfirmed containment report carries no observation timestamp; every
 	// confirmed one must.
 	unconfirmed := m.ConfirmedProcess == "unknown"
@@ -1500,10 +1456,8 @@ func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, sel
 	if err == nil && m.StopID == execwire.ExpiryStopID(lease.Request.Nonce) {
 		derived.Cause, actor = "lease_expired", "lease-clock"
 	}
-	for _, cause := range execwire.LocalStopCauses {
-		if m.StopID == execwire.LocalStopID(identity.AttemptID, cause) {
-			derived.Cause, actor = cause, "runner-local"
-		}
+	if cause := runnerLocalStopCause(identity.AttemptID, m.StopID); cause != "" {
+		derived.Cause, actor = cause, "runner-local"
 	}
 	if actor != "" {
 		var latched bool
@@ -1597,6 +1551,28 @@ func (s *Store) ReportTermination(ctx context.Context, fingerprint, session, sel
 		return TerminationReply{}, err
 	}
 	released := d.Released
+	if !released && state == p.Running && actor == "runner-local" && m.ConfirmedProcess == "terminated" && m.RemoteWork == "quiescent" && boundary.settled() {
+		// A confirmed local stop can arrive without the stopping proposal (for
+		// example supervisor EOF). Require the recorded launched process, then
+		// fence and release in this transaction; unconfirmed/remote-unknown
+		// evidence never takes this edge. Old boots take reconciliation above.
+		rows, err := rcRuntimeRows(ctx, tx, identity.AttemptID)
+		if err != nil {
+			return TerminationReply{}, err
+		}
+		launched := false
+		for _, row := range rows {
+			if v, ok := rcDecodeRuntime(row.Body); ok && row.Kind == "launched" && v.Evidence != nil && v.Evidence.Kind == "launched" && v.Evidence.PGID > 0 && v.Evidence.PID > 0 && v.Evidence.StartUnixNS > 0 {
+				launched = true
+			}
+		}
+		if launched {
+			if _, revision, err = rcFence(ctx, tx, identity, state, revision, m.StopID); err != nil {
+				return TerminationReply{}, err
+			}
+			state = p.Stopping
+		}
+	}
 	if !released && boundary.settled() && m.RemoteWork == "quiescent" && (m.ConfirmedProcess == "terminated" || m.ConfirmedProcess == "not_started") && (state == p.Stopping || state == p.Unknown) {
 		stop, err := loadStop(ctx, tx, m.StopID)
 		if err != nil {

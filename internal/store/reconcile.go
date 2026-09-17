@@ -177,6 +177,7 @@ type RetryInputs struct {
 	Dispatched   int64            `json:"dispatched"`
 	FirstMS      int64            `json:"first_ms,omitempty"`
 	Ceiling      g.Budgets        `json:"ceiling,omitzero"`
+	Reserved     g.Budgets        `json:"reserved,omitzero"`
 }
 
 // BoundaryAttestation is a runner's durable statement that an attempt's
@@ -383,14 +384,13 @@ func rcLeaseNonces(ctx context.Context, tx *sql.Tx, attemptID string) ([]string,
 // latches that have not been cleared. It mirrors control.go's controlSuppressed
 // plus the clearing record this file writes.
 func rcTaskLatched(ctx context.Context, tx *sql.Tx, taskID, grantID string) (bool, error) {
+	if stopped, err := dispatchStopped(ctx, tx, taskID); err != nil || stopped {
+		return stopped, err
+	}
 	var latched bool
-	// The sticky dispatch_stops flag StopDispatch writes follows the pause_task
-	// latch it writes in the same transaction (dispatchID(task, "legacy-stop")):
-	// clearing that latch resumes the task.
-	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=? AND NOT EXISTS(SELECT 1 FROM reconcile_reports r WHERE r.id=?))
- OR EXISTS(SELECT 1 FROM control_stops s WHERE `+rcActiveStopFilter+` AND (kind='global_stop' OR
+	err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM control_stops s WHERE `+rcActiveStopFilter+` AND (kind='global_stop' OR
  (kind IN ('pause_task','cancel_attempt') AND task_id=?) OR
- (kind='authority_supersession' AND (grant_id=? OR (task_id=? AND EXISTS(SELECT 1 FROM control_targets t WHERE t.stop_id=s.id))))))`, taskID, latchClearedPrefix+dispatchID(taskID, "legacy-stop"), taskID, grantID, taskID).Scan(&latched)
+ (kind='authority_supersession' AND (grant_id=? OR (task_id=? AND EXISTS(SELECT 1 FROM control_targets t WHERE t.stop_id=s.id))))))`, taskID, grantID, taskID).Scan(&latched)
 	return latched, err
 }
 
@@ -679,13 +679,20 @@ func rcCurrentEvent(ctx context.Context, tx *sql.Tx, attemptID string, revision 
 
 // FenceAttempt moves an assigned|starting|running|result_pending|unknown attempt to
 // stopping and latches its cancel with cause: lease_expired uses the lease-clock
-// stop id dispatchID(last nonce, "expired") that issueLeaseTx also uses, so a
+// stop id execwire.ExpiryStopID(last nonce) that issueLeaseTx also uses, so a
 // lapse latched by a late renewal and a lapse latched by reconcile are one stop;
 // operator uses dispatchID(attempt, "reconcile-fence"). Durable point: the latch,
 // the attempts CAS and its event committed together; the transition that made
 // the attempt stopping is returned (the retained one on replay). It never
 // releases the reservation.
 func (s *Store) FenceAttempt(ctx context.Context, attemptID, cause string) (p.Message, error) {
+	if !p.ValidID(attemptID) {
+		return p.Message{}, p.Malformed
+	}
+	// Serialize the fence behind admitted appends without holding the store
+	// mutex while waiting on sink I/O, matching termination/finalization order.
+	unlock := s.sinks().Serialize(attemptID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if cause != "lease_expired" && cause != "operator" {
@@ -717,7 +724,7 @@ func (s *Store) FenceAttempt(ctx context.Context, attemptID, cause string) (p.Me
 		if err != nil {
 			return p.Message{}, err
 		}
-		stopID, actor = dispatchID(lease.Request.Nonce, "expired"), rcLeaseClockActor
+		stopID, actor = execwire.ExpiryStopID(lease.Request.Nonce), rcLeaseClockActor
 	}
 	if _, err := latchStop(ctx, tx, actor, c.Request{ID: stopID, Kind: c.CancelAttempt, TaskID: identity.TaskID, AttemptID: attemptID, Cause: cause}, s.controlStamp()); err != nil {
 		return p.Message{}, err
@@ -762,6 +769,17 @@ func rcReleaseActor(ctx context.Context, tx *sql.Tx, d Dispatch, preferred strin
 		return "", i.Denied
 	}
 	return fingerprint, err
+}
+
+// runnerLocalStopCause recognizes only the deterministic ID for this attempt
+// and the shared closed set of causes; a random stop ID conveys no authority.
+func runnerLocalStopCause(attemptID, stopID string) string {
+	for _, cause := range c.LocalStopCauses {
+		if execwire.LocalStopID(attemptID, cause) == stopID {
+			return cause
+		}
+	}
+	return ""
 }
 
 // rcTerminationCheck verifies one terminated report against the dispatch and the
@@ -820,6 +838,14 @@ func (s *Store) rcTerminationCheck(ctx context.Context, tx *sql.Tx, d Dispatch, 
 		cause = stop.Request.Cause
 	} else if expiry {
 		cause = "lease_expired"
+	} else if local := runnerLocalStopCause(identity.AttemptID, m.StopID); local != "" {
+		// A supervisor can die before sending its stopping proposal. Retained
+		// guardian termination then supplies the same derived local cancel;
+		// its old-boot barrier and quiescence requirements still apply below.
+		cause = local
+		if _, err := latchStop(ctx, tx, "runner-local", c.Request{ID: m.StopID, Kind: c.CancelAttempt, TaskID: identity.TaskID, AttemptID: identity.AttemptID, Cause: cause}, s.controlStamp()); err != nil {
+			return "", "", err
+		}
 	} else {
 		return "", "", g.Deny("reconciliation_required", "stop_id")
 	}
@@ -893,6 +919,13 @@ func rcClearLatches(ctx context.Context, tx *sql.Tx, taskID, attemptID, daemonBo
 // together. A released dispatch replays its retained proof. Durable point: that
 // commit. It never releases on a timer, a bare flag or remote_work unknown.
 func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis ReleaseBasis) (ReleaseOutcome, error) {
+	if !p.ValidID(attemptID) {
+		return ReleaseOutcome{}, g.Deny("malformed", "attempt_id")
+	}
+	// Release must wait for every admitted append to become durable before it
+	// makes terminal replay and backup pinning legal.
+	unlock := s.sinks().Serialize(attemptID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tx, err := s.grantTransaction(ctx)
@@ -1132,6 +1165,13 @@ func (s *Store) ReleaseAttempt(ctx context.Context, attemptID string, basis Rele
 // Durable point: the CAS, its event and the retained recovery record in one
 // commit; replay returns the recorded transition. It never restarts the attempt.
 func (s *Store) RecoverResultPending(ctx context.Context, attemptID string, journal execwire.Journal) (p.Message, error) {
+	if !p.ValidID(attemptID) {
+		return p.Message{}, g.Deny("malformed", "attempt_id")
+	}
+	// Recovery shares the append/transition lock order even though this edge
+	// is nonterminal; no recovery writer may overtake admitted stream I/O.
+	unlock := s.sinks().Serialize(attemptID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tx, err := s.grantTransaction(ctx)
@@ -1343,6 +1383,13 @@ func rcQuiescenceProof(rows []RuntimeObservation, receiptID string, exit *Runtim
 // the same state returns the same reply. Durable point: that one commit.
 // Nothing reruns; without proof the reservation stays held.
 func (s *Store) CompleteFinalization(ctx context.Context, attemptID string, attested *BoundaryAttestation) (FinalizeReply, error) {
+	if !p.ValidID(attemptID) {
+		return FinalizeReply{}, g.Deny("malformed", "attempt_id")
+	}
+	// Read and prove the final watermark only after admitted appends finish;
+	// never hold the store mutex while waiting on their sink I/O.
+	unlock := s.sinks().Serialize(attemptID)
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tx, err := s.grantTransaction(ctx)
@@ -1729,6 +1776,27 @@ func (s *Store) RetryInputs(ctx context.Context, taskID string) (RetryInputs, er
 	v.Ceiling = v.Last.Request.Envelope.Budgets
 	if v.Grant.ID != "" {
 		v.Ceiling = v.Grant.Envelope.Budgets
+	}
+	// Read exact immutable allowances in this same snapshot. Failed/stopped
+	// attempts retain their entire charge; usage receipts are not refunds.
+	for _, attempt := range v.Attempts {
+		if attempt.DispatchID == "" {
+			continue
+		}
+		prior, err := loadDispatch(ctx, tx, attempt.DispatchID)
+		if err != nil {
+			return RetryInputs{}, err
+		}
+		b := prior.Allowance
+		v.Reserved.Requests += b.Requests
+		v.Reserved.Subattempts += b.Subattempts
+		v.Reserved.ProviderOutputTokens += b.ProviderOutputTokens
+		if b.ProviderCostMicros != nil {
+			if v.Reserved.ProviderCostMicros == nil {
+				v.Reserved.ProviderCostMicros = new(int64)
+			}
+			*v.Reserved.ProviderCostMicros += *b.ProviderCostMicros
+		}
 	}
 	if v.Cause, err = rcTerminalCause(ctx, tx, v.Last, last.State, s.meta.DaemonBoot); err != nil {
 		return RetryInputs{}, err
