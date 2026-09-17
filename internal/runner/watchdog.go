@@ -423,6 +423,23 @@ func (l *guardianLauncher) CloseInput() {
 		l.pipe = nil
 	}
 }
+
+// abortStart closes parent copies when the adapter failed before startedHandle.
+// No initial spec has been sent, so no guardian job authority was delivered.
+func (l *guardianLauncher) abortStart() {
+	l.CloseInput()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	for _, f := range []*os.File{l.childInput, l.childControl, l.control} {
+		if f != nil {
+			_ = f.Close()
+		}
+	}
+	if l.done == nil {
+		l.done = make(chan struct{})
+	}
+	l.once.Do(func() { close(l.done) })
+}
 func (l *guardianLauncher) Observation() isolation.Observation { return l.inner.Observation() }
 func (l *guardianLauncher) Cleanup() error {
 	l.CloseInput()

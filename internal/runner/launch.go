@@ -277,7 +277,7 @@ func (r *Runner) Launch(ctx context.Context, req LaunchRequest) error {
 	r.mu.Unlock()
 	handle, err := prep.req.Harness.Start(ctx, request)
 	if err != nil {
-		gl.CloseInput()
+		gl.abortStart()
 		return err
 	}
 	started, err := gl.startedHandle(ctx)

@@ -594,3 +594,26 @@ func TestGuardianInitialSpecSerializedWithRenewals(t *testing.T) {
 	}
 	<-l.done
 }
+
+func TestGuardianFailedStartClosesParentPipes(t *testing.T) {
+	l := &guardianLauncher{inner: guardianTestLauncher{}, executable: "/usr/bin/true", receipt: filepath.Join(t.TempDir(), "receipt"), deadline: func() int64 { return 1000 }, limits: ResourceLimits{1024, 64 << 20, 10}}
+	cmd := exec.Command("/bin/sleep", "60")
+	cmd.Env = []string{"PATH=/usr/bin:/bin"}
+	cmd.Dir = t.TempDir()
+	if err := l.Wrap(cmd); err != nil {
+		t.Fatal(err)
+	}
+	files := []*os.File{l.pipe, l.childInput, l.control, l.childControl}
+	l.abortStart()
+	l.abortStart()
+	for _, f := range files {
+		if _, err := f.Stat(); err == nil {
+			t.Fatal("failed Start retained parent descriptor")
+		}
+	}
+	select {
+	case <-l.done:
+	default:
+		t.Fatal("failed Start still awaiting nonexistent guardian")
+	}
+}
