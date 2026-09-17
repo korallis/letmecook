@@ -77,19 +77,36 @@ func (p developmentProfile) run(ctx context.Context, root string, check Check) (
 			o.refusal = &Refusal{Code: "unqualified_profile", Reason: UnqualifiedReason, Environment: o.environment}
 		}
 	}()
-	parent, err := os.MkdirTemp(filepath.Dir(root), "verify-runtime-")
+	parent, err := os.MkdirTemp(filepath.Dir(p.stateDir), "verify-runtime-")
 	if err != nil {
 		o.failure = "verification runtime unavailable"
 		return o
 	}
 	defer os.RemoveAll(parent)
 	w := isolation.Workspace{Root: root, PrivateHome: filepath.Join(parent, "home"), TempDir: filepath.Join(parent, "tmp"), RuntimeDir: filepath.Join(parent, "runtime")}
-	for _, path := range []string{w.PrivateHome, w.TempDir, w.RuntimeDir} {
-		if err = os.Mkdir(path, 0700); err != nil {
+	// Runtime-owned locations override check-supplied/ambient homes and caches.
+	// Everything is under the already permitted workspace roots, alongside the
+	// explicit private state (not beneath its secret denial or system temp).
+	env := make(map[string]string, len(check.Env)+13)
+	for key, value := range check.Env {
+		env[key] = value
+	}
+	private := map[string]string{
+		"HOME": w.PrivateHome, "TMPDIR": w.TempDir, "TMP": w.TempDir, "TEMP": w.TempDir,
+		"GOCACHE": filepath.Join(w.RuntimeDir, "go-cache"), "GOMODCACHE": filepath.Join(w.RuntimeDir, "go-modules"), "GOPATH": filepath.Join(w.RuntimeDir, "go-path"),
+		"XDG_CONFIG_HOME": filepath.Join(w.PrivateHome, ".config"), "XDG_CACHE_HOME": filepath.Join(w.PrivateHome, ".cache"),
+		"XDG_DATA_HOME": filepath.Join(w.PrivateHome, ".local", "share"), "XDG_STATE_HOME": filepath.Join(w.PrivateHome, ".local", "state"),
+	}
+	for key, path := range private {
+		env[key] = path
+		if err = os.MkdirAll(path, 0700); err != nil {
 			o.failure = "verification runtime unavailable"
 			return o
 		}
 	}
+	// Do not load host Go configuration or acquire another toolchain. Module
+	// dependencies must be available offline; the profile still denies egress.
+	env["GOENV"], env["GOTOOLCHAIN"] = "off", "local"
 	ctx, cancel := context.WithTimeout(ctx, min(p.timeout, check.Timeout))
 	defer cancel()
 	launcher, err := p.profile.Prepare(ctx, w)
@@ -139,8 +156,8 @@ func (p developmentProfile) run(ctx context.Context, root string, check Check) (
 	cmd.Dir = dir
 	cmd.Env = []string{}
 	cmd.WaitDelay = time.Second
-	for _, key := range envKeys(check.Env) {
-		cmd.Env = append(cmd.Env, key+"="+check.Env[key])
+	for _, key := range envKeys(env) {
+		cmd.Env = append(cmd.Env, key+"="+env[key])
 	}
 	stdout, stderr := newDevCapture(), newDevCapture()
 	cmd.Stdout = stdout
