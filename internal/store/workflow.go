@@ -253,7 +253,7 @@ func (s *Store) CreateTask(ctx context.Context, actor string, brief TaskBrief) (
 	if err != nil {
 		return Task{}, err
 	}
-	old, err := s.taskTx(ctx, tx, brief.TaskID, s.meta.Generation)
+	old, err := s.taskTx(ctx, tx, brief.TaskID, s.meta.Generation, true)
 	if err == nil {
 		if !reflect.DeepEqual(inputBrief(old.Brief), in) || old.Brief.Actor != who.ID {
 			return Task{}, g.Deny("identity_conflict", "task")
@@ -297,7 +297,7 @@ func (s *Store) CreateTask(ctx context.Context, actor string, brief TaskBrief) (
 	}
 	return Task{Brief: brief, Phase: "ready"}, nil
 }
-func (s *Store) taskTx(ctx context.Context, tx *sql.Tx, id, generation string) (Task, error) {
+func (s *Store) taskTx(ctx context.Context, tx *sql.Tx, id, generation string, verifyContent bool) (Task, error) {
 	var t Task
 	var criteria, paths, operations, settings string
 	err := tx.QueryRowContext(ctx, `SELECT b.task_id,b.revision,b.repository_id,b.base_commit,b.brief,b.criteria,b.paths,b.operations,b.brief_sha256,b.plan_sha256,b.actor,b.created_ms,t.state,b.harness,b.settings FROM task_briefs b JOIN tasks t ON t.id=b.task_id WHERE b.task_id=?`, id).Scan(&t.Brief.TaskID, &t.Brief.Revision, &t.Brief.Repository, &t.Brief.BaseCommit, &t.Brief.Brief, &criteria, &paths, &operations, &t.Brief.BriefSHA256, &t.Brief.PlanSHA256, &t.Brief.Actor, &t.Brief.CreatedMS, &t.Phase, &t.Brief.Harness, &settings)
@@ -368,7 +368,7 @@ func (s *Store) taskTx(ctx context.Context, tx *sql.Tx, id, generation string) (
 		status.Verified = false
 		status.Reasons = append(status.Reasons, "candidate generation or head stale")
 	}
-	if status.Verified {
+	if status.Verified && verifyContent {
 		if err = s.verifyCandidateContent(ctx, tx, candidate); err != nil {
 			status.Verified = false
 			status.Reasons = append(status.Reasons, "candidate content unavailable")
@@ -397,8 +397,12 @@ func (s *Store) Task(ctx context.Context, id string) (Task, error) {
 		return Task{}, err
 	}
 	defer tx.Rollback()
-	return s.taskTx(ctx, tx, id, s.meta.Generation)
+	return s.taskTx(ctx, tx, id, s.meta.Generation, true)
 }
+
+// Tasks composes recorded metadata only: list requests must not open or hash
+// candidate blobs while holding the store mutex. Task and review/accept paths
+// still recheck content; listed verification/acceptance is not a fresh custody check.
 func (s *Store) Tasks(ctx context.Context, after string, limit int) ([]Task, error) {
 	if limit < 1 || limit > a.MaxItems || after != "" && !p.ValidID(after) {
 		return nil, g.Deny("invalid_query", "after/limit")
@@ -428,7 +432,7 @@ func (s *Store) Tasks(ctx context.Context, after string, limit int) ([]Task, err
 	}
 	out := []Task{}
 	for _, id := range ids {
-		t, err := s.taskTx(ctx, tx, id, s.meta.Generation)
+		t, err := s.taskTx(ctx, tx, id, s.meta.Generation, false)
 		if err != nil {
 			return nil, err
 		}

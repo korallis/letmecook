@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -206,4 +208,54 @@ func TestWorkflowDurableEventCursor(t *testing.T) {
 	}
 	_, err = f.s.Events(ctx, first.NextAfter, 1, "")
 	requireReason(t, err, "cursor_expired")
+}
+
+func TestWorkflowTaskListDoesNotOpenCandidateBlobs(t *testing.T) {
+	s, artifacts := persistent(t)
+	report, decision := verificationFixture(t, s)
+	mustSaveVerification(t, s, report)
+	if err := s.RecordLocalDecision(ctx, decision); err != nil {
+		t.Fatal(err)
+	}
+	profile, owner, _ := repositoryFixture(t, s)
+	if _, err := s.RegisterRepository(ctx, owner, 0, profile); err != nil {
+		t.Fatal(err)
+	}
+	principal, err := s.Authenticate(ctx, owner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	taskID := report.Candidate.Identity.TaskID
+	// Add owner-view metadata to the synthetic persistence fixture's existing task.
+	if _, err = s.db.Exec(`INSERT INTO task_briefs VALUES(?,1,?,?, 'synthetic list fixture','[]','[]','[]','fake','{"attempts":[]}',?,?,?,1)`, taskID, profile.ID, report.Candidate.BaseCommit, strings.Repeat("a", 64), strings.Repeat("b", 64), principal.ID); err != nil {
+		t.Fatal(err)
+	}
+	before, err := s.Tasks(ctx, "", 50)
+	if err != nil || len(before) != 1 || !before[0].Verification.Status.Verified || !before[0].Review.Accepted {
+		t.Fatal("fixture is not verified/accepted", before, err)
+	}
+	// Make every blob path impossible to open, independent of test-user privileges.
+	// A content recheck would necessarily change the listed status or fail the read.
+	if err = os.Rename(filepath.Join(artifacts, "blobs"), filepath.Join(artifacts, "unavailable-blobs")); err != nil {
+		t.Fatal(err)
+	}
+	after, err := s.Tasks(ctx, "", 50)
+	if err != nil || !reflect.DeepEqual(before, after) {
+		t.Fatal("list accessed unavailable candidate content", after, err)
+	}
+	single, err := s.Task(ctx, taskID)
+	if err != nil || single.Verification.Status.Verified || single.Review.Accepted || !strings.Contains(strings.Join(single.Verification.Status.Reasons, ";"), "candidate content unavailable") {
+		t.Fatal("single-task content check lost", single, err)
+	}
+	if _, status, err := s.CurrentVerification(ctx, taskID); !os.IsNotExist(err) || status.Verified {
+		t.Fatal("verification read did not check blobs", status, err)
+	}
+	if review, err := s.CurrentLocalReview(ctx, taskID); !os.IsNotExist(err) || review.Accepted {
+		t.Fatal("review read did not check blobs", review, err)
+	}
+	decision.ID = newID()
+	if err = s.RecordLocalDecision(ctx, decision); !os.IsNotExist(err) {
+		t.Fatal("acceptance did not check blobs", err)
+	}
+	rowCount(t, s, "review_decisions", 1)
 }

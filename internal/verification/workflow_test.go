@@ -152,7 +152,7 @@ func TestWorkflowCanaryDriftRetainsUnqualifiedRefusal(t *testing.T) {
 	marker := filepath.Join(t.TempDir(), "must-not-run")
 	req.Checks.Checks[0].Argv = []string{"/usr/bin/touch", marker}
 	report := runTest(t, src, req, profile)
-	if len(report.Evidence) != 1 || report.Evidence[0].ProfileID != "unqualified" || !report.Evidence[0].Environment.ConfinementDrift || report.Evidence[0].Refusal == nil || Evaluate(report, req.Candidate).Verified {
+	if len(report.Evidence) != 1 || report.Evidence[0].ProfileID != "unqualified" || !report.Evidence[0].Environment.ConfinementDrift || report.Evidence[0].Failure != "confinement_drift" || report.Evidence[0].Refusal == nil || Evaluate(report, req.Candidate).Verified {
 		t.Fatal(report)
 	}
 	if !slices.Contains(report.Limitations, "test-only observation limitation") {
@@ -198,6 +198,17 @@ func TestDevelopmentCanaryRefusesUnsafeStateRoots(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	for _, mode := range []os.FileMode{0500, 0750, 0705} {
+		if err = os.Chmod(state, mode); err != nil {
+			t.Fatal(err)
+		}
+		if _, err = NewDevelopmentProfile(lyingDevelopment{}, time.Second, state); err == nil {
+			t.Fatalf("non-0700 state accepted: %o", mode)
+		}
+	}
+	if err = os.Chmod(state, 0700); err != nil {
+		t.Fatal(err)
+	}
 	if err = os.Symlink(t.TempDir(), filepath.Join(state, "verification-canary")); err != nil {
 		t.Fatal(err)
 	}
@@ -212,5 +223,59 @@ func TestDevelopmentCanaryRefusesUnsafeStateRoots(t *testing.T) {
 	w.Root = state
 	if err = verificationCanary(context.Background(), lyingLauncher{}, w, state); err == nil {
 		t.Fatal("canary inside workspace accepted")
+	}
+}
+
+func TestWorkflowCanarySetupUnavailableIsNotDrift(t *testing.T) {
+	for _, kind := range []string{"state-permissions", "state-missing", "canary-file", "canary-symlink"} {
+		t.Run(kind, func(t *testing.T) {
+			state, err := os.MkdirTemp("/var/tmp", "gaffer-canary-unavailable-")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(state)
+			state, err = filepath.EvalSymlinks(state)
+			if err != nil {
+				t.Fatal(err)
+			}
+			profile, err := NewDevelopmentProfile(lyingDevelopment{}, time.Second, state)
+			if err != nil {
+				t.Fatal(err)
+			}
+			switch kind {
+			case "state-permissions":
+				err = os.Chmod(state, 0500)
+				defer os.Chmod(state, 0700)
+			case "state-missing":
+				err = os.Remove(state)
+			case "canary-file":
+				err = os.WriteFile(filepath.Join(state, "verification-canary"), []byte("not a directory"), 0600)
+			case "canary-symlink":
+				err = os.Symlink(t.TempDir(), filepath.Join(state, "verification-canary"))
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			src, req := fixture(t)
+			marker := filepath.Join(t.TempDir(), "must-not-run")
+			req.Checks.Checks[0].Argv = []string{"/usr/bin/touch", marker}
+			report := runTest(t, src, req, profile)
+			if err = report.Validate(); err != nil {
+				t.Fatal("invalid refusal evidence", err)
+			}
+			if len(report.Evidence) != 1 {
+				t.Fatal(report)
+			}
+			e := report.Evidence[0]
+			if e.Failure != "canary_unavailable" || e.Environment.ConfinementDrift || e.ProfileID != "unqualified" || e.Refusal == nil || e.ExitCode != nil || Evaluate(report, req.Candidate).Verified {
+				t.Fatal("setup failure misclassified or passed", e)
+			}
+			if !slices.Contains(report.Limitations, "test-only observation limitation") {
+				t.Fatal("measured profile limitations lost")
+			}
+			if _, err = os.Stat(marker); !os.IsNotExist(err) {
+				t.Fatal("trusted check ran after unavailable canary", err)
+			}
+		})
 	}
 }

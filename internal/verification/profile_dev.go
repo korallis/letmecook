@@ -46,7 +46,7 @@ func NewDevelopmentProfile(profile isolation.Profile, timeout time.Duration, sta
 		return nil, isolation.ErrExecutionUnqualified
 	}
 	info, err := os.Lstat(canonical)
-	if err != nil || !info.IsDir() || info.Mode().Perm()&0077 != 0 {
+	if err != nil || !info.IsDir() || info.Mode().Perm() != 0700 {
 		return nil, isolation.ErrExecutionUnqualified
 	}
 	return developmentProfile{profile: profile, timeout: timeout, stateDir: canonical}, nil
@@ -72,7 +72,7 @@ func (c *devCapture) stream() Stream {
 func (p developmentProfile) run(ctx context.Context, root string, check Check) (o outcome) {
 	o = outcome{qualification: "development", environment: observe(p.id(), p.id(), check.Env["PATH"]), stdout: emptyStream(), stderr: emptyStream()}
 	defer func() {
-		if o.failure != "" && o.exit == nil && (!IsDigest(o.profileDigest) || !IsDigest(o.runtimeDigest) || o.environment.ConfinementDrift) {
+		if o.failure != "" && o.exit == nil && (!IsDigest(o.profileDigest) || !IsDigest(o.runtimeDigest) || o.environment.ConfinementDrift || o.failure == "canary_unavailable") {
 			o.profileID = "unqualified"
 			o.refusal = &Refusal{Code: "unqualified_profile", Reason: UnqualifiedReason, Environment: o.environment}
 		}
@@ -114,10 +114,13 @@ func (p developmentProfile) run(ctx context.Context, root string, check Check) (
 		return o
 	}
 	if err = verificationCanary(ctx, launcher, w, p.stateDir); err != nil {
-		// Drift is recorded rather than turned into an executed passing report. The
-		// labelled environment remains the expected profile; failure carries drift.
-		o.environment = observe(p.id(), "canary-failed", check.Env["PATH"])
-		o.failure = "confinement_drift"
+		// Setup/inconclusive probes are not evidence of escape. Retain the
+		// prepared profile observation, but refuse execution in either case.
+		o.failure = "canary_unavailable"
+		if errors.Is(err, errCanaryDrift) {
+			o.environment = observe(p.id(), "canary-failed", check.Env["PATH"])
+			o.failure = "confinement_drift"
+		}
 		return o
 	}
 	dir := root
@@ -169,12 +172,19 @@ func systemTempException(path string) bool {
 	}
 	return false
 }
+
+var errCanaryDrift = errors.New("canary observed confinement escape")
+
 func verificationCanary(ctx context.Context, launcher isolation.Launcher, w isolation.Workspace, stateDir string) error {
 	// Explicit daemon state only: never infer HOME or place the canary in the
 	// verification workspace or any known launcher system-temp write exception.
 	canonical, err := filepath.EvalSymlinks(stateDir)
 	if err != nil || canonical != stateDir || systemTempException(canonical) {
 		return fmt.Errorf("unsafe canary state")
+	}
+	info, err := os.Lstat(stateDir)
+	if err != nil || !info.IsDir() || info.Mode().Perm() != 0700 {
+		return fmt.Errorf("canary state must remain a private 0700 directory")
 	}
 	canaryRoot := filepath.Join(stateDir, "verification-canary")
 	for _, allowed := range []string{w.Root, w.PrivateHome, w.TempDir, w.RuntimeDir} {
@@ -186,8 +196,8 @@ func verificationCanary(ctx context.Context, launcher isolation.Launcher, w isol
 	if err = os.Mkdir(canaryRoot, 0700); err != nil && !os.IsExist(err) {
 		return err
 	}
-	info, err := os.Lstat(canaryRoot)
-	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm()&0077 != 0 {
+	info, err = os.Lstat(canaryRoot)
+	if err != nil || !info.IsDir() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm() != 0700 {
 		return fmt.Errorf("unsafe canary root")
 	}
 	parent, err := os.MkdirTemp(canaryRoot, "probe-")
@@ -203,11 +213,18 @@ func verificationCanary(ctx context.Context, launcher isolation.Launcher, w isol
 	if err := launcher.Wrap(cmd); err != nil {
 		return err
 	}
-	if err := runDevelopmentCommand(cmd); err != nil {
-		return fmt.Errorf("write canary failed")
+	runErr := runDevelopmentCommand(cmd)
+	if _, err := os.Lstat(outside); err == nil {
+		return fmt.Errorf("%w: write escaped", errCanaryDrift)
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("write canary unavailable: %w", err)
 	}
-	if _, err := os.Stat(outside); !os.IsNotExist(err) {
-		return fmt.Errorf("write escaped")
+	if runErr != nil {
+		var exit *exec.ExitError
+		if errors.As(runErr, &exit) && exit.ExitCode() == 42 {
+			return fmt.Errorf("%w: write succeeded", errCanaryDrift)
+		}
+		return fmt.Errorf("write canary inconclusive: %w", runErr)
 	}
 	// A real listening loopback endpoint distinguishes denied egress from an
 	// unrelated connect failure. Verification never needs an inference boundary.
@@ -227,9 +244,12 @@ func verificationCanary(ctx context.Context, launcher isolation.Launcher, w isol
 		return err
 	}
 	err = runDevelopmentCommand(cmd)
+	if err == nil {
+		return fmt.Errorf("%w: network escaped", errCanaryDrift)
+	}
 	var exit *exec.ExitError
-	if err == nil || !errors.As(err, &exit) {
-		return fmt.Errorf("network canary inconclusive or escaped")
+	if !errors.As(err, &exit) || exit.ExitCode() != 1 || probeCtx.Err() != nil {
+		return fmt.Errorf("network canary inconclusive: %w", err)
 	}
 	return nil
 }
