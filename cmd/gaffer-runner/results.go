@@ -283,7 +283,13 @@ func (s *supervisor) resumeCustody(ctx context.Context, r *runner.Runner, plan c
 		if err != nil {
 			return err
 		}
-		if receipt.Quarantined || receipt.Receipt.Identity != plan.Begin.Result.Identity || receipt.Receipt.Manifest != *plan.Begin.Result.Manifest || receipt.Ack.ReceiptID != receipt.Receipt.ReceiptID {
+		if receipt.Quarantined {
+			// Restore retained the bytes, not execution authority in the old
+			// generation. Treat this successful custody reply as a durable fence,
+			// never as a promoted receipt or a fatal supervisor transport error.
+			return &execclient.Error{Status: 409, Code: "stale_generation", Detail: "custody_quarantined"}
+		}
+		if receipt.Receipt.Identity != plan.Begin.Result.Identity || receipt.Receipt.Manifest != *plan.Begin.Result.Manifest || receipt.Ack.ReceiptID != receipt.Receipt.ReceiptID {
 			return errors.New("custody acknowledgement mismatch")
 		}
 		if err = runner.DurableFile(filepath.Join(filepath.Dir(plan.BlobDir), "receipt.json"), receipt); err != nil {
@@ -372,7 +378,11 @@ func (s *supervisor) replay(ctx context.Context, r *runner.Runner) error {
 			var m execclient.Intent
 			err = w.Decode(entry.Body, &m)
 			if err == nil {
-				_, err = s.client.Commit(ctx, id, m.MessageID)
+				var receipt w.CommitReply
+				receipt, err = s.client.Commit(ctx, id, m.MessageID)
+				if err == nil && receipt.Quarantined {
+					err = &execclient.Error{Status: 409, Code: "stale_generation", Detail: "custody_quarantined"}
+				}
 			}
 		case "finalize":
 			var m w.Completion
