@@ -683,7 +683,7 @@ func TestOfflineRestoreCLI(t *testing.T) {
 	if output, err := build.CombinedOutput(); err != nil {
 		t.Fatal(string(output), err)
 	}
-	args := []string{"restore", "--backup", out, "--state-dir", filepath.Join(f.root, "cli-state"), "--artifacts-dir", filepath.Join(f.root, "cli-art"), "--json"}
+	args := []string{"restore", "--timeout", "1ms", "--backup", out, "--state-dir", filepath.Join(f.root, "cli-state"), "--artifacts-dir", filepath.Join(f.root, "cli-art"), "--json"}
 	command := exec.Command(binary, args...)
 	command.Env = []string{"PATH=" + os.Getenv("PATH")}
 	output, err := command.CombinedOutput()
@@ -702,8 +702,25 @@ func TestOfflineRestoreCLI(t *testing.T) {
 	command = exec.Command(binary, args...)
 	output, err = command.CombinedOutput()
 	var exit *exec.ExitError
-	if !errors.As(err, &exit) || exit.ExitCode() != 1 || !bytes.Contains(output, []byte("restore_refused")) {
+	if !errors.As(err, &exit) || exit.ExitCode() != 1 || !bytes.Contains(output, []byte("restore_refused")) || !bytes.Contains(output, []byte("target_not_empty")) {
 		t.Fatal(string(output), err)
+	}
+	for _, mode := range []string{"invalid_destination", "digest_mismatch"} {
+		t.Run(mode, func(t *testing.T) {
+			destination := filepath.Join(f.root, "cli-"+mode)
+			if mode == "invalid_destination" {
+				destination = "relative-state"
+			} else {
+				blob := f.request.Manifest
+				must(t, os.WriteFile(filepath.Join(out, "artifacts", "manifests", f.request.Result.Manifest.ManifestID+".json"), append(bytes.Clone(blob), '\n'), 0600))
+			}
+			command := exec.Command(binary, "restore", "--backup", out, "--state-dir", destination, "--artifacts-dir", filepath.Join(f.root, "cli-"+mode+"-art"), "--timeout", "1ms", "--json")
+			output, err := command.CombinedOutput()
+			var exit *exec.ExitError
+			if !errors.As(err, &exit) || exit.ExitCode() != 1 || !bytes.Contains(output, []byte(mode)) {
+				t.Fatal(string(output), err)
+			}
+		})
 	}
 }
 
