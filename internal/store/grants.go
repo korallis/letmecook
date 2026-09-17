@@ -59,7 +59,15 @@ func (s *Store) grantTransaction(ctx context.Context) (*sql.Tx, error) {
 	if s.fixture {
 		return nil, g.Deny("fixture_only", "store")
 	}
-	return s.db.BeginTx(ctx, nil)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	if err = workflowOwner(ctx, tx); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+	return tx, nil
 }
 
 func loadGrant(ctx context.Context, tx *sql.Tx, id string) (g.Grant, error) {
@@ -218,6 +226,9 @@ func (s *Store) changeExecution(ctx context.Context, expectedID string, grant g.
 		return g.Grant{}, err
 	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO execution_grant_heads VALUES(?,?) ON CONFLICT(task_id) DO UPDATE SET grant_id=excluded.grant_id", grant.TaskID, grant.ID); err != nil {
+		return g.Grant{}, err
+	}
+	if err := workflowDecisionTx(ctx, tx, grant); err != nil {
 		return g.Grant{}, err
 	}
 	if err := tx.Commit(); err != nil {
