@@ -23,6 +23,28 @@ func releases(t *testing.T, s *Store, want int) {
 	rowCount(t, s, "dispatch_releases", want)
 }
 
+// retainedSHA finds the runtime_observations key of the terminated report that
+// carried messageID.
+func retainedSHA(t *testing.T, s *Store, attempt, messageID string) string {
+	t.Helper()
+	rows, err := s.db.Query("SELECT evidence_sha256,body FROM runtime_observations WHERE attempt_id=? AND kind='terminated'", attempt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var sha, body string
+		if err := rows.Scan(&sha, &body); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(body, messageID) {
+			return sha
+		}
+	}
+	t.Fatal("retained report not found", messageID)
+	return ""
+}
+
 func TestReconciliationInputsSnapshot(t *testing.T) {
 	x := executionFixtureFor(t, nil)
 	lease := x.run(t)
@@ -52,6 +74,11 @@ func TestReconciliationInputsSnapshot(t *testing.T) {
 	for _, row := range in.RuntimeObservations {
 		kinds[row.Kind]++
 	}
+	// Runner request receipts (kind receipt) accompany every replayable route.
+	if kinds["receipt"] == 0 {
+		t.Fatal("no runner receipts retained", kinds)
+	}
+	delete(kinds, "receipt")
 	if !reflect.DeepEqual(kinds, map[string]int{"launch_intent": 1, "launched": 1, "exit": 1, "stop": 1, "terminated": 1}) {
 		t.Fatal(kinds)
 	}
@@ -139,10 +166,7 @@ func TestReleaseAttemptRefusesWithoutEvidence(t *testing.T) {
 	if reply, err := x.s.ReportTermination(ctx, x.runner, x.session.SessionID, p.FencedVersion, evidence, quiescent()); err != nil || reply.Outcome != "retained" {
 		t.Fatal(reply, err)
 	}
-	var sha string
-	if err := x.s.db.QueryRow("SELECT evidence_sha256 FROM runtime_observations WHERE attempt_id=? AND kind='terminated' AND daemon_boot=?", attempt, oldBoot).Scan(&sha); err != nil {
-		t.Fatal(err)
-	}
+	sha := retainedSHA(t, x.s, attempt, evidence.Terminated.MessageID)
 	refuse(ReleaseBasis{Kind: BasisRetainedTermination, EvidenceSHA256: sha}, "lease_barrier")
 	advanceControl(x.s, 40*time.Second)
 	out, err := x.s.ReleaseAttempt(ctx, attempt, ReleaseBasis{Kind: BasisRetainedTermination, EvidenceSHA256: sha})
@@ -370,10 +394,18 @@ func TestCompleteFinalizationEvidence(t *testing.T) {
 	if taskRow(t, z.s, z.d.Request.TaskID) != p.TaskReconciling {
 		t.Fatal(taskRow(t, z.s, z.d.Request.TaskID))
 	}
-	// The runner's replayed finalize under a new session returns the same reply.
+	// The runner's replayed finalize under a new session returns the same reply
+	// when it attests the same stream, exit and boundary; this runner posted no
+	// usage receipts, so its boundary is empty and quiescent.
 	z.session = sessionFor(t, z.dispatchFixture)
-	if again, err := z.s.FinalizeAttempt(ctx, z.runner, z.session.SessionID, zAttempt, z.completion(t, zCustody.Receipt.ReceiptID, 1)); err != nil || !reflect.DeepEqual(again, reply) {
+	replay := z.completion(t, zCustody.Receipt.ReceiptID, 1)
+	replay.Boundary = BoundaryState{Quiescent: true}
+	if again, err := z.s.FinalizeAttempt(ctx, z.runner, z.session.SessionID, zAttempt, replay); err != nil || !reflect.DeepEqual(again, reply) {
 		t.Fatal(again, err)
+	}
+	// A different boundary attestation is not the same completion.
+	if _, err := z.s.FinalizeAttempt(ctx, z.runner, z.session.SessionID, zAttempt, z.completion(t, zCustody.Receipt.ReceiptID, 1)); !errors.Is(err, p.IdentityConflict) {
+		t.Fatal("divergent attestation accepted after reconcile finalization", err)
 	}
 	_ = yCustody
 	consistent(t, z.s)

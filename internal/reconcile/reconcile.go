@@ -245,6 +245,11 @@ func run(ctx context.Context, d Deps, trigger, runnerID string, journals map[str
 	generation, boot := d.Store.Boot()
 	report := Report{ID: newID(), DaemonBoot: boot, CreatedMS: d.now().UnixMilli(), Trigger: trigger, RunnerID: runnerID, Entries: []Entry{}}
 	attempts, err := d.Store.NonTerminalAttempts(ctx)
+	if fixtureOnly(err) {
+		// A --fixture store holds synthetic assignments and no reservations,
+		// grants or leases; there is nothing to reconcile and nothing to retain.
+		return report, nil
+	}
 	if err != nil {
 		return Report{}, err
 	}
@@ -614,6 +619,13 @@ func apply(ctx context.Context, d Deps, in store.ReconciliationInputs, dec decis
 	entry.ActionRequired = true
 	entry.Detail += "; store refused: " + err.Error()
 	return entry, nil
+}
+
+// fixtureOnly reports the store's refusal to open a persistent transaction on a
+// disposable --fixture store.
+func fixtureOnly(err error) bool {
+	var deny *g.Refusal
+	return errors.As(err, &deny) && deny.Code == "fixture_only"
 }
 
 // refusal reports whether an error is a store decision (recorded on the entry)

@@ -374,7 +374,9 @@ func TestCustodyCommittedPendingFinalization(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			completion := store.Completion{Version: execwire.Version, MessageID: uuid(), ReceiptID: custody.Receipt.ReceiptID, Stream: store.StreamWatermark{Through: 0, Digest: digest}, Exit: store.ExitRecord{Code: 0, PGID: 101, ObservedUnixNS: exited(0).ObservedUnixNS}, Boundary: quiescent()}
+			// The runner's finalize attests the boundary its usage receipts describe
+			// (one terminal receipt), so it matches the retained completion.
+			completion := store.Completion{Version: execwire.Version, MessageID: uuid(), ReceiptID: custody.Receipt.ReceiptID, Stream: store.StreamWatermark{Through: 0, Digest: digest}, Exit: store.ExitRecord{Code: 0, PGID: 101, ObservedUnixNS: exited(0).ObservedUnixNS}, Boundary: store.BoundaryState{Reservations: 1, TerminalReceipts: 1, Quiescent: true}}
 			reply, err := f.s.FinalizeAttempt(ctx, f.runner, k.session.SessionID, k.id().AttemptID, completion)
 			if err != nil || reply.Outcome != outcome || !reply.Released {
 				t.Fatal("runner replay after reconcile finalization", reply, err)
