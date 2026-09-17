@@ -81,7 +81,8 @@ match an entire candidate exactly; omitting an inconvenient fallback is not a
 narrowing. A pinned grant has one candidate; standing `within-envelope` choice may
 select one approved candidate without another approval. Classifier recommendations
 and overrides go through the same checks. No account identities, balance ledger,
-provider credentials or Gaffer fallback loop exists; 9Router retains ownership.
+provider credentials or Gaffer fallback loop exists; the configured model gateway
+retains ownership.
 Digests bind reviewed records; this slice does not claim to resolve/verify live
 capabilities or prove graph completeness from a model-supplied list.
 

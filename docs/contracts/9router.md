@@ -1,11 +1,15 @@
 # 9Router integration contract v1
 
+**Status:** historical and optional 9Router gateway profile. The generic product
+requirement is [specification §8](../spec.md#8-model-gateway-integration-and-task-capacity)
+and the [model gateway contract](model-gateway.md). This profile applies only when
+an operator selects 9Router; its source observations and evidence remain intact.
+
 For [issue #2](https://github.com/korallis/letmecook/issues/2), amended by the
 operator-approved [issue #81](https://github.com/korallis/letmecook/issues/81)
-limits profiles on **14 September 2026**. This specifies the boundary to implement
-in the M0 experiments; it does not implement or certify a deployment. The reviewed v0.4
-[ownership and authority requirements](../spec.md#8-9router-integration-and-task-capacity)
-remain in force. Fixture identifiers below are in
+limits profiles on **14 September 2026**. This specified the boundary implemented
+by the M0 9Router experiments' synthetic evidence; it does not implement or certify
+a deployment. Fixture identifiers below are in
 [the conformance corpus](../../tests/fixtures/9router/README.md).
 
 ## Evidence and deployment gate

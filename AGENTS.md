@@ -5,8 +5,10 @@ describes intended behaviour, not existing APIs. See
 `docs/decisions/0001-execution-foundation.md` for the build choice, package owners
 and unresolved #9 gates. The reversible protocol, local store scaffold and
 embedded fixture shell remain provisional; `docs/contracts/execution.md` owns protocol
-reconciliation, `cmd/gafferd/README.md` owns explicit install flags, fixture separation,
-read API and checks; `cmd/gafferd/IDENTITY.md` owns provisional mTLS bootstrap,
+reconciliation; `docs/contracts/model-gateway.md` owns gateway configuration,
+credential-reference and inference-boundary requirements; `cmd/gafferd/README.md`
+owns explicit install flags, fixture separation, read API and checks;
+`cmd/gafferd/IDENTITY.md` owns provisional mTLS bootstrap,
 enrollment and local recovery (not runner eligibility); and
 `web/README.md` owns the shell build that must precede the Go build.
 `internal/authority/README.md` owns provisional grant APIs and their trust/dispatch
@@ -37,9 +39,12 @@ execution runtime or original downstream acceptance follows from these slices or
 
 ## Product boundaries
 
-- All model access goes through 9Router, including coordinator inference. It owns
-  subscriptions, provider credentials, account choice and request fallback.
-  Gaffer must not grow a second account router or quota-balance ledger.
+- All model access goes through the operator-configured model gateway, including
+  coordinator inference. The gateway owns provider credentials, accounts and
+  subscriptions, rotation, cooldown and request fallback. Gaffer must not grow a
+  second account router or quota-balance ledger. Workers receive only attempt-scoped
+  inference access; the trusted boundary injects the gateway credential and pins
+  permitted protocols and models.
 - Authority is explicit and enforced in code. Execution, local acceptance,
   publication and merge remain distinct. Stop, lease fencing and acknowledged
   artifact durability are correctness requirements.

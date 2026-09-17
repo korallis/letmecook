@@ -53,10 +53,12 @@ The route record is exactly #93's safe reference/digest/limits-profile record.
 Resolve `input_digest` to verified immutable input and authority records, including
 repository mapping, brief/plan revisions, base/context, grant, isolation and full
 route decision. An unresolved digest or route reference blocks admission. The
-[task-routing](task-routing.md) and [limits-profile](native-subscription-limits.md)
-contracts still apply: all inference goes through 9Router; account selection,
-credentials and fallback remain its responsibility. Execution, local acceptance,
-publication and merge require distinct authority.
+[task-routing](task-routing.md) and [model-gateway](model-gateway.md) contracts
+still apply: all inference goes through the configured model gateway; account
+selection, credentials and request fallback remain its responsibility. The optional
+[native limits profile](native-subscription-limits.md) applies only when it is
+separately authorised and its controls are proven on the configured gateway.
+Execution, local acceptance, publication and merge require distinct authority.
 
 ## 2. Version and wire contract
 

@@ -1,29 +1,33 @@
-# Task-aware selection of 9Router routes
+# Task-aware selection of gateway model targets
 
 Specification for [issue #71](https://github.com/korallis/letmecook/issues/71),
-14 September 2026. This describes intended alpha behaviour, not an implemented
-selector or verified model ranking. It extends the [9Router contract](9router.md)
-without changing its authority, configuration-freeze or cancellation rules.
-The operator-approved [#81 limits profiles](native-subscription-limits.md) add an
-explicit native subscription option; they do not establish live eligibility.
+14 September 2026; generalized 17 September 2026. This describes intended alpha
+behaviour, not an implemented selector or verified model ranking. It extends the
+[generic model gateway contract](model-gateway.md). The retained
+[9Router contract](9router.md) is a historical gateway-specific profile; the
+[#81 limits profiles](native-subscription-limits.md) remain operator-approved
+options whose evidence was recorded on that profile. Neither establishes current
+CLIProxyAPI eligibility or conformance.
 
 ## Ownership and result
 
-Gaffer assesses the concrete task and chooses an eligible **named route** for a
-planner, worker, reviewer or separately authorised research step. 9Router executes
-the route's model fallback chain and chooses provider connections. Gaffer never
-tries its ranked candidates as a second request fallback loop, maintains account
-balances, or acquires provider credentials.
+Gaffer assesses the concrete task and chooses an eligible **gateway model ID or
+alias** for a planner, worker, reviewer or separately authorised research step. The
+configured model gateway owns provider accounts/subscriptions, rotation, cooldown
+and request fallback behind that target. Gaffer never tries its ranked candidates
+as a second request-fallback loop, maintains account balances, or acquires gateway
+or provider credentials.
 
 A role-to-model matrix is an editable starting preference. The completed feature
 must distinguish tasks within a role: a formatting failure and an intermittent CI
-race can require different routes, as can CSS cleanup and screenshot-based visual
-review. Many files do not necessarily mean difficult reasoning; a one-line change
+race can require different model targets, as can CSS cleanup and screenshot-based
+visual review. Many files do not necessarily mean difficult reasoning; a one-line change
 to access control can have high consequences. Mixed work can have separate approved
-steps and route decisions rather than forcing every step onto the largest model.
+steps and model decisions rather than forcing every step onto the largest model.
 
-Public installations supply their own router, route references and preferences.
-There are no built-in personal hosts, mandatory provider accounts or model chains.
+Public installations supply their own gateway endpoint, credential reference,
+protocols, exact model IDs or aliases and preferences. There are no built-in
+personal hosts, mandatory gateway products, provider accounts or model chains.
 Use [operator-selected deployment](../spec.md#12-operator-selected-deployment).
 
 ## Assessment, eligibility and ranking
@@ -37,14 +41,16 @@ Use [operator-selected deployment](../spec.md#12-operator-selected-deployment).
    required capabilities, preferences and unknowns; cite evidence for material
    classifications. The assessment proposes requirements and cannot grant them.
 2. **Apply hard constraints.** Deterministic code intersects the grant, repository
-   data/provider policy, approved complete route graph, verified model/settings/
-   protocol/tool/modality/context support, runner/harness/isolation compatibility
-   and enforceable budgets under the explicitly allowed limits profiles.
+   data/provider policy, approved complete gateway model/fallback envelope,
+   verified model/settings/protocol/tool/modality/context support,
+   runner/harness/isolation compatibility and enforceable budgets under the
+   explicitly allowed limits profiles.
    `strict-provider-output-v1` remains the default for existing grants. Native
    local limits require explicit operator authority and exclude tasks or grants
    requiring either hard provider bound. Missing, stale or mismatched mandatory
-   capability evidence excludes the candidate. Unknown optional performance evidence is
-   recorded separately. Discovery and configured account presence are not readiness.
+   capability evidence excludes the candidate. Unknown optional performance
+   evidence is recorded separately. Discovery and configured account presence are
+   not readiness.
 3. **Rank eligible choices.** Compare task fit using versioned operator preferences
    and relevant capability/performance evidence. Preferences may favour quality,
    latency or resource use within the hard limits. Record the applicable factors,
@@ -56,21 +62,21 @@ Use [operator-selected deployment](../spec.md#12-operator-selected-deployment).
    not a fabricated probability of correctness. A non-material unknown can use
    the operator's conservative eligible default with a disclosed assumption.
    Uncertainty affecting authority, mandatory capability, hard budget or acceptable
-   outcome parks that step for clarification. No eligible route, stale evidence,
-   invalid assessment, assessment-budget exhaustion and router outage are distinct
-   outcomes. Uncertainty never automatically means “use the most expensive model.”
+   outcome parks that step for clarification. No eligible model target, stale
+   evidence, invalid assessment, assessment-budget exhaustion and gateway outage
+   are distinct outcomes. Uncertainty never automatically means “use the most expensive model.”
 5. **Approve and admit.** Bind the decision to the exact brief/plan, evidence and
-   policy revisions, exact router build, full graph fingerprint, protocol/harness/
-   settings and limits profile plus its explicit authority. The owner may pin an
-   eligible route or authorise automatic choice within a displayed set/envelope,
-   including through standing policy.
+   policy revisions, exact gateway identity, known fallback-envelope fingerprint,
+   protocol/harness/settings and limits profile plus its explicit authority. The
+   owner may pin an eligible model target or authorise automatic choice within a
+   displayed set/envelope, including through standing policy.
    Revalidate current eligibility at dispatch, then atomically persist the decision,
-   selected route, attempt, reservation and outbox assignment. A stale assessment
-   never authorises a current assignment. Routine inside-envelope choices do not
-   need repeated permission; widening the envelope does.
+   selected gateway model target, attempt, reservation and outbox assignment. A
+   stale assessment never authorises a current assignment. Routine inside-envelope
+   choices do not need repeated permission; widening the envelope does.
 
 Every possible fallback must satisfy mandatory requirements. A vision-capable
-first model followed by a text-only or unverified fallback is not a vision route.
+first model followed by a text-only or unverified fallback is not a vision target.
 A subscription preference cannot make paid or unclassified overflow eligible.
 For `native-subscription-local-v1`, every reachable connection and fallback needs
 reviewed subscription classification and compatible protocol, tools, exact settings,
@@ -85,28 +91,28 @@ adapter settings with demonstrated semantics, not a universal low/high/xhigh enu
 ## Bounded assessment bootstrap
 
 Before any semantic assessment, select an operator-configured bootstrap/planner
-route by deterministic eligibility checks on the packet it will receive. Its
-complete provider and billing envelope must permit that data. Unknown repository
-identity or exposure policy cannot be resolved by first sending private code to an
-unapproved classifier. Start with the smallest authorised metadata/excerpts.
+gateway model ID or alias by deterministic eligibility checks on the packet it
+will receive. Its complete provider and billing envelope must permit that data.
+Unknown repository identity or exposure policy cannot be resolved by first sending
+private code to an unapproved classifier. Start with the smallest authorised metadata/excerpts.
 
 Perform cheap deterministic extraction first. Where practical, return assessment
-and route proposals in an already required planning response. The initial alpha
-budget allows one semantic assessment and at most one explicitly budgeted repair
-or clarification pass per unchanged input revision; missing budget disables those
+and model-target proposals in an already required planning response. The initial
+alpha budget allows one semantic assessment and at most one explicitly budgeted
+repair or clarification pass per unchanged input revision; missing budget disables those
 calls. The bootstrap uses the selected, explicitly authorized limits profile and
 its finite request/response bytes, concurrency, total/first-output/semantic-idle
 and attempt time, request/subattempt/retry counts, plus provider bounds where that
 profile requires them. Fix concrete limits in the implementation fixture before
-measurement. A planner cannot call an unapproved route to decide whether that same
-route is acceptable. No selector chooses another selector recursively, runs on
-every scheduler tick, or calls providers directly.
+measurement. A planner cannot call an unapproved model target to decide whether
+that same target is acceptable. No selector chooses another selector recursively,
+runs on every scheduler tick, or calls providers directly.
 
 Cache only by brief/context/policy/selector/evidence versions. A changed relevant
 input invalidates the assessment; repeated retries of an unchanged input do not
 reset its budget. Charge assessment, discarded output, repairs and failed attempts
 to the task. Repository instructions and model output are data: neither can change
-the candidate set, budgets, route settings or the approval policy.
+the candidate set, budgets, model-target settings or the approval policy.
 
 ## Evidence and decision records
 
@@ -117,50 +123,56 @@ private prompts or hidden chain-of-thought.
 | Record | Required content |
 | --- | --- |
 | Task assessment | Task/brief/plan/context hashes, role or step, requirements/preferences, supporting references, confidence/unknowns, assessor and selector versions, charged allowance |
-| Route profile | Operator-owned route ID, intended uses and preference rules, permitted provider/model/billing envelope reference, explicitly allowed limits profiles and authority, bootstrap eligibility, policy revision and route fingerprint |
-| Capability evidence | Exact router build, route graph, model/fallback path, limits profile, harness/adapter/settings versions, protocol/tools/modalities/context and local/provider bounds (including unavailable capabilities), observed result, provenance and invalidation conditions |
-| Route decision | Assessment and policy versions, considered candidate references, hard exclusion reasons, ranked eligible choices and applied factors, selected route and full profile identity, authorization policy reference, override/default reason, decision identity |
-| Execution observations | Requested route/settings versus observed model/connection/fallback when available, request/attempt IDs, source/freshness of usage, terminal outcome, verification/review result; missing attribution stays unknown |
+| Gateway model profile | Operator-owned gateway model ID or alias, intended uses and preference rules, permitted provider/model/billing envelope reference, explicitly allowed limits profiles and authority, bootstrap eligibility, policy revision and configuration fingerprint |
+| Capability evidence | Exact gateway identity, permitted target and known fallback envelope, limits profile, harness/adapter/settings versions, protocol/tools/modalities/context and local/provider bounds (including unavailable capabilities), observed result, provenance and invalidation conditions |
+| Gateway model decision | Assessment and policy versions, considered candidate references, hard exclusion reasons, ranked eligible choices and applied factors, selected model ID or alias and full profile identity, authorization policy reference, override/default reason, decision identity |
+| Execution observations | Requested model target/settings versus observed provider/model/account/fallback when available, request/attempt IDs, source/freshness of usage, terminal outcome, verification/review result; missing attribution stays unknown |
 
 Configuration inspection, transport conformance, task suitability and transient
 availability are separate evidence classes. A provider outage is not a low-quality
-answer; a successful unreviewed output is not proof of task suitability. Route
-definition, model, adapter or relevant settings changes invalidate incompatible
+answer; a successful unreviewed output is not proof of task suitability. Gateway
+model definition, adapter or relevant settings changes invalidate incompatible
 evidence. Passive status can block admission but cannot manufacture positive
-capability or precise remaining quota.
+capability or precise remaining quota. Missing status, usage, headroom,
+resolved-account, reset, fallback or correlation data remains unknown.
 
 ## Fallback, stop and independent review
 
-An attempt retains its immutable named route and policy identity. 9Router may
-rotate accounts or perform its proven request fallback within the approved graph.
+An attempt retains its immutable gateway model target and policy identity. The
+configured gateway may rotate accounts or perform proven request fallback within
+the approved envelope.
 Partial output, unknown upstream work or executed tools never trigger Gaffer to
-swap to the next ranked route and replay the transcript. Preserve the artifact,
+swap to the next ranked model target and replay the transcript. Preserve the artifact,
 fence/reconcile the previous execution and use existing bounded replacement-attempt
-rules. A new attempt may select another already permitted route with a recorded
-reason. Policy edits still require the accepted freeze/drain capability; a catalog
-match does not establish that an installed router supplies it.
-Changing limits profile requires explicit authorization and a new policy/grant
-identity through that same procedure; the assessor cannot downgrade a strict grant.
+rules. A new attempt may select another already permitted model target with a recorded
+reason. Policy edits requiring an immutable fallback envelope need a proven
+gateway-specific versioning or freeze-and-drain mechanism; a catalog match does not
+establish that the installed gateway supplies either. If neither is available,
+record the integration gap and do not claim that guarantee. Changing limits profile
+requires explicit authorization, a new policy/grant identity and any mechanism
+required by that policy; the assessor cannot downgrade a strict grant.
 Native local timeout/process exit never proves remote stop or refunds work, and
 unresolved remote work continues to prevent replacement and drain completion.
 
 Independent model review uses a fresh invocation and evidence packet containing
 the exact candidate/base identity, criteria, actual checks and known limitations.
 It does not inherit the worker's live session or accept a success claim as proof.
-Choose the reviewer route against review requirements. A different model is not by
-itself independence; model diversity can be an explicit preference or requirement.
+Choose the reviewer model target against review requirements. A different model is
+not by itself independence; model diversity can be an explicit preference or
+requirement.
 Reviewer findings cannot grant local acceptance, publication or merge authority.
 
 ## Optional operator preference example
 
 The following reproduces the operator's requested starting preferences. Names and
 effort labels are **desired labels**, not verified availability, comparative
-strength or a runnable configuration. An installation must bind exact IDs and
-tested settings in its own 9Router, validate the entire fallback graph, and mark
+strength or a runnable configuration. An installation must bind exact gateway model
+IDs or aliases and tested settings, validate every known fallback path, and mark
 unresolved mappings unavailable. Do not silently substitute a similarly named model.
-The order belongs to 9Router after a compatible route is configured; Gaffer chooses
-which eligible route fits the task. Operators may omit any class or choose entirely
-different providers.
+Fallback order belongs to the configured gateway after a compatible alias is
+configured; Gaffer chooses which eligible target fits the task. Operators may omit
+any class or choose entirely different providers. The catalog findings below are
+9Router-specific evidence and do not establish CLIProxyAPI mappings.
 
 | Work profile | Desired fallback chain | Desired effort by position |
 | --- | --- | --- |
@@ -180,7 +192,7 @@ different providers.
 
 “Approved hard problem” requires that profile's explicit grant; classification
 cannot approve it. “Open-ended” still has finite scope and budgets. A default is
-subject to the same eligibility checks as every other route. These are runtime
+subject to the same eligibility checks as every other model target. These are runtime
 preferences, separate from this repository's Astra implementation workflow.
 
 ### Initial catalog findings
@@ -230,26 +242,25 @@ before tuning, allow multiple suitable choices, and retain all failures.
 | CSS cleanup versus screenshot comparison | Only the latter requires proven image support across every fallback |
 | Formatting CI error versus intermittent integration race | A common role label must not force the same suitability ranking |
 | Provided research excerpts versus live X-search | External research requires separately authorised retrieval tools |
-| Preferred cheap route with paid or text-only fallback | Hard billing/modality exclusion wins over preference |
-| Native local route for a hard output-token or monetary-bound task | Exclude before inference despite subscription preference; provider bounds remain unavailable |
+| Preferred cheap target with paid or text-only fallback | Hard billing/modality exclusion wins over preference |
+| Native local target for a hard output-token or monetary-bound task | Exclude before inference despite subscription preference; provider bounds remain unavailable |
 | Native preference with missing authorization or incompatible harness/fallback settings | Exclude; no silent strict-grant downgrade or unsupported cap stripping |
 | Native request times out locally without trustworthy remote terminal | Retain reservation and unresolved outcome; no refund, replacement or completed drain |
-| Mixed UI and storage work | Propose separately scoped steps or a fully capable eligible route |
+| Mixed UI and storage work | Propose separately scoped steps or a fully capable eligible model target |
 | Repository text demanding a new endpoint, credentials or shell | Reject authority expansion; record the injected text only as task data |
-| Missing capability, stale route edit, unknown cost cap or invalid assessment | Named blocked/clarification outcome; no invented support or unlimited retry |
+| Missing capability, stale model-target edit, unknown cost cap or invalid assessment | Named blocked/clarification outcome; no invented support or unlimited retry |
 | Worker claims success and requests self-review | Fresh reviewer context and actual artifact/check evidence remain required |
 | Changed intent, stale override or repeated scheduler tick | Revision checks and one bounded assessment allowance prevent stale dispatch and repeated charges |
-| Partial tool stream followed by route outage | Preserve/fence/reconcile; never transparently replay on another ranked route |
+| Partial tool stream followed by model-target outage | Preserve/fence/reconcile; never transparently replay on another ranked target |
 
 Compare task-aware selection with an operator-owned static role default on matched
-fixed-base tasks, holding the available route set, fallback definitions, budgets,
-harness and data policy constant. Here route choice is the experimental variable.
-Keep this separate from the existing whole-product comparison that holds routes
-identical. Count assessment overhead and unsuccessful attempts in both analyses.
+fixed-base tasks, holding the available model-target set, fallback definitions,
+budgets, harness and data policy constant. Here target choice is the experimental
+variable. Keep this separate from the existing whole-product comparison that holds targets identical. Count assessment overhead and unsuccessful attempts in both analyses.
 
 Predeclare acceptable suitability/clarification decisions, independent defect
 severity and sample limitations. Report hard-constraint violations (required zero),
-route suitability, overrides/reasons, clarification quality, latency/usage,
+model-target suitability, overrides/reasons, clarification quality, latency/usage,
 accepted outcomes, rework and operator effort. Agreement with one model label or
 token savings alone is insufficient. Alpha validates this decision behaviour;
 beta expands the task-class comparison and may propose versioned preference
@@ -277,6 +288,7 @@ already describes task-fit judgment over operator profiles, even if an operator'
 current configuration behaves as a static matrix. See its
 [pinned architecture](https://github.com/kunchenguid/firstmate/blob/e3bd750cab2d58e33d5148a8e2cf7b2e7428014b/docs/architecture.md)
 and [dispatch example](https://github.com/kunchenguid/firstmate/blob/e3bd750cab2d58e33d5148a8e2cf7b2e7428014b/docs/examples/crew-dispatch.json).
-Gaffer retains 9Router's account/fallback ownership rather than importing
-Firstmate's quota/account selection machinery. This reference is not a claim that
+Gaffer retains the configured gateway's account/subscription, rotation, cooldown
+and request-fallback ownership rather than importing Firstmate's quota/account
+selection machinery. This reference is not a claim that
 Gaffer already implements either system's routing behaviour.

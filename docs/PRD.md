@@ -1,6 +1,6 @@
 # Gaffer — Product Requirements
 
-**Status:** proposed baseline v0.4 · **Owner:** solo maintainer · **Updated:** 14 September 2026
+**Status:** proposed baseline v0.4 · **Owner:** solo maintainer · **Updated:** 17 September 2026
 
 This revision follows the [evaluation](evaluation.md). Requirements below are
 prospective. Story IDs from the original plan are retained; their release assignment
@@ -15,12 +15,13 @@ The primary hypothesis is that explicit intent, durable progress and a coherent
 review flow reduce operator effort on work spanning multiple sessions. Neither a
 large fleet nor fully automated memory is required to test that hypothesis.
 
-9Router is a required shared model-access layer, even with one harness. It owns
-provider connections, multiple subscriptions per provider and request routing.
-Gaffer owns the work, assesses each task's requirements and selects an eligible
-named route rather than individual account credentials. An operator's preference
-matrix seeds that choice; task evidence, verified capabilities and constraints
-determine suitability. A coordinator
+An operator-configured model gateway is the required shared model-access boundary,
+even with one harness; the current selection is CLIProxyAPI. The gateway owns
+provider credentials, accounts and subscriptions, rotation, cooldown and request
+fallback. Gaffer owns the work, assesses each task's requirements and selects an
+eligible gateway model ID or alias rather than an account credential. An operator's
+preference matrix seeds that choice; task evidence, verified capabilities and
+constraints determine suitability. A coordinator
 is a logical role that plans and reports; it is not necessarily an always-running
 model conversation. Models wake for useful work, then stop consuming quota.
 
@@ -49,7 +50,7 @@ would require a complete separately tested deployment profile.
 - **Spend attention proportionally.** Small work gets one combined brief-and-plan approval. Reuse existing authority without repeated prompts; ask when a material uncertainty or change exceeds it.
 - **Treat clarification as a budget, not a ceiling on understanding.** Default to at most three questions per round, with options and free text. Never guess a consequential answer merely to meet that target.
 - **Current instructions win.** Remember scoped preferences, but reconfirm when context changes. A preference is not permission.
-- **One model-access control plane.** All agents use 9Router. Configure provider accounts, subscriptions, routing and fallback there once; Gaffer consumes those capabilities and owns task orchestration. Configured providers may receive code.
+- **One model-access boundary.** All agents use the operator-configured model gateway, currently CLIProxyAPI. Configure provider credentials, accounts/subscriptions, rotation, cooldown and fallback there; Gaffer consumes allowed model targets and owns task orchestration without a second account router or quota ledger. Configured providers may receive code.
 - **Separate planning from execution.** A model can propose work. Deterministic policy decides what can run, where, and with what authority.
 - **Protect continuity before increasing concurrency.** Persist attempts, preserve partial work, bound retries and reconcile uncertain outcomes.
 - **Use simple memory first.** Reviewed files and explicit progress precede learned idioms, embeddings and automatic curation.
@@ -59,8 +60,8 @@ would require a complete separately tested deployment profile.
 
 | Release | Included | Deliberately absent |
 | --- | --- | --- |
-| Private alpha, after M2 | One operator/repository/runner/harness through 9Router; multiple subscriptions from one provider; named model routes and router-owned fallback; sequential tasks; responsive capture and approval; durable recovery; stop; explicit memory; verified artifact review and authorised PR publication | Parallel writers, auto-merge, chat, offline capture, automated curation |
-| Beta, after M4 | Second harness on the same 9Router instance; explicit multi-runner placement; bounded parallelism; integration before acceptance; task scheduling informed by router availability; manual context retrieval | Inferred quota precision, multi-user team pools |
+| Private alpha, after M2 | One operator/repository/runner/harness through the configured model gateway; exact protocols and allowed model IDs or aliases; gateway-owned provider access and request fallback; sequential tasks; responsive capture and approval; durable recovery; stop; explicit memory; verified artifact review and authorised PR publication | Parallel writers, auto-merge, chat, offline capture, automated curation |
+| Beta, after M4 | Second harness on the same configured gateway; explicit multi-runner placement; bounded parallelism; integration before acceptance; task scheduling informed by gateway availability where exposed; manual context retrieval | Inferred quota precision, multi-user team pools |
 | v1, after M6 | Reliable scheduled/GitHub-polled work; standing authority; digest; PWA draft capture; release/install/restore documentation; measured solo-operator workflow | Full code review editor, auto-merge, automatic memory promotion, generic plugin ecosystem |
 | Later experiments | Learned idioms, hybrid retrieval, additional adapters, skills authoring, browser/desktop runners | No commitment until their own evidence gates pass |
 
@@ -73,12 +74,12 @@ implies those capabilities have been built.
 
 #### US-A1 — Get to a first useful result
 
-**Alpha.** The operator connects the daemon to 9Router, connects a runner, verifies a harness,
-and sees one concrete next action.
+**Alpha.** The operator connects the daemon to a configured model gateway, connects
+a runner, verifies a harness, and sees one concrete next action.
 
-- [ ] `gaffer up` creates private state and prints the local setup URL; a diagnostic explains missing git, 9Router connectivity, harness, authentication or isolation support.
+- [ ] `gaffer up` creates private state and prints the local setup URL; a diagnostic explains missing git, gateway connectivity, harness, authentication or isolation support.
 - [ ] A packaged daemon serves its UI without a separately installed UI runtime. The runner may require the documented isolation runtime and provider CLI.
-- [ ] First-run setup shows where state, execution files and provider credentials live.
+- [ ] First-run setup shows where state, execution files and the gateway credential reference live; provider credentials live in the gateway.
 - [ ] Uninstall stops services and removes program files; context and recovery artifacts are preserved unless the operator chooses to delete them.
 
 #### US-A2 — Decide which machines can work
@@ -102,20 +103,21 @@ can reserve a runner to exact repositories/projects.
 - [ ] Weakening a reservation requires an operator action on that host; refusals appear with a reason in the audit view.
 - [ ] Reservation is described as placement control, not as process or data isolation.
 
-#### US-A4 — Manage all subscriptions through one router
+#### US-A4 — Use one configured model gateway
 
-**Alpha: 9Router with multiple subscriptions from the same provider.** See
+**Alpha: operator-selected gateway, currently CLIProxyAPI.** See the
+[model gateway contract](contracts/model-gateway.md) and
 [integration findings](evaluation.md#4-provider-and-gateway-feasibility).
 
-- [ ] Connect one 9Router instance with an endpoint and router credential reference; select named routes for planning, coding and review.
-- [ ] Alpha assesses concrete tasks and scoped steps before choosing among approved named routes; a fixed role-to-model matrix alone is insufficient. Separate mandatory capabilities, data/billing limits and uncertainty from preference ranking.
+- [ ] Configure one gateway with a stable ID, operator-selected HTTPS base URL, protected credential reference, supported protocol set and exact allowed model IDs or aliases. Never store a credential value in Gaffer.
+- [ ] Alpha assesses concrete tasks and scoped steps before choosing among approved gateway model targets; a fixed role-to-model matrix alone is insufficient. Separate mandatory capabilities, data/billing limits and uncertainty from preference ranking.
 - [ ] Explain the proposed choice, relevant evidence/unknowns and eligible alternatives; support an operator override or standing automatic-selection policy within the permitted envelope.
-- [ ] Bound any model-assisted assessment through a configured 9Router bootstrap route. Record selection and evidence versions; revalidate at dispatch and preserve the selected route throughout an attempt.
-- [ ] Provider login, credential refresh, connection priority, account rotation and fallback are managed in 9Router. Gaffer links to its management surface and shows relevant read-only status.
-- [ ] Two distinct subscriptions from one provider can serve the same route. Exhausting or disabling one allows 9Router to use the other without editing every agent's configuration.
-- [ ] Separate subscriptions keep separate capacity; aliases for the same account do not create extra allowance. Shared organisation limits are respected where applicable.
-- [ ] A probe verifies the exact harness→9Router→model path, including streaming/tool calls. Agents receive router access, never the underlying provider credentials.
-- [ ] Usage observations name their source and freshness. Unknown headroom/reset stays unknown. Paid fallback is enabled explicitly in the route's billing policy.
+- [ ] Bound any model-assisted assessment through an allowed bootstrap model. Record selection and evidence versions; revalidate at dispatch and preserve the selected target throughout an attempt.
+- [ ] Provider login, credentials, accounts/subscriptions, rotation, cooldown and request fallback are managed in the gateway. Gaffer does not expose parallel account controls or a quota ledger.
+- [ ] Where multiple accounts or subscriptions back one target, gateway-owned rotation or fallback does not require changing agent configuration or redispatching the Gaffer task. Do not claim this behavior without gateway-specific evidence.
+- [ ] Duplicate aliases for one account never imply extra capacity; separate accounts count as separate capacity only where the gateway establishes it; shared organisation limits are respected where applicable.
+- [ ] A probe verifies the exact harness→boundary→gateway→model path, including required streaming/tool behavior. Workers receive only attempt-scoped boundary access; the boundary injects the gateway credential and pins permitted protocols and models.
+- [ ] Usage and status observations name their source and freshness. Missing management APIs, headroom, reset, resolved account or fallback details stay unknown. Paid fallback must be explicit in the gateway policy and proven enforceable where required.
 
 The [task-routing contract](https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md) defines the optional
 operator preference example, hard eligibility, assessment budget, fresh review
@@ -200,7 +202,7 @@ expected verification, permitted execution and budget.
 **Alpha.** The board distinguishes queued, running, reconciling, blocked,
 awaiting review, accepted, published, merged, failed and cancelled.
 
-- [ ] Show current attempt, runner, harness, requested 9Router route, resolved model/connection when available, activity age, limits and next action.
+- [ ] Show current attempt, runner, harness, requested gateway model ID or alias, resolved provider/model/account when available, activity age, limits and next action.
 - [ ] Reconnecting or refreshing recovers stored events and indicates any log gap.
 - [ ] Pause stops new dispatch. Cancel requests active termination; the UI shows whether termination was acknowledged.
 - [ ] Re-run creates a new attempt with a reason and bounded retry allowance.
@@ -237,26 +239,26 @@ work, verification failures, stopped attempts and resource blocks.
 
 #### US-C2 — Respond to capacity limits
 
-**Alpha task-aware route selection and caps; beta capacity-aware task scheduling.**
-Gaffer selects an eligible named route for the work; 9Router selects models and
-provider connections within that route's approved fallback definition.
+**Alpha task-aware gateway-model selection and caps; beta capacity-aware task scheduling.**
+Gaffer selects an eligible gateway model ID or alias for the work; the configured
+gateway owns provider accounts/subscriptions, rotation, cooldown and request fallback.
 
-- [ ] Account exhaustion, cooldown and rotation stay in 9Router. A successful router fallback continues the current attempt without Gaffer redispatching the task.
-- [ ] Distinct subscriptions from the same provider can supply the route; Gaffer consumes aggregate availability rather than maintaining competing per-account balances.
-- [ ] When the whole route is unavailable, preserve the attempt and work. A replacement attempt starts only after the prior execution is fenced and its artifacts reconciled.
-- [ ] Allowed providers, model capabilities and billing classes constrain the complete fallback route. No cross-provider transcript portability is assumed.
-- [ ] Show router-reported reset/next probe time, or “unknown”; use bounded task-level backoff without thrashing.
+- [ ] A successful gateway-owned rotation or fallback continues the current attempt without Gaffer redispatching the task.
+- [ ] Gaffer consumes safe aggregate availability where exposed rather than maintaining competing per-account balances; missing account/subscription observations stay unknown.
+- [ ] When the whole model target or gateway is unavailable, preserve the attempt and work. A replacement attempt starts only after the prior execution is fenced and its artifacts reconciled.
+- [ ] Allowed providers, model capabilities and billing classes constrain the complete fallback envelope. No cross-provider transcript portability is assumed; an uninspectable envelope makes the target ineligible rather than assumed compliant.
+- [ ] Show gateway-reported reset/next probe time where available, otherwise “unknown”; use bounded task-level backoff without thrashing.
 - [ ] Concurrency, duration, attempts, daily work and enforceable spend caps apply to discovery, planning, coding and verification.
 
 #### US-C3 — Recover from provider outages
 
-**Alpha through 9Router.** Request-level account/provider fallback is part of the
-router integration; Gaffer handles only failures that escape that layer.
+**Alpha through the configured model gateway.** Request-level account/provider
+fallback belongs to the gateway; Gaffer handles only failures that escape that layer.
 
-- [ ] Use the same named routes across agents; manage connection priorities and model fallback centrally in 9Router.
-- [ ] Distinguish one connection failing, a route exhausted and the router itself unavailable. Router downtime parks inference-dependent work without bypassing to direct provider credentials.
-- [ ] Test request fallback before output and during streaming. Where continuation is unsafe, surface the failure and reconcile the attempt rather than replaying tool effects.
-- [ ] Surface router health and supported usage/error signals in Gaffer. Missing management APIs become scoped integration work, not a second account router.
+- [ ] Use approved model IDs or aliases across agents; keep provider account priority, rotation, cooldown and request fallback in the gateway.
+- [ ] Distinguish a provider/account observation where exposed, a model target failure and the gateway itself being unavailable. Gateway downtime parks inference-dependent work without direct-provider bypass.
+- [ ] Test any claimed request fallback before output and during streaming. Where continuation is unsafe, surface the failure and reconcile the attempt rather than replaying tool effects.
+- [ ] Surface gateway health and supported usage/error signals where a safe interface exists. Missing management APIs stay explicit unknowns or scoped integration work, not a second account router.
 
 #### US-C4 — Start recurring work
 
@@ -402,8 +404,8 @@ without claiming equivalence from a small sample. See [evaluation design](evalua
 ## 7. Decisions still requiring evidence
 
 1. **Build or reuse:** compare the closest existing tools using the same acceptance checklist before M1.
-2. **First harness:** select the best proven harness/9Router/isolation combination in M0; verify multiple subscriptions from one provider.
-3. **Coordinator implementation:** call a named 9Router route through its compatible API with structured output and typed tools. A model receives no general shell in the planner role.
+2. **First harness:** select the best proven harness/configured-gateway/isolation combination in M0; verify each required protocol/model path and any gateway behavior the product will rely on.
+3. **Coordinator implementation:** call an allowed gateway model ID or alias through its compatible API and trusted inference boundary with structured output and typed tools. A model receives no general shell or gateway credential in the planner role.
 4. **Parallelism:** retain sequential execution when delegation increases operator effort or defects.
 5. **Packaging:** keep the proposed Go core, but prove process supervision, SQLite and distribution on target systems before treating “one binary” as solved.
-6. **Advanced memory:** add it only after measured pain justifies the maintenance cost. Central routing through 9Router is already an architectural decision.
+6. **Advanced memory:** add it only after measured pain justifies the maintenance cost. One operator-configured model gateway is already an architectural decision; CLIProxyAPI is the current selection, not a mandatory product dependency.

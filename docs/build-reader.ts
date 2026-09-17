@@ -10,6 +10,7 @@ const documents = [
   { id: 'prd', file: 'PRD.md', title: 'Requirements', description: 'Journey, scope and success measures' },
   { id: 'spec', file: 'spec.md', title: 'Specification', description: 'Authority, execution and recovery' },
   { id: 'roadmap', file: 'roadmap.md', title: 'Roadmap', description: 'Milestones and evidence gates' },
+  { id: 'model-gateway', file: 'contracts/model-gateway.md', title: 'Model gateway', description: 'Endpoint, credentials and inference boundary' },
 ];
 const byFile = new Map(documents.map(document => [document.file, document.id]));
 const escape = (text: string) => text.replace(/[&<>"']/g, character => ({

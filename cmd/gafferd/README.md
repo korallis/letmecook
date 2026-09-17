@@ -67,8 +67,8 @@ Choose any operator-controlled host meeting the local storage requirements. No
 configuration discovery from HOME, environment, files, repository plugins, accounts,
 proxy/router variables or a private network. Unknown/positional flags reject.
 The identity API accepts connections only; it never contacts, discovers or enrolls
-network hosts on its own. Runner runtime and 9Router clients remain absent; no
-provider credentials are stored.
+network hosts on its own. Runner runtime and model-gateway clients remain absent;
+no provider or gateway credentials are stored.
 
 **Plaintext loopback mode is not authentication.** Before owner bootstrap, local
 programs can read metadata. Use disposable synthetic data only in that mode; never

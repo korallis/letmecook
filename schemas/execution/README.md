@@ -74,8 +74,9 @@ Route records contain only `route_ref`, `decision_digest`, `policy_digest` and
 `limits_profile`. References match `[a-z][a-z0-9_-]{0,63}`: no endpoint, URL, account,
 credential or free-text payload. An opaque reference is not evidence of eligibility.
 The [task-routing contract](../../docs/contracts/task-routing.md) still requires
-immutable eligible named-route selection over the complete graph; 9Router alone
-owns account choice, credentials and fallback. The
+immutable eligible gateway-model selection over the complete approved envelope;
+the configured model gateway alone owns account choice, credentials and request
+fallback. The
 [native-limits contract](../../docs/contracts/native-subscription-limits.md) still
 requires explicit native authorization and unavailable provider-bound wording.
 These protocol records do not implement grants or either limits profile.

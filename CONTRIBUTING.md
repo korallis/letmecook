@@ -40,5 +40,5 @@ observations and limitations. Report a failed gate honestly; waiting for a real
 seven-day cohort cannot be replaced with invented data.
 
 Never commit credentials, private transcripts or personal fixture data. Live model
-probes use operator-configured 9Router connections and declared budgets. The normal
+probes use the operator-configured model gateway and declared budgets. The normal
 offline fixture suite should use synthetic secrets and disposable repositories.

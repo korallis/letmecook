@@ -7,11 +7,16 @@ the controls, and the prepared private baseline tasks/data policy. The product
 choice is resolved; implementation and live evidence remain outstanding. This
 document performs no deployment, credential operation or inference.
 
-This extends the [9Router integration contract](9router.md) and
-[task-routing eligibility](task-routing.md). Public installations remain
-host/provider/model configurable. 9Router exclusively owns subscriptions,
-provider credentials, account selection, refresh and request fallback. Gaffer
-selects an eligible named route and does not add an account or quota router.
+**Status:** operator-approved optional limits profile (#81). Its retained evidence
+and approved evaluation envelope were recorded on the 9Router gateway profile and
+do not establish conformance for any other gateway. The generic product boundary
+is the [model gateway contract](model-gateway.md).
+
+This extends the historical [9Router integration contract](9router.md) and
+[task-routing eligibility](task-routing.md). In this profile, 9Router exclusively
+owns subscriptions, provider credentials, account selection, refresh and request
+fallback. Gaffer selects an eligible gateway model target and does not add an
+account router or quota ledger.
 
 ## Two explicit limits profiles
 
