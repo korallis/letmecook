@@ -54,6 +54,9 @@ type Request struct {
 	State      tls.ConnectionState
 	Selected   string // negotiated ALPN, never a body field.
 	Session    string // X-Gaffer-Session; S1 checks it against durable session state.
+	// ContentLength is the request's declared body length (-1 when unknown), for
+	// raw routes that must bind a promised byte count before reading.
+	ContentLength int64
 }
 type Error struct {
 	Status       int
@@ -77,14 +80,17 @@ type SinkReader interface {
 	Window(attempt string, after, limit int64) ([]runstream.Record, runstream.Ack, error)
 }
 type Deps struct {
-	Store     *store.Store
-	Sinks     SinkReader
-	Jobs      jobs.Runner
-	Reconcile reconcile.Reader
-	Hub       *notify.Hub
-	Gateway   inference.Gateway
-	Policy    sc.AdmissionPolicy
-	Backup    backup.Service
+	Store *store.Store
+	// DaemonFingerprint is the SHA-256 DER pin of the execution listener's
+	// certificate, reported to runners in the session reply.
+	DaemonFingerprint string
+	Sinks             SinkReader
+	Jobs              jobs.Runner
+	Reconcile         reconcile.Reader
+	Hub               *notify.Hub
+	Gateway           inference.Gateway
+	Policy            sc.AdmissionPolicy
+	Backup            backup.Service
 }
 
 type registration struct {
@@ -339,7 +345,7 @@ func routeHandler(d Deps, route Route, execution bool) http.Handler {
 		for _, name := range names {
 			params[name] = r.PathValue(name)
 		}
-		result, failure := route.Handle(r.Context(), actor, Request{Query: q, Body: body, BodyReader: bodyReader, Path: params, State: state, Selected: state.NegotiatedProtocol, Session: session})
+		result, failure := route.Handle(r.Context(), actor, Request{Query: q, Body: body, BodyReader: bodyReader, ContentLength: r.ContentLength, Path: params, State: state, Selected: state.NegotiatedProtocol, Session: session})
 		if failure != nil {
 			writeRouteError(w, execution, failure)
 			return

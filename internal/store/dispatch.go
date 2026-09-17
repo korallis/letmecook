@@ -319,6 +319,13 @@ func (s *Store) Dispatch(ctx context.Context, request DispatchRequest) (Dispatch
 }
 
 func dispatchAllowed(ctx context.Context, tx *sql.Tx, request g.Request, now int64) error {
+	var paused bool
+	if err := tx.QueryRowContext(ctx, "SELECT paused FROM daemon_state WHERE singleton=1").Scan(&paused); err != nil {
+		return err
+	}
+	if paused {
+		return g.Deny("paused", "daemon")
+	}
 	var stopped bool
 	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM dispatch_stops WHERE task_id=?)", request.TaskID).Scan(&stopped); err != nil {
 		return err

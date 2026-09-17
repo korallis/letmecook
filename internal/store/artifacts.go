@@ -265,7 +265,9 @@ func (s *Store) CustodyResult(ctx context.Context, request CustodyRequest) (Cust
 		if oldID != want.ManifestID || oldHash != want.SHA256 || oldBytes != want.Bytes {
 			return CustodyReceipt{}, p.IdentityConflict
 		}
-		return custodyReply(request.Result, receipt, quarantined != 0), nil
+		// A retained receipt from a retired generation is history, never current:
+		// replay after restore reports it quarantined under the current generation.
+		return custodyReply(request.Result, receipt, quarantined != 0 || request.Result.Identity.Generation != s.meta.Generation), nil
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return CustodyReceipt{}, err

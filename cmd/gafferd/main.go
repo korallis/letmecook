@@ -182,6 +182,11 @@ func run(ctx context.Context, args []string, out io.Writer) (err error) {
 	}
 	defer listener.Close()
 	d := httpapi.Deps{Store: s, Hub: &notify.Hub{}, Gateway: gateway, Policy: admission}
+	if secure {
+		if d.DaemonFingerprint, err = i.Fingerprint(executionTLS.Certificates[0].Leaf); err != nil {
+			return err
+		}
+	}
 	var executionServer *http.Server
 	var executionListener net.Listener
 	if secure {

@@ -165,6 +165,13 @@ func openStore(ctx context.Context, dir string, fixture bool) (_ *Store, err err
 			err = errors.Join(err, s.Close())
 		}
 	}()
+	// A failed restore marks its target; never serve a partially restored state.
+	if _, e := os.Lstat(filepath.Join(dir, ".restore-incomplete")); !os.IsNotExist(e) {
+		if e != nil {
+			return nil, e
+		}
+		return nil, fmt.Errorf("incomplete restore; use fresh empty restore targets")
+	}
 	for _, name := range []string{"state.db", "state.db-wal", "state.db-shm", "state.db-journal"} {
 		st, e := os.Lstat(filepath.Join(dir, name))
 		if e != nil && !os.IsNotExist(e) {
