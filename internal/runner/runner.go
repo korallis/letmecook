@@ -21,7 +21,7 @@ import (
 
 var (
 	ErrStopped           = errors.New("runner_reconciliation_required")
-	ErrPolicy            = errors.New("runner_local_policy_refused")
+	ErrPolicy            = errors.New("local_policy_denied")
 	ErrExecutionDisabled = errors.New("runner_execution_unqualified")
 )
 

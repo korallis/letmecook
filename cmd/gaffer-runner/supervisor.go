@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -215,6 +217,10 @@ func serve(ctx context.Context, cfg config, out io.Writer) error {
 			return nil
 		case err := <-pollErr:
 			return err
+		case <-s.cancel:
+			// No live attempt owns this target. Its durable observation was already
+			// sent (or remains in its journal); pending cancels cannot block inbox.
+
 		case d := <-assignments:
 			if seen[d.ID] {
 				continue
@@ -290,7 +296,7 @@ func messagesEqual(a, b p.Message) bool {
 	bb, _ := json.Marshal(b)
 	return string(aa) == string(bb)
 }
-func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) error {
+func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error) {
 	if local, e := loadPolicy(s.cfg.Policy); e != nil {
 		return e
 	} else if e = s.probe(ctx, local); e != nil {
@@ -330,12 +336,31 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) error {
 	if input.Harness != s.cfg.Harness {
 		return runner.ErrPolicy
 	}
-	if s.cfg.FakeSpec != "" || s.cfg.BriefFile != "" {
-		return errors.New("local task overrides refused with authenticated daemon input")
-	}
 	if err = r.Enqueue("task_input", input.BriefSHA256, input); err != nil {
 		return err
 	}
+	var repo repositories.Profile
+	data, policyErr := os.ReadFile(s.cfg.RepositoryProfile)
+	if policyErr == nil {
+		policyErr = closedjson.Decode(data, &repo, 65536, nil)
+	}
+	if policyErr == nil {
+		policyErr = repo.Select(d.Facts.Repository)
+	}
+	if policyErr != nil || d.Facts.Repository.RunnerRoot.Root != s.cfg.RepositoryRoot || d.Facts.Repository.RunnerRoot.RunnerID != s.session.RunnerID {
+		refusal := p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "refuse", Identity: d.Assignment.Identity, InReplyTo: d.Assignment.MessageID, Reason: p.LocalPolicyDenied}
+		if _, err := s.message(ctx, r, d.ID, refusal, nil, nil, nil); err != nil {
+			return err
+		}
+		return runner.ErrPolicy
+	}
+	accepted, running, launchAttempted := false, false, false
+	phase, revision := p.Assigned, int64(1)
+	defer func() {
+		if result != nil && accepted && !running {
+			result = errors.Join(result, s.failedLocal(r, d, phase, revision, launchAttempted, result))
+		}
+	}()
 	ack, err := r.Accept(s.options().Session, d)
 	if err != nil {
 		if errors.Is(err, p.StaleGeneration) || errors.Is(err, p.BootMismatch) {
@@ -343,22 +368,12 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) error {
 		}
 		return err
 	}
+	accepted = true
 	if _, err = s.message(ctx, r, d.ID, ack, nil, nil, nil); err != nil {
 		return err
 	}
 	if err = s.lease(ctx, r, d.ID); err != nil {
 		return err
-	}
-	var repo repositories.Profile
-	data, err := os.ReadFile(s.cfg.RepositoryProfile)
-	if err != nil {
-		return err
-	}
-	if err = closedjson.Decode(data, &repo, 65536, nil); err != nil {
-		return err
-	}
-	if d.Facts.Repository.RunnerRoot.Root != s.cfg.RepositoryRoot {
-		return runner.ErrPolicy
 	}
 	checkout, err := repositories.Prepare(ctx, repo, d.Facts.Repository)
 	if err != nil {
@@ -400,9 +415,11 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) error {
 	if err != nil {
 		return err
 	}
+	phase, revision = p.Starting, 2
 	if err = r.StartingAcknowledged(m); err != nil {
 		return err
 	}
+	launchAttempted = true
 	if err = r.Launch(ctx, req); err != nil {
 		return err
 	}
@@ -411,6 +428,7 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) error {
 	if err != nil {
 		return err
 	}
+	running = true
 	spool, err := runstream.CreateSpool(filepath.Join(dir, "spool"), d.Assignment.Identity, s.cfg.SpoolLimit)
 	if err != nil {
 		return err
@@ -521,7 +539,7 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) error {
 	for !finished {
 		select {
 		case <-ctx.Done():
-			return cancelAndDrain(s.expiryCancel(r, d), "supervisor_shutdown")
+			return cancelAndDrain(s.operatorCancel(d), "supervisor_shutdown")
 		case cancel := <-s.cancel:
 			if cancel.Identity == d.Assignment.Identity {
 				return cancelAndDrain(cancel, "cancel")
@@ -682,6 +700,9 @@ func lastNonce(r *runner.Runner) string {
 	}
 	return ""
 }
+func (s *supervisor) operatorCancel(d store.Dispatch) p.Message {
+	return p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: d.Assignment.Identity, StopID: uuid(), RunnerBoot: s.boot, DaemonBoot: s.session.DaemonBoot}
+}
 func (s *supervisor) expiryCancel(r *runner.Runner, d store.Dispatch) p.Message {
 	return p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: d.Assignment.Identity, StopID: w.ExpiryStopID(lastNonce(r)), RunnerBoot: s.boot, DaemonBoot: s.session.DaemonBoot}
 }
@@ -701,7 +722,9 @@ func (s *supervisor) flush(ctx context.Context, spool *runstream.Spool, id strin
 	return nil
 }
 func (s *supervisor) cancelAttempt(ctx context.Context, r *runner.Runner, d store.Dispatch, phase p.AttemptState, revision int64, spool *runstream.Spool, cancel p.Message, cause string, drain func(context.Context) error) error {
-	_ = r.Enqueue("cancel", cancel.MessageID, cancel)
+	if err := r.Enqueue("cancel", cancel.MessageID, cancel); err != nil {
+		return err
+	}
 	_, err := s.transition(ctx, r, d, phase, p.Stopping, revision, w.Evidence{Kind: "stop", Nonce: lastNonce(r)}, cancel.StopID)
 	if err != nil && !execclient.IsFence(err) {
 		return err
@@ -716,10 +739,17 @@ func (s *supervisor) cancelAttempt(ctx context.Context, r *runner.Runner, d stor
 	wait, stopWait := context.WithTimeout(context.Background(), 6*time.Second)
 	defer stopWait()
 	report, ge := r.WaitGuardian(wait)
-	if ge != nil || report.Escaped || !report.PGIDEmpty {
-		return runner.ErrTerminationUnconfirmed
-	}
 	boundary := r.CloseBoundary(wait)
+	if ge != nil || report.Escaped || !report.PGIDEmpty {
+		measurement := rec.Measurement
+		if measurement.RequestedAt.IsZero() {
+			measurement = c.Measurement{RequestedAt: time.Now().UTC(), AcknowledgedAt: time.Now().UTC()}
+		}
+		measurement.ObservedAt = nil
+		measurement.AckToObservedNS = nil
+		_, sendErr := s.containment(ctx, r, d, cancel, "unknown", boundary, measurement, report, cause)
+		return errors.Join(runner.ErrTerminationUnconfirmed, sendErr)
+	}
 	if err := drain(wait); err != nil {
 		return err
 	}
@@ -746,4 +776,59 @@ func (s *supervisor) cancelAttempt(ctx context.Context, r *runner.Runner, d stor
 type cEvidence struct {
 	message     p.Message
 	measurement c.Measurement
+}
+
+// A failed local preparation/start is not permission to wait silently for lease
+// lapse. Retain and send stop evidence even when the daemon needs reconciliation
+// before it can latch a fresh runner-local operator stop ID.
+func (s *supervisor) failedLocal(r *runner.Runner, d store.Dispatch, phase p.AttemptState, revision int64, launchAttempted bool, cause error) error {
+	ctx, cancelContext := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancelContext()
+	cancel := s.operatorCancel(d)
+	if err := r.Enqueue("local_failure", cancel.MessageID+"/failure", map[string]any{"cause": cause.Error(), "launch_attempted": launchAttempted}); err != nil {
+		return err
+	}
+	if err := r.Enqueue("cancel", cancel.MessageID, cancel); err != nil {
+		return err
+	}
+	_, transitionErr := s.transition(ctx, r, d, phase, p.Stopping, revision, w.Evidence{Kind: "stop", Nonce: lastNonce(r)}, cancel.StopID)
+	now := time.Now().UTC()
+	measurement := c.Measurement{RequestedAt: now, AcknowledgedAt: now}
+	confirmed := "not_started"
+	report := runner.GuardianReport{}
+	if launchAttempted {
+		confirmed = "unknown"
+		r.StopGuardian()
+		wait, stop := context.WithTimeout(ctx, 6*time.Second)
+		rep, err := r.WaitGuardian(wait)
+		stop()
+		report = rep
+		if err == nil && rep.PGIDEmpty && !rep.Escaped {
+			if ev, e := r.GuardianEvidence(cancel); e == nil {
+				confirmed = "terminated"
+				measurement = ev.Measurement
+			}
+		}
+	} else {
+		elapsed := int64(0)
+		measurement.ObservedAt = &now
+		measurement.AckToObservedNS = &elapsed
+	}
+	boundary := r.CloseBoundary(ctx)
+	_, err := s.containment(ctx, r, d, cancel, confirmed, boundary, measurement, report, cause.Error())
+	return errors.Join(transitionErr, err)
+}
+func (s *supervisor) containment(ctx context.Context, r *runner.Runner, d store.Dispatch, cancel p.Message, confirmed string, boundary inference.State, measurement c.Measurement, report runner.GuardianReport, cause string) (execclient.MessageReply, error) {
+	body, _ := json.Marshal(struct {
+		Report      runner.GuardianReport
+		Measurement c.Measurement
+		Cause       string
+	}{report, measurement, cause})
+	sum := sha256.Sum256(body)
+	remote := "unknown"
+	if boundary.Quiescent {
+		remote = "quiescent"
+	}
+	message := p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "terminated", Identity: cancel.Identity, StopID: cancel.StopID, RunnerBoot: cancel.RunnerBoot, DaemonBoot: cancel.DaemonBoot, ConfirmedProcess: confirmed, RemoteWork: remote, EvidenceDigest: hex.EncodeToString(sum[:])}
+	return s.message(ctx, r, d.ID, message, nil, &boundary, &measurement)
 }

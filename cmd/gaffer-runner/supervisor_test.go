@@ -1104,3 +1104,123 @@ func TestHarnessReleaseAfterTerminalAndCompleteSpooling(t *testing.T) {
 		})
 	}
 }
+
+func TestGuardianOwnDeadlineWithOpenSupervisorPipe(t *testing.T) {
+	for _, hung := range []bool{false, true} {
+		t.Run(fmt.Sprintf("hung_supervisor=%v", hung), func(t *testing.T) {
+			dir := t.TempDir()
+			spec := runner.LaunchSpec{Argv: []string{"/bin/sleep", "60"}, Env: []string{"PATH=/usr/bin:/bin"}, Cwd: dir, DeadlineMS: 500, GraceMS: 200, KillMS: 1000, Rlimits: runner.ResourceLimits{OpenFiles: 1024, FileBytes: 64 << 20, CPUSeconds: 10}, ReceiptPath: filepath.Join(dir, "guardian.json")}
+			in, write, err := os.Pipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer in.Close()
+			defer write.Close()
+			control, childControl, err := os.Pipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer control.Close()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			cmd := exec.CommandContext(ctx, testBinary, "guardian")
+			cmd.Stdin = in
+			cmd.ExtraFiles = []*os.File{childControl}
+			var stderr bytes.Buffer
+			cmd.Stderr = &stderr
+			if err := cmd.Start(); err != nil {
+				t.Fatal(err)
+			}
+			childControl.Close()
+			t.Cleanup(func() { cmd.Process.Kill() })
+			if hung {
+				body, _ := json.Marshal(spec)
+				parent := exec.Command("/bin/sh", "-c", `printf '%s\n' "$SPEC"; kill -STOP $$`)
+				parent.Env = []string{"PATH=/usr/bin:/bin", "SPEC=" + string(body)}
+				parent.Stdout = write
+				if err := parent.Start(); err != nil {
+					t.Fatal(err)
+				}
+				defer func() { parent.Process.Signal(syscall.SIGCONT); parent.Process.Kill(); parent.Wait() }()
+				write.Close() // only the deliberately hung supervisor retains the pipe
+			} else if err := json.NewEncoder(write).Encode(spec); err != nil {
+				t.Fatal(err)
+			}
+			dec := json.NewDecoder(control)
+			var started runner.GuardianStarted
+			var report runner.GuardianReport
+			if err := dec.Decode(&started); err != nil {
+				t.Fatal(err, stderr.String())
+			}
+			if err := dec.Decode(&report); err != nil {
+				t.Fatal(err, stderr.String())
+			}
+			if err := cmd.Wait(); err != nil {
+				t.Fatal(err, stderr.String())
+			}
+			if report.Cause != "lease_expired" || !report.PGIDEmpty || report.Escaped || report.StopToObservedNS < 0 || report.StopToObservedNS > int64(time.Duration(spec.GraceMS+spec.KillMS)*time.Millisecond) {
+				t.Fatalf("deadline report %+v", report)
+			}
+			if report.StopUnixNS-started.StartUnixNS < int64(450*time.Millisecond) {
+				t.Fatal("deadline stopped early")
+			}
+			if err := syscall.Kill(-started.PGID, 0); !errors.Is(err, syscall.ESRCH) {
+				t.Fatal("group remains", err)
+			}
+			var retained runner.GuardianReport
+			b, err := os.ReadFile(spec.ReceiptPath)
+			if err != nil || json.Unmarshal(b, &retained) != nil || retained != report {
+				t.Fatal("receipt mismatch", err)
+			}
+			t.Logf("independent cutoff %s; stop-to-observed %s", time.Duration(report.StopUnixNS-started.StartUnixNS), time.Duration(report.StopToObservedNS))
+		})
+	}
+}
+
+func TestRepositoryMismatchRefusedBeforeAcceptance(t *testing.T) {
+	for _, mode := range []string{"root", "digest", "base", "remote"} {
+		t.Run(mode, func(t *testing.T) {
+			f := newFixture(t, "noop")
+			local := f.profile
+			switch mode {
+			case "root":
+				f.s.cfg.RepositoryRoot = filepath.Join(f.root, "other")
+			case "digest":
+				local.ProtectedPaths = []string{"new-protected"}
+			case "base":
+				local.Base.Commit = strings.Repeat("b", 40)
+			case "remote":
+				local.Remote = "file:///nonexistent.git"
+			}
+			if err := runner.DurableFile(f.s.cfg.RepositoryProfile, local); err != nil {
+				t.Fatal(err)
+			}
+			if err := f.s.attempt(f.ctx, f.dispatch); !errors.Is(err, runner.ErrPolicy) {
+				t.Fatal(err)
+			}
+			f.d.mu.Lock()
+			defer f.d.mu.Unlock()
+			if f.d.dispatch.Acknowledged || f.d.leaseCount != 0 || contains(f.d.calls, "running") {
+				t.Fatal("mismatch accepted", f.d.calls)
+			}
+			found := false
+			for _, body := range f.d.request {
+				var env w.MessageEnvelope
+				if json.Unmarshal(body, &env) == nil && env.Message.Kind == "refuse" {
+					found = env.Message.Reason == p.LocalPolicyDenied && env.Message.InReplyTo == f.dispatch.Assignment.MessageID
+				}
+			}
+			if !found {
+				t.Fatal("missing local_policy_denied refusal")
+			}
+		})
+	}
+}
+func TestMockGatewayRefusesNonLoopback(t *testing.T) {
+	for _, addr := range []string{"0.0.0.0:0", "[::]:0", "192.0.2.1:0", "localhost:0"} {
+		err := mockGateway(context.Background(), []string{"--listen", addr, "--key-file", "/not-read"}, io.Discard)
+		if err == nil || err.Error() != "mock gateway requires loopback IP" {
+			t.Fatalf("%s: %v", addr, err)
+		}
+	}
+}

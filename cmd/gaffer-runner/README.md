@@ -42,8 +42,7 @@ The runner verifies the task/dispatch/repository/base/harness and the exact gran
 paths/operations. `brief_sha256` must equal the grant's brief digest and SHA-256
 of canonical `{brief,criteria,paths,operations,harness,settings}`, in that order,
 with recursively sorted settings keys. The input is journaled before acceptance.
-`--brief-file` and `--fake-spec` are reserved test overrides and **refused when
-authenticated daemon input is present**; they cannot replace approved input.
+There are no local task override flags; only authenticated approved input is used.
 
 Other flags are `--gateway-config`, `--opencode-bin`, and `--spool-bytes`
 (default 4 MiB, minimum 64 KiB). The standalone S2 build registers only `fake`.

@@ -93,8 +93,8 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 }
 
 type config struct {
-	StateDir, Daemon, Fingerprint, Cert, Key, RepositoryRoot, Isolation, Harness, GatewayConfig, OpenCodeBin, Policy, RepositoryProfile, FakeSpec, BriefFile string
-	SpoolLimit                                                                                                                                               int64
+	StateDir, Daemon, Fingerprint, Cert, Key, RepositoryRoot, Isolation, Harness, GatewayConfig, OpenCodeBin, Policy, RepositoryProfile string
+	SpoolLimit                                                                                                                          int64
 }
 
 func parseConfig(args []string) (config, error) {
@@ -112,8 +112,6 @@ func parseConfig(args []string) (config, error) {
 	f.StringVar(&c.OpenCodeBin, "opencode-bin", "", "pinned adapter binary")
 	f.StringVar(&c.Policy, "policy", "", "trusted local eligibility file")
 	f.StringVar(&c.RepositoryProfile, "repository-profile", "", "trusted local repository profile")
-	f.StringVar(&c.FakeSpec, "fake-spec", "", "trusted synthetic settings/script")
-	f.StringVar(&c.BriefFile, "brief-file", "", "trusted task brief file")
 	f.Int64Var(&c.SpoolLimit, "spool-bytes", 4<<20, "durable stream limit")
 	if err := f.Parse(args); err != nil {
 		return c, err
