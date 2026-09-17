@@ -14,7 +14,7 @@ approval follows from anything committed here.
 | --- | --- |
 | `corpus-v1.json` | S-12: 20 representative sequential tasks across the three repos with deterministic fake-harness edit specs, expected outcomes and per-task trusted-check expectations |
 | `fault-matrix-v1.json` | S-11: expected terminal state, reservation, `remote_work` and invariant assertions for each fault-injection fake mode |
-| `recovery-100-v1.json` | S-13: 100 generated trivial tasks, the 10-SIGKILL restart schedule and the timing/percentile method (30 s old-lease barrier included) |
+| `recovery-100-v1.json` | S-13: 100 generated trivial tasks, the 10-SIGKILL restart schedule and the timing/percentile method (old-lease barrier of 30 s validity plus the 7 s daemon margin included) |
 | `repos/make-repos.sh` | Idempotent bash generator for the three bare git repositories with pinned initial commits and `repo-profile.json` skeletons |
 | `repos/gen-recovery.ts` | Deterministic generator for `recovery-100-v1.json` (Node 24+, no dependencies); re-running must reproduce the committed file byte-for-byte |
 | `check.ts` | Structural validator for everything above; run `node tests/system/fixtures/check.ts` from the repository root |

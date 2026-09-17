@@ -136,7 +136,8 @@
       }
     ],
     "percentiles": "Nearest-rank over the sorted samples: p50 = ceil(0.5*n)-th, p95 = ceil(0.95*n)-th, max = n-th. With n=10, p95 is the 10th (max) sample; reach n>=20 by repeating the cycle.",
-    "old_lease_barrier": "The measured recovery window deliberately includes the 30 s old-lease barrier (lease validity 20 s plus drift/termination margin) whenever a pre-restart lease must lapse before its dispatch is releasable; no timing sample may subtract it.",
+    "timestamp_source": "The daemon events API carries no wall-clock timestamps; the harness records every timestamp from its own clock at the moment it observes the event and stores the event sequence beside it.",
+    "old_lease_barrier": "The measured recovery window deliberately includes the old-lease barrier: the 30 s maximum lease validity window (validity 20 s plus drift/termination margins) plus the daemon's retained 7 s issuance margin, 37 s as observed, whenever a pre-restart lease must lapse before its dispatch is releasable; no timing sample may subtract it.",
     "unknown_is_blocking": "Attempts classified unknown (remote work or process unconfirmed) count as blocking: all_classified is not reached while any attempt is unknown, and such tasks are not counted as recovered."
   },
   "tasks": [
