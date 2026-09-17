@@ -799,11 +799,13 @@ type Reconciliation struct {
 // and failure await real result custody. Reservations release in the same terminal
 // CAS/event transaction, but all committed budget charges remain consumed.
 func (s *Store) ReconcileDispatch(ctx context.Context, actor string, proof Reconciliation) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	if err := validReconciliation(proof); err != nil {
 		return err
 	}
+	unlock := s.sinks().Serialize(proof.Identity.AttemptID)
+	defer unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	tx, err := s.grantTransaction(ctx)
 	if err != nil {
 		return err

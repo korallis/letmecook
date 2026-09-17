@@ -374,3 +374,23 @@ func assertReconcileTerminalStream(t *testing.T, x *executionFixture, records []
 		t.Fatal("new record accepted after terminalization", err)
 	}
 }
+
+func TestIntReview2AppendAdmittedBeforeOwnerReconcileLandsAfter(t *testing.T) {
+	x := executionFixtureFor(t, nil)
+	lease := x.lease(t)
+	x.propose(t, p.Starting, launchIntent(lease.Request.Nonce))
+	x.propose(t, p.Running, launchedEvidence())
+	attempt := x.d.Assignment.Identity.AttemptID
+	stop := stopRequest(c.CancelAttempt, x.d)
+	if _, err := x.s.RequestStop(ctx, x.owner, stop); err != nil {
+		t.Fatal(err)
+	}
+	x.propose(t, p.Stopping, RuntimeEvidence{Kind: "stop"})
+	_, revision := attemptRow(t, x.s, attempt)
+	proof := Reconciliation{DispatchID: x.d.ID, Identity: x.d.Assignment.Identity, ExpectedRevision: revision, To: p.Cancelled, ConfirmedProcess: "terminated", RemoteWork: "quiescent", LaunchFenced: true, ArtifactsPreserved: true, EvidenceDigest: strings.Repeat("b", 64)}
+	records := spooledRecords(t, x.d.Assignment.Identity, "late")
+	if err := appendBeforeReconcile(t, &x, records, 1, func() error { return x.s.ReconcileDispatch(ctx, x.owner, proof) }); err != nil {
+		t.Fatal(err)
+	}
+	assertReconcileTerminalStream(t, &x, records)
+}
