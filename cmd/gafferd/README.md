@@ -131,9 +131,14 @@ with their evidence, leases (refusals fenced first), stream records (fsync per
 record under `<state-dir>/streams/<attempt_id>.sink`), staged blobs
 (`<artifacts-dir>/upload/<upload_id>/`), custody and the one finalize
 transaction (terminal CAS, event, release and result head). While
-`daemon_state.paused` is set the inbox delivers nothing new and leases, forward
-transitions and finalization are refused `paused`; stops, termination evidence,
-streams, refusals and usage still land so a paused daemon drains evidence. The
+`daemon_state.paused` is set the inbox delivers nothing new and acknowledgements,
+leases, forward transitions and finalization are refused `paused`; stops,
+termination evidence, streams, refusals and usage still land so a paused daemon
+drains evidence. A session sees and acknowledges only dispatches admitted under
+its own runner boot and the eligibility revision its hello cited. Every
+state-changing runner request is keyed by its `message_id`: an identical
+request replays the retained response, a changed one is refused
+`identity_conflict` and never applied. The
 routes are development evidence for the M1 development profile, not a supported
 runtime, and grant no acceptance, publication or merge authority.
 

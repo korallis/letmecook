@@ -142,8 +142,22 @@ selected ALPN read from the connection is what the store checks with
 | `POST /attempts/{id}/finalize` | `Completion{version, message_id, receipt_id, stream{through, digest}, exit{code, pgid, observed_unix_ns}, boundary}` → `{outcome, released}` | CAS, terminal event, `dispatch_releases` and result head in one transaction (section 5) |
 | `POST /usage` | `Usage{version, message_id, identity, receipts[]}` → `{outcome:"recorded"}` | `attempt_usage` upsert per `request_id`; a terminal receipt supersedes its reservation and is never regressed |
 
+Every runner request that changes state is keyed by its `message_id` under one
+replay rule: the daemon retains, in the transaction that applied the request,
+the digest of the canonical request and the response it earned (per route and
+`message_id`, in `runtime_observations` of kind `receipt`). An identical request
+replays the retained response byte for byte; a changed request under the same
+`message_id` is 409 `identity_conflict` and is never applied. For
+`POST /messages` the envelope's `message_id` must equal `message.message_id`
+(else 409 `identity_conflict`): one identity per runner message, shared by
+receipts, fences and events. A lease request with a retained `nonce` replays its
+original `lease_reply` before any timing check and is never extended; a changed
+request under a retained nonce is `identity_conflict`.
+
 `POST /messages` by `message.kind`: `accept` → `AcknowledgeAssignment` →
-`{outcome:"acknowledged"}`; `refuse` (in reply to the assignment, before
+`{outcome:"acknowledged"}` (refused `paused` while the daemon is paused and
+`boot_mismatch` / `reconciliation_required` unless the dispatch was admitted
+under the session's runner boot and eligibility revision); `refuse` (in reply to the assignment, before
 acknowledgement) → `runtime_observations(kind:"refused")` →
 `{outcome:"recorded"}`; `transition` → `ProposeTransition`; `terminated` →
 `ReportTermination`. Transition proposals carry `evidence` whose kind and fields
@@ -168,7 +182,8 @@ returns it again, an unequal replay under the same `message_id` is
 `runtime_observations` in the same transaction.
 
 `terminated` validates the evidence exactly as the owner import does (target,
-boots, measurement) and releases the reservation to `cancelled` (or `expired`
+boots, measurement), binds the reported boundary to the message (a later
+boundary observation needs a new `message_id`) and releases the reservation to `cancelled` (or `expired`
 for a `lease_expired` stop) only when the reported boundary is settled
 (`quiescent`, no in-flight requests, reservations equal to terminal receipts),
 `remote_work` is `quiescent`, `confirmed_process` is `terminated` or
@@ -178,6 +193,12 @@ is the release actor. Otherwise the observation is retained and the reply is
 `ExpiryStopID(last lease nonce)` first latches the `lease_expired` cancel under
 actor `lease-clock`. Evidence carrying another daemon or runner boot is retained
 in `runtime_observations` for reconcile (`{outcome:"retained"}`), never promoted.
+A report with `confirmed_process: unknown` (containment not confirmable:
+detached child, EPERM, escape) carries no observation timestamp, is retained in
+`runtime_observations` only and replies `{outcome:"observed", released:false}`;
+the cancel stays pending and a later confirmed report under a new `message_id`
+may still release. A `refuse` with reason `local_policy_denied` before
+acceptance is recorded like every other refusal.
 
 Lease service: the daemon builds `lease_reply{nonce, boots, validity_ms 20000}`
 (its `message_id` is derived from the nonce; the closed `lease_reply` field set
@@ -385,25 +406,33 @@ an inventory over 256 MiB (413 `oversized`), replays by `message_id`, reuses an
 open session for the same manifest and refuses a second manifest for the
 attempt (`identity_conflict`). Each `PUT` streams exactly the promised length
 into a temp file while hashing, fsyncs, renames to the digest name and fsyncs
-the directory before the row is marked staged and committed; a short, long or
+the directory before the row is marked staged and committed; every staging
+operation runs through an `os.Root` on the artifacts directory and refuses a
+symbolic link at `upload/` or `upload/<upload_id>`, so no byte can be written
+or read outside staging; a short, long or
 mismatching body removes the temp file (422 `digest_mismatch`) and leaves the
 digest missing. Bytes are charged per attempt across every upload session
 before they are stored. `CommitUpload` refuses while any digest is missing or
-no longer verifies (409 `upload_incomplete` naming up to 32 digests), otherwise
-hands the staged files to `CustodyResult`, then marks the session committed;
+no longer verifies (409 `upload_incomplete` naming up to 32 digests), matches
+retained custody only by the full attempt identity and the exact manifest tuple
+(a manifest id bound to another attempt is 409 `identity_conflict`, never a
+replay of that attempt's receipt), otherwise hands the staged files to
+`CustodyResult`, then marks the session committed;
 the acknowledgement is deterministic in the receipt, so a reply lost before or
 after the session mark is replayed byte-identically, including after a restart.
 `FinalizeAttempt` accepts only a non-quarantined receipt of the current
 generation and identity, a retained `exit` observation equal to the claimed
-exit, a settled boundary, a claimed stream watermark no later than the sink's
-with an equal chain digest, no latched stop (409 `stop_latched`), a live grant,
+exit whose `stream_through` equals the claimed watermark, a settled boundary, a
+sink watermark equal to that claim with an equal chain digest (nothing streamed
+after the exit, nothing attested beyond the sink), no latched stop (409 `stop_latched`), a live grant,
 current boots and an unpaused daemon (409 `paused`); anything less is 409
 `reconciliation_required`. It then moves `result_pending` to the manifest's
 outcome, records the terminal event `dispatchID(receipt_id, "terminal")`, the
 `dispatch_releases` row (actor: runner principal), `tasks.state`
 `awaiting_review` or `reconciling` and, on success, the `artifact_result_heads`
 head in one transaction. A finalized attempt replays the same reply for the same
-receipt. Once a head exists, only that attempt's manifest can be selected or
+`message_id` and completion, and for a new `message_id` only when the completion
+attests the retained one; anything changed is `identity_conflict`. Once a head exists, only that attempt's manifest can be selected or
 accepted for verification. A crash between custody and finalize leaves a receipt
 with no terminal event for reconcile to complete from the stored evidence;
 nothing reruns. These are development-evidence obligations under O6, proven by
