@@ -319,7 +319,9 @@ function verifyHost(p: Profile) {
   assert.equal(read('/proc/1/comm'), 'systemd');
   assert.equal(fs.statfsSync('/sys/fs/cgroup').type, 0x63677270);
   for (const name of ['cpu', 'memory', 'pids']) assert.ok(read('/sys/fs/cgroup/cgroup.controllers').split(' ').includes(name));
-  assert.ok(fs.existsSync('/sys/fs/cgroup/cgroup.kill'));
+  // cgroup.kill is deliberately absent on the unified root; probe the frozen
+  // non-root controller slice without writing to its kill control.
+  assert.ok(fs.existsSync(`${CONTROLLER_GROUP}/cgroup.kill`), 'non-root cgroup.kill unavailable');
   // Disposable host only: do not stop Docker, inspect private configuration, or repair it.
   for (const path of ['/usr/bin/docker', '/usr/local/bin/docker', '/usr/bin/dockerd', '/usr/bin/containerd', '/run/docker.sock', '/var/run/docker.sock', '/run/containerd/containerd.sock', '/opt/docker-desktop', '/usr/lib/docker', '/var/lib/docker']) assert.ok(!fs.existsSync(path), `Docker-free prerequisite failed: ${path}`);
   assert.ok(!/docker|containerd/i.test(command('/usr/bin/systemctl', ['list-units', '--all', '--no-pager', '--no-legend'])));
