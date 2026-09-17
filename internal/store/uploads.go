@@ -87,29 +87,88 @@ type uploadRow struct {
 
 func (s *Store) uploadDir(id string) string { return filepath.Join(s.artifacts, "upload", id) }
 
-// uploadRel is the staging directory of one upload relative to the artifacts root.
-func uploadRel(id string) string { return "upload/" + id }
-
-// artifactRoot opens the artifacts directory as an os.Root so every staging
-// operation is confined to it: a path component that resolves outside the root
-// is refused by the root itself, and stagingDir refuses symbolic links inside it.
-func (s *Store) artifactRoot() (*os.Root, error) {
-	return os.OpenRoot(s.artifacts)
+// pinned opens name inside parent as its own root and proves it is the real
+// directory at that moment (not a symbolic link): the opened handle is compared
+// with the lstat of the path. Everything done through the returned root then
+// targets that directory even if the path is replaced by a link later, so no
+// destructive operation can be redirected inside or outside the artifacts root.
+func pinned(parent *os.Root, name string) (*os.Root, error) {
+	dir, err := parent.OpenRoot(name)
+	if err != nil {
+		return nil, err
+	}
+	info, err := parent.Lstat(name)
+	if err != nil {
+		dir.Close()
+		return nil, err
+	}
+	opened, err := dir.Stat(".")
+	if err != nil {
+		dir.Close()
+		return nil, err
+	}
+	if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() || !os.SameFile(info, opened) {
+		dir.Close()
+		return nil, g.Deny("corrupt_record", "upload_staging")
+	}
+	return dir, nil
 }
 
-// stagingDir requires upload/ and upload/<id> to be real directories owned by
-// this process, never symbolic links, before any byte is read or written there.
-func stagingDir(root *os.Root, id string) error {
-	for _, name := range []string{"upload", uploadRel(id)} {
-		info, err := root.Lstat(name)
-		if err != nil {
-			return err
-		}
-		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-			return g.Deny("corrupt_record", "upload_staging")
+// stagingRoots are the pinned artifacts, upload/ and upload/<id> directories.
+type stagingRoots struct{ root, upload, stage *os.Root }
+
+func (r *stagingRoots) Close() {
+	for _, dir := range []*os.Root{r.stage, r.upload, r.root} {
+		if dir != nil {
+			dir.Close()
 		}
 	}
-	return nil
+}
+
+// openStaging pins <artifacts>/upload/<id>. With create it makes upload/ and a
+// fresh upload/<id> (a stale directory from a crashed earlier begin is removed
+// through the pinned upload/ handle; a link in its place is refused untouched).
+func (s *Store) openStaging(id string, create bool) (_ *stagingRoots, err error) {
+	r := &stagingRoots{}
+	defer func() {
+		if err != nil {
+			r.Close()
+		}
+	}()
+	if r.root, err = os.OpenRoot(s.artifacts); err != nil {
+		return nil, err
+	}
+	if create {
+		if err := r.root.Mkdir("upload", 0700); err != nil && !errors.Is(err, os.ErrExist) {
+			return nil, err
+		}
+	}
+	if r.upload, err = pinned(r.root, "upload"); err != nil {
+		return nil, err
+	}
+	if create {
+		if err := s.step("after_staging_pin"); err != nil {
+			return nil, err
+		}
+		info, err := r.upload.Lstat(id)
+		if err == nil {
+			if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
+				return nil, g.Deny("corrupt_record", "upload_staging")
+			}
+			if err := r.upload.RemoveAll(id); err != nil {
+				return nil, err
+			}
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		if err := r.upload.Mkdir(id, 0700); err != nil {
+			return nil, err
+		}
+	}
+	if r.stage, err = pinned(r.upload, id); err != nil {
+		return nil, err
+	}
+	return r, nil
 }
 
 func syncRooted(root *os.Root, name string) error {
@@ -275,6 +334,19 @@ func (s *Store) BeginUpload(ctx context.Context, fingerprint, session, attemptID
 	if total > MaxUploadBytes {
 		return UploadSession{}, p.Oversized
 	}
+	// A retained session for this message id replays before any admission check
+	// for a new one, whatever the attempt's state has become since.
+	id := dispatchID(begin.MessageID, "upload")
+	old, err := loadUpload(ctx, tx, id)
+	if err == nil {
+		if old.AttemptID != attemptID || old.RunnerID != who.ID || old.ManifestID != want.ManifestID || old.ManifestSHA256 != want.SHA256 || !reflect.DeepEqual(old.Result, result) {
+			return UploadSession{}, p.IdentityConflict
+		}
+		return uploadView(ctx, tx, old)
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return UploadSession{}, err
+	}
 	stale := identity.Generation != s.meta.Generation
 	if !stale {
 		state, _, err := attemptState(ctx, tx, attemptID)
@@ -292,17 +364,6 @@ func (s *Store) BeginUpload(ctx context.Context, fingerprint, session, attemptID
 		return UploadSession{}, p.IdentityConflict
 	}
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return UploadSession{}, err
-	}
-	id := dispatchID(begin.MessageID, "upload")
-	old, err := loadUpload(ctx, tx, id)
-	if err == nil {
-		if old.AttemptID != attemptID || old.RunnerID != who.ID || old.ManifestID != want.ManifestID || old.ManifestSHA256 != want.SHA256 || !reflect.DeepEqual(old.Result, result) {
-			return UploadSession{}, p.IdentityConflict
-		}
-		return uploadView(ctx, tx, old)
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
 		return UploadSession{}, err
 	}
 	rows, err := tx.QueryContext(ctx, "SELECT id,manifest_sha256,state FROM upload_sessions WHERE attempt_id=? ORDER BY created_ms", attemptID)
@@ -337,36 +398,12 @@ func (s *Store) BeginUpload(ctx context.Context, fingerprint, session, attemptID
 		}
 		return uploadView(ctx, tx, row)
 	}
-	root, err := s.artifactRoot()
+	st, err := s.openStaging(id, true)
 	if err != nil {
 		return UploadSession{}, err
 	}
-	defer root.Close()
-	rel := uploadRel(id)
-	// Nothing is removed or created until every existing component is a real
-	// directory: a symbolic link anywhere here is refused untouched.
-	for _, name := range []string{"upload", rel} {
-		info, err := root.Lstat(name)
-		if errors.Is(err, os.ErrNotExist) {
-			break
-		}
-		if err != nil {
-			return UploadSession{}, err
-		}
-		if info.Mode()&os.ModeSymlink != 0 || !info.IsDir() {
-			return UploadSession{}, g.Deny("corrupt_record", "upload_staging")
-		}
-	}
-	if err := root.RemoveAll(rel); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return UploadSession{}, err
-	}
-	if err := root.MkdirAll(rel, 0700); err != nil {
-		return UploadSession{}, err
-	}
-	if err := stagingDir(root, id); err != nil {
-		return UploadSession{}, err
-	}
-	f, err := root.OpenFile(rel+"/manifest.json", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	defer st.Close()
+	f, err := st.stage.OpenFile("manifest.json", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return UploadSession{}, err
 	}
@@ -374,7 +411,7 @@ func (s *Store) BeginUpload(ctx context.Context, fingerprint, session, attemptID
 	if err = errors.Join(err, f.Sync(), f.Close()); err != nil {
 		return UploadSession{}, err
 	}
-	if err := errors.Join(syncRooted(root, rel), syncRooted(root, "upload"), syncRooted(root, ".")); err != nil {
+	if err := errors.Join(syncRooted(st.stage, "."), syncRooted(st.upload, "."), syncRooted(st.root, ".")); err != nil {
 		return UploadSession{}, err
 	}
 	if _, err := tx.ExecContext(ctx, "INSERT INTO upload_sessions VALUES(?,?,?,?,?,?,?,'open',0,?)", id, attemptID, who.ID, want.ManifestID, want.SHA256, want.Bytes, controlJSON(result), time.Now().UnixMilli()); err != nil {
@@ -431,14 +468,13 @@ func (s *Store) blobAdmit(ctx context.Context, fingerprint, session, uploadID, d
 		return uploadRow{}, 0, false, g.Deny("digest_mismatch", "length")
 	}
 	if state != "missing" {
-		root, err := s.artifactRoot()
-		if err != nil {
-			return uploadRow{}, 0, false, err
-		}
-		verified := stagingDir(root, uploadID) == nil && verifyRooted(root, uploadRel(uploadID)+"/"+digest, ArtifactBlob{SHA256: digest, Bytes: want}) == nil
-		root.Close()
-		if verified {
-			return row, want, true, nil
+		st, err := s.openStaging(uploadID, false)
+		if err == nil {
+			verified := verifyRooted(st.stage, digest, ArtifactBlob{SHA256: digest, Bytes: want}) == nil
+			st.Close()
+			if verified {
+				return row, want, true, nil
+			}
 		}
 	}
 	used, err := attemptUploadBytes(ctx, tx, row.AttemptID)
@@ -455,18 +491,13 @@ func (s *Store) blobAdmit(ctx context.Context, fingerprint, session, uploadID, d
 // fsyncs, and only then renames the file to its digest name and fsyncs the
 // directory. A short, long or mismatching body removes the temp file.
 func (s *Store) stageBlob(uploadID, digest string, body io.Reader, want int64) error {
-	root, err := s.artifactRoot()
+	st, err := s.openStaging(uploadID, false)
 	if err != nil {
 		return err
 	}
-	defer root.Close()
-	if err := stagingDir(root, uploadID); err != nil {
-		return err
-	}
-	rel := uploadRel(uploadID)
-	final := rel + "/" + digest
-	tmp := final + ".part-" + newID()
-	f, err := root.OpenFile(tmp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	defer st.Close()
+	tmp := digest + ".part-" + newID()
+	f, err := st.stage.OpenFile(tmp, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
@@ -477,19 +508,19 @@ func (s *Store) stageBlob(uploadID, digest string, body io.Reader, want int64) e
 	err = errors.Join(f.Sync(), f.Close())
 	mismatch := copyErr != nil || n != want || !errors.Is(probeErr, io.EOF) || hex.EncodeToString(h.Sum(nil)) != digest
 	if err != nil || mismatch {
-		removeErr := root.Remove(tmp)
+		removeErr := st.stage.Remove(tmp)
 		if err != nil {
 			return errors.Join(err, removeErr)
 		}
 		return g.Deny("digest_mismatch", "bytes")
 	}
 	if err := s.step("after_blob_fsync"); err != nil {
-		return errors.Join(err, root.Remove(tmp))
+		return errors.Join(err, st.stage.Remove(tmp))
 	}
-	if err := root.Rename(tmp, final); err != nil {
-		return errors.Join(err, root.Remove(tmp))
+	if err := st.stage.Rename(tmp, digest); err != nil {
+		return errors.Join(err, st.stage.Remove(tmp))
 	}
-	return syncRooted(root, rel)
+	return syncRooted(st.stage, ".")
 }
 
 // blobStaged marks a durably staged blob and charges its bytes to the attempt.
@@ -520,12 +551,12 @@ func (s *Store) blobStaged(ctx context.Context, fingerprint, session, uploadID, 
 		return false, err
 	}
 	if used+want > MaxUploadBytes {
-		root, err := s.artifactRoot()
+		st, err := s.openStaging(uploadID, false)
 		if err != nil {
 			return false, err
 		}
-		defer root.Close()
-		return false, errors.Join(p.Oversized, root.Remove(uploadRel(uploadID)+"/"+digest))
+		defer st.Close()
+		return false, errors.Join(p.Oversized, st.stage.Remove(digest))
 	}
 	if _, err := tx.ExecContext(ctx, "UPDATE upload_blobs SET state='staged' WHERE upload_id=? AND digest=?", uploadID, digest); err != nil {
 		return false, err
@@ -714,18 +745,14 @@ func (s *Store) CommitUpload(ctx context.Context, fingerprint, session, uploadID
 	if len(missing) > 0 {
 		return CommitReply{}, incomplete(missing)
 	}
-	root, err := s.artifactRoot()
+	st, err := s.openStaging(uploadID, false)
 	if err != nil {
 		return CommitReply{}, err
 	}
-	defer root.Close()
-	if err := stagingDir(root, uploadID); err != nil {
-		return CommitReply{}, err
-	}
-	rel := uploadRel(uploadID)
+	defer st.Close()
 	var broken []string
 	for _, b := range staged {
-		if err := verifyRooted(root, rel+"/"+b.SHA256, b); err != nil {
+		if err := verifyRooted(st.stage, b.SHA256, b); err != nil {
 			broken = append(broken, b.SHA256)
 		}
 	}
@@ -735,14 +762,14 @@ func (s *Store) CommitUpload(ctx context.Context, fingerprint, session, uploadID
 		}
 		return CommitReply{}, incomplete(broken)
 	}
-	info, err := root.Lstat(rel + "/manifest.json")
+	info, err := st.stage.Lstat("manifest.json")
 	if err != nil {
 		return CommitReply{}, err
 	}
 	if !info.Mode().IsRegular() {
 		return CommitReply{}, g.Deny("corrupt_record", "upload_manifest")
 	}
-	manifest, err := root.ReadFile(rel + "/manifest.json")
+	manifest, err := st.stage.ReadFile("manifest.json")
 	if err != nil {
 		return CommitReply{}, err
 	}
@@ -771,6 +798,6 @@ func (s *Store) CommitUpload(ctx context.Context, fingerprint, session, uploadID
 	}
 	// Custody holds verified copies and the receipt replays from metadata, so
 	// the staging directory is disposable; its removal is best effort.
-	_ = root.RemoveAll(rel)
+	_ = st.upload.RemoveAll(uploadID)
 	return CommitReply{Ack: custody.Ack, Receipt: custody.Receipt, Quarantined: custody.Quarantined}, nil
 }
