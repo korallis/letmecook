@@ -76,3 +76,27 @@ func TestParserRejectsAmbiguousEventsAndBoundsRaw(t *testing.T) {
 		t.Fatal("tool request not normalized")
 	}
 }
+
+func TestParserAcceptsNullableDataWithoutInventingUsage(t *testing.T) {
+	for _, raw := range []string{
+		`{"type":"tool_use","timestamp":1,"part":{"tool":"lookup","state":{"status":"completed","output":{"result":null,"items":[null,{"value":null}]}},"schema":{"default":null,"enum":[null,"ok"]}}}`,
+		`{"type":"step_finish","part":{"reason":"stop","tokens":{"input":null,"output":1},"future":null}}`,
+		`{"type":"step_finish","part":{"reason":"stop","tokens":{"output":1}}}`,
+		`{"type":"future_event","future":[null,{"anything":null}]}`,
+	} {
+		event, err := ParseEvent([]byte(raw))
+		if err != nil || event.Usage != nil || string(event.Raw) != raw {
+			t.Fatal("nullable data refused, rewritten or claimed as usage", err)
+		}
+	}
+	for _, raw := range []string{
+		`{"type":null}`, `{"type":"text","timestamp":null}`, `{"type":"text","timestamp":253402300800000}`,
+		`{"type":"tool_use","part":{"tool":null,"state":{"status":"running"}}}`,
+		`{"type":"tool_use","part":{"tool":"lookup","state":{"status":null}}}`,
+		`{"type":"text","part":{"output":{"x":null,"x":1}}}`,
+	} {
+		if _, err := ParseEvent([]byte(raw)); err == nil {
+			t.Fatal("interpreted null, invalid timestamp or nested duplicate accepted")
+		}
+	}
+}

@@ -63,9 +63,17 @@ the durable request-reservation budget receives 429 `budget_exhausted`.
 The scope must be a subset of the gateway's canonical protocol/model allowlists,
 with a current-shaped execution identity and positive local bounds. Request JSON
 is UTF-8, duplicate-free, nesting/size bounded and closed at the protocol envelope;
-provider tool arguments remain data. The model is an exact allowlist member and
+provider tool arguments, schemas and nullable fields remain data. The owned
+`protocoljson` validator preserves structural `closedjson` checks while allowing
+null data at any depth; control-wire decoding is unchanged. `model`, `stream` and
+`background` are separately checked, so null never weakens routing authority.
+The model is an exact allowlist member and
 the request bytes are not rewritten. Responses `background:true` is refused:
 acknowledging asynchronous upstream work is not synchronous completion.
+
+OpenCode 1.18.31 issues at least two gateway requests per observed run (the first
+without tools). Its attempt `Scope.Limits.Requests` must therefore be at least 2;
+this is an integration allowance, not permission for the boundary to raise caps.
 
 Forwarding uses a fresh header set: JSON/stream negotiation, a fixed user agent,
 and only the injected gateway credential (Bearer for OpenAI-compatible protocols,
@@ -91,6 +99,10 @@ Anthropic cache-read/cache-creation input counts are included in prompt totals.
 Responses streams require a matching terminal response status; Messages streams
 require `message_stop`; Chat streams require `[DONE]`. Premature SSE EOF, truncated
 bodies, response-byte overflow, async status and transport timeout remain unknown.
+Response-byte overflow or a non-EOF read failure aborts the local HTTP response
+rather than returning a clean-looking truncated body. Nullable unrelated fields
+do not erase observed usage or terminal status. Null/malformed usage in a known
+terminal Responses result is terminal with unknown usage, not unknown remote work.
 
 `Receipt.Source == "gateway_usage"` means **both** prompt and completion token
 counts were observed. `gateway_usage_unknown` means absent, incomplete or rejected
@@ -100,7 +112,8 @@ not prompts, response text, credentials, tokens, paths, accounts or endpoint URL
 Usage is observational, not billing or provider-output enforcement.
 
 Worker disconnect does not cancel upstream work. The boundary drains within its
-original `RequestTimeout`, stops trying to write to a dropped/slow worker, and
+original `RequestTimeout`, stops trying to write to a dropped/slow worker (a
+per-chunk write deadline of min(5 seconds, RequestTimeout)), and
 completes the receipt only if a terminal result is actually observed. Otherwise
 `Reservations != TerminalReceipts`, so `Quiescent` stays false even after
 `InFlight` becomes zero. A completion-journal call has its own bounded timeout so
@@ -134,7 +147,10 @@ GAFFER_LIVE_GATEWAY=1 GAFFER_GATEWAY_CONFIG=/protected/gateway.json \
 Without the explicit environment gate it skips. It prints status/counts/usage
 source only. One authorized run on 17 September 2026 returned status 200, one
 reservation, one terminal receipt and quiescence; usage was classified
-`gateway_usage_unknown`, not asserted zero. This is not conformance evidence for
+`gateway_usage_unknown`, not asserted zero. That historical run preceded the
+nullable-data parsing correction; it was not repeated. Local TLS JSON/SSE tests
+now cover provider null fields alongside nonzero usage for all three protocols.
+This is not conformance evidence for
 provider fallback, cost, cancellation or supported unattended execution.
 
 ## Gateway contract appendix placement

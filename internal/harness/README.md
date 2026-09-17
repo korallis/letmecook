@@ -84,7 +84,7 @@ HOME/XDG prevents ambient user configuration from entering the process.
 ## Mandatory config-isolation gate
 
 `Probe` requires an **empty disposable** workspace and private directories. It
-plants hostile user/repository `opencode.json`, `.opencode/opencode.json`, plugin,
+plants hostile repository `opencode.json`, `.opencode/opencode.json`, plugin,
 MCP configuration, tools, agents, AGENTS/CLAUDE instructions and skill files. It
 runs `--version` and a real JSON-mode run through the supplied launcher against
 its own fake loopback gateway. It verifies:
@@ -95,9 +95,12 @@ its own fake loopback gateway. It verifies:
 - no plugin/MCP execution markers;
 - no literal scoped token in output, config, workspace, caches, logs or database.
 
-The probe never uses the operator gateway. Tests put hostile HOME/XDG/config in
-the ambient environment as well, proving the adapter uses its separate clean
-HOME. A failed probe clears the affected gate and Start remains refused. Failure
+The probe never uses the operator gateway. Its hostile user config is planted
+under `RuntimeDir/hostile-home`, not in the child's `PrivateHome`; it is deliberately
+unreachable under the explicit child HOME/XDG environment. Real-binary tests set
+the parent's HOME/XDG/OPENCODE_CONFIG to that hostile tree, proving ambient values
+are not inherited. This is fresh-HOME isolation, not evidence that OpenCode
+ignores a hostile config inside the HOME it actually receives. A failed probe clears the affected gate and Start remains refused. Failure
 reports contain fixed limitation text, never request bodies or endpoint secrets.
 
 An attempt-specific sandbox cannot know the probe port in advance. A supplied
@@ -129,7 +132,11 @@ kinds and token observations. The first step start is `started`, later starts ar
 activity; pending/running tools are `tool_requested`; stop completion is held
 until process exit and both pipes reach EOF. Nonzero exit cannot become success.
 Approval events are surfaced, not silently bypassed. Token counts include cache
-reads/writes and are labeled `opencode_tokens`, not authoritative billing.
+reads/writes and are labeled `opencode_tokens`, not authoritative billing. Missing
+or null input/output totals remain unknown (no Usage record). Native JSON is
+structurally checked for duplicate keys, invalid UTF-8, excessive nesting and
+trailing values; nullable tool/schema/output data remains data, while interpreted
+labels and JSON-encodable timestamps are validated separately.
 
 Raw JSON is retained up to 48 KiB per event; larger records have an explicit
 bounded truncation envelope. Stderr becomes native events whose Raw is a JSON

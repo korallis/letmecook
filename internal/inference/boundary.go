@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/korallis/letmecook/internal/closedjson"
+	"github.com/korallis/letmecook/internal/inference/protocoljson"
 	p "github.com/korallis/letmecook/schemas/execution"
 )
 
@@ -312,23 +312,24 @@ func (b *boundary) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	parser := newUsageParser(protocol, resp.Header.Get("Content-Type"))
 	controller := http.NewResponseController(w)
-	_ = controller.SetWriteDeadline(time.Now().Add(min(time.Second, b.limits.RequestTimeout)))
+	_ = controller.SetWriteDeadline(time.Now().Add(min(5*time.Second, b.limits.RequestTimeout)))
 	w.Header().Set("Content-Type", safeContentType(resp.Header.Get("Content-Type")))
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(resp.StatusCode)
 	dropped := controller.Flush() != nil
 	buf := make([]byte, 32*1024)
-	terminal := false
+	terminal, aborted := false, false
 	for {
 		n, readErr := resp.Body.Read(buf[:min(int64(len(buf)), b.limits.ResponseBytes-receipt.BytesOut+1)])
 		if n > 0 {
 			receipt.BytesOut += int64(n)
 			if receipt.BytesOut > b.limits.ResponseBytes {
+				aborted = true
 				break
 			}
 			parser.feed(buf[:n])
 			if !dropped && r.Context().Err() == nil {
-				_ = controller.SetWriteDeadline(time.Now().Add(min(time.Second, b.limits.RequestTimeout)))
+				_ = controller.SetWriteDeadline(time.Now().Add(min(5*time.Second, b.limits.RequestTimeout)))
 				_, writeErr := w.Write(buf[:n])
 				dropped = writeErr != nil || controller.Flush() != nil
 			} else {
@@ -338,11 +339,18 @@ func (b *boundary) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if readErr != nil {
 			if readErr == io.EOF {
 				terminal = parser.finish(resp.StatusCode)
+			} else {
+				aborted = true
 			}
 			break
 		}
 	}
 	parser.apply(&receipt)
+	if aborted {
+		// Close/reset the worker response rather than cleanly ending a truncated
+		// body. Deferred upstream close and accounting still run; no completion.
+		panic(http.ErrAbortHandler)
+	}
 	if !terminal {
 		return
 	}
@@ -442,13 +450,11 @@ func requestID() string {
 }
 
 // The protocol envelopes are closed; tool arguments and JSON schemas remain
-// data. closedjson also checks duplicate keys, UTF-8, nesting and trailing data.
+// data, including nulls. Structural validation checks duplicate keys, UTF-8,
+// nesting and trailing data; authority-bearing fields are checked below.
 func requestModel(body []byte, protocol string) (string, error) {
 	var envelope map[string]json.RawMessage
-	nullable := map[string]bool{"content": true, "stop": true, "tool_choice": true, "logprobs": true, "metadata": true, "user": true,
-		"max_tokens": true, "max_completion_tokens": true, "temperature": true, "top_p": true, "seed": true,
-		"response_format": true, "previous_response_id": true, "instructions": true, "parallel_tool_calls": true}
-	if closedjson.Decode(body, &envelope, len(body), nullable) != nil || envelope == nil {
+	if protocoljson.Decode(body, &envelope, len(body)) != nil || envelope == nil {
 		return "", ErrInvalidScope
 	}
 	fields := "model stream metadata temperature top_p tools tool_choice"

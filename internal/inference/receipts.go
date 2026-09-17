@@ -3,9 +3,10 @@ package inference
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/korallis/letmecook/internal/closedjson"
 	"mime"
 	"strings"
+
+	"github.com/korallis/letmecook/internal/inference/protocoljson"
 )
 
 const maxUsageFrame = 1 << 20
@@ -105,21 +106,14 @@ func (u *usageParser) finish(status int) bool {
 		return false
 	}
 	if u.protocol == "responses" {
-		var body struct {
-			Status string `json:"status"`
-		}
-		if json.Unmarshal(u.jsonBody, &body) != nil {
-			return false
-		}
-		return body.Status == "completed" || body.Status == "failed" || body.Status == "incomplete"
+		return u.terminal // Set only by a structurally validated response status.
 	}
 	return true // A fully drained synchronous JSON HTTP result.
 }
 func (u *usageParser) observe(data []byte, event string) {
 	if !(u.protocol == "chat_completions" && bytes.Equal(bytes.TrimSpace(data), []byte("[DONE]"))) {
 		var object map[string]json.RawMessage
-		nullable := map[string]bool{"content": true, "logprobs": true, "finish_reason": true, "stop_reason": true, "stop_sequence": true, "system_fingerprint": true, "service_tier": true, "error": true, "incomplete_details": true, "previous_response_id": true, "instructions": true, "temperature": true, "top_p": true, "metadata": true, "parallel_tool_calls": true, "user": true, "max_output_tokens": true, "top_logprobs": true, "reasoning_effort": true, "effort": true, "summary": true, "encrypted_content": true, "obfuscation": true}
-		if closedjson.Decode(data, &object, maxUsageFrame, nullable) != nil || object == nil {
+		if protocoljson.Decode(data, &object, maxUsageFrame) != nil || object == nil {
 			return
 		}
 	}

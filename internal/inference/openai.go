@@ -17,11 +17,12 @@ func (u *usageParser) openai(data []byte, event string) {
 		Output     *int64 `json:"output_tokens"`
 	}
 	var v struct {
-		Type     string `json:"type"`
-		Usage    *usage `json:"usage"`
+		Type     string          `json:"type"`
+		Status   string          `json:"status"`
+		Usage    json.RawMessage `json:"usage"`
 		Response *struct {
-			Status string `json:"status"`
-			Usage  *usage `json:"usage"`
+			Status string          `json:"status"`
+			Usage  json.RawMessage `json:"usage"`
 		} `json:"response"`
 	}
 	if json.Unmarshal(data, &v) != nil {
@@ -29,6 +30,9 @@ func (u *usageParser) openai(data []byte, event string) {
 	}
 	observed := v.Usage
 	if u.protocol == "responses" {
+		if !u.sse {
+			u.terminal = v.Status == "completed" || v.Status == "failed" || v.Status == "incomplete"
+		}
 		kind := v.Type
 		if kind == "" {
 			kind = event
@@ -41,12 +45,13 @@ func (u *usageParser) openai(data []byte, event string) {
 			observed = v.Response.Usage
 		}
 	}
-	if observed == nil {
-		return
+	var tokens usage
+	if json.Unmarshal(observed, &tokens) != nil {
+		return // Invalid or missing usage does not erase a known terminal result.
 	}
-	prompt, completion := observed.Prompt, observed.Completion
+	prompt, completion := tokens.Prompt, tokens.Completion
 	if u.protocol == "responses" {
-		prompt, completion = observed.Input, observed.Output
+		prompt, completion = tokens.Input, tokens.Output
 	}
 	if validTokens(prompt) {
 		u.prompt, u.havePrompt = *prompt, true

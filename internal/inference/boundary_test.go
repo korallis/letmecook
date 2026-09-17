@@ -323,8 +323,21 @@ func TestRequestCapAndCloseDrain(t *testing.T) {
 	b := boundaryFor(t, s, gateway, &receiptJournal{})
 	first := make(chan int, 1)
 	go func() {
-		status, _ := call(t, b, "POST", "/v1/chat/completions", testToken, `{"model":"model-a"}`)
-		first <- status
+		req, _ := http.NewRequest("POST", "http://"+b.Addr()+"/v1/chat/completions", strings.NewReader(`{"model":"model-a"}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+testToken)
+		resp, err := (&http.Client{Timeout: 5 * time.Second}).Do(req)
+		if err != nil {
+			t.Error(err)
+			first <- 0
+			return
+		}
+		_, err = io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			t.Error(err)
+		}
+		first <- resp.StatusCode
 	}()
 	<-entered
 	status, _ := call(t, b, "POST", "/v1/chat/completions", testToken, `{"model":"model-a"}`)
@@ -401,6 +414,7 @@ func TestIncompleteResponseAndJournalFailuresHoldReservation(t *testing.T) {
 		{name: "unterminated-sse", kind: "text/event-stream", body: "data: {\"usage\":{\"prompt_tokens\":1,\"completion_tokens\":1}}\n\n"},
 		{name: "async-response", kind: "application/json", body: `{"status":"in_progress"}`},
 		{name: "response-cap", kind: "application/json", body: strings.Repeat("x", 100), maxBytes: 10},
+		{name: "upstream-read-error", kind: "application/json", body: `{"usage":{"prompt_tokens":1,"completion_tokens":2}}`},
 		{name: "reserve-failure", kind: "application/json", body: `{}`, failReserve: true},
 		{name: "complete-failure", kind: "application/json", body: `{}`, failComplete: true},
 	} {
@@ -409,6 +423,9 @@ func TestIncompleteResponseAndJournalFailuresHoldReservation(t *testing.T) {
 			gateway := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				calls.Add(1)
 				w.Header().Set("Content-Type", tc.kind)
+				if tc.name == "upstream-read-error" {
+					w.Header().Set("Content-Length", "1000")
+				}
 				io.WriteString(w, tc.body)
 			}))
 			defer gateway.Close()
@@ -422,7 +439,19 @@ func TestIncompleteResponseAndJournalFailuresHoldReservation(t *testing.T) {
 			if tc.name == "async-response" {
 				path = "/v1/responses"
 			}
-			call(t, b, "POST", path, testToken, `{"model":"model-a"}`)
+			req, _ := http.NewRequest("POST", "http://"+b.Addr()+path, strings.NewReader(`{"model":"model-a"}`))
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Authorization", "Bearer "+testToken)
+			resp, err := (&http.Client{Timeout: 5 * time.Second}).Do(req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, readErr := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			mustAbort := tc.name == "response-cap" || tc.name == "upstream-read-error"
+			if (readErr != nil) != mustAbort {
+				t.Fatalf("worker body completion: got error %v, want abort %t", readErr, mustAbort)
+			}
 			state := b.Close(context.Background())
 			if state.Quiescent || state.Reservations != 1 || state.TerminalReceipts != 0 || state.InFlight != 0 {
 				t.Fatalf("uncertain work marked terminal: %+v", state)
@@ -636,5 +665,73 @@ func TestChunkedOversizeAndCloseDeadline(t *testing.T) {
 	<-finished
 	if !boundary.Close(context.Background()).Quiescent {
 		t.Fatal("bounded upstream did not complete after Close deadline")
+	}
+}
+
+func TestNullableProtocolDataAndTerminalAccounting(t *testing.T) {
+	for _, tc := range []struct {
+		name, protocol, content, response string
+		unknown, unresolved               bool
+	}{
+		{"chat-json", "chat_completions", "application/json", `{"choices":[{"message":{"content":null,"reasoning_content":null,"tool_calls":null},"native_finish_reason":null}],"usage":{"prompt_tokens":7,"completion_tokens":3}}`, false, false},
+		{"chat-sse", "chat_completions", "text/event-stream", "data: {\"choices\":[{\"delta\":{\"content\":null,\"reasoning_content\":null,\"tool_calls\":null},\"native_finish_reason\":null}],\"usage\":{\"prompt_tokens\":7,\"completion_tokens\":3}}\n\ndata: [DONE]\n\n", false, false},
+		{"responses-json", "responses", "application/json", `{"status":"completed","max_tool_calls":null,"usage":{"input_tokens":7,"output_tokens":3}}`, false, false},
+		{"responses-sse", "responses", "text/event-stream", "event: response.completed\ndata: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"max_tool_calls\":null,\"usage\":{\"input_tokens\":7,\"output_tokens\":3}}}\n\n", false, false},
+		{"messages-json", "messages", "application/json", `{"type":"message","container":null,"usage":{"input_tokens":7,"output_tokens":3}}`, false, false},
+		{"messages-sse", "messages", "text/event-stream", "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"container\":null,\"usage\":{\"input_tokens\":7,\"output_tokens\":3}}}\n\nevent: message_stop\ndata: {\"type\":\"message_stop\"}\n\n", false, false},
+		{"failed-json-null-usage", "responses", "application/json", `{"status":"failed","usage":null,"max_tool_calls":null}`, true, false},
+		{"failed-sse-null-usage", "responses", "text/event-stream", "event: response.failed\ndata: {\"type\":\"response.failed\",\"response\":{\"status\":\"failed\",\"usage\":null,\"max_tool_calls\":null}}\n\n", true, false},
+		{"incomplete-sse-null-usage", "responses", "text/event-stream", "event: response.incomplete\ndata: {\"type\":\"response.incomplete\",\"response\":{\"status\":\"incomplete\",\"usage\":null}}\n\n", true, false},
+		{"completed-sse-null-usage", "responses", "text/event-stream", "event: response.completed\ndata: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":null}}\n\n", true, false},
+		{"failed-sse-bad-usage", "responses", "text/event-stream", "event: response.failed\ndata: {\"type\":\"response.failed\",\"response\":{\"status\":\"failed\",\"usage\":{\"input_tokens\":\"invalid\"}}}\n\n", true, false},
+		{"duplicate-status-json", "responses", "application/json", `{"status":"in_progress","status":"completed","usage":null}`, true, true},
+		{"duplicate-status-sse", "responses", "text/event-stream", "event: response.completed\ndata: {\"type\":\"response.completed\",\"response\":{\"status\":\"in_progress\",\"status\":\"completed\",\"usage\":null}}\n\n", true, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			// Null schema/default/enum members and arbitrary metadata remain data.
+			request := `{"model":"model-a","stream":true,"tools":[{"type":"function","function":{"name":"lookup","parameters":{"type":"object","properties":{"x":{"default":null,"enum":[null,"ok"]}}}}}],"metadata":{"nested":[null,{"arbitrary":null}]}}`
+			gateway := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				got, _ := io.ReadAll(r.Body)
+				if string(got) != request {
+					t.Error("nullable data was rewritten")
+				}
+				w.Header().Set("Content-Type", tc.content)
+				io.WriteString(w, tc.response)
+			}))
+			defer gateway.Close()
+			sink := &receiptJournal{}
+			b := boundaryFor(t, scopeFor(t, gateway.URL), gateway, sink)
+			status, body := call(t, b, "POST", protocolPaths[tc.protocol], testToken, request)
+			if status != 200 || string(body) != tc.response {
+				t.Fatal("legal nullable data refused or response changed")
+			}
+			state := b.Close(context.Background())
+			_, receipts := sink.snapshot()
+			if tc.unresolved {
+				if state.Quiescent || state.TerminalReceipts != 0 || len(receipts) != 0 {
+					t.Fatal("ambiguous JSON forged terminal result")
+				}
+				return
+			}
+			if !state.Quiescent || state.Reservations != 1 || state.TerminalReceipts != 1 || len(receipts) != 1 {
+				t.Fatal("terminal nullable result not durably completed", state)
+			}
+			r := receipts[0]
+			if tc.unknown {
+				if r.Source != "gateway_usage_unknown" || r.PromptTokens != 0 || r.CompletionTokens != 0 {
+					t.Fatal("unobserved totals represented as known usage")
+				}
+			} else if r.Source != "gateway_usage" || r.PromptTokens != 7 || r.CompletionTokens != 3 {
+				t.Fatal("nullable fields erased observed usage", r)
+			}
+		})
+	}
+}
+
+func TestNullableDataDoesNotRelaxRequestAuthority(t *testing.T) {
+	for _, body := range []string{`{"model":null}`, `{"model":"model-a","stream":null}`, `{"model":"model-a","background":null}`, `{"model":"model-a","background":true}`, `{"model":"model-a","unknown":null}`, `{"model":"model-a","tools":[{"parameters":{"default":null,"default":0}}]}`} {
+		if _, err := requestModel([]byte(body), "responses"); err == nil {
+			t.Fatalf("invalid authority or ambiguous data accepted: %s", body)
+		}
 	}
 }
