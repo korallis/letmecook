@@ -89,8 +89,9 @@ Follow it for local owner commands, HTTPS configuration and runner enrollment.
 
 `schemas/readapi/types.go` / `types.ts` retain `read-provisional-v1`, extending its
 closed mode/schema combinations: `fixture-only` / schema 1, `store-only` / schema 2,
-3, 4, 5, 6, 7 or 8 (current). New persistent opens migrate to 8; clients retain historical
-schema 2/3/4/5/6/7 reads. Schema 8 adds provisional durable stop metadata only; neither response exposes grants,
+3, 4, 5, 6, 7, 8 or 9 (current). New persistent opens migrate to 9; clients retain historical
+schema 2/3/4/5/6/7/8 reads. Schema 8 adds provisional durable stop metadata and schema 9 adds
+provisional verification/local-review metadata only; neither response exposes grants,
 repository profiles or dispatch input records.
 Older strict clients refuse unsupported mode/schema combinations rather than
 misreading persistent state as fixture data.
