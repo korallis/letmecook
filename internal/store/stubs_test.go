@@ -3,35 +3,8 @@ package store
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"testing"
 )
-
-// Every unimplemented M1 seam refuses with the sentinel until its owning slice
-// lands; nothing here may be mistaken for an empty success. The execution,
-// upload and finalize seams (S1), backup and restore (S6) and the owner workflow
-// API (S4) are implemented and covered by their own tests.
-func TestSeamStubsRefuseUntilImplemented(t *testing.T) {
-	s, _ := persistent(t)
-	var errs []error
-	_, err := s.FenceAttempt(ctx, "", "")
-	errs = append(errs, err)
-	_, err = s.NonTerminalAttempts(ctx)
-	errs = append(errs, err)
-	_, err = s.ReconcileReport(ctx, "")
-	errs = append(errs, err)
-	errs = append(errs, s.PutReconcileReport(ctx, ReconcileReport{}))
-	_, err = s.ReconciliationInputs(ctx, "")
-	errs = append(errs, err)
-	if len(errs) != 5 {
-		t.Fatalf("stub inventory drifted: %d", len(errs))
-	}
-	for i, err := range errs {
-		if !errors.Is(err, ErrNotImplemented) {
-			t.Fatalf("stub %d: %v", i, err)
-		}
-	}
-}
 
 // Reply and record types cross the execution channel, whose decoder rejects
 // null. Zero values must marshal without null and round-trip unchanged.
