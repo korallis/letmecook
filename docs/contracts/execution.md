@@ -132,10 +132,10 @@ selected ALPN read from the connection is what the store checks with
 | `POST /session` | `Hello` → `Session{session_id, generation, daemon_boot, runner_id, mode, drift_ms 2000, termination_ms 5000, lease_validity_ms 20000, renew_every_ms 5000, paused}` | `runner_sessions` row; same `message_id` → same row, changed hello → 409 `identity_conflict`. `mode` is `normal` only when the hello cites the runner's latest published eligibility revision and that record carries the hello's `runner_boot`; otherwise `recovery_only` (evidence accepted, nothing delivered). |
 | `GET /state?dispatch_id=` | → `State{attempt_state, revision, acknowledged, released, last_lease, stream{through, expected, bytes}, receipt_id, head, stop_targets[], paused}` | read |
 | `GET /input?dispatch_id=` | → `TaskInput{version, dispatch_id, task_id, repository, base_commit, brief_sha256, brief, criteria[], paths[], operations[], harness, settings}` | read; `brief_sha256` recomputed from the retained brief must equal the stored digest and the grant's `brief.sha256`, else 409 `reconciliation_required` |
-| `GET /inbox?wait_ms≤25000` | → `Inbox{assignments[], cancels[], paused, poll_after_ms}` | `Delivery` commits grant expiry; refused deliveries are logged, never sent; the pending outbox is paged (up to 8 × 128) until a deliverable dispatch is found; long-poll wakes on the daemon's notify hub; a paused daemon or a `recovery_only` session delivers no assignment but still delivers cancels |
+| `GET /inbox?wait_ms≤25000` | → `Inbox{assignments[], cancels[], paused, poll_after_ms}` | `Delivery` commits grant expiry; refused deliveries are logged, never sent; the store selects only dispatches admitted for this runner under the session's eligibility revision and boot (at most 128, bounded by a 48 KiB encoded budget that always offers the first); long-poll wakes on the daemon's notify hub; a paused daemon or a `recovery_only` session delivers no assignment but still delivers cancels |
 | `POST /messages` | `MessageEnvelope{version, message_id, dispatch_id, message, evidence?, boundary?, measurement?}` → `{outcome, message?}` or, for `terminated`, `{outcome, released}` | one transaction per kind (below) |
 | `POST /lease` | `LeaseEnvelope` → `lease_reply` | `control_leases` row; refusals fenced in `control_fenced` and committed before the 409 |
-| `POST /streams/{attempt_id}` | `StreamBatch{version, records[]}` ≤ 64 KiB, contiguous → `StreamAck{through, expected, bytes}` | sink append fsynced per record, serialized with finalization on the store lock; 409 `stream_sequence_gap` / `stream_record_conflict` carry the expected sequence in `detail`; duplicates replay the retained acknowledgement |
+| `POST /streams/{attempt_id}` | `StreamBatch{version, records[]}` ≤ 64 KiB, contiguous → `StreamAck{through, expected, bytes}` | sink append fsynced per record under the attempt's append lock (shared with finalization; the store lock covers only admission); after the attempt is terminal only retained records replay their acknowledgement, new ones are `stale_attempt`; 409 `stream_sequence_gap` / `stream_record_conflict` carry the expected sequence in `detail`; duplicates replay the retained acknowledgement |
 | `POST /attempts/{id}/uploads` | `UploadBegin` → 201 `UploadSession{upload_id, missing[], bytes_allowed}` | manifest file plus `upload_sessions`/`upload_blobs` rows; replay by `message_id` |
 | `PUT /uploads/{id}/blobs/{sha256}` | raw bytes → 201 new / 200 duplicate `{sha256, bytes, duplicate}` | temp file hashed, fsynced, renamed, directory fsynced, row marked staged; 422 `digest_mismatch` removes the temp file; 413 `oversized` over 256 MiB per attempt |
 | `POST /uploads/{id}/commit` | `{version, message_id}` → `CommitReply{ack, receipt, quarantined}` | custody promotion and metadata commit (`CustodyResult`), then the session mark; 409 `upload_incomplete` lists missing digests (at most 32) in `detail`; a lost reply replays the byte-identical acknowledgement |
@@ -190,10 +190,12 @@ for a `lease_expired` stop) only when the reported boundary is settled
 `not_started`, and the attempt is `stopping` or `unknown`; the runner principal
 is the release actor. Otherwise the observation is retained and the reply is
 `{outcome:"observed", released:false}`; a later report under a new
-`message_id` that attests the same or stronger termination (remote_work may
-move from unknown to quiescent) is an observation revision, retained in
-`runtime_observations` and released on its own boundary, while the first
-`control_observations` row stays immutable; different evidence conflicts. A `stop_id` equal to
+`message_id` that attests the same termination and measurement (only
+`remote_work` may move from unknown to quiescent, never back) is an observation
+revision, validated against the strongest revision already accepted, retained
+in `runtime_observations` and released on its own boundary, while the first
+`control_observations` row stays immutable; different evidence conflicts.
+`Store.TerminationView` is the effective (strongest) termination of a stop. A `stop_id` equal to
 `ExpiryStopID(last lease nonce)` first latches the `lease_expired` cancel under
 actor `lease-clock`. Evidence carrying another daemon or runner boot is retained
 in `runtime_observations` for reconcile (`{outcome:"retained"}`), never promoted.
@@ -408,7 +410,8 @@ publication/merge permission.
 
 The provisional custody path over the execution channel is `BeginUpload` →
 `RecordUploadedBlob` per missing digest → `CommitUpload` → `FinalizeAttempt`.
-`BeginUpload` requires a `result_pending` attempt owned by the runner (a
+`BeginUpload` replays a retained session by `message_id` in any attempt state
+and otherwise requires a `result_pending` attempt owned by the runner (a
 stale-generation identity is admitted only so its bytes are retained and
 quarantined at commit), binds `result.identity`, the manifest digest and the
 distinct blob inventory before any byte arrives, refuses a blob over 64 MiB or
@@ -417,9 +420,11 @@ open session for the same manifest and refuses a second manifest for the
 attempt (`identity_conflict`). Each `PUT` streams exactly the promised length
 into a temp file while hashing, fsyncs, renames to the digest name and fsyncs
 the directory before the row is marked staged and committed; every staging
-operation runs through an `os.Root` on the artifacts directory and refuses a
-symbolic link at `upload/` or `upload/<upload_id>`, so no byte can be written
-or read outside staging; a short, long or
+operation runs through `os.Root` handles pinned to the real `upload/` and
+`upload/<upload_id>` directories (an opened handle proven equal to the lstat of
+its path before anything is removed, created, written or read), so a symbolic
+link at either place is refused untouched and a later replacement of the path
+cannot redirect any operation; a short, long or
 mismatching body removes the temp file (422 `digest_mismatch`) and leaves the
 digest missing. Bytes are charged per attempt across every upload session
 before they are stored. `CommitUpload` refuses while any digest is missing or
@@ -437,7 +442,8 @@ sink watermark equal to that claim with an equal chain digest (nothing streamed
 after the exit, nothing attested beyond the sink), no latched stop (409 `stop_latched`), a live grant,
 current boots and an unpaused daemon (409 `paused`); anything less is 409
 `reconciliation_required`. It then moves `result_pending` to the manifest's
-outcome, records the terminal event `dispatchID(receipt_id, "terminal")`, the
+outcome, except that `succeeded` also requires exit code 0 (a manifest claiming
+success over a non-zero exit finalizes `failed` and never becomes the head), records the terminal event `dispatchID(receipt_id, "terminal")`, the
 `dispatch_releases` row (actor: runner principal), `tasks.state`
 `awaiting_review` or `reconciling` and, on success, the `artifact_result_heads`
 head in one transaction. A finalized attempt replays the same reply for the same
