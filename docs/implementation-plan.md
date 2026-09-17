@@ -43,6 +43,7 @@ The #9 record owns the [merged-code snapshot](decisions/0001-execution-foundatio
 [provisional-slice disposition](decisions/0001-execution-foundation.md#provisional-slice-reconciliation)
 and [bounded M1 package plan](decisions/0001-execution-foundation.md#bounded-m1-ownership-and-path-plan).
 Use those boundaries when applying the navigation hints below.
+The [M1 end-to-end integration contract](decisions/0002-m1-end-to-end-integration.md) (#114–#117 with #20, #22, #23, #24) allocates schema 10, the execution channel, supervisor, boundary, owner API and slice ownership that build on it.
 
 Affected GitHub issue-body navigation hints were updated and read back on
 15 September 2026 as follows; outcomes, dependencies, acceptance criteria and
