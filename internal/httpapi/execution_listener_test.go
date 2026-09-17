@@ -217,3 +217,76 @@ func TestExecutionListenerConcurrentHandshakeAndCloseWrite(t *testing.T) {
 		t.Fatal("Close did not interrupt pending peer")
 	}
 }
+
+type observedListener struct {
+	net.Listener
+	accepted chan struct{}
+}
+
+func (l observedListener) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err == nil {
+		l.accepted <- struct{}{}
+	}
+	return c, err
+}
+
+func TestExecutionListenerBoundsPendingHandshakes(t *testing.T) {
+	_, certFile, keyFile := certificate(t, true)
+	cfg, err := i.ExecutionTLS(certFile, keyFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	observed := observedListener{Listener: raw, accepted: make(chan struct{}, 65)}
+	listener := ExecutionListener(observed, cfg, time.Minute).(*executionListener)
+	defer listener.Close()
+	var clients []net.Conn
+	defer func() {
+		for _, c := range clients {
+			c.Close()
+		}
+	}()
+	for range 65 {
+		c, err := net.DialTimeout("tcp", listener.Addr().String(), time.Second)
+		if err != nil {
+			t.Fatal(err)
+		}
+		clients = append(clients, c)
+	}
+	for range 64 {
+		select {
+		case <-observed.accepted:
+		case <-time.After(time.Second):
+			t.Fatal("handshake capacity not reached")
+		}
+	}
+	select {
+	case <-observed.accepted:
+		t.Fatal("more than 64 pending handshakes")
+	case <-time.After(100 * time.Millisecond):
+	}
+	listener.Close()
+	for _, c := range clients[:64] {
+		c.SetReadDeadline(time.Now().Add(time.Second))
+		var b [1]byte
+		if _, err := c.Read(b[:]); err == nil {
+			t.Fatal("pending peer remained open")
+		} else if e, ok := err.(net.Error); ok && e.Timeout() {
+			t.Fatal("pending handshake not closed")
+		}
+	}
+	deadline := time.Now().Add(time.Second)
+	for len(listener.slots) != 0 {
+		if time.Now().After(deadline) {
+			t.Fatal("Close left handshake workers blocked")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if c, err := listener.Accept(); err == nil || c != nil {
+		t.Fatal("closed listener delivered a connection")
+	}
+}

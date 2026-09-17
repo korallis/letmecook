@@ -464,3 +464,23 @@ func TestRawRouteStreamingAndBounds(t *testing.T) {
 		})
 	}
 }
+
+type failedReader struct{}
+
+func (failedReader) Read([]byte) (int, error) { return 0, io.ErrUnexpectedEOF }
+
+func TestRawResponseReadFailureAbortsAndCloses(t *testing.T) {
+	s, owner, _, _ := routeStore(t)
+	body := &observedBody{Reader: io.MultiReader(strings.NewReader("partial"), failedReader{})}
+	h := routeHandler(Deps{Store: s}, Route{Method: "GET", Pattern: "/api/v1/blob", Role: "owner", Handle: func(context.Context, Actor, Request) (any, *Error) { return Response{Status: 200, Body: body}, nil }}, false)
+	w := httptest.NewRecorder()
+	defer func() {
+		if got := recover(); got != http.ErrAbortHandler {
+			t.Fatalf("truncated stream did not abort: %v", got)
+		}
+		if !body.closed || w.Body.String() != "partial" {
+			t.Fatalf("failed stream not closed or appended JSON: closed=%t body=%q", body.closed, w.Body.String())
+		}
+	}()
+	h.ServeHTTP(w, routeRequest(owner, false, "GET", "/api/v1/blob", ""))
+}
