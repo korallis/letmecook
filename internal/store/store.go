@@ -230,7 +230,7 @@ func (s *Store) migrate(ctx context.Context) error {
 			}
 		}
 		version = 1
-	} else if version != 1 && (s.fixture || version != 2 && version != 3 && version != 4 && version != 5 && version != 6 && version != 7 && version != 8) {
+	} else if version != 1 && (s.fixture || version != 2 && version != 3 && version != 4 && version != 5 && version != 6 && version != 7 && version != 8 && version != 9) {
 		return fmt.Errorf("unsupported schema version")
 	}
 	mode := "fixture-only"
@@ -280,6 +280,12 @@ PRAGMA user_version=2;`); err != nil {
 				return err
 			}
 			version = 8
+		}
+		if version == 8 {
+			if _, err = tx.ExecContext(ctx, verificationSchema); err != nil {
+				return err
+			}
+			version = 9
 		}
 		if err = expireGrants(ctx, tx, time.Now().UnixMilli()); err != nil {
 			return err
