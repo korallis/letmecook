@@ -23,6 +23,8 @@ CREATE TABLE task_briefs (
  criteria TEXT NOT NULL CHECK(length(CAST(criteria AS BLOB))<=65536),
  paths TEXT NOT NULL CHECK(length(CAST(paths AS BLOB))<=65536),
  operations TEXT NOT NULL CHECK(length(operations)<=256),
+ harness TEXT NOT NULL CHECK(harness IN ('fake','opencode')),
+ settings TEXT NOT NULL CHECK(length(CAST(settings AS BLOB))<=49152),
  brief_sha256 TEXT NOT NULL CHECK(length(brief_sha256)=64),
  plan_sha256 TEXT NOT NULL CHECK(length(plan_sha256)=64),
  actor TEXT NOT NULL REFERENCES principals(id),
