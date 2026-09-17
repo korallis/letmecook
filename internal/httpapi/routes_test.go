@@ -1,15 +1,19 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -380,6 +384,83 @@ func TestRegistryRejectsLateRegistration(t *testing.T) {
 				}
 			}()
 			Register("late", func(Deps) []Route { return nil })
+		})
+	}
+}
+
+type observedBody struct {
+	io.Reader
+	reads  int
+	closed bool
+}
+
+func (b *observedBody) Read(p []byte) (int, error) { b.reads++; return b.Reader.Read(p) }
+func (b *observedBody) Close() error               { b.closed = true; return nil }
+
+func TestRawRouteStreamingAndBounds(t *testing.T) {
+	isolatedRegistry(t)
+	s, owner, _, _ := routeStore(t)
+	payload := bytes.Repeat([]byte{0, 0xff, 'x'}, 1<<20) // Binary, 3 MiB, not JSON.
+	var input *observedBody
+	var output *observedBody
+	calls := 0
+	Register("workflow", func(Deps) []Route {
+		return []Route{{Method: "POST", Pattern: "/api/v1/blob/{kind}", Role: "owner", Class: Bulk, MaxBody: int64(len(payload)), Raw: true, Handle: func(_ context.Context, _ Actor, r Request) (any, *Error) {
+			calls++
+			if r.Body != nil || r.BodyReader == nil || input.reads != 0 {
+				t.Fatal("raw request buffered before Handle")
+			}
+			got, err := io.ReadAll(r.BodyReader)
+			if r.Path["kind"] == "oversized" {
+				var limit *http.MaxBytesError
+				if !errors.As(err, &limit) || len(got) != len(payload) {
+					t.Fatalf("unbounded raw body: %d %v", len(got), err)
+				}
+				return nil, &Error{413, "oversized", ""}
+			}
+			if err != nil || !bytes.Equal(got, payload) {
+				t.Fatalf("streamed request mismatch: %d %v", len(got), err)
+			}
+			var body any = payload
+			if r.Path["kind"] == "reader" {
+				output = &observedBody{Reader: bytes.NewReader(payload)}
+				body = output
+			}
+			return Response{Status: 200, Body: body, Header: http.Header{"Content-Type": []string{"application/x-artifact"}, "Content-Length": []string{strconv.Itoa(len(payload))}}}, nil
+		}}}
+	})
+	h, err := NewTLS(s, "https://127.0.0.1:7444")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, kind := range []string{"bytes", "reader", "oversized", "declared-oversized"} {
+		t.Run(kind, func(t *testing.T) {
+			r := routeRequest(owner, false, "POST", "/api/v1/blob/"+kind, "")
+			data := payload
+			if strings.Contains(kind, "oversized") {
+				data = append(append([]byte(nil), payload...), 'x')
+			}
+			input = &observedBody{Reader: bytes.NewReader(data)}
+			r.Body, r.ContentLength = input, -1 // Unknown length must still be bounded.
+			if kind == "declared-oversized" {
+				r.ContentLength = int64(len(data))
+			}
+			before := calls
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			if strings.Contains(kind, "oversized") {
+				assertRouteError(t, w, 413, "oversized")
+				if kind == "declared-oversized" && (calls != before || input.reads != 0) {
+					t.Fatal("declared oversize entered handler")
+				}
+				return
+			}
+			if w.Code != 200 || !bytes.Equal(w.Body.Bytes(), payload) || w.Header().Get("Content-Type") != "application/x-artifact" || w.Header().Get("Content-Length") != strconv.Itoa(len(payload)) {
+				t.Fatalf("raw response mismatch: %d %d", w.Code, w.Body.Len())
+			}
+			if kind == "reader" && (!output.closed || output.reads == 0) {
+				t.Fatal("response reader not consumed and closed")
+			}
 		})
 	}
 }

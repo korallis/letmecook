@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -40,16 +41,18 @@ type Route struct {
 	Method, Pattern, Role string
 	Class                 Class
 	MaxBody               int64
+	Raw                   bool // Stream the bounded request through Request.BodyReader.
 	Handle                func(context.Context, Actor, Request) (any, *Error)
 }
 type Actor struct{ Fingerprint, Role, ID string }
 type Request struct {
-	Query    url.Values
-	Body     []byte
-	Path     map[string]string // Go 1.22 path wildcards, not a reparsed URL.
-	State    tls.ConnectionState
-	Selected string // negotiated ALPN, never a body field.
-	Session  string // X-Gaffer-Session; S1 checks it against durable session state.
+	Query      url.Values
+	Body       []byte
+	BodyReader io.Reader         // Raw routes only; Body stays nil. Consume within Handle and check read errors.
+	Path       map[string]string // Go 1.22 path wildcards, not a reparsed URL.
+	State      tls.ConnectionState
+	Selected   string // negotiated ALPN, never a body field.
+	Session    string // X-Gaffer-Session; S1 checks it against durable session state.
 }
 type Error struct {
 	Status       int
@@ -58,6 +61,9 @@ type Error struct {
 
 // Response lets route bodies select a successful status and response headers.
 // Plain Handle results remain HTTP 200. Invalid statuses are programming errors.
+// A []byte or io.Reader Body streams verbatim, without the JSON response bound.
+// Supply Content-Type/Content-Length as appropriate. An io.ReadCloser transfers
+// ownership to the handler and is closed after streaming (including errors).
 type Response struct {
 	Status int
 	Body   any
@@ -316,41 +322,68 @@ func routeHandler(d Deps, route Route, execution bool) http.Handler {
 			fail(400, "invalid_request")
 			return
 		}
-		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxBody))
-		if err != nil {
-			fail(413, "oversized")
-			return
+		bounded := http.MaxBytesReader(w, r.Body, maxBody)
+		var body []byte
+		var bodyReader io.Reader
+		if route.Raw {
+			bodyReader = bounded
+		} else {
+			body, err = io.ReadAll(bounded)
+			if err != nil {
+				fail(413, "oversized")
+				return
+			}
 		}
 		params := make(map[string]string, len(names))
 		for _, name := range names {
 			params[name] = r.PathValue(name)
 		}
-		result, failure := route.Handle(r.Context(), actor, Request{Query: q, Body: body, Path: params, State: state, Selected: state.NegotiatedProtocol, Session: session})
+		result, failure := route.Handle(r.Context(), actor, Request{Query: q, Body: body, BodyReader: bodyReader, Path: params, State: state, Selected: state.NegotiatedProtocol, Session: session})
 		if failure != nil {
 			writeRouteError(w, execution, failure)
 			return
 		}
 		status := http.StatusOK
 		var header http.Header
+		var stream io.Reader
 		if response, ok := result.(Response); ok {
 			if response.Status < 200 || response.Status > 299 || (response.Status == 204 && response.Body != nil) {
 				fail(500, "internal")
 				return
 			}
 			status, header, result = response.Status, response.Header, response.Body
+			switch raw := response.Body.(type) {
+			case []byte:
+				stream = bytes.NewReader(raw)
+			case io.Reader:
+				stream = raw
+				if closer, ok := raw.(io.Closer); ok {
+					defer closer.Close()
+				}
+			}
 		}
 		var b []byte
-		if status != 204 {
+		if status != 204 && stream == nil {
 			b, err = json.Marshal(result)
 			if err != nil || len(b) > a.MaxBytes {
 				fail(503, "store_unavailable")
 				return
 			}
 		}
+		if stream != nil {
+			w.Header().Set("Content-Type", "application/octet-stream")
+		}
 		for name, values := range header {
 			w.Header()[name] = append([]string(nil), values...)
 		}
 		w.WriteHeader(status)
+		if stream != nil {
+			if _, err := io.Copy(w, stream); err != nil {
+				// A committed response cannot become a JSON error or a clean EOF.
+				panic(http.ErrAbortHandler)
+			}
+			return
+		}
 		if len(b) > 0 {
 			w.Write(b)
 		}
