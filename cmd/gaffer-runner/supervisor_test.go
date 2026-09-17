@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -88,38 +89,45 @@ func certFiles(t *testing.T, dir, name string) (string, string, string) {
 }
 
 type fakeDaemon struct {
-	t              *testing.T
-	mu             sync.Mutex
-	session        w.Session
-	dispatch       store.Dispatch
-	input          execclient.TaskInput
-	peer           string
-	reply          map[string][]byte
-	request        map[string][]byte
-	calls          []string
-	state          p.AttemptState
-	revision       int64
-	sink           *runstream.Sink
-	upload         string
-	begin          w.UploadBegin
-	blobs          map[string][]byte
-	receipt        w.CommitReply
-	commits        int
-	finalized      bool
-	released       bool
-	dropCommit     bool
-	refuseFinalize bool
-	blockLease     bool
-	stale          bool
-	cancel         *p.Message
-	termination    *w.MessageEnvelope
-	manifest       store.CandidateManifest
-	leaseCount     int
-	inputTamper    bool
-	inputRaw       []byte
-	inputRedirect  string
-	blockRunning   bool
-	runningWaiting chan struct{}
+	t                               *testing.T
+	mu                              sync.Mutex
+	session                         w.Session
+	dispatch                        store.Dispatch
+	input                           execclient.TaskInput
+	peer                            string
+	reply                           map[string][]byte
+	request                         map[string][]byte
+	calls                           []string
+	state                           p.AttemptState
+	revision                        int64
+	sink                            *runstream.Sink
+	upload                          string
+	begin                           w.UploadBegin
+	blobs                           map[string][]byte
+	receipt                         w.CommitReply
+	commits                         int
+	finalized                       bool
+	released                        bool
+	dropCommit                      bool
+	refuseFinalize                  bool
+	blockLease                      bool
+	stale                           bool
+	cancel                          *p.Message
+	termination                     *w.MessageEnvelope
+	manifest                        store.CandidateManifest
+	leaseCount                      int
+	inputTamper                     bool
+	inputRaw                        []byte
+	inputRedirect                   string
+	blockRunning                    bool
+	runningWaiting                  chan struct{}
+	eligibleBoot, sessionRunnerBoot string
+	paused, delivered               bool
+	inboxCalls, cancelCopies        int
+	blockFinalize                   bool
+	finalizeWaiting                 chan struct{}
+	finalizeBodies                  [][]byte
+	lastNonce                       string
 }
 
 func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
@@ -153,6 +161,14 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 			return
 		}
 		d.calls = append(d.calls, "hello")
+		d.sessionRunnerBoot = h.RunnerBoot
+		d.session.Mode = "recovery_only"
+		if h.RunnerBoot == d.eligibleBoot {
+			d.session.Mode = "normal"
+		}
+		if d.paused {
+			d.session.Mode = "paused"
+		}
 		send(d.session)
 	case "/x/v1/input":
 		if d.inputRaw != nil {
@@ -171,15 +187,19 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 			send(d.input)
 		}
 	case "/x/v1/inbox":
-		in := w.Inbox{Assignments: []w.Dispatch{}, Cancels: []p.Message{}, PollAfterMS: 10}
-		if !d.dispatch.Acknowledged {
+		d.inboxCalls++
+		in := w.Inbox{Assignments: []w.Dispatch{}, Cancels: []p.Message{}, PollAfterMS: 500, Paused: d.paused}
+		if !d.dispatch.Acknowledged && !d.delivered && d.session.Mode == "normal" {
+			d.delivered = true
 			b, _ := json.Marshal(d.dispatch)
 			var v w.Dispatch
 			json.Unmarshal(b, &v)
 			in.Assignments = append(in.Assignments, v)
 		}
 		if d.cancel != nil {
-			in.Cancels = append(in.Cancels, *d.cancel)
+			for i := 0; i < max(1, d.cancelCopies); i++ {
+				in.Cancels = append(in.Cancels, *d.cancel)
+			}
 		}
 		send(in)
 	case "/x/v1/state":
@@ -200,7 +220,9 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 			return
 		}
 		if old, ok := d.reply[m.MessageID]; ok {
-			if !bytes.Equal(d.request[m.MessageID], body) {
+			var prior w.MessageEnvelope
+			_ = json.Unmarshal(d.request[m.MessageID], &prior)
+			if p.CheckReplay(m.Message, prior.Message, d.dispatch.Assignment.Identity) != p.OK || !bytes.Equal(d.request[m.MessageID], body) {
 				errorReply(409, "identity_conflict")
 				return
 			}
@@ -213,7 +235,14 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 			d.dispatch.Acknowledged = true
 			d.calls = append(d.calls, "accept")
 			reply.Outcome = "acknowledged"
+		case "refuse":
+			if d.dispatch.Acknowledged {
+				errorReply(409, "reconciliation_required")
+				return
+			}
+			d.calls = append(d.calls, "refuse")
 		case "transition":
+			reply.Outcome = "applied"
 			if m.Message.ExpectedRevision == nil || *m.Message.ExpectedRevision != d.revision || m.Message.From != d.state {
 				errorReply(409, "revision_conflict")
 				return
@@ -245,8 +274,29 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 			d.calls = append(d.calls, string(d.state))
 			reply.Message = &m.Message
 		case "terminated":
+			if m.Measurement == nil || m.Boundary == nil || m.Measurement.Validate(m.Message.ConfirmedProcess != "unknown") != nil {
+				errorReply(400, "malformed")
+				return
+			}
 			d.termination = &m
-			d.released = m.Message.ConfirmedProcess == "terminated" && m.Boundary != nil && m.Boundary.Quiescent
+			if d.sessionRunnerBoot != m.Message.RunnerBoot {
+				reply.Outcome = "retained"
+				break
+			}
+			latched := d.cancel != nil && d.cancel.StopID == m.Message.StopID
+			if d.lastNonce != "" && m.Message.StopID == w.ExpiryStopID(d.lastNonce) {
+				latched = true
+			}
+			for _, cause := range w.LocalStopCauses {
+				if m.Message.StopID == w.LocalStopID(m.Message.Identity.AttemptID, cause) {
+					latched = true
+				}
+			}
+			if !latched {
+				errorReply(409, "reconciliation_required")
+				return
+			}
+			d.released = m.Message.ConfirmedProcess != "unknown" && m.Boundary.Quiescent && (d.state == p.Stopping || d.state == p.Unknown)
 			reply.Outcome = "observed"
 			reply.Released = d.released
 			d.calls = append(d.calls, "terminated")
@@ -262,10 +312,11 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 			return
 		}
 		if d.blockLease && d.leaseCount > 0 {
-			errorReply(503, "busy")
+			errorReply(409, "delayed_reply")
 			return
 		}
 		d.leaseCount++
+		d.lastNonce = m.Request.Nonce
 		if old, ok := d.reply[m.MessageID]; ok {
 			resp.Write(old)
 			return
@@ -296,6 +347,11 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 				var e error
 				a, e = d.sink.Receive(r)
 				if e != nil {
+					if errors.Is(e, runstream.ErrGap) {
+						resp.WriteHeader(409)
+						json.NewEncoder(resp).Encode(w.ErrorBody{Version: w.Version, Error: "stream_sequence_gap", Detail: strconv.FormatInt(a.Expected, 10)})
+						return
+					}
 					errorReply(409, "stream_record_conflict")
 					return
 				}
@@ -328,6 +384,7 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 				}
 			}
 			d.calls = append(d.calls, "begin")
+			resp.WriteHeader(201)
 			send(w.UploadSession{UploadID: d.upload, Missing: missing, BytesAllowed: 256 << 20})
 		case strings.Contains(req.URL.Path, "/blobs/"):
 			digest := filepath.Base(req.URL.Path)
@@ -358,11 +415,21 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 				errorReply(409, "reconciliation_required")
 				return
 			}
+			d.finalizeBodies = append(d.finalizeBodies, append([]byte(nil), body...))
+			if d.stale {
+				errorReply(409, "stale_generation")
+				return
+			}
 			var completion w.Completion
 			if w.Decode(body, &completion) != nil {
 				errorReply(400, "malformed")
 				return
 			}
+			if old, ok := d.request[completion.MessageID]; ok && !bytes.Equal(old, body) {
+				errorReply(409, "identity_conflict")
+				return
+			}
+			d.request[completion.MessageID] = append([]byte(nil), body...)
 			hash := sha256.New()
 			for _, r := range d.sink.Records() {
 				hash.Write([]byte(r.Digest))
@@ -374,6 +441,16 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 			d.finalized = true
 			d.released = true
 			d.calls = append(d.calls, "finalize")
+			if d.blockFinalize {
+				select {
+				case d.finalizeWaiting <- struct{}{}:
+				default:
+				}
+				d.mu.Unlock()
+				<-req.Context().Done()
+				d.mu.Lock()
+				return
+			}
 			send(execclient.FinalizeReply{Outcome: d.manifest.Outcome, Released: true})
 		default:
 			errorReply(404, "not_found")
@@ -435,7 +512,7 @@ func newFixture(t *testing.T, mode string) *fixture {
 	listener := httpapi.ExecutionListener(inner, tlsCfg, time.Second)
 	boot := uuid()
 	rid := uuid()
-	session := w.Session{SessionID: uuid(), Generation: uuid(), DaemonBoot: uuid(), DaemonFingerprint: daemonFP, RunnerID: rid, Mode: "normal", DriftMS: 500, TerminationMS: 5000, LeaseValidityMS: 12000, RenewEveryMS: 500}
+	session := w.Session{SessionID: uuid(), Generation: uuid(), DaemonBoot: uuid(), DaemonFingerprint: daemonFP, RunnerID: rid, Mode: "normal", DriftMS: 2000, TerminationMS: 5000, LeaseValidityMS: 20000, RenewEveryMS: 5000}
 	hash := strings.Repeat("a", 64)
 	rev := g.Revision{Number: 1, SHA256: hash}
 	route := g.Route{RouteRef: "worker-dev", ProfileRef: "mock", RouteRevision: 1, Policy: rev, RouterBuild: hash, GraphDigest: hash, Evidence: rev, Harness: "fake", Protocol: "responses", SettingsDigest: hash, Isolation: isolation.DevelopmentProfileID, LimitsProfile: "gateway-local-bounds-v1", LimitsAuthority: "operator", Targets: []g.Target{{Provider: "mock", Model: "gpt-6-astra", Billing: "gateway-managed"}}}
@@ -475,7 +552,7 @@ func newFixture(t *testing.T, mode string) *fixture {
 	if err != nil {
 		t.Fatal(err)
 	}
-	daemon := &fakeDaemon{t: t, session: session, dispatch: dispatch, input: input, peer: runnerFP, reply: map[string][]byte{}, request: map[string][]byte{}, state: p.Assigned, revision: 1, sink: sink, upload: uuid(), blobs: map[string][]byte{}}
+	daemon := &fakeDaemon{t: t, session: session, eligibleBoot: boot, dispatch: dispatch, input: input, peer: runnerFP, reply: map[string][]byte{}, request: map[string][]byte{}, state: p.Assigned, revision: 1, sink: sink, upload: uuid(), blobs: map[string][]byte{}}
 	server := &http.Server{Handler: http.HandlerFunc(daemon.handler), ConnContext: httpapi.ExecutionConnContext}
 	go server.Serve(listener)
 	client, err := execclient.New(execclient.Options{Endpoint: "https://" + inner.Addr().String(), Fingerprint: daemonFP, Certificate: certificate, RetryDelay: 10 * time.Millisecond})
@@ -640,7 +717,7 @@ func TestLeaseLapseAndIgnoreTermCancel(t *testing.T) {
 			start := time.Now()
 			if mode == "ignore_term" {
 				cancel := p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: f.dispatch.Assignment.Identity, StopID: uuid(), RunnerBoot: f.s.boot, DaemonBoot: f.s.session.DaemonBoot}
-				f.s.cancel <- cancel
+				f.sendCancel(cancel)
 			}
 			select {
 			case err := <-done:
@@ -694,7 +771,7 @@ func TestDetachedChildNeverClaimsTermination(t *testing.T) {
 	go func() { done <- f.s.attempt(f.ctx, f.dispatch) }()
 	waitState(t, f, p.Running)
 	time.Sleep(350 * time.Millisecond)
-	f.s.cancel <- p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: f.dispatch.Assignment.Identity, StopID: uuid(), RunnerBoot: f.s.boot, DaemonBoot: f.s.session.DaemonBoot}
+	f.sendCancel(p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: f.dispatch.Assignment.Identity, StopID: uuid(), RunnerBoot: f.s.boot, DaemonBoot: f.s.session.DaemonBoot})
 	select {
 	case err := <-done:
 		if !errors.Is(err, runner.ErrTerminationUnconfirmed) {
@@ -705,7 +782,7 @@ func TestDetachedChildNeverClaimsTermination(t *testing.T) {
 	}
 	f.d.mu.Lock()
 	defer f.d.mu.Unlock()
-	if f.d.termination != nil || f.d.released || f.d.finalized {
+	if f.d.termination == nil || f.d.termination.Message.ConfirmedProcess != "unknown" || f.d.termination.Measurement.Validate(false) != nil || f.d.released || f.d.finalized {
 		t.Fatal("escaped group falsely released")
 	}
 }
@@ -791,6 +868,7 @@ func TestSupervisorSIGKILLGuardianEOFAndOpen(t *testing.T) {
 			}{d.DispatchRequest, d.Facts})
 			d.Assignment.InputDigest = ih
 			f.d.dispatch = d
+			f.d.eligibleBoot = boot.RunnerBoot
 			f.d.mu.Unlock()
 			if err := runner.DurableFile(cfg.Policy, local); err != nil {
 				t.Fatal(err)
@@ -1079,7 +1157,7 @@ func TestHarnessReleaseAfterTerminalAndCompleteSpooling(t *testing.T) {
 				done := make(chan error, 1)
 				go func() { done <- f.s.attempt(f.ctx, f.dispatch) }()
 				waitState(t, f, p.Running)
-				f.s.cancel <- p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: f.dispatch.Assignment.Identity, StopID: uuid(), RunnerBoot: f.s.boot, DaemonBoot: f.s.session.DaemonBoot}
+				f.sendCancel(p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: f.dispatch.Assignment.Identity, StopID: uuid(), RunnerBoot: f.s.boot, DaemonBoot: f.s.session.DaemonBoot})
 				err = <-done
 			} else {
 				err = f.s.attempt(f.ctx, f.dispatch)
@@ -1223,4 +1301,11 @@ func TestMockGatewayRefusesNonLoopback(t *testing.T) {
 			t.Fatalf("%s: %v", addr, err)
 		}
 	}
+}
+
+func (f *fixture) sendCancel(m p.Message) {
+	f.d.mu.Lock()
+	f.d.cancel = &m
+	f.d.mu.Unlock()
+	f.s.cancel <- m
 }

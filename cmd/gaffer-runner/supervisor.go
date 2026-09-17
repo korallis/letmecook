@@ -539,7 +539,7 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 	for !finished {
 		select {
 		case <-ctx.Done():
-			return cancelAndDrain(s.operatorCancel(d), "supervisor_shutdown")
+			return cancelAndDrain(s.localCancel(d, "runner_shutdown"), "supervisor_shutdown")
 		case cancel := <-s.cancel:
 			if cancel.Identity == d.Assignment.Identity {
 				return cancelAndDrain(cancel, "cancel")
@@ -700,8 +700,8 @@ func lastNonce(r *runner.Runner) string {
 	}
 	return ""
 }
-func (s *supervisor) operatorCancel(d store.Dispatch) p.Message {
-	return p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: d.Assignment.Identity, StopID: uuid(), RunnerBoot: s.boot, DaemonBoot: s.session.DaemonBoot}
+func (s *supervisor) localCancel(d store.Dispatch, cause string) p.Message {
+	return p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: d.Assignment.Identity, StopID: w.LocalStopID(d.Assignment.Identity.AttemptID, cause), RunnerBoot: s.boot, DaemonBoot: s.session.DaemonBoot}
 }
 func (s *supervisor) expiryCancel(r *runner.Runner, d store.Dispatch) p.Message {
 	return p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: d.Assignment.Identity, StopID: w.ExpiryStopID(lastNonce(r)), RunnerBoot: s.boot, DaemonBoot: s.session.DaemonBoot}
@@ -779,12 +779,11 @@ type cEvidence struct {
 }
 
 // A failed local preparation/start is not permission to wait silently for lease
-// lapse. Retain and send stop evidence even when the daemon needs reconciliation
-// before it can latch a fresh runner-local operator stop ID.
+// lapse. Retain and send stop evidence using the daemon-validated local stop ID.
 func (s *supervisor) failedLocal(r *runner.Runner, d store.Dispatch, phase p.AttemptState, revision int64, launchAttempted bool, cause error) error {
 	ctx, cancelContext := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancelContext()
-	cancel := s.operatorCancel(d)
+	cancel := s.localCancel(d, "launch_failed")
 	if err := r.Enqueue("local_failure", cancel.MessageID+"/failure", map[string]any{"cause": cause.Error(), "launch_attempted": launchAttempted}); err != nil {
 		return err
 	}
