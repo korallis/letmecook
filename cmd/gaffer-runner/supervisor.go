@@ -133,14 +133,13 @@ func serve(ctx context.Context, cfg config, out io.Writer) error {
 				recovery = append(recovery, r)
 				var meta attemptMeta
 				if b, e := os.ReadFile(filepath.Join(filepath.Dir(path), "attempt.json")); e == nil && closedjson.Decode(b, &meta, 65536, map[string]bool{"provider_cost_micros": true}) == nil {
-					status := r.Status()
-					hello.Journals = append(hello.Journals, w.Journal{DispatchID: meta.Dispatch.ID, Identity: meta.Dispatch.Assignment.Identity, RunnerBoot: meta.RunnerBoot, DaemonBoot: meta.DaemonBoot, State: p.Unknown, Corrupt: status.Guardian == nil && status.Runtime != nil})
+					hello.Journals = append(hello.Journals, journalSummary(r, meta, filepath.Dir(path)))
 				}
 				if err = s.replay(ctx, r); err != nil && !execclient.IsFence(err) {
 					return err
 				}
 				if meta.Dispatch.ID != "" {
-					if err = s.recoverTermination(ctx, r, meta); err != nil && !execclient.IsFence(err) && !errors.Is(err, runner.ErrTerminationUnconfirmed) {
+					if err = s.recoverTermination(ctx, r, meta); err != nil && !execclient.IsFence(err) && !isRefusal(err) && !errors.Is(err, runner.ErrTerminationUnconfirmed) {
 						return err
 					}
 				}
@@ -225,8 +224,21 @@ func serve(ctx context.Context, cfg config, out io.Writer) error {
 			if seen[d.ID] {
 				continue
 			}
-			seen[d.ID] = true
 			err := s.attempt(ctx, d)
+			// Inbox delivery is one-time. Retry transient pre-admission failures
+			// locally; no attempt directory/authority exists yet.
+			for transientInputError(err) && ctx.Err() == nil {
+				if _, statErr := os.Stat(filepath.Join(cfg.StateDir, "attempts", d.ID)); !os.IsNotExist(statErr) {
+					break
+				}
+				select {
+				case <-ctx.Done():
+					return nil
+				case <-time.After(500 * time.Millisecond):
+				}
+				err = s.attempt(ctx, d)
+			}
+			seen[d.ID] = true
 			if err != nil {
 				_ = writeJSON(out, map[string]any{"dispatch_id": d.ID, "error": err.Error(), "supported": false})
 				if execclient.IsFence(err) {
@@ -235,6 +247,18 @@ func serve(ctx context.Context, cfg config, out io.Writer) error {
 			}
 		}
 	}
+}
+
+func transientInputError(err error) bool {
+	if err == nil || isRefusal(err) {
+		return false
+	}
+	var remote *execclient.Error
+	if errors.As(err, &remote) {
+		return remote.Status >= 500
+	}
+	var network interface{ Timeout() bool }
+	return errors.As(err, &network)
 }
 
 type attemptMeta struct {
@@ -251,8 +275,8 @@ func (s *supervisor) message(ctx context.Context, r *runner.Runner, d string, m 
 	reply, err := s.client.Message(ctx, in)
 	if err == nil {
 		err = r.Acknowledge(m.MessageID)
-	} else if execclient.IsFence(err) {
-		_ = r.Fence(err.Error())
+	} else {
+		err = s.recordRefusal(r, m.MessageID, err)
 	}
 	return reply, err
 }
@@ -318,6 +342,16 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 	if !p.ValidID(d.ID) || !p.ValidID(d.Assignment.Identity.AttemptID) {
 		return p.Malformed
 	}
+	input, inputErr := s.client.Input(ctx, d.ID)
+	if inputErr != nil {
+		return inputErr
+	}
+	if err := input.Validate(d); err != nil {
+		return err
+	}
+	if input.Harness != s.cfg.Harness {
+		return runner.ErrPolicy
+	}
 	dir := filepath.Join(s.cfg.StateDir, "attempts", d.ID)
 	if _, err := os.Stat(dir); err == nil {
 		return errors.New("retained attempt requires reconciliation")
@@ -333,16 +367,6 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 	defer r.StopGuardian()
 	if err = runner.DurableFile(filepath.Join(dir, "attempt.json"), attemptMeta{d, s.boot, s.session.DaemonBoot}); err != nil {
 		return err
-	}
-	input, inputErr := s.client.Input(ctx, d.ID)
-	if inputErr != nil {
-		return inputErr
-	}
-	if err = input.Validate(d); err != nil {
-		return err
-	}
-	if input.Harness != s.cfg.Harness {
-		return runner.ErrPolicy
 	}
 	if err = r.Enqueue("task_input", input.BriefSHA256, input); err != nil {
 		return err
@@ -362,10 +386,10 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 		}
 		return runner.ErrPolicy
 	}
-	accepted, running, launchAttempted, stopHandled := false, false, false, false
+	accepted, running, launchAttempted, stopHandled, jobFinished := false, false, false, false, false
 	phase, revision := p.Assigned, int64(1)
 	defer func() {
-		if result != nil && accepted && !stopHandled && (!running || ctx.Err() != nil) {
+		if result != nil && accepted && !stopHandled && (!running || ctx.Err() != nil && !jobFinished || isRefusal(result) && !custodyAccepted(r)) {
 			cause := "launch_failed"
 			if ctx.Err() != nil {
 				cause = "runner_shutdown"
@@ -558,6 +582,15 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 	for !finished {
 		select {
 		case <-ctx.Done():
+			// EOF/output delivery can lag the trusted exit receipt. A finished job
+			// is custody work, not a new cancellation on supervisor shutdown.
+			peek, stop := context.WithTimeout(context.Background(), 20*time.Millisecond)
+			rep, e := r.WaitGuardian(peek)
+			stop()
+			if e == nil && rep.PGIDEmpty && !rep.Escaped && rep.Cause == "exit" {
+				finished = true
+				break
+			}
 			return cancelAndDrain(s.localCancel(d, "runner_shutdown"), "supervisor_shutdown")
 		case cancel := <-s.cancel:
 			if cancel.Identity == d.Assignment.Identity {
@@ -570,10 +603,8 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 		case <-tick.C:
 			status, e := r.Tick()
 			if e != nil && status.StopRequired {
-				if errors.Is(e, runner.ErrPolicy) {
-					return cancelAndDrain(s.localCancel(d, "local_policy_drift"), "local_policy_drift")
-				}
-				return cancelAndDrain(s.expiryCancel(r, d), "lease_expired")
+				cancel, cause := s.tickCancel(r, d, e)
+				return cancelAndDrain(cancel, cause)
 			}
 		case item := <-eventCh:
 			if item.err != nil {
@@ -624,6 +655,7 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 	if !report.PGIDEmpty || report.Escaped {
 		return cancelAndDrain(s.localCancel(d, "containment_unconfirmed"), "containment_unconfirmed")
 	}
+	jobFinished = true
 	if err = drain(guardCtx); err != nil {
 		return err
 	}
@@ -633,14 +665,14 @@ func (s *supervisor) attempt(ctx context.Context, wire w.Dispatch) (result error
 	if report.ExitCode != 0 && failure == "" {
 		failure = "harness_crash"
 	}
-	if err = checkEnvelope(ctx, checkout.Path, checkout.BaseCommit, d.Request.Envelope, repo); err != nil {
+	if err = checkEnvelope(guardCtx, checkout.Path, checkout.BaseCommit, d.Request.Envelope, repo); err != nil {
 		failure = "envelope_violation"
 		_, err = spool.Append(runstream.Native{Version: "harness-v1", Kind: "failed", Data: []byte(`{"reason":"envelope_violation"}`)}, runstream.Normalized{Stream: "status", Text: failure})
 		if err != nil {
 			return err
 		}
 	}
-	if err = s.flush(ctx, spool, d.Assignment.Identity.AttemptID); err != nil {
+	if err = s.flush(guardCtx, spool, d.Assignment.Identity.AttemptID); err != nil {
 		return err
 	}
 	boundary := r.CloseBoundary(guardCtx)
@@ -725,6 +757,15 @@ func lastNonce(r *runner.Runner) string {
 func (s *supervisor) localCancel(d store.Dispatch, cause string) p.Message {
 	return p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: d.Assignment.Identity, StopID: w.LocalStopID(d.Assignment.Identity.AttemptID, cause), RunnerBoot: s.boot, DaemonBoot: s.session.DaemonBoot}
 }
+
+// Only an expired lease may claim the daemon's lease-clock stop identity.
+func (s *supervisor) tickCancel(r *runner.Runner, d store.Dispatch, err error) (p.Message, string) {
+	if errors.Is(err, runner.ErrLeaseExpired) {
+		return s.expiryCancel(r, d), "lease_expired"
+	}
+	// Policy/grant/budget/clock invalidation all revoke local launch authority.
+	return s.localCancel(d, "local_policy_drift"), "local_policy_drift"
+}
 func (s *supervisor) expiryCancel(r *runner.Runner, d store.Dispatch) p.Message {
 	return p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "cancel", Identity: d.Assignment.Identity, StopID: w.ExpiryStopID(lastNonce(r)), RunnerBoot: s.boot, DaemonBoot: s.session.DaemonBoot}
 }
@@ -749,7 +790,7 @@ func (s *supervisor) cancelAttempt(ctx context.Context, r *runner.Runner, d stor
 	}
 	r.StopGuardian() // durable cancel must stop locally even if the daemon is unavailable
 	_, err := s.transition(ctx, r, d, phase, p.Stopping, revision, w.Evidence{Kind: "stop", Nonce: lastNonce(r)}, cancel.StopID)
-	if err != nil && !execclient.IsFence(err) {
+	if err != nil && !execclient.IsFence(err) && !isRefusal(err) {
 		return err
 	}
 	runtime := r.Status().Runtime
@@ -810,24 +851,28 @@ func (s *supervisor) failedLocal(r *runner.Runner, d store.Dispatch, phase p.Att
 	if err := r.Enqueue("local_failure", cancel.MessageID+"/failure", map[string]any{"cause": cause.Error(), "launch_attempted": launchAttempted}); err != nil {
 		return err
 	}
-	if err := r.Enqueue("cancel", cancel.MessageID, cancel); err != nil {
-		return err
-	}
 	if launchAttempted {
 		r.StopGuardian()
 	}
-	// Cancellation may interrupt the response after a transition committed. Read
-	// the authenticated state before proposing its stop; never guess the revision.
+	// A refused or lost response may hide a committed edge or owner stop. Use
+	// authenticated state and the existing stop target rather than inventing one.
 	alreadyStopping := false
-	if stopCause == "runner_shutdown" {
-		current, stateErr := s.client.State(ctx, d.ID)
-		if stateErr == nil {
-			if current.Released {
-				return nil
-			} // pending finalization still replays from its journal
-			phase, revision = current.AttemptState, current.Revision
-			alreadyStopping = phase == p.Stopping || phase == p.Unknown
+	current, stateErr := s.client.State(ctx, d.ID)
+	if stateErr == nil {
+		if current.Released {
+			return nil
 		}
+		phase, revision = current.AttemptState, current.Revision
+		alreadyStopping = phase == p.Stopping || phase == p.Unknown
+		for _, target := range current.StopTargets {
+			if target.DispatchID == d.ID && target.Cancel.Identity == d.Assignment.Identity {
+				cancel = target.Cancel
+				break
+			}
+		}
+	}
+	if err := r.Enqueue("cancel", cancel.MessageID, cancel); err != nil {
+		return err
 	}
 	var transitionErr error
 	if !alreadyStopping {

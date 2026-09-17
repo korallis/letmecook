@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"github.com/korallis/letmecook/internal/control"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +16,8 @@ import (
 
 	"github.com/korallis/letmecook/internal/artifacts"
 	g "github.com/korallis/letmecook/internal/authority"
+	"github.com/korallis/letmecook/internal/closedjson"
+	"github.com/korallis/letmecook/internal/control"
 	"github.com/korallis/letmecook/internal/execclient"
 	w "github.com/korallis/letmecook/internal/execwire"
 	"github.com/korallis/letmecook/internal/inference"
@@ -74,102 +76,283 @@ func streamDigest(spool *runstream.Spool) string {
 	}
 	return hex.EncodeToString(hash.Sum(nil))
 }
+
+// custodyPlan is immutable continuation intent. Every request ID and the exact
+// result edge/manifest/usage/exit bytes are durable before the first custody call.
+// Blob bytes live in a synced, sandbox-denied directory, not a mutable checkout.
+type custodyPlan struct {
+	Edge       w.MessageEnvelope
+	Begin      w.UploadBegin
+	Commit     execclient.Intent
+	Usage      w.Usage
+	Completion w.Completion
+	BlobDir    string
+	Outcome    string
+}
+
 func (s *supervisor) upload(ctx context.Context, r *runner.Runner, d store.Dispatch, dir string, checkout repositories.Checkout, spool *runstream.Spool, report runner.GuardianReport, boundary inference.State, failure string) error {
-	attempt := d.Assignment.Identity.AttemptID
 	outcome := "succeeded"
 	if failure != "" {
 		outcome = "failed"
 	}
-	if _, err := s.transition(ctx, r, d, p.Running, p.ResultPending, 3, w.Evidence{Kind: "exit", Code: report.ExitCode, PID: report.PID, PGID: report.PGID, GuardianPID: r.Status().Runtime.GuardianPID, StartUnixNS: report.StartUnixNS, PGIDEmpty: report.PGIDEmpty && !report.Escaped, ObservedUnixNS: report.ObservedUnixNS, StreamThrough: spool.Acknowledged()}, ""); err != nil {
-		return err
-	}
-	pack, err := artifacts.Pack(ctx, artifacts.Request{Root: checkout.Path, Base: checkout.BaseCommit, RecoveryDir: filepath.Join(dir, "artifacts"), Identity: d.Assignment.Identity, Outcome: outcome})
+	// Once the trusted receipt says the job exited, cancellation of serve may
+	// interrupt transport, not preparation of replayable finalization evidence.
+	prepare, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	pack, err := artifacts.Pack(prepare, artifacts.Request{Root: checkout.Path, Base: checkout.BaseCommit, RecoveryDir: filepath.Join(dir, "artifacts"), Identity: d.Assignment.Identity, Outcome: outcome})
 	if err != nil {
 		return err
+	}
+	blobDir := filepath.Join(dir, "custody-blobs")
+	if err := os.MkdirAll(blobDir, 0700); err != nil {
+		return err
+	}
+	// Persist the new directory's name before retaining any continuation intent.
+	parent, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	if err = errors.Join(parent.Sync(), parent.Close()); err != nil {
+		return err
+	}
+	for _, source := range pack.Sources {
+		if err := retainBlob(blobDir, source.File); err != nil {
+			return err
+		}
 	}
 	sum := sha256.Sum256(pack.Manifest)
 	manifest := p.Manifest{ManifestID: uuid(), SHA256: hex.EncodeToString(sum[:]), Bytes: int64(len(pack.Manifest))}
 	result := p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "result", Identity: d.Assignment.Identity, Manifest: &manifest}
-	begin := w.UploadBegin{Version: w.Version, MessageID: result.MessageID, Result: result, ManifestBase64: base64.StdEncoding.EncodeToString(pack.Manifest)}
-	if err = r.Enqueue("begin:"+attempt, begin.MessageID, begin); err != nil {
+	revision := int64(3)
+	edge := p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "transition", Identity: d.Assignment.Identity, ExpectedRevision: &revision, From: p.Running, To: p.ResultPending}
+	plan := custodyPlan{
+		Edge:       w.MessageEnvelope{Version: w.Version, MessageID: edge.MessageID, DispatchID: d.ID, Message: edge, Evidence: &w.Evidence{Kind: "exit", Code: report.ExitCode, PID: report.PID, PGID: report.PGID, GuardianPID: r.Status().Runtime.GuardianPID, StartUnixNS: report.StartUnixNS, PGIDEmpty: report.PGIDEmpty && !report.Escaped, ObservedUnixNS: report.ObservedUnixNS, StreamThrough: spool.Acknowledged()}},
+		Begin:      w.UploadBegin{Version: w.Version, MessageID: result.MessageID, Result: result, ManifestBase64: base64.StdEncoding.EncodeToString(pack.Manifest)},
+		Commit:     execclient.Intent{Version: w.Version, MessageID: uuid()},
+		Usage:      w.Usage{Version: w.Version, MessageID: uuid(), Identity: d.Assignment.Identity, Receipts: r.Usage()},
+		Completion: w.Completion{Version: w.Version, MessageID: uuid(), Stream: w.StreamCompletion{Through: spool.Acknowledged(), Digest: streamDigest(spool)}, Exit: w.Exit{Code: report.ExitCode, PGID: report.PGID, ObservedUnixNS: report.ObservedUnixNS}, Boundary: boundary},
+		BlobDir:    blobDir, Outcome: outcome,
+	}
+	if plan.Usage.Receipts == nil {
+		plan.Usage.Receipts = []inference.Receipt{}
+	}
+	if err := r.Enqueue("custody", "custody", plan); err != nil {
 		return err
 	}
-	upload, err := s.client.BeginUpload(ctx, attempt, begin)
+	return s.resumeCustody(ctx, r, plan)
+}
+
+func retainBlob(dir, source string) error {
+	in, err := os.Open(source)
 	if err != nil {
 		return err
 	}
-	if err = r.Acknowledge(begin.MessageID); err != nil {
+	defer in.Close()
+	out, err := os.CreateTemp(dir, ".blob-")
+	if err != nil {
 		return err
 	}
-	blobs := map[string][]byte{}
-	for _, source := range pack.Sources {
-		b, e := os.ReadFile(source.File)
-		if e != nil {
+	defer os.Remove(out.Name())
+	hash := sha256.New()
+	_, err = io.Copy(io.MultiWriter(out, hash), in)
+	if err == nil {
+		err = out.Sync()
+	}
+	closeErr := out.Close()
+	if err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return err
+	}
+	if err = os.Rename(out.Name(), filepath.Join(dir, hex.EncodeToString(hash.Sum(nil)))); err != nil {
+		return err
+	}
+	fd, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer fd.Close()
+	return fd.Sync()
+}
+
+var errCustodyRefused = errors.New("custody request retained with terminal refusal")
+
+func outboxEntry(r *runner.Runner, key string) runner.OutboxEntry {
+	for _, e := range r.Outbox() {
+		if e.Key == key {
 			return e
 		}
-		sum := sha256.Sum256(b)
-		blobs[hex.EncodeToString(sum[:])] = b
 	}
-	for _, missing := range upload.Missing {
-		b, ok := blobs[missing.SHA256]
-		if !ok || int64(len(b)) != missing.Bytes {
-			return errors.New("daemon requested unknown blob")
+	return runner.OutboxEntry{}
+}
+
+func custodyAccepted(r *runner.Runner) bool {
+	for _, e := range r.Outbox() {
+		if e.Kind == "custody" {
+			var plan custodyPlan
+			return json.Unmarshal(e.Body, &plan) == nil && outboxEntry(r, plan.Edge.MessageID).Acknowledged
 		}
-		if _, err = s.client.PutBlob(ctx, upload.UploadID, missing.SHA256, b); err != nil {
+	}
+	return false
+}
+
+func (s *supervisor) custodyStep(r *runner.Runner, kind, key string, body any, send func() error) error {
+	e := outboxEntry(r, key)
+	if e.Refused != "" {
+		return errCustodyRefused
+	}
+	if e.Acknowledged {
+		return nil
+	}
+	if err := r.Enqueue(kind, key, body); err != nil {
+		return err
+	}
+	if err := send(); err != nil {
+		return s.recordRefusal(r, key, err)
+	}
+	return r.Acknowledge(key)
+}
+
+func (s *supervisor) resumeCustody(ctx context.Context, r *runner.Runner, plan custodyPlan) error {
+	if outboxEntry(r, "custody").Refused != "" {
+		return errCustodyRefused
+	}
+	attempt := plan.Begin.Result.Identity.AttemptID
+	if err := s.custodyStep(r, "message", plan.Edge.MessageID, plan.Edge, func() error {
+		reply, err := s.client.Message(ctx, plan.Edge)
+		if err == nil && (reply.Message == nil || !messagesEqual(plan.Edge.Message, *reply.Message)) {
+			return p.IdentityConflict
+		}
+		return err
+	}); err != nil {
+		return err
+	}
+	var upload w.UploadSession
+	responseKey := plan.Begin.MessageID + "/response"
+	if body := outboxEntry(r, responseKey).Body; body != nil {
+		if err := w.Decode(body, &upload); err != nil {
 			return err
 		}
 	}
-	commitID := uuid()
-	intent := execclient.Intent{Version: w.Version, MessageID: commitID}
-	if err = r.Enqueue("commit:"+upload.UploadID, commitID, intent); err != nil {
+	if err := s.custodyStep(r, "begin:"+attempt, plan.Begin.MessageID, plan.Begin, func() error {
+		var err error
+		upload, err = s.client.BeginUpload(ctx, attempt, plan.Begin)
+		if err != nil {
+			return err
+		}
+		return r.Enqueue("upload_session", responseKey, upload)
+	}); err != nil {
 		return err
 	}
-	receipt, err := s.client.Commit(ctx, upload.UploadID, commitID)
-	if err != nil {
+	if upload.UploadID == "" {
+		return errors.New("durable upload response missing")
+	}
+	// Commit intent is queued only after every blob PUT succeeded. Once intent
+	// exists, retry commit directly: its lost reply may hide a closed upload,
+	// for which the daemon correctly refuses further PUTs. Before that point,
+	// idempotent PUTs may repeat; verify the exact retained bytes first.
+	if outboxEntry(r, plan.Commit.MessageID).Body == nil {
+		for _, missing := range upload.Missing {
+			if len(missing.SHA256) != 64 || strings.ContainsAny(missing.SHA256, "/\\") {
+				return p.Malformed
+			}
+			b, err := os.ReadFile(filepath.Join(plan.BlobDir, missing.SHA256))
+			if err != nil {
+				return err
+			}
+			sum := sha256.Sum256(b)
+			if hex.EncodeToString(sum[:]) != missing.SHA256 || int64(len(b)) != missing.Bytes {
+				return errors.New("retained blob mismatch")
+			}
+			if _, err := s.client.PutBlob(ctx, upload.UploadID, missing.SHA256, b); err != nil {
+				return s.recordRefusal(r, "custody", err)
+			}
+		}
+	}
+	var receipt w.CommitReply
+	receiptKey := plan.Commit.MessageID + "/receipt"
+	if body := outboxEntry(r, receiptKey).Body; body != nil {
+		if err := w.Decode(body, &receipt); err != nil {
+			return err
+		}
+	}
+	if err := s.custodyStep(r, "commit:"+upload.UploadID, plan.Commit.MessageID, plan.Commit, func() error {
+		var err error
+		receipt, err = s.client.Commit(ctx, upload.UploadID, plan.Commit.MessageID)
+		if err != nil {
+			return err
+		}
+		if receipt.Quarantined || receipt.Receipt.Identity != plan.Begin.Result.Identity || receipt.Receipt.Manifest != *plan.Begin.Result.Manifest || receipt.Ack.ReceiptID != receipt.Receipt.ReceiptID {
+			return errors.New("custody acknowledgement mismatch")
+		}
+		if err = runner.DurableFile(filepath.Join(filepath.Dir(plan.BlobDir), "receipt.json"), receipt); err != nil {
+			return err
+		}
+		return r.Enqueue("custody_receipt", receiptKey, receipt)
+	}); err != nil {
 		return err
 	}
-	if receipt.Quarantined || receipt.Receipt.Identity != d.Assignment.Identity || receipt.Receipt.Manifest != manifest || receipt.Ack.ReceiptID != receipt.Receipt.ReceiptID {
-		return errors.New("custody acknowledgement mismatch")
+	if receipt.Receipt.ReceiptID == "" {
+		return errors.New("durable custody receipt missing")
 	}
-	if err = runner.DurableFile(filepath.Join(dir, "receipt.json"), receipt); err != nil {
+	if err := s.custodyStep(r, "usage", plan.Usage.MessageID, plan.Usage, func() error { return s.client.Usage(ctx, plan.Usage) }); err != nil {
 		return err
 	}
-	if err = r.Acknowledge(commitID); err != nil {
-		return err
-	}
-	usage := w.Usage{Version: w.Version, MessageID: uuid(), Identity: d.Assignment.Identity, Receipts: r.Usage()}
-	if usage.Receipts == nil {
-		usage.Receipts = []inference.Receipt{}
-	}
-	if err = r.Enqueue("usage", usage.MessageID, usage); err != nil {
-		return err
-	}
-	if err = s.client.Usage(ctx, usage); err != nil {
-		return err
-	}
-	if err = r.Acknowledge(usage.MessageID); err != nil {
-		return err
-	}
-	completion := w.Completion{Version: w.Version, MessageID: uuid(), ReceiptID: receipt.Receipt.ReceiptID, Stream: w.StreamCompletion{Through: spool.Acknowledged(), Digest: streamDigest(spool)}, Exit: w.Exit{Code: report.ExitCode, PGID: report.PGID, ObservedUnixNS: report.ObservedUnixNS}, Boundary: boundary}
-	if err = r.Enqueue("finalize:"+attempt, completion.MessageID, completion); err != nil {
-		return err
-	}
-	reply, err := s.client.Finalize(ctx, attempt, completion)
-	if err != nil {
-		return err
-	}
-	if !reply.Released || reply.Outcome != outcome {
-		return errors.New("finalization not confirmed")
-	}
-	return r.Acknowledge(completion.MessageID)
+	completion := plan.Completion
+	completion.ReceiptID = receipt.Receipt.ReceiptID
+	return s.custodyStep(r, "finalize:"+attempt, completion.MessageID, completion, func() error {
+		reply, err := s.client.Finalize(ctx, attempt, completion)
+		if err != nil {
+			return err
+		}
+		if !reply.Released || reply.Outcome != plan.Outcome {
+			return errors.New("finalization not confirmed")
+		}
+		return nil
+	})
 }
+
+func isRefusal(err error) bool {
+	var remote *execclient.Error
+	return errors.As(err, &remote) && remote.Status >= 400 && remote.Status < 500
+}
+
+func (s *supervisor) recordRefusal(r *runner.Runner, key string, err error) error {
+	if !isRefusal(err) {
+		return err
+	}
+	if e := r.Refuse(key, err.Error()); e != nil {
+		return e
+	}
+	if execclient.IsFence(err) {
+		if e := r.Fence(err.Error()); e != nil {
+			return e
+		}
+	}
+	return err
+}
+
 func (s *supervisor) replay(ctx context.Context, r *runner.Runner) error {
+	var plan custodyPlan
+	hasPlan := false
 	for _, entry := range r.Outbox() {
-		if entry.Acknowledged {
+		if entry.Kind == "custody" {
+			if err := closedjson.Decode(entry.Body, &plan, 128<<10, nil); err != nil {
+				return err
+			}
+			hasPlan = true
+		}
+	}
+	for _, entry := range r.Outbox() {
+		if entry.Acknowledged || entry.Refused != "" {
 			continue
 		}
 		var err error
 		kind, id, _ := strings.Cut(entry.Kind, ":")
+		if hasPlan && (entry.Key == plan.Edge.MessageID || kind == "begin" || kind == "commit" || kind == "usage" || kind == "finalize") {
+			continue
+		}
 		switch kind {
 		case "message":
 			var m w.MessageEnvelope
@@ -207,12 +390,21 @@ func (s *supervisor) replay(ctx context.Context, r *runner.Runner) error {
 			continue
 		}
 		if err != nil {
-			if execclient.IsFence(err) {
-				_ = r.Fence(err.Error())
+			if isRefusal(err) {
+				if e := s.recordRefusal(r, entry.Key, err); !errors.Is(e, err) {
+					return e
+				}
+				continue // terminal refusal retains bytes; do not poison every restart
 			}
 			return err
 		}
 		if err = r.Acknowledge(entry.Key); err != nil {
+			return err
+		}
+	}
+	if hasPlan {
+		err := s.resumeCustody(ctx, r, plan)
+		if err != nil && !isRefusal(err) && !errors.Is(err, errCustodyRefused) {
 			return err
 		}
 	}
@@ -223,6 +415,15 @@ var _ = json.Valid
 
 func (s *supervisor) recoverTermination(ctx context.Context, r *runner.Runner, meta attemptMeta) error {
 	for _, entry := range r.Outbox() {
+		if entry.Kind == "custody" {
+			var plan custodyPlan
+			if err := closedjson.Decode(entry.Body, &plan, 128<<10, nil); err != nil {
+				return err
+			}
+			if outboxEntry(r, plan.Edge.MessageID).Refused == "" {
+				return nil
+			}
+		} // accepted/pending custody is never converted to runner_shutdown
 		if strings.HasPrefix(entry.Kind, "finalize:") {
 			return nil
 		}
@@ -278,4 +479,47 @@ func (s *supervisor) recoverTermination(ctx context.Context, r *runner.Runner, m
 	}
 	_, err = s.message(ctx, r, meta.Dispatch.ID, evidence.Terminated, nil, &boundary, &evidence.Measurement)
 	return err
+}
+
+// journalSummary reports retained facts, not inferred release. A missing guardian
+// report is unknown containment, not corruption of an otherwise verified journal.
+func journalSummary(r *runner.Runner, meta attemptMeta, dir string) w.Journal {
+	v := w.Journal{DispatchID: meta.Dispatch.ID, Identity: meta.Dispatch.Assignment.Identity, RunnerBoot: meta.RunnerBoot, DaemonBoot: meta.DaemonBoot, State: p.Assigned}
+	for _, e := range r.Outbox() {
+		if e.Kind == "message" && e.Acknowledged {
+			var m w.MessageEnvelope
+			if w.Decode(e.Body, &m) == nil && m.Message.Kind == "transition" {
+				v.State = m.Message.To
+			}
+		}
+		if e.Kind == "custody_receipt" {
+			var receipt w.CommitReply
+			if w.Decode(e.Body, &receipt) == nil {
+				v.ReceiptID = receipt.Receipt.ReceiptID
+			}
+		}
+	}
+	if r.Status().Runtime != nil && r.Status().Guardian == nil {
+		v.State = p.Unknown
+	}
+	if v.ReceiptID == "" {
+		if b, err := os.ReadFile(filepath.Join(dir, "receipt.json")); err == nil {
+			var receipt w.CommitReply
+			if w.Decode(b, &receipt) == nil {
+				v.ReceiptID = receipt.Receipt.ReceiptID
+			} else {
+				v.Corrupt = true
+			}
+		}
+	}
+	if _, err := os.Stat(filepath.Join(dir, "spool")); err == nil {
+		spool, err := runstream.OpenSpool(filepath.Join(dir, "spool"), v.Identity)
+		if err != nil {
+			v.Corrupt = true
+		} else {
+			v.StreamThrough = spool.Acknowledged()
+			spool.Close()
+		}
+	}
+	return v
 }

@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -129,6 +130,11 @@ type fakeDaemon struct {
 	finalizeWaiting                 chan struct{}
 	finalizeBodies                  [][]byte
 	lastNonce                       string
+	resultRefusal                   string
+	blockStage                      string
+	stageWaiting                    chan struct{}
+	inputFailures                   int
+	hellos                          []w.Hello
 }
 
 func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
@@ -153,6 +159,30 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 		return
 	}
 	body, _ := io.ReadAll(io.LimitReader(req.Body, 64<<20))
+	stage := ""
+	switch {
+	case req.URL.Path == "/x/v1/usage":
+		stage = "usage"
+	case strings.HasSuffix(req.URL.Path, "/uploads"):
+		stage = "begin"
+	case strings.Contains(req.URL.Path, "/blobs/"):
+		stage = "blob"
+	case strings.HasSuffix(req.URL.Path, "/commit"):
+		stage = "commit"
+	case strings.HasSuffix(req.URL.Path, "/finalize"):
+		stage = "finalize"
+	}
+	if stage != "" && d.blockStage == stage {
+		select {
+		case d.stageWaiting <- struct{}{}:
+		default:
+		}
+		d.mu.Unlock()
+		<-req.Context().Done()
+		d.mu.Lock()
+		return
+	}
+
 	send := func(v any) { resp.Header().Set("Content-Type", "application/json"); json.NewEncoder(resp).Encode(v) }
 	switch req.URL.Path {
 	case "/x/v1/session":
@@ -162,6 +192,7 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 			return
 		}
 		d.calls = append(d.calls, "hello")
+		d.hellos = append(d.hellos, h)
 		d.sessionRunnerBoot = h.RunnerBoot
 		d.session.Mode = "recovery_only"
 		if h.RunnerBoot == d.eligibleBoot {
@@ -172,6 +203,11 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 		}
 		send(d.session)
 	case "/x/v1/input":
+		if d.inputFailures > 0 {
+			d.inputFailures--
+			errorReply(503, "busy")
+			return
+		}
 		if d.inputRaw != nil {
 			resp.Write(d.inputRaw)
 			return
@@ -204,7 +240,11 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 		}
 		send(in)
 	case "/x/v1/state":
-		send(w.State{AttemptState: d.state, Revision: d.revision, Released: d.released, Acknowledged: d.dispatch.Acknowledged, ReceiptID: d.receipt.Receipt.ReceiptID, StopTargets: []cTarget{}, Stream: w.StreamAck{}})
+		targets := []cTarget{}
+		if d.cancel != nil {
+			targets = append(targets, cTarget{DispatchID: d.dispatch.ID, Cancel: *d.cancel})
+		}
+		send(w.State{AttemptState: d.state, Revision: d.revision, Released: d.released, Acknowledged: d.dispatch.Acknowledged, ReceiptID: d.receipt.Receipt.ReceiptID, StopTargets: targets, Stream: w.StreamAck{}})
 	case "/x/v1/messages":
 		var m w.MessageEnvelope
 		if w.Decode(body, &m) != nil {
@@ -243,6 +283,14 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 			}
 			d.calls = append(d.calls, "refuse")
 		case "transition":
+			if m.Message.To == p.ResultPending && d.resultRefusal != "" {
+				if d.resultRefusal == "revision_conflict" {
+					d.state = p.Stopping
+					d.revision++
+				}
+				errorReply(409, d.resultRefusal)
+				return
+			}
 			reply.Outcome = "applied"
 			if m.Message.ExpectedRevision == nil || *m.Message.ExpectedRevision != d.revision || m.Message.From != d.state {
 				errorReply(409, "revision_conflict")
@@ -398,6 +446,11 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 			resp.WriteHeader(201)
 			send(w.UploadSession{UploadID: d.upload, Missing: missing, BytesAllowed: 256 << 20})
 		case strings.Contains(req.URL.Path, "/blobs/"):
+			// The real daemon closes PUT admission after custody is committed.
+			if d.receipt.Receipt.ReceiptID != "" {
+				errorReply(409, "reconciliation_required")
+				return
+			}
 			digest := filepath.Base(req.URL.Path)
 			sum := sha256.Sum256(body)
 			if digest != hex.EncodeToString(sum[:]) {
@@ -412,6 +465,16 @@ func (d *fakeDaemon) handler(resp http.ResponseWriter, req *http.Request) {
 			if d.receipt.Receipt.ReceiptID == "" {
 				receiptID := uuid()
 				d.receipt = w.CommitReply{Ack: p.Message{Version: p.FencedVersion, MessageID: uuid(), Kind: "result_ack", Identity: d.dispatch.Assignment.Identity, Manifest: d.begin.Result.Manifest, ReceiptID: receiptID}, Receipt: p.Receipt{Identity: d.dispatch.Assignment.Identity, Manifest: *d.begin.Result.Manifest, ReceiptID: receiptID, Artifacts: "durable", Metadata: "durable"}}
+			}
+			if d.blockStage == "commit_ack" {
+				select {
+				case d.stageWaiting <- struct{}{}:
+				default:
+				}
+				d.mu.Unlock()
+				<-req.Context().Done()
+				d.mu.Lock()
+				return
 			}
 			if d.dropCommit && d.commits == 1 {
 				hij := resp.(http.Hijacker)
@@ -486,6 +549,9 @@ type fixture struct {
 
 func newFixture(t *testing.T, mode string) *fixture {
 	t.Helper()
+	if runtime.GOOS != "darwin" {
+		t.Skip("macos-sandbox-exec-dev requires native macOS sandbox-exec; non-sandbox tests remain enabled")
+	}
 	root, _ := filepath.EvalSymlinks(t.TempDir())
 	roots := filepath.Join(root, "roots")
 	stateDir := filepath.Join(root, "state")
