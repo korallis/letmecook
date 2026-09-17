@@ -56,6 +56,9 @@ type cliError struct {
 }
 
 func exitCode(status int, code string) int {
+	if status == 0 && (code == "invalid_configuration" || code == "invalid_arguments") {
+		return 2
+	}
 	if code == "reconciliation_required" {
 		return 4
 	}
@@ -205,7 +208,7 @@ func helpCommand(ctx context.Context, g globals, args []string) int {
 	if len(args) != 0 {
 		return failLocal(g, 2, "invalid_arguments", "help takes no arguments")
 	}
-	return emit(g, "help", "gaffer (provisional)\nCommands: help, version, identity keygen, identity self\nGlobals: --endpoint --cert --key --daemon-fingerprint --json --message-id --timeout\nidentity keygen: --cert FILE --key FILE [--name NAME] [--days 30] [--server --host HOST]\nWorkflow, execution, verification and backup commands arrive in later slices.")
+	return emit(g, "help", "gaffer (provisional)\nCommands: help, version, identity keygen|self|invite|enroll|update, repo, runner facts, task, attempt, verify, review, daemon, reconcile, backup, flow\nGlobals: --endpoint --cert --key --daemon-fingerprint --json --message-id --timeout\nidentity keygen: --cert FILE --key FILE [--name NAME] [--days 30] [--server --host HOST]\nWorkflow commands use pinned owner mTLS. Execution, verification, local acceptance and publication remain distinct.")
 }
 func versionCommand(ctx context.Context, g globals, args []string) int {
 	if len(args) != 0 {
@@ -215,11 +218,13 @@ func versionCommand(ctx context.Context, g globals, args []string) int {
 }
 func identityCommand(ctx context.Context, g globals, args []string) int {
 	if len(args) == 0 {
-		return failLocal(g, 2, "invalid_arguments", "identity requires keygen or self")
+		return failLocal(g, 2, "invalid_arguments", "identity requires keygen, self, invite, enroll or update")
 	}
 	switch args[0] {
 	case "keygen":
 		return identityKeygen(ctx, g, args[1:])
+	case "invite", "enroll", "update":
+		return identityWorkflow(ctx, g, args)
 	case "self":
 		return identitySelf(ctx, g, args[1:])
 	default:
