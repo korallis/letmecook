@@ -80,7 +80,8 @@ func digestFile(source, target string) (store.ArtifactBlob, error) {
 	if err != nil {
 		return store.ArtifactBlob{}, err
 	}
-	if n < 1 || n > maxBytes {
+	// Zero-byte files are legitimate candidate content (an emptied file is a change).
+	if n > maxBytes {
 		return store.ArtifactBlob{}, fmt.Errorf("artifact size")
 	} // Re-read snapshot to hash after its durable copy.
 	f, err := os.Open(target)
@@ -170,6 +171,9 @@ func Pack(ctx context.Context, r Request) (Package, error) {
 	deleted, err := names(deletedRaw)
 	if err != nil {
 		return Package{}, err
+	}
+	if deleted == nil {
+		deleted = []string{} // explicit empty category; custody and Recreate refuse null.
 	}
 	if len(tracked)+len(untracked) > maxFiles {
 		return Package{}, fmt.Errorf("too many files")

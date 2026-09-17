@@ -116,7 +116,8 @@ func Recreate(ctx context.Context, src Source, c Candidate, repo, parent string)
 	paths := map[string]bool{}
 	var total int64
 	for _, b := range all {
-		if !safePath(b.Path) || paths[b.Path] || !IsDigest(b.SHA256) || b.Bytes < 1 || b.Bytes > 1<<30 {
+		// Zero-byte candidate files are recreated as empty files, never skipped.
+		if !safePath(b.Path) || paths[b.Path] || !IsDigest(b.SHA256) || b.Bytes < 0 || b.Bytes > 1<<30 {
 			return "", fmt.Errorf("unsafe candidate path/blob")
 		}
 		paths[b.Path] = true
