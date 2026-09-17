@@ -3,26 +3,40 @@
 package store
 
 // Enable after integration applies the workflowOwner/workflowDecisionTx calls to
-// grants.go and the daemon pause check to dispatchAllowed. No sleeps/race luck:
-// each test revokes the identity after authentication and before domain commit.
+// grants.go. The paused-admission gate is already in the seams base. No sleeps/
+// race luck: each test revokes identity after authentication, before commit.
 import (
 	"errors"
 	"strings"
 	"testing"
 
 	i "github.com/korallis/letmecook/internal/identity"
+	r "github.com/korallis/letmecook/internal/review"
 )
 
 func TestOwnerCommitRevocationBetweenAuthenticationAndDomainCommit(t *testing.T) {
-	for _, operation := range []string{"approve", "restrict", "invalidate", "dispatch"} {
+	for _, operation := range []string{"approve", "restrict", "invalidate", "dispatch", "review"} {
 		t.Run(operation, func(t *testing.T) {
 			f := dispatchFixtureFor(t, nil)
+			var decision r.Decision
+			if operation == "review" {
+				report, d := verificationFixture(t, f.s)
+				mustSaveVerification(t, f.s, report)
+				decision = d
+			}
 			if _, err := f.s.Authenticate(ctx, f.owner); err != nil {
 				t.Fatal(err)
 			}
 			authenticated := OwnerContext(ctx, f.owner)
 			if err := f.s.BootstrapOwner(ctx, strings.Repeat("c", 64), true); err != nil {
 				t.Fatal(err)
+			}
+			// Recovery revokes all runners too. Restore only the unrelated test
+			// runner principal so dispatch tests the owner gate, not placement.
+			if operation == "dispatch" {
+				if _, err := f.s.db.Exec("UPDATE principals SET enabled=1,revoked=0 WHERE id=?", f.facts.Repository.RunnerRoot.RunnerID); err != nil {
+					t.Fatal(err)
+				}
 			}
 			var err error
 			switch operation {
@@ -39,6 +53,8 @@ func TestOwnerCommitRevocationBetweenAuthenticationAndDomainCommit(t *testing.T)
 				err = f.s.InvalidateExecution(authenticated, f.grant.TaskID, f.grant.ID, "owner", "revoked")
 			case "dispatch":
 				_, err = f.s.Dispatch(authenticated, f.request)
+			case "review":
+				err = f.s.RecordLocalDecision(authenticated, decision)
 			}
 			if !errors.Is(err, i.Denied) {
 				t.Fatalf("revoked owner %s commit must fail identity_denied, got %v", operation, err)

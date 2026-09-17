@@ -51,9 +51,12 @@ func fixtureGit(t *testing.T, dir string, args ...string) string {
 	return strings.TrimSpace(string(b))
 }
 func newOwnerFixture(t *testing.T) *ownerFixture {
+	return newOwnerFixtureWithPolicy(t, sc.AdmissionPolicy{DevelopmentProfiles: []string{"macos-sandbox-exec-dev"}})
+}
+func newOwnerFixtureWithPolicy(t *testing.T, policy sc.AdmissionPolicy) *ownerFixture {
 	t.Helper()
 	clearEnv(t)
-	f := &ownerFixture{hub: &notify.Hub{}, policy: sc.AdmissionPolicy{DevelopmentProfiles: []string{"macos-sandbox-exec-dev"}}}
+	f := &ownerFixture{hub: &notify.Hub{}, policy: policy}
 	f.cert, f.key, f.owner = generate(t, false)
 	f.runnerCert, f.runnerKey, _ = generate(t, false)
 	f.serverCert, f.serverKey, f.serverPin = generate(t, true)
@@ -120,7 +123,7 @@ func newOwnerFixture(t *testing.T) *ownerFixture {
 	}
 	return f
 }
-func (f *ownerFixture) serve(t *testing.T, policy sc.AdmissionPolicy) (string, *http.Client) {
+func (f *ownerFixture) serve(t *testing.T, sinks ...httpapi.SinkReader) (string, *http.Client) {
 	t.Helper()
 	ts := httptest.NewUnstartedServer(nil)
 	var err error
@@ -128,7 +131,10 @@ func (f *ownerFixture) serve(t *testing.T, policy sc.AdmissionPolicy) (string, *
 	if err != nil {
 		t.Fatal(err)
 	}
-	d := httpapi.Deps{Store: f.s, Policy: policy, Hub: f.hub}
+	d := httpapi.Deps{Store: f.s, Policy: f.policy, Hub: f.hub}
+	if len(sinks) > 0 {
+		d.Sinks = sinks[0]
+	}
 	worker, err := jobs.NewWorker(context.Background(), f.s, httpapi.WorkflowJobHandlers(d, httpapi.VerificationOptions{StateDir: f.state}))
 	if err != nil {
 		t.Fatal(err)
@@ -219,7 +225,7 @@ func taskBody(f *ownerFixture, key string) map[string]any {
 }
 func TestWorkflowHTTPSReplayRolesDevelopmentAndStop(t *testing.T) {
 	f := newOwnerFixture(t)
-	endpoint, client := f.serve(t, f.policy)
+	endpoint, client := f.serve(t)
 	create := taskBody(f, "create")
 	taskID := create["message_id"].(string)
 	mutation(t, client, endpoint, "/api/v1/tasks", create, 201)
@@ -330,10 +336,11 @@ func TestWorkflowHTTPSReplayRolesDevelopmentAndStop(t *testing.T) {
 	mutation(t, client, endpoint, "/api/v1/tasks/"+extraID+"/invalidate", invalidate, 200)
 	mutation(t, client, endpoint, "/api/v1/daemon/stop", commandBody("stop-all"), 202)
 	// Daemon consent cannot be supplied by a request flag.
-	deniedURL, deniedClient := f.serve(t, sc.AdmissionPolicy{})
-	other := taskBody(f, "denied-create")
+	denied := newOwnerFixtureWithPolicy(t, sc.AdmissionPolicy{})
+	deniedURL, deniedClient := denied.serve(t)
+	other := taskBody(denied, "denied-create")
 	mutation(t, deniedClient, deniedURL, "/api/v1/tasks", other, 201)
-	proposal, err = workflow.BuildGrant(context.Background(), f.s, other["message_id"].(string), f.facts.ID)
+	proposal, err = workflow.BuildGrant(context.Background(), denied.s, other["message_id"].(string), denied.facts.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -534,7 +541,7 @@ func TestReviewOverrideGoldenStillRefused(t *testing.T) {
 // acknowledged; retry recovers from the immutable domain intent key.
 func TestWorkflowLostReceiptRecoversCommittedTask(t *testing.T) {
 	f := newOwnerFixture(t)
-	endpoint, client := f.serve(t, f.policy)
+	endpoint, client := f.serve(t)
 	db, err := sql.Open("sqlite", filepath.Join(f.state, "state.db"))
 	if err != nil {
 		t.Fatal(err)
