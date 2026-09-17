@@ -331,7 +331,7 @@ func (x *executionFixture) rcRunFake(t *testing.T, texts ...string) c.Lease {
 	x.propose(t, p.Running, launchedEvidence())
 	through := int64(0)
 	if len(texts) > 0 {
-		ack, err := x.s.Streams().Receive(x.d.Assignment.Identity.AttemptID, x.d.Assignment.Identity, spooledRecords(t, x.d.Assignment.Identity, texts...))
+		ack, err := x.s.sinks().Receive(x.d.Assignment.Identity.AttemptID, x.d.Assignment.Identity, spooledRecords(t, x.d.Assignment.Identity, texts...))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -393,7 +393,7 @@ func TestCompleteFinalizationEvidence(t *testing.T) {
 	refuse(&x, nil, "boundary")
 	// Records appended after the exit observation break the watermark equality.
 	extra := spooledRecords(t, x.d.Assignment.Identity, "first", "second", "late")
-	if _, err := x.s.Streams().Receive(attempt, x.d.Assignment.Identity, extra[2:]); err != nil {
+	if _, err := x.s.sinks().Receive(attempt, x.d.Assignment.Identity, extra[2:]); err != nil {
 		t.Fatal(err)
 	}
 	refuse(&x, nil, "stream")
