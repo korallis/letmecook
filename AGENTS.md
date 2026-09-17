@@ -5,8 +5,10 @@ describes intended behaviour, not existing APIs. See
 `docs/decisions/0001-execution-foundation.md` for the build choice, package owners
 and unresolved #9 gates. The reversible protocol, local store scaffold and
 embedded fixture shell remain provisional; `docs/contracts/execution.md` owns protocol
-reconciliation, `cmd/gafferd/README.md` owns explicit install flags, fixture separation,
-read API and checks; `cmd/gafferd/IDENTITY.md` owns provisional mTLS bootstrap,
+reconciliation; `docs/contracts/model-gateway.md` owns gateway configuration,
+credential-reference and inference-boundary requirements; `cmd/gafferd/README.md`
+owns explicit install flags, fixture separation, read API and checks;
+`cmd/gafferd/IDENTITY.md` owns provisional mTLS bootstrap,
 enrollment and local recovery (not runner eligibility); and
 `web/README.md` owns the shell build that must precede the Go build.
 `internal/authority/README.md` owns provisional grant APIs and their trust/dispatch

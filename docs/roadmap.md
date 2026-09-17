@@ -61,7 +61,7 @@ configured model gateway, and is a new Gaffer foundation justified?
 - [ ] A written build/adopt/extend decision compares at least two plausible foundations with the same required workflow; untested properties stay unknown.
 - [ ] One real task through the configured gateway returns a complete reviewable artifact with recorded harness/gateway version, base SHA, protocol, model target and available usage observations.
 - [ ] Every gateway behavior Gaffer will rely on is proven separately. If account rotation or request fallback is configured, failure before output and partial-stream handling are tested without changing agent configuration or redispatching the Gaffer task.
-- [ ] Gateway and provider credentials remain outside workers. Worker inference access cannot reach gateway management, the unrestricted endpoint, direct providers or an unauthorised model. Any status projection excludes credential fields.
+- [ ] Provider credentials remain inside the gateway; the gateway credential is resolved only by the trusted boundary and never reaches workers. Worker inference access cannot reach gateway management, the unrestricted endpoint, direct providers or an unauthorised model. Any status projection excludes credential fields.
 - [ ] A worker cannot write outside the execution boundary or modify runner policy; adversarial fixtures cover symlinks, hooks and child processes.
 - [ ] Planner/discovery probes cannot execute repository code or gain delivery permissions.
 - [ ] Cancellation terminates the test process tree; failure is a blocker for unattended work.

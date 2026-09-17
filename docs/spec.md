@@ -444,12 +444,13 @@ same authority envelope. See the [task-routing contract](https://github.com/kora
 for assessment bounds, evidence, immutable decisions and evaluation.
 
 Gateway model targets can use different models while sharing gateway-owned provider
-accounts or subscriptions. Attribute available intent, planning, coding,
-model-assisted review and later curation usage to tasks/projects only with proven
-correlation. Keep uncorrelated observations separate and missing usage or attribution
-unknown. Embeddings are absent initially; any future model integration must use an
-explicitly supported gateway model target or a separately documented local embedding
-implementation.
+accounts or subscriptions. All intent, planning, coding, model-assisted review and
+later curation usage that passes the per-attempt boundary is attributed to
+tasks/projects. Upstream provider/model/account and gateway usage observations are
+attached to an attempt only with proven correlation; keep uncorrelated observations
+separate and mark missing usage unknown. Embeddings are absent initially; any future
+model integration must use an explicitly supported gateway model target or a
+separately documented local embedding implementation.
 
 Future typed model tools can include plan.propose, task.inspect, context.query,
 context.propose and human.ask. A schedule or authority change is a proposal awaiting
@@ -655,8 +656,9 @@ A **gateway model target** is an exact ID or alias permitted by configuration. T
 gateway may resolve that target through one or more provider accounts,
 subscriptions or fallback models. Those are gateway-owned details. Every possible
 fallback still has to fit the operator-approved provider/model/billing envelope;
-where that cannot be established, Gaffer records the capability as unknown and
-blocks policies that require proof. Duplicate aliases never imply extra capacity.
+where that cannot be established, the target is ineligible for any grant whose
+data, billing or capability policy depends on it, which includes every grant
+carrying repository data. Duplicate aliases never imply extra capacity.
 
 The worker keeps its current attempt and boundary endpoint while the gateway handles
 an allowed account rotation or request fallback. It never receives a new Gaffer
@@ -749,10 +751,12 @@ ranked alternatives are not a Gaffer request-fallback loop. Bootstrap assessment
 uses an explicitly permitted gateway model and bounded allowance.
 
 Account rotation, cooldown and request fallback live in the configured gateway.
-Gaffer permits only model targets whose complete known provider/model/billing set
-fits project policy. A subscription-only target excludes paid fallthrough; paid
-fallback is explicit gateway policy. If the gateway cannot expose or constrain that
-envelope, hard policies requiring it remain blocked rather than guessed.
+Gaffer permits only model targets whose complete provider/model/billing envelope
+is established and fits project policy. A subscription-only target excludes paid
+fallthrough; paid fallback is explicit gateway policy. If the gateway cannot expose
+or constrain a target's fallback envelope, that target is ineligible until the
+operator pins an exact model whose envelope is known; it is never admitted by
+default.
 
 Track wall time, attempts, concurrent processes, daily work and metered-spend limits
 at task/project/global level. Where a hard monetary ceiling is required, enforce it
@@ -764,15 +768,24 @@ retries and summaries in accounting; report marginal cash separately from alloca
 subscription/hardware cost.
 
 Each grant binds an explicit versioned limits profile together with exact gateway
-identity, permitted model/fallback envelope where knowable, protocol/harness/settings,
+identity, complete permitted model/fallback envelope, protocol/harness/settings,
 capability evidence and authority. `strict-provider-output-v1` remains the default:
 a positive finite provider output-token cap must be preserved and enforced on every
-approved path. The existing
+approved path.
+
+The operator-approved optional
 [`native-subscription-local-v1` contract](https://github.com/korallis/letmecook/blob/main/docs/contracts/native-subscription-limits.md)
-is a historical 9Router-specific optional profile; it is not CLIProxyAPI conformance
-and cannot be applied to another gateway without new evidence and authority. A
-profile change needs a new policy/grant identity and any required gateway-specific
-freeze/drain procedure; no automatic downgrade is allowed.
+requires explicit authorization and finite enforced local bytes, concurrency,
+request/subattempt/retry counts and deadlines. It declares provider output-token
+and monetary bounds unavailable and rejects tasks requiring either hard bound.
+Every reachable account/fallback must have reviewed subscription classification
+and required compatibility. Its recorded evidence and approved evaluation envelope
+were obtained on the 9Router profile and do not establish CLIProxyAPI conformance;
+using it on another gateway needs that gateway's own conformance evidence under
+the same explicit authority. A profile change needs a new policy/grant identity
+and any required gateway-specific freeze/drain procedure; no automatic downgrade
+is allowed. The approved bounded evaluation envelope is separate from public
+installation defaults and is not live evidence.
 
 ### 8.4 Failure boundary and conformance
 
@@ -819,7 +832,7 @@ This is an entity/constraint sketch, not executable migration SQL:
 daemon_generation(id, created_at, reason, reconciled_at)
 repository(id, canonical_remote, allowed_roots, default_branch, policy_revision)
 project(id, repository_id, state, context_path, current_brief, current_plan)
-capture(id, client_request_id UNIQUE, raw_text, source, gateway_model_id, created_at)
+capture(id, client_request_id UNIQUE, raw_text, source, repository_routing, created_at)
 brief_revision(id, project_id, revision, hash, content, state)
 plan_revision(id, brief_revision_id, hash, content, state)
 authority_grant(id, actor, scope, revisions, limits, expires_at, revoked_at)

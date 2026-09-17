@@ -4,8 +4,9 @@ Specification for [issue #71](https://github.com/korallis/letmecook/issues/71),
 14 September 2026; generalized 17 September 2026. This describes intended alpha
 behaviour, not an implemented selector or verified model ranking. It extends the
 [generic model gateway contract](model-gateway.md). The retained
-[9Router contract](9router.md) and [#81 limits profiles](native-subscription-limits.md)
-remain historical gateway-specific profiles; they do not establish current
+[9Router contract](9router.md) is a historical gateway-specific profile; the
+[#81 limits profiles](native-subscription-limits.md) remain operator-approved
+options whose evidence was recorded on that profile. Neither establishes current
 CLIProxyAPI eligibility or conformance.
 
 ## Ownership and result
@@ -163,7 +164,7 @@ Reviewer findings cannot grant local acceptance, publication or merge authority.
 
 ## Optional operator preference example
 
-The following reproduces the operator's historical starting preferences. Names and
+The following reproduces the operator's requested starting preferences. Names and
 effort labels are **desired labels**, not verified availability, comparative
 strength or a runnable configuration. An installation must bind exact gateway model
 IDs or aliases and tested settings, validate every known fallback path, and mark

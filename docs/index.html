@@ -508,7 +508,10 @@ operator-configured model gateway, currently CLIProxyAPI, not 9Router specifical
 The gateway owns provider credentials, accounts/subscriptions, rotation, cooldown
 and request fallback. Gaffer builds work orchestration above that boundary without
 duplicating account routing or quota accounting. The v0.4 9Router decision and its
-source evidence remain historical gateway-specific material.</p>
+source evidence remain historical gateway-specific material. The v0.3
+recommendation to defer a shared gateway was an overcorrection; v0.4 selected
+9Router, and this revision generalizes that selection to any operator-configured
+gateway.</p>
 <h2 id="evaluation-1-overall-judgment">1. Overall judgment</h2>
 <p>The product intent is coherent: you want to describe work naturally, retain the
 agreement and progress over time, run agents on explicitly chosen machines, and
@@ -763,7 +766,7 @@ snapshot reads from active refresh rather than polling everything indiscriminate
 <p>The original hard-coded SQLite path should still be removed: the referenced
 <a href="https://github.com/rickicode/9router">README</a> describes a different storage layout,
 and private storage is not the right API contract regardless of backend. This is a
-reason the historical profile integrated through an adapter, not through private storage.</p>
+reason to integrate any gateway through an adapter, not through its private storage.</p>
 <h3 id="evaluation-concrete-integration-boundaries-from-source">Concrete integration boundaries from source</h3>
 <p>The inspected inference handler makes API-key enforcement configurable and does
 not implement per-key combo/model scope. Enable authentication and use a narrow
@@ -1088,7 +1091,7 @@ a runner, verifies a harness, and sees one concrete next action.</p>
 <ul>
 <li><input disabled="" type="checkbox"> <code>gaffer up</code> creates private state and prints the local setup URL; a diagnostic explains missing git, gateway connectivity, harness, authentication or isolation support.</li>
 <li><input disabled="" type="checkbox"> A packaged daemon serves its UI without a separately installed UI runtime. The runner may require the documented isolation runtime and provider CLI.</li>
-<li><input disabled="" type="checkbox"> First-run setup shows where state, execution files and provider credentials live.</li>
+<li><input disabled="" type="checkbox"> First-run setup shows where state, execution files and the gateway credential reference live; provider credentials live in the gateway.</li>
 <li><input disabled="" type="checkbox"> Uninstall stops services and removes program files; context and recovery artifacts are preserved unless the operator chooses to delete them.</li>
 </ul>
 <h4 id="prd-us-a2-decide-which-machines-can-work">US-A2 — Decide which machines can work</h4>
@@ -1121,6 +1124,7 @@ can reserve a runner to exact repositories/projects.</p>
 <li><input disabled="" type="checkbox"> Bound any model-assisted assessment through an allowed bootstrap model. Record selection and evidence versions; revalidate at dispatch and preserve the selected target throughout an attempt.</li>
 <li><input disabled="" type="checkbox"> Provider login, credentials, accounts/subscriptions, rotation, cooldown and request fallback are managed in the gateway. Gaffer does not expose parallel account controls or a quota ledger.</li>
 <li><input disabled="" type="checkbox"> Where multiple accounts or subscriptions back one target, gateway-owned rotation or fallback does not require changing agent configuration or redispatching the Gaffer task. Do not claim this behavior without gateway-specific evidence.</li>
+<li><input disabled="" type="checkbox"> Duplicate aliases for one account never imply extra capacity; separate accounts count as separate capacity only where the gateway establishes it; shared organisation limits are respected where applicable.</li>
 <li><input disabled="" type="checkbox"> A probe verifies the exact harness→boundary→gateway→model path, including required streaming/tool behavior. Workers receive only attempt-scoped boundary access; the boundary injects the gateway credential and pins permitted protocols and models.</li>
 <li><input disabled="" type="checkbox"> Usage and status observations name their source and freshness. Missing management APIs, headroom, reset, resolved account or fallback details stay unknown. Paid fallback must be explicit in the gateway policy and proven enforceable where required.</li>
 </ul>
@@ -1235,7 +1239,7 @@ gateway owns provider accounts/subscriptions, rotation, cooldown and request fal
 <li><input disabled="" type="checkbox"> A successful gateway-owned rotation or fallback continues the current attempt without Gaffer redispatching the task.</li>
 <li><input disabled="" type="checkbox"> Gaffer consumes safe aggregate availability where exposed rather than maintaining competing per-account balances; missing account/subscription observations stay unknown.</li>
 <li><input disabled="" type="checkbox"> When the whole model target or gateway is unavailable, preserve the attempt and work. A replacement attempt starts only after the prior execution is fenced and its artifacts reconciled.</li>
-<li><input disabled="" type="checkbox"> Allowed providers, model capabilities and billing classes constrain the complete known fallback envelope. No cross-provider transcript portability is assumed; an uninspectable envelope blocks policies that require proof.</li>
+<li><input disabled="" type="checkbox"> Allowed providers, model capabilities and billing classes constrain the complete fallback envelope. No cross-provider transcript portability is assumed; an uninspectable envelope makes the target ineligible rather than assumed compliant.</li>
 <li><input disabled="" type="checkbox"> Show gateway-reported reset/next probe time where available, otherwise “unknown”; use bounded task-level backoff without thrashing.</li>
 <li><input disabled="" type="checkbox"> Concurrency, duration, attempts, daily work and enforceable spend caps apply to discovery, planning, coding and verification.</li>
 </ul>
@@ -1838,12 +1842,13 @@ reason, unknowns and eligible alternatives; an operator can override within the
 same authority envelope. See the <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/task-routing.md">task-routing contract</a>
 for assessment bounds, evidence, immutable decisions and evaluation.</p>
 <p>Gateway model targets can use different models while sharing gateway-owned provider
-accounts or subscriptions. Attribute available intent, planning, coding,
-model-assisted review and later curation usage to tasks/projects only with proven
-correlation. Keep uncorrelated observations separate and missing usage or attribution
-unknown. Embeddings are absent initially; any future model integration must use an
-explicitly supported gateway model target or a separately documented local embedding
-implementation.</p>
+accounts or subscriptions. All intent, planning, coding, model-assisted review and
+later curation usage that passes the per-attempt boundary is attributed to
+tasks/projects. Upstream provider/model/account and gateway usage observations are
+attached to an attempt only with proven correlation; keep uncorrelated observations
+separate and mark missing usage unknown. Embeddings are absent initially; any future
+model integration must use an explicitly supported gateway model target or a
+separately documented local embedding implementation.</p>
 <p>Future typed model tools can include plan.propose, task.inspect, context.query,
 context.propose and human.ask. A schedule or authority change is a proposal awaiting
 operator/policy approval. The CLI calls the same typed API for humans or workers
@@ -2060,8 +2065,9 @@ Anthropic Messages protocols. Gaffer stores a credential reference, never a valu
 gateway may resolve that target through one or more provider accounts,
 subscriptions or fallback models. Those are gateway-owned details. Every possible
 fallback still has to fit the operator-approved provider/model/billing envelope;
-where that cannot be established, Gaffer records the capability as unknown and
-blocks policies that require proof. Duplicate aliases never imply extra capacity.</p>
+where that cannot be established, the target is ineligible for any grant whose
+data, billing or capability policy depends on it, which includes every grant
+carrying repository data. Duplicate aliases never imply extra capacity.</p>
 <p>The worker keeps its current attempt and boundary endpoint while the gateway handles
 an allowed account rotation or request fallback. It never receives a new Gaffer
 account profile because Gaffer has no such profile. A terminal gateway failure is
@@ -2138,10 +2144,12 @@ restriction or resource cap. An attempt&#39;s gateway model target stays immutab
 ranked alternatives are not a Gaffer request-fallback loop. Bootstrap assessment
 uses an explicitly permitted gateway model and bounded allowance.</p>
 <p>Account rotation, cooldown and request fallback live in the configured gateway.
-Gaffer permits only model targets whose complete known provider/model/billing set
-fits project policy. A subscription-only target excludes paid fallthrough; paid
-fallback is explicit gateway policy. If the gateway cannot expose or constrain that
-envelope, hard policies requiring it remain blocked rather than guessed.</p>
+Gaffer permits only model targets whose complete provider/model/billing envelope
+is established and fits project policy. A subscription-only target excludes paid
+fallthrough; paid fallback is explicit gateway policy. If the gateway cannot expose
+or constrain a target&#39;s fallback envelope, that target is ineligible until the
+operator pins an exact model whose envelope is known; it is never admitted by
+default.</p>
 <p>Track wall time, attempts, concurrent processes, daily work and metered-spend limits
 at task/project/global level. Where a hard monetary ceiling is required, enforce it
 using bounded requests, in-flight reservations and independently verified
@@ -2151,15 +2159,23 @@ cannot refund already processed requests. Include planning, coding, model review
 retries and summaries in accounting; report marginal cash separately from allocated
 subscription/hardware cost.</p>
 <p>Each grant binds an explicit versioned limits profile together with exact gateway
-identity, permitted model/fallback envelope where knowable, protocol/harness/settings,
+identity, complete permitted model/fallback envelope, protocol/harness/settings,
 capability evidence and authority. <code>strict-provider-output-v1</code> remains the default:
 a positive finite provider output-token cap must be preserved and enforced on every
-approved path. The existing
+approved path.</p>
+<p>The operator-approved optional
 <a href="https://github.com/korallis/letmecook/blob/main/docs/contracts/native-subscription-limits.md"><code>native-subscription-local-v1</code> contract</a>
-is a historical 9Router-specific optional profile; it is not CLIProxyAPI conformance
-and cannot be applied to another gateway without new evidence and authority. A
-profile change needs a new policy/grant identity and any required gateway-specific
-freeze/drain procedure; no automatic downgrade is allowed.</p>
+requires explicit authorization and finite enforced local bytes, concurrency,
+request/subattempt/retry counts and deadlines. It declares provider output-token
+and monetary bounds unavailable and rejects tasks requiring either hard bound.
+Every reachable account/fallback must have reviewed subscription classification
+and required compatibility. Its recorded evidence and approved evaluation envelope
+were obtained on the 9Router profile and do not establish CLIProxyAPI conformance;
+using it on another gateway needs that gateway&#39;s own conformance evidence under
+the same explicit authority. A profile change needs a new policy/grant identity
+and any required gateway-specific freeze/drain procedure; no automatic downgrade
+is allowed. The approved bounded evaluation envelope is separate from public
+installation defaults and is not live evidence.</p>
 <h3 id="spec-84-failure-boundary-and-conformance">8.4 Failure boundary and conformance</h3>
 <p>A provider account rate limit or pre-output request failure that the configured
 gateway successfully handles is not a Gaffer task failure. Keep the same attempt.
@@ -2195,7 +2211,7 @@ it. Advanced task admission based on richer gateway observations can mature at M
 <pre><code class="language-text">daemon_generation(id, created_at, reason, reconciled_at)
 repository(id, canonical_remote, allowed_roots, default_branch, policy_revision)
 project(id, repository_id, state, context_path, current_brief, current_plan)
-capture(id, client_request_id UNIQUE, raw_text, source, gateway_model_id, created_at)
+capture(id, client_request_id UNIQUE, raw_text, source, repository_routing, created_at)
 brief_revision(id, project_id, revision, hash, content, state)
 plan_revision(id, brief_revision_id, hash, content, state)
 authority_grant(id, actor, scope, revisions, limits, expires_at, revoked_at)
@@ -2425,7 +2441,7 @@ configured model gateway, and is a new Gaffer foundation justified?</p>
 <li><input disabled="" type="checkbox"> A written build/adopt/extend decision compares at least two plausible foundations with the same required workflow; untested properties stay unknown.</li>
 <li><input disabled="" type="checkbox"> One real task through the configured gateway returns a complete reviewable artifact with recorded harness/gateway version, base SHA, protocol, model target and available usage observations.</li>
 <li><input disabled="" type="checkbox"> Every gateway behavior Gaffer will rely on is proven separately. If account rotation or request fallback is configured, failure before output and partial-stream handling are tested without changing agent configuration or redispatching the Gaffer task.</li>
-<li><input disabled="" type="checkbox"> Gateway and provider credentials remain outside workers. Worker inference access cannot reach gateway management, the unrestricted endpoint, direct providers or an unauthorised model. Any status projection excludes credential fields.</li>
+<li><input disabled="" type="checkbox"> Provider credentials remain inside the gateway; the gateway credential is resolved only by the trusted boundary and never reaches workers. Worker inference access cannot reach gateway management, the unrestricted endpoint, direct providers or an unauthorised model. Any status projection excludes credential fields.</li>
 <li><input disabled="" type="checkbox"> A worker cannot write outside the execution boundary or modify runner policy; adversarial fixtures cover symlinks, hooks and child processes.</li>
 <li><input disabled="" type="checkbox"> Planner/discovery probes cannot execute repository code or gain delivery permissions.</li>
 <li><input disabled="" type="checkbox"> Cancellation terminates the test process tree; failure is a blocker for unattended work.</li>

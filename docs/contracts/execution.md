@@ -55,10 +55,10 @@ repository mapping, brief/plan revisions, base/context, grant, isolation and ful
 route decision. An unresolved digest or route reference blocks admission. The
 [task-routing](task-routing.md) and [model-gateway](model-gateway.md) contracts
 still apply: all inference goes through the configured model gateway; account
-selection, credentials and request fallback remain its responsibility. The
-historical [native limits profile](native-subscription-limits.md) applies only when
-its 9Router gateway profile is selected and it is separately authorised. Execution,
-local acceptance, publication and merge require distinct authority.
+selection, credentials and request fallback remain its responsibility. The optional
+[native limits profile](native-subscription-limits.md) applies only when it is
+separately authorised and its controls are proven on the configured gateway.
+Execution, local acceptance, publication and merge require distinct authority.
 
 ## 2. Version and wire contract
 

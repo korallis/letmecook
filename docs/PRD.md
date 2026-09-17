@@ -79,7 +79,7 @@ a runner, verifies a harness, and sees one concrete next action.
 
 - [ ] `gaffer up` creates private state and prints the local setup URL; a diagnostic explains missing git, gateway connectivity, harness, authentication or isolation support.
 - [ ] A packaged daemon serves its UI without a separately installed UI runtime. The runner may require the documented isolation runtime and provider CLI.
-- [ ] First-run setup shows where state, execution files and provider credentials live.
+- [ ] First-run setup shows where state, execution files and the gateway credential reference live; provider credentials live in the gateway.
 - [ ] Uninstall stops services and removes program files; context and recovery artifacts are preserved unless the operator chooses to delete them.
 
 #### US-A2 — Decide which machines can work
@@ -115,6 +115,7 @@ can reserve a runner to exact repositories/projects.
 - [ ] Bound any model-assisted assessment through an allowed bootstrap model. Record selection and evidence versions; revalidate at dispatch and preserve the selected target throughout an attempt.
 - [ ] Provider login, credentials, accounts/subscriptions, rotation, cooldown and request fallback are managed in the gateway. Gaffer does not expose parallel account controls or a quota ledger.
 - [ ] Where multiple accounts or subscriptions back one target, gateway-owned rotation or fallback does not require changing agent configuration or redispatching the Gaffer task. Do not claim this behavior without gateway-specific evidence.
+- [ ] Duplicate aliases for one account never imply extra capacity; separate accounts count as separate capacity only where the gateway establishes it; shared organisation limits are respected where applicable.
 - [ ] A probe verifies the exact harness→boundary→gateway→model path, including required streaming/tool behavior. Workers receive only attempt-scoped boundary access; the boundary injects the gateway credential and pins permitted protocols and models.
 - [ ] Usage and status observations name their source and freshness. Missing management APIs, headroom, reset, resolved account or fallback details stay unknown. Paid fallback must be explicit in the gateway policy and proven enforceable where required.
 
@@ -245,7 +246,7 @@ gateway owns provider accounts/subscriptions, rotation, cooldown and request fal
 - [ ] A successful gateway-owned rotation or fallback continues the current attempt without Gaffer redispatching the task.
 - [ ] Gaffer consumes safe aggregate availability where exposed rather than maintaining competing per-account balances; missing account/subscription observations stay unknown.
 - [ ] When the whole model target or gateway is unavailable, preserve the attempt and work. A replacement attempt starts only after the prior execution is fenced and its artifacts reconciled.
-- [ ] Allowed providers, model capabilities and billing classes constrain the complete known fallback envelope. No cross-provider transcript portability is assumed; an uninspectable envelope blocks policies that require proof.
+- [ ] Allowed providers, model capabilities and billing classes constrain the complete fallback envelope. No cross-provider transcript portability is assumed; an uninspectable envelope makes the target ineligible rather than assumed compliant.
 - [ ] Show gateway-reported reset/next probe time where available, otherwise “unknown”; use bounded task-level backoff without thrashing.
 - [ ] Concurrency, duration, attempts, daily work and enforceable spend caps apply to discovery, planning, coding and verification.
 

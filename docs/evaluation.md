@@ -14,7 +14,10 @@ operator-configured model gateway, currently CLIProxyAPI, not 9Router specifical
 The gateway owns provider credentials, accounts/subscriptions, rotation, cooldown
 and request fallback. Gaffer builds work orchestration above that boundary without
 duplicating account routing or quota accounting. The v0.4 9Router decision and its
-source evidence remain historical gateway-specific material.
+source evidence remain historical gateway-specific material. The v0.3
+recommendation to defer a shared gateway was an overcorrection; v0.4 selected
+9Router, and this revision generalizes that selection to any operator-configured
+gateway.
 
 ## 1. Overall judgment
 
@@ -189,7 +192,7 @@ snapshot reads from active refresh rather than polling everything indiscriminate
 The original hard-coded SQLite path should still be removed: the referenced
 [README](https://github.com/rickicode/9router) describes a different storage layout,
 and private storage is not the right API contract regardless of backend. This is a
-reason the historical profile integrated through an adapter, not through private storage.
+reason to integrate any gateway through an adapter, not through its private storage.
 
 ### Concrete integration boundaries from source
 
