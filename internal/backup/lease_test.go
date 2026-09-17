@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/korallis/letmecook/internal/authority"
 	"github.com/korallis/letmecook/internal/store"
 	p "github.com/korallis/letmecook/schemas/execution"
 )
@@ -34,6 +35,20 @@ func TestRestoreIssueLeaseFencesOldGeneration(t *testing.T) {
 	if errors.Is(err, store.ErrNotImplemented) {
 		t.Skip("integration: S1 IssueLease implementation pending on seams base")
 	}
+	var refusal *authority.Refusal
+	if !errors.As(err, &refusal) || refusal.Code != "session_stale" {
+		t.Fatal("pre-restore session not fenced", err)
+	}
+	// A retired session is refused before generation checks. Reconnect through
+	// the real API so the old dispatch/request reaches the generation fence.
+	hello.MessageID = uuid()
+	fresh, err := s.RunnerSession(ctx, f.runner, hello)
+	must(t, err)
+	if fresh.Generation == status.Generation || fresh.DaemonBoot == status.DaemonBoot {
+		t.Fatal("restored session reused retired generation or boot", fresh)
+	}
+	request.DaemonBoot = fresh.DaemonBoot
+	_, err = s.IssueLease(ctx, f.runner, fresh.SessionID, f.dispatch, p.FencedVersion, request)
 	if !errors.Is(err, p.StaleGeneration) {
 		t.Fatal("old-generation lease issuance not fenced", err)
 	}

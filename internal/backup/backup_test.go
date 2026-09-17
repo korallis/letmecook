@@ -582,7 +582,6 @@ func TestRestoreFencesOldAssignmentLeaseAndResult(t *testing.T) {
 	}
 }
 func TestRestoreQuarantinesAlreadyAcknowledgedReceiptReplay(t *testing.T) {
-	t.Skip("integration: artifacts.go replay fix pending")
 	f := testFixture(t, true)
 	prior := f.custody(t)
 	out := f.backup(t)
@@ -961,7 +960,6 @@ func TestRestoredSnapshotPreservesHistoricalEventGenerations(t *testing.T) {
 }
 
 func TestDaemonRefusesIncompleteRestoreMarker(t *testing.T) {
-	t.Skip("integration: incomplete restore startup guard pending")
 	root := t.TempDir()
 	state := filepath.Join(root, "state")
 	must(t, os.Mkdir(state, 0700))

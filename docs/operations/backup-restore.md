@@ -61,10 +61,12 @@ its entire directory/root is missing. Copied journals receive bounded read-only
 replay of the `runnerjournal` envelope and hash chain plus `runstream.Validate`
 record checks, binding the attempt identity, acknowledged watermark and
 generation lineage across repeated restores. Verification never opens a live
-writable sink; read-only backup media can be verified and restored without mutation. Extra files (including SQLite
-sidecars) are refused. Corrupt or missing content produces an error naming the
-failed content where available; a database-only directory is never reported as a complete backup. Hashes detect accidental corruption, not an
-attacker who can rewrite both the backup and its manifest. Store backups privately.
+writable sink; read-only backup media can be verified and restored without
+mutation. Extra files (including SQLite sidecars) are refused. Corrupt or missing
+content produces an error naming the failed content where available; a
+database-only directory is never reported as a complete backup. Hashes detect
+accidental corruption, not an attacker who can rewrite both the backup and its
+manifest. Store backups privately.
 
 **Residual stream-evidence limit:** a terminal attempt can have acknowledged sink
 records but no retained exit observation or other positive stream watermark. If
@@ -177,17 +179,19 @@ A new generation is a message fence, **not a process kill**. Old-generation
 assignment acknowledgements and lease/result control messages are refused
 `stale_generation`; newly arriving old-generation custody is retained in quarantine,
 never a current head. `TestRestoreIssueLeaseFencesOldGeneration` additionally
-invokes the actual lease issuance entry point against a retained old-generation
-session; it skips only while that S1 method returns `ErrNotImplemented` on the
-seams base, and otherwise requires `stale_generation` with no lease row created.
-Historical acknowledged-receipt replay additionally needs
-S0's retained-receipt generation check; the integration regression test is named
-`TestRestoreQuarantinesAlreadyAcknowledgedReceiptReplay` (skipped until that fix
-lands). Historical events must retain their original generation, and the legacy
-snapshot reader needs the separate historical-generation projection update
-(`TestRestoredSnapshotPreservesHistoricalEventGenerations`). Normal startup should
-also refuse `.restore-incomplete`; the standalone backup slice does not own that
-`store.go` guard. No successful response here grants execution, review or publication.
+invokes the actual lease issuance entry point: a retained pre-restore session
+must fail `session_stale`, then an old-generation request over a fresh session
+must fail `stale_generation` with no lease row created. It skips only while S1's
+`IssueLease` returns `ErrNotImplemented` on the seams base.
+Historical acknowledged-receipt replay is quarantined by the integrated store's
+retained-receipt generation check, covered by
+`TestRestoreQuarantinesAlreadyAcknowledgedReceiptReplay`. Normal store startup
+refuses `.restore-incomplete` before opening or initializing its database, covered
+by `TestDaemonRefusesIncompleteRestoreMarker`. Historical events must still retain
+their original generation; the legacy snapshot reader needs the separate
+historical-generation projection update, so
+`TestRestoredSnapshotPreservesHistoricalEventGenerations` remains skipped. No
+successful response here grants execution, review or publication.
 
 ## Recovery point, retention and limits
 
