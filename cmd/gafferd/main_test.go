@@ -262,3 +262,71 @@ func TestExecutionFlagValidation(t *testing.T) {
 		}
 	}
 }
+
+func TestPrepareVerificationState(t *testing.T) {
+	t.Run("creates-private-root", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), "state")
+		for range 2 {
+			if err := prepareVerificationState(path); err != nil {
+				t.Fatal(err)
+			}
+			info, err := os.Lstat(path)
+			if err != nil || !info.IsDir() || info.Mode().Perm() != 0700 {
+				t.Fatal("verification root is not private", info, err)
+			}
+		}
+	})
+	t.Run("does-not-create-missing-parent", func(t *testing.T) {
+		parent := filepath.Join(t.TempDir(), "missing")
+		if err := prepareVerificationState(filepath.Join(parent, "state")); err == nil {
+			t.Fatal("missing installation parent accepted")
+		}
+		if _, err := os.Lstat(parent); !os.IsNotExist(err) {
+			t.Fatal("preflight created installation parent", err)
+		}
+	})
+	t.Run("refuses-symlink-root", func(t *testing.T) {
+		root := t.TempDir()
+		path := filepath.Join(t.TempDir(), "state")
+		if err := os.Symlink(root, path); err != nil {
+			t.Fatal(err)
+		}
+		if err := prepareVerificationState(path); err == nil || !strings.Contains(err.Error(), path) || !strings.Contains(err.Error(), "0700") {
+			t.Fatal("symlink verification root accepted", err)
+		}
+	})
+}
+
+func TestDevelopmentVerificationRefusesWideStateBeforeStartup(t *testing.T) {
+	_, cert, key := localCertificate(t, true)
+	for name, mode := range map[string]os.FileMode{"group-read": 0740, "group-execute": 0710, "other-execute": 0701, "public": 0755} {
+		t.Run(name, func(t *testing.T) {
+			root := t.TempDir()
+			state, artifacts := filepath.Join(root, "state"), filepath.Join(root, "artifacts")
+			if err := os.Mkdir(state, 0700); err != nil {
+				t.Fatal(err)
+			}
+			// Set the precise existing mode independent of the test process umask.
+			if err := os.Chmod(state, mode); err != nil {
+				t.Fatal(err)
+			}
+			args := []string{"--state-dir", state, "--artifacts-dir", artifacts, "--listen", "127.0.0.1:0", "--execution-listen", "127.0.0.1:0", "--endpoint", "https://127.0.0.1", "--tls-cert", cert, "--tls-key", key, "--allow-development-profile=macos-sandbox-exec-dev", "--verification-isolation-profile=macos-sandbox-exec-dev"}
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			var out bytes.Buffer
+			err := run(ctx, args, &out)
+			if err == nil || !strings.Contains(err.Error(), state) || !strings.Contains(err.Error(), "0700") || out.Len() != 0 {
+				t.Fatal("startup did not clearly refuse the non-private verification root", err, out.String())
+			}
+			info, err := os.Lstat(state)
+			if err != nil || info.Mode().Perm() != mode {
+				t.Fatal("operator permissions changed", info, err)
+			}
+			for _, path := range []string{filepath.Join(state, "state.db"), artifacts} {
+				if _, err := os.Lstat(path); !os.IsNotExist(err) {
+					t.Fatal("refusal happened after store initialization", path, err)
+				}
+			}
+		})
+	}
+}

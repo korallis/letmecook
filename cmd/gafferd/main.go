@@ -55,6 +55,29 @@ func listenAddress(value string, plaintext bool) bool {
 	return err == nil && net.ParseIP(host) != nil && (!plaintext || host == "127.0.0.1") && portErr == nil && n >= 0 && n <= 65535 && strconv.Itoa(n) == port
 }
 
+// prepareVerificationState keeps the verifier's canary root explicit and private.
+// Preserve the installation rule that the parent already exists, and never chmod
+// an operator's directory to make a failed preflight appear qualified.
+func prepareVerificationState(path string) error {
+	if !filepath.IsAbs(path) || filepath.Clean(path) != path || path == string(os.PathSeparator) {
+		return fmt.Errorf("verification state directory %q must be absolute, clean and non-root", path)
+	}
+	if _, err := os.Stat(filepath.Dir(path)); err != nil {
+		return fmt.Errorf("verification state parent %q must already exist: %w", filepath.Dir(path), err)
+	}
+	if err := os.MkdirAll(path, 0700); err != nil {
+		return fmt.Errorf("create verification state directory %q with required mode 0700: %w", path, err)
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return fmt.Errorf("inspect verification state directory %q: %w", path, err)
+	}
+	if !info.IsDir() || info.Mode().Perm() != 0700 {
+		return fmt.Errorf("verification state directory %q must be a real directory with mode 0700 (no group/other permission bits); existing permissions were not changed", path)
+	}
+	return nil
+}
+
 func run(ctx context.Context, args []string, out io.Writer) (err error) {
 	flags := flag.NewFlagSet("gafferd", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -157,6 +180,11 @@ func run(ctx context.Context, args []string, out io.Writer) (err error) {
 		u, e := url.Parse(*endpoint)
 		if e != nil || u.Scheme != "https" || u.Host == "" || u.User != nil || u.Path != "" || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" || tlsConfig.Certificates[0].Leaf.VerifyHostname(u.Hostname()) != nil {
 			return i.Invalid
+		}
+	}
+	if secure && *verificationProfile == isolation.DevelopmentProfileID {
+		if err = prepareVerificationState(*state); err != nil {
+			return err
 		}
 	}
 	var s *store.Store
