@@ -5,38 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
-
-	c "github.com/korallis/letmecook/internal/control"
-	p "github.com/korallis/letmecook/schemas/execution"
 )
 
-// Every M1 seam refuses with the sentinel until its owning slice lands; nothing
-// here may be mistaken for an empty success.
+// Every unimplemented M1 seam refuses with the sentinel until its owning slice
+// lands; nothing here may be mistaken for an empty success. The execution,
+// upload and finalize seams are implemented (S1) and covered by their own tests.
 func TestSeamStubsRefuseUntilImplemented(t *testing.T) {
 	s, _ := persistent(t)
 	var errs []error
-	_, err := s.RunnerSession(ctx, "", HelloRecord{})
-	errs = append(errs, err)
-	_, err = s.ExecutionState(ctx, "", "", "")
-	errs = append(errs, err)
-	_, err = s.PendingCancels(ctx, "", "")
-	errs = append(errs, err)
-	_, err = s.ProposeTransition(ctx, "", "", "", p.Message{}, RuntimeEvidence{})
-	errs = append(errs, err)
-	_, err = s.IssueLease(ctx, "", "", "", "", p.Message{})
-	errs = append(errs, err)
-	_, err = s.ReportTermination(ctx, "", "", "", c.Evidence{}, BoundaryState{})
-	errs = append(errs, err)
-	errs = append(errs, s.RecordUsage(ctx, "", "", UsageReport{}))
-	_, err = s.BeginUpload(ctx, "", "", "", UploadBegin{})
-	errs = append(errs, err)
-	_, err = s.RecordUploadedBlob(ctx, "", "", "", "", bytes.NewReader(nil), 0)
-	errs = append(errs, err)
-	_, err = s.CommitUpload(ctx, "", "", "", "")
-	errs = append(errs, err)
-	_, err = s.FinalizeAttempt(ctx, "", "", "", Completion{})
-	errs = append(errs, err)
-	_, err = s.CreateTask(ctx, "", TaskBrief{})
+	_, err := s.CreateTask(ctx, "", TaskBrief{})
 	errs = append(errs, err)
 	_, err = s.Task(ctx, "")
 	errs = append(errs, err)
@@ -76,7 +53,7 @@ func TestSeamStubsRefuseUntilImplemented(t *testing.T) {
 	errs = append(errs, s.PutReconcileReport(ctx, ReconcileReport{}))
 	_, err = s.ReconciliationInputs(ctx, "")
 	errs = append(errs, err)
-	if len(errs) != 31 {
+	if len(errs) != 20 {
 		t.Fatalf("stub inventory drifted: %d", len(errs))
 	}
 	for i, err := range errs {

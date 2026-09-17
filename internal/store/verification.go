@@ -122,6 +122,26 @@ func custodyManifest(ctx context.Context, tx *sql.Tx, ref p.Manifest, generation
 	return m, raw, nil
 }
 
+// headSupersedes refuses a candidate that is not the task's finalized result
+// head (artifact_result_heads). Without a head, custody-only candidates remain
+// selectable; once FinalizeAttempt has named a head, only that attempt's manifest
+// can be selected or accepted, so a superseded candidate cannot be accepted.
+func headSupersedes(ctx context.Context, tx *sql.Tx, identity p.Identity, manifestID string) error {
+	var attempt, manifest string
+	var epoch int64
+	err := tx.QueryRowContext(ctx, "SELECT attempt_id,epoch,manifest_id FROM artifact_result_heads WHERE task_id=?", identity.TaskID).Scan(&attempt, &epoch, &manifest)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if attempt != identity.AttemptID || epoch != identity.Epoch || manifest != manifestID {
+		return fmt.Errorf("candidate superseded by the finalized result head")
+	}
+	return nil
+}
+
 // SelectVerificationCandidate is a trusted caller CAS, not authority. Selection
 // history is independent of #18's immutable receipt/current flags. New custody
 // references must already exist; this method neither creates nor rewrites them.
@@ -135,6 +155,9 @@ func (s *Store) SelectVerificationCandidate(ctx context.Context, expectedSelecti
 	defer tx.Rollback()
 	m, _, err := custodyManifest(ctx, tx, ref, s.meta.Generation)
 	if err != nil {
+		return v.Candidate{}, err
+	}
+	if err = headSupersedes(ctx, tx, m.Identity, ref.ManifestID); err != nil {
 		return v.Candidate{}, err
 	}
 	old, err := currentCandidate(ctx, tx, m.Identity.TaskID)
@@ -467,6 +490,9 @@ func (s *Store) RecordLocalDecision(ctx context.Context, d r.Decision) error {
 		return fmt.Errorf("decision criterion coverage incomplete")
 	}
 	if d.Action == "accept" {
+		if err = headSupersedes(ctx, tx, current.Identity, current.Manifest.ManifestID); err != nil {
+			return err
+		}
 		if err = s.verifyCandidateContent(ctx, tx, current); err != nil {
 			return err
 		}
