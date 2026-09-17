@@ -8,6 +8,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -113,14 +114,29 @@ func TestAcknowledgementFailureInjection(t *testing.T) {
 	if count(t, db, "SELECT count(*) FROM dispatch_acks") != 1 {
 		t.Fatal("changed replay altered acknowledgements")
 	}
-	// A dispatch admitted under another boot cannot be acknowledged by this session.
+	// Once acknowledged, any other accept for the dispatch is an identity
+	// conflict, whichever session sends it.
 	other := p.Message{Version: p.FencedVersion, Kind: "accept", MessageID: newTestID(), Identity: h.d.Assignment.Identity, AssignmentID: h.d.Assignment.AssignmentID, RunnerBoot: newTestID(), DaemonBoot: sess.DaemonBoot}
 	rebooted, err := h.s.RunnerSession(context.Background(), pin(t, h.runner), helloRecord(other.RunnerBoot, h.facts.ID, 1))
 	if err != nil {
 		t.Fatal(err)
 	}
 	w = h.do(t, handler, "POST", "/x/v1/messages", rebooted.SessionID, string(encode(t, execwire.MessageEnvelope{Version: execwire.Version, MessageID: other.MessageID, DispatchID: h.d.ID, Message: other})))
+	assertRouteError(t, w, 409, "identity_conflict")
+	// A dispatch not yet acknowledged cannot be acknowledged by a session of
+	// another boot.
+	g := newExecutionHarness(t)
+	ghandler := g.recorder(t)
+	gsess, err := g.s.RunnerSession(context.Background(), pin(t, g.runner), helloRecord(newTestID(), g.facts.ID, 1))
+	if err != nil {
+		t.Fatal(err)
+	}
+	fresh := p.Message{Version: p.FencedVersion, Kind: "accept", MessageID: newTestID(), Identity: g.d.Assignment.Identity, AssignmentID: g.d.Assignment.AssignmentID, RunnerBoot: gsess.RunnerBoot, DaemonBoot: gsess.DaemonBoot}
+	w = g.do(t, ghandler, "POST", "/x/v1/messages", gsess.SessionID, string(encode(t, execwire.MessageEnvelope{Version: execwire.Version, MessageID: fresh.MessageID, DispatchID: g.d.ID, Message: fresh})))
 	assertRouteError(t, w, 409, "boot_mismatch")
+	if count(t, g.db(t), "SELECT count(*) FROM dispatch_acks") != 0 {
+		t.Fatal("foreign-boot session acknowledged")
+	}
 }
 
 // The daemon-side writers this lane owns notify the inbox hub through the
@@ -191,5 +207,41 @@ func TestDaemonSideWritersNotifyTheInbox(t *testing.T) {
 	expect("fenced renewal")
 	if count(t, db, "SELECT count(*) FROM control_fenced") != 1 {
 		t.Fatal("fenced renewal not durable")
+	}
+}
+
+// Second review: a pending backlog that is not deliverable to this session
+// (other runners or incarnations, corrupt or foreign rows) cannot starve an
+// eligible dispatch that sorts after the first page.
+func TestInboxPagesPastAnIneligibleBacklog(t *testing.T) {
+	h := newExecutionHarness(t)
+	handler := h.recorder(t)
+	session := h.sessionID(t)
+	db := h.db(t)
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for n := range 130 {
+		task := fmt.Sprintf("00000000-0000-4000-8000-%012d", n*3+1)
+		attempt := fmt.Sprintf("00000000-0000-4000-8000-%012d", n*3+2)
+		dispatch := fmt.Sprintf("00000000-0000-4000-8000-%012d", n*3+3)
+		if _, err := tx.Exec("INSERT INTO tasks VALUES(?,'ready')", task); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tx.Exec("INSERT INTO attempts VALUES(?,?,1,'assigned',1,?)", attempt, task, newTestID()); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tx.Exec("INSERT INTO dispatches VALUES(?,?,?,?,?,?,1,?,'{}','{}',1)", dispatch, attempt, task, h.grant.ID, h.runnerID, h.facts.ID, strings.Repeat("0", 64)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	w := h.do(t, handler, "GET", "/x/v1/inbox", session, "")
+	var inbox execwire.Inbox
+	if w.Code != 200 || execwire.Decode(w.Body.Bytes(), &inbox) != nil || len(inbox.Assignments) != 1 || inbox.Assignments[0].ID != h.d.ID {
+		t.Fatalf("eligible dispatch starved by the backlog: %d %s", w.Code, w.Body.String())
 	}
 }

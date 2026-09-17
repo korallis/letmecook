@@ -40,6 +40,7 @@ const (
 	maxInboxWaitMS   = 25000
 	inboxPollAfterMS = 500
 	inboxPage        = 128
+	inboxPages       = 8
 )
 
 func init() { Register("execution", executionRoutes) }
@@ -242,22 +243,32 @@ func (x executionAPI) readInbox(ctx context.Context, a Actor, session string) (e
 	}
 	inbox := execwire.Inbox{Assignments: []execwire.Dispatch{}, Cancels: []p.Message{}, Paused: sess.Paused, PollAfterMS: inboxPollAfterMS}
 	if !sess.Paused && sess.Mode == "normal" {
-		ids, err := x.Store.PendingAssignments(ctx, "", inboxPage)
-		if err != nil {
-			return execwire.Inbox{}, err
-		}
-		for _, id := range ids {
-			d, err := x.Store.Assignment(ctx, id)
-			// Only dispatches admitted for this runner under this session's boot and
-			// eligibility revision are offered; older incarnations are reconcile's.
-			if err != nil || d.Facts.Repository.RunnerRoot.RunnerID != a.ID || sess.Binds(d) != nil {
-				continue
+		// The pending outbox is paged until this session finds a deliverable
+		// dispatch or the bound is reached, so a backlog belonging to other runners
+		// or incarnations cannot starve an eligible session.
+		after := ""
+		for page := 0; page < inboxPages && len(inbox.Assignments) == 0; page++ {
+			ids, err := x.Store.PendingAssignments(ctx, after, inboxPage)
+			if err != nil {
+				return execwire.Inbox{}, err
 			}
-			if _, err := x.Store.Delivery(ctx, a.Fingerprint, id); err != nil {
-				log.Printf("execution inbox: dispatch %s not delivered: %v", id, routeError(err).Code)
-				continue
+			for _, id := range ids {
+				d, err := x.Store.Assignment(ctx, id)
+				// Only dispatches admitted for this runner under this session's boot and
+				// eligibility revision are offered; older incarnations are reconcile's.
+				if err != nil || d.Facts.Repository.RunnerRoot.RunnerID != a.ID || sess.Binds(d) != nil {
+					continue
+				}
+				if _, err := x.Store.Delivery(ctx, a.Fingerprint, id); err != nil {
+					log.Printf("execution inbox: dispatch %s not delivered: %v", id, routeError(err).Code)
+					continue
+				}
+				inbox.Assignments = append(inbox.Assignments, wireDispatch(d))
 			}
-			inbox.Assignments = append(inbox.Assignments, wireDispatch(d))
+			if len(ids) < inboxPage {
+				break
+			}
+			after = ids[len(ids)-1]
 		}
 	}
 	cancels, err := x.Store.PendingCancels(ctx, a.Fingerprint, session)
@@ -345,13 +356,17 @@ func (x executionAPI) messages(ctx context.Context, a Actor, r Request) (any, *E
 		} else if !errors.Is(err, sql.ErrNoRows) {
 			return nil, routeError(err)
 		}
-		// A paused daemon admits no new work and a session only acknowledges the
-		// dispatches admitted under its own boot and eligibility.
-		if sess.Paused {
-			return nil, &Error{409, "paused", "accept"}
-		}
-		if err := sess.Binds(d); err != nil {
-			return nil, routeError(err)
+		// A durable acknowledgement replays before any mutable admission check
+		// (AcknowledgeAssignment verifies the retained receipt itself); only a new
+		// acknowledgement is refused while paused or outside the session's boot and
+		// eligibility.
+		if !d.Acknowledged {
+			if sess.Paused {
+				return nil, &Error{409, "paused", "accept"}
+			}
+			if err := sess.Binds(d); err != nil {
+				return nil, routeError(err)
+			}
 		}
 		if err := x.Store.AcknowledgeAssignment(ctx, a.Fingerprint, env.DispatchID, env.Message); err != nil {
 			return nil, routeError(err)
@@ -377,7 +392,7 @@ func (x executionAPI) messages(ctx context.Context, a Actor, r Request) (any, *E
 		var evidence store.RuntimeEvidence
 		if env.Evidence != nil {
 			e := env.Evidence
-			evidence = store.RuntimeEvidence{Kind: e.Kind, Workspace: e.Workspace, BoundaryPort: e.BoundaryPort, GuardianPID: e.GuardianPID, Nonce: e.Nonce, PID: e.PID, PGID: e.PGID, StartUnixNS: e.StartUnixNS, Code: e.Code, PGIDEmpty: e.PGIDEmpty, ObservedUnixNS: e.ObservedUnixNS, StreamThrough: e.StreamThrough}
+			evidence = store.RuntimeEvidence{Kind: e.Kind, Workspace: e.Workspace, BoundaryPort: e.BoundaryPort, GuardianPID: e.GuardianPID, Nonce: e.Nonce, PID: e.PID, PGID: e.PGID, StartUnixNS: e.StartUnixNS, Code: e.Code, PGIDEmpty: e.PGIDEmpty, ObservedUnixNS: e.ObservedUnixNS, StreamThrough: e.StreamThrough, Cause: e.Cause}
 		}
 		m, err := x.Store.ProposeTransition(ctx, a.Fingerprint, r.Session, r.Selected, env.Message, evidence)
 		if err != nil {
@@ -433,11 +448,7 @@ func (x executionAPI) streams(ctx context.Context, a Actor, r Request) (any, *Er
 	if len(batch.Records) == 0 {
 		return nil, &Error{400, "malformed", ""}
 	}
-	identity, err := x.Store.StreamIdentity(ctx, a.Fingerprint, r.Session, attempt)
-	if err != nil {
-		return nil, routeError(err)
-	}
-	ack, err := x.Store.Streams().Receive(attempt, identity, batch.Records)
+	ack, err := x.Store.AppendStream(ctx, a.Fingerprint, r.Session, attempt, batch.Records)
 	if err != nil {
 		e := routeError(err)
 		if errors.Is(err, runstream.ErrGap) || errors.Is(err, runstream.ErrConflict) {
