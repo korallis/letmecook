@@ -29,12 +29,16 @@ func terminateGroup(group int, grace time.Duration, deadline time.Time) (bool, e
 		if errors.Is(err, syscall.ESRCH) {
 			return escalated, nil
 		}
-		if err != nil {
+		// XNU reports EPERM, not ESRCH, while a process group still exists but
+		// has no signalable member (for example only unreaped zombies remain).
+		// EPERM is also what an unsignalable foreign member produces, so it is
+		// never positive evidence: keep observing until ESRCH or the deadline.
+		if err != nil && !errors.Is(err, syscall.EPERM) {
 			return escalated, err
 		}
 		now := time.Now()
 		if !escalated && (!now.Before(escalateAt) || !now.Before(deadline)) {
-			if err := syscall.Kill(-group, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) {
+			if err := syscall.Kill(-group, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) && !errors.Is(err, syscall.EPERM) {
 				return escalated, err
 			}
 			escalated = true
