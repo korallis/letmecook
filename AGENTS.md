@@ -14,6 +14,8 @@ boundary. `docs/operations/repositories.md` owns provisional repository registra
 and trusted checkout limits. None accepts #9/#10 or permits execution. No supported
 execution runtime or original downstream acceptance follows from these slices or the decision record.
 
+M1 development system-proof status and unresolved gates are recorded in `docs/evidence/m1-acceptance.md`; no supported execution or downstream acceptance follows.
+
 ## Issue workflow
 
 - Work from one assigned GitHub issue. Check its dependencies and read the linked

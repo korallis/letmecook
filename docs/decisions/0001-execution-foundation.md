@@ -15,6 +15,8 @@ was installed or executed for this comparison. No product inference, credential
 access, live-trial retry, deployment or source import was performed. Use a related-work reference,
 not `Closes #9`, until its mandatory comparison/runtime/review gates are satisfied.
 
+The M1 [development system proof](../evidence/m1-acceptance.md) now drives public binaries against immutable synthetic fixtures. Its checkpoint failures and missing live/recovery measurements are explicit; development-only execution does not qualify a supported runtime, close O1–O8, complete #9/#10, or accept original downstream work.
+
 ## Evidence cutoff and authority
 
 Original evidence/effort cutoff: `27aa5b367e4ae6a017931e6882fd58598a9efab6`.

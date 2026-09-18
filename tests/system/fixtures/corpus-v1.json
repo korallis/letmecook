@@ -1,0 +1,1056 @@
+{
+  "version": 1,
+  "fixture": "corpus-v1",
+  "scenario": "S-12",
+  "purpose": "20 representative sequential tasks across the three disposable synthetic repositories, consumed by tests/system against the real gafferd/gaffer-runner/gaffer binaries.",
+  "sequencing": {
+    "mode": "sequential",
+    "detail": "Exactly one active attempt at a time, dispatched in id order. Every task's base_commit is its repository's pinned initial commit: M1 has no publication or merge route, accepted results move no branch, and tasks never chain."
+  },
+  "base_policy": "Each repository is registered from repos/make-repos.sh output with the pinned initial commit below; task base_commit equals that commit.",
+  "harness_note": "All 20 tasks run the fake harness by default (a real child job through the isolation launcher, per the harness contract). Tasks whose harness array also names opencode carry the same brief for the live OpenCode path; the fake path remains the default proof.",
+  "fake_spec_note": "fake_spec.attempts is the ordered attempt script: attempt N uses attempts[N-1]. edits describe the deterministic edit set - applied by modes that apply edits, declared-but-never-applied by crash/hang/approval (intent only). edit entries carry content (full new file contents), content_base64 (binary), or delete:true. modes create_empty uses content:\"\".",
+  "outcome_semantics": {
+    "succeeded": "Attempt finalized succeeded, trusted checks passed, local acceptance recorded.",
+    "failed_verification": "Artifact failed the repository's trusted checks; the operator then rejects locally.",
+    "stopped": "Operator stop mid-run; attempt cancelled and reservation released; no retry within this run.",
+    "retry_then_succeeded": "First attempt failed (crash), released, then a retry within budget succeeded.",
+    "approval_blocked": "Harness requested an approval that was never granted; the attempt failed and the task is blocked pending an operator decision.",
+    "failed": "Attempt finalized failed with a retained failed manifest (custody evidence, no head); no candidate exists to verify or review, so the task stays reconciling until the operator retries or stops it."
+  },
+  "repos": {
+    "greeting": {
+      "profile": "greeting-echo-v1",
+      "base_commit": "479eec44aa5cda0a5f91a48b2e5b6119c18570ba",
+      "checks": [
+        "grep -qx 'hello, gaffer' greeting.txt",
+        "test -f README.md"
+      ]
+    },
+    "calc": {
+      "profile": "calc-go-v1",
+      "base_commit": "cd739784278eb03050235d38d07c327c7811b36b",
+      "checks": [
+        "go test ./...",
+        "gofmt -l ."
+      ]
+    },
+    "notes": {
+      "profile": "notes-links-v1",
+      "base_commit": "82cabef608abfb716d1415eb14e9dcb2044f6712",
+      "checks": [
+        "node scripts/check-links.js ."
+      ]
+    }
+  },
+  "tasks": [
+    {
+      "id": "task-01",
+      "repo": "greeting",
+      "brief": "Replace the contents of greeting.txt with exactly the single line \"hello, gaffer\".",
+      "criteria": [
+        {
+          "id": "t01-greeting-line",
+          "text": "greeting.txt contains exactly the line \"hello, gaffer\""
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake",
+        "opencode"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Canonical S-04 happy path: single-file text edit. Also the live-opencode candidate (S-14 analog) with the same brief."
+    },
+    {
+      "id": "task-02",
+      "repo": "greeting",
+      "brief": "Update greeting.txt to say \"hello, gaffer\" and append the tagline line \"One-line greeting service for acceptance runs.\" to README.md.",
+      "criteria": [
+        {
+          "id": "t02-greeting-line",
+          "text": "greeting.txt contains exactly the line \"hello, gaffer\""
+        },
+        {
+          "id": "t02-tagline",
+          "text": "README.md ends with the tagline line"
+        }
+      ],
+      "paths": [
+        "greeting.txt",
+        "README.md"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              },
+              {
+                "path": "README.md",
+                "content": "# greeting\n\nDisposable synthetic shell/text repository for Gaffer acceptance scenarios.\n\nOne-line greeting service for acceptance runs.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Multi-file edit in one attempt. The greeting.txt edit keeps the invariant the greeting-echo-v1 trusted check demands."
+    },
+    {
+      "id": "task-03",
+      "repo": "greeting",
+      "brief": "Set greeting.txt to \"hello, gaffer\" and replace the 1x1 white pixel in asset.png with the provided 1x1 green pixel bytes.",
+      "criteria": [
+        {
+          "id": "t03-greeting-line",
+          "text": "greeting.txt contains exactly the line \"hello, gaffer\""
+        },
+        {
+          "id": "t03-asset-bytes",
+          "text": "asset.png is exactly the 70-byte green 1x1 RGBA PNG carried in fake_spec"
+        }
+      ],
+      "paths": [
+        "greeting.txt",
+        "asset.png"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "binary_edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer\n"
+              },
+              {
+                "path": "asset.png",
+                "content_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNg+M/wHwAEAQH/rrVV9QAAAABJRU5ErkJggg=="
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Binary-file edit: a 70-byte PNG-like payload must survive pack, upload, custody and verification byte-for-byte. The greeting.txt edit keeps the repo invariant."
+    },
+    {
+      "id": "task-04",
+      "repo": "greeting",
+      "brief": "Set greeting.txt to \"hello, gaffer!\" with a trailing exclamation mark. This wrong content is deliberate.",
+      "criteria": [
+        {
+          "id": "t04-deliberate-break",
+          "text": "The trusted greeting-echo-v1 check must fail on this artifact"
+        }
+      ],
+      "paths": [
+        "greeting.txt"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "greeting.txt",
+                "content": "hello, gaffer!\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "failed_verification",
+      "verification": {
+        "profile": "greeting-echo-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "fail"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Deliberately breaks trusted check 0: verification must report the failure and the operator must then reject locally (failed_verification then reject)."
+    },
+    {
+      "id": "task-05",
+      "repo": "calc",
+      "brief": "Create CHANGELOG.md at the repository root containing a level-1 heading \"Changelog\" and one list entry \"1.0.0: initial synthetic fixture.\".",
+      "criteria": [
+        {
+          "id": "t05-changelog",
+          "text": "CHANGELOG.md exists with the heading and the 1.0.0 entry"
+        }
+      ],
+      "paths": [
+        "CHANGELOG.md"
+      ],
+      "operations": [
+        "create"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "CHANGELOG.md",
+                "content": "# Changelog\n\n- 1.0.0: initial synthetic fixture.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Create-new-file case in the Go repository; a non-Go file leaves both trusted checks green."
+    },
+    {
+      "id": "task-06",
+      "repo": "calc",
+      "brief": "Create an empty file at testdata/.keep with zero bytes of content.",
+      "criteria": [
+        {
+          "id": "t06-empty-file",
+          "text": "testdata/.keep exists and is exactly zero bytes"
+        }
+      ],
+      "paths": [
+        "testdata/.keep"
+      ],
+      "operations": [
+        "create"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "create_empty",
+            "edits": [
+              {
+                "path": "testdata/.keep",
+                "content": ""
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Empty-file creation: the zero-byte entry must be supported end to end (manifest bytes >= 0, empty-content upload, custody digest of the empty string)."
+    },
+    {
+      "id": "task-07",
+      "repo": "calc",
+      "brief": "Add a function Sub(a, b int) int returning a - b to calc.go, and a test TestSub in calc_test.go asserting Sub(5, 3) == 2.",
+      "criteria": [
+        {
+          "id": "t07-sub-function",
+          "text": "calc.go declares Sub returning a - b"
+        },
+        {
+          "id": "t07-sub-test",
+          "text": "calc_test.go's TestSub asserts Sub(5, 3) == 2 and go test ./... passes"
+        }
+      ],
+      "paths": [
+        "calc.go",
+        "calc_test.go"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake",
+        "opencode"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "calc.go",
+                "content": "// Package calc is a disposable synthetic calculator used by Gaffer acceptance scenarios.\npackage calc\n\n// Add returns a + b.\nfunc Add(a, b int) int { return a + b }\n\n// Mul returns a * b.\nfunc Mul(a, b int) int { return a * b }\n\n// Sub returns a - b.\nfunc Sub(a, b int) int { return a - b }\n"
+              },
+              {
+                "path": "calc_test.go",
+                "content": "package calc\n\nimport \"testing\"\n\nfunc TestAdd(t *testing.T) {\n\tif got := Add(2, 3); got != 5 {\n\t\tt.Fatalf(\"Add(2, 3) = %d, want 5\", got)\n\t}\n}\n\nfunc TestMul(t *testing.T) {\n\tif got := Mul(2, 3); got != 6 {\n\t\tt.Fatalf(\"Mul(2, 3) = %d, want 6\", got)\n\t}\n}\n\nfunc TestSub(t *testing.T) {\n\tif got := Sub(5, 3); got != 2 {\n\t\tt.Fatalf(\"Sub(5, 3) = %d, want 2\", got)\n\t}\n}\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Code edit with a test; gofmt-clean full contents are pinned so the fake and live paths converge on identical bytes. Also runnable as opencode with the same brief."
+    },
+    {
+      "id": "task-08",
+      "repo": "calc",
+      "brief": "Add a function Div(a, b int) int returning a / b to calc.go, and a test TestDiv in calc_test.go asserting Div(6, 3) == 2.",
+      "criteria": [
+        {
+          "id": "t08-div-function",
+          "text": "calc.go declares Div returning a / b"
+        },
+        {
+          "id": "t08-div-test",
+          "text": "calc_test.go's TestDiv asserts Div(6, 3) == 2 and go test ./... passes"
+        }
+      ],
+      "paths": [
+        "calc.go",
+        "calc_test.go"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "crash",
+            "edits": [
+              {
+                "path": "calc.go",
+                "content": "// Package calc is a disposable synthetic calculator used by Gaffer acceptance scenarios.\npackage calc\n\n// Add returns a + b.\nfunc Add(a, b int) int { return a + b }\n\n// Mul returns a * b.\nfunc Mul(a, b int) int { return a * b }\n\n// Div returns a / b.\nfunc Div(a, b int) int { return a / b }\n"
+              },
+              {
+                "path": "calc_test.go",
+                "content": "package calc\n\nimport \"testing\"\n\nfunc TestAdd(t *testing.T) {\n\tif got := Add(2, 3); got != 5 {\n\t\tt.Fatalf(\"Add(2, 3) = %d, want 5\", got)\n\t}\n}\n\nfunc TestMul(t *testing.T) {\n\tif got := Mul(2, 3); got != 6 {\n\t\tt.Fatalf(\"Mul(2, 3) = %d, want 6\", got)\n\t}\n}\n\nfunc TestDiv(t *testing.T) {\n\tif got := Div(6, 3); got != 2 {\n\t\tt.Fatalf(\"Div(6, 3) = %d, want 2\", got)\n\t}\n}\n"
+              }
+            ]
+          },
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "calc.go",
+                "content": "// Package calc is a disposable synthetic calculator used by Gaffer acceptance scenarios.\npackage calc\n\n// Add returns a + b.\nfunc Add(a, b int) int { return a + b }\n\n// Mul returns a * b.\nfunc Mul(a, b int) int { return a * b }\n\n// Div returns a / b.\nfunc Div(a, b int) int { return a / b }\n"
+              },
+              {
+                "path": "calc_test.go",
+                "content": "package calc\n\nimport \"testing\"\n\nfunc TestAdd(t *testing.T) {\n\tif got := Add(2, 3); got != 5 {\n\t\tt.Fatalf(\"Add(2, 3) = %d, want 5\", got)\n\t}\n}\n\nfunc TestMul(t *testing.T) {\n\tif got := Mul(2, 3); got != 6 {\n\t\tt.Fatalf(\"Mul(2, 3) = %d, want 6\", got)\n\t}\n}\n\nfunc TestDiv(t *testing.T) {\n\tif got := Div(6, 3); got != 2 {\n\t\tt.Fatalf(\"Div(6, 3) = %d, want 2\", got)\n\t}\n}\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "retry_then_succeeded",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Retry-within-budget after a crash fake mode: attempt 1 (crash) dies before any edit lands and is released; attempt 2 applies the same edit and verifies. S-12 retry is owner-driven (--auto-retry stays off outside S-13)."
+    },
+    {
+      "id": "task-09",
+      "repo": "calc",
+      "brief": "Add a function Pow(base, exp int) int returning base raised to exp to calc.go, plus a TestPow asserting Pow(2, 3) == 8. The run will be stopped before the edit lands.",
+      "criteria": [
+        {
+          "id": "t09-stopped",
+          "text": "The operator stop arrives mid-run; the attempt is cancelled and the reservation released without an artifact"
+        }
+      ],
+      "paths": [
+        "calc.go",
+        "calc_test.go"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "hang",
+            "edits": [
+              {
+                "path": "calc.go",
+                "content": "// Package calc is a disposable synthetic calculator used by Gaffer acceptance scenarios.\npackage calc\n\n// Add returns a + b.\nfunc Add(a, b int) int { return a + b }\n\n// Mul returns a * b.\nfunc Mul(a, b int) int { return a * b }\n\n// Pow returns base raised to exp.\nfunc Pow(base, exp int) int {\n\tresult := 1\n\tfor i := 0; i < exp; i++ {\n\t\tresult *= base\n\t}\n\treturn result\n}\n"
+              },
+              {
+                "path": "calc_test.go",
+                "content": "package calc\n\nimport \"testing\"\n\nfunc TestAdd(t *testing.T) {\n\tif got := Add(2, 3); got != 5 {\n\t\tt.Fatalf(\"Add(2, 3) = %d, want 5\", got)\n\t}\n}\n\nfunc TestMul(t *testing.T) {\n\tif got := Mul(2, 3); got != 6 {\n\t\tt.Fatalf(\"Mul(2, 3) = %d, want 6\", got)\n\t}\n}\n\nfunc TestPow(t *testing.T) {\n\tif got := Pow(2, 3); got != 8 {\n\t\tt.Fatalf(\"Pow(2, 3) = %d, want 8\", got)\n\t}\n}\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "stopped",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Mid-run operator stop: the hang mode makes no progress, the operator issues a stop, the cancel is delivered within 1 s, the process group is terminated and the dispatch is released. Declared edits describe intent only; verification never runs."
+    },
+    {
+      "id": "task-10",
+      "repo": "calc",
+      "brief": "Create RUN-LOG.md containing a level-1 heading \"Run log\" and one list entry \"spool-cap run recorded.\". The job will flood stdout while doing it.",
+      "criteria": [
+        {
+          "id": "t10-spool-cap",
+          "text": "The attempt terminates with a terminal spool_full status record and a retained failed manifest; no candidate exists, so verification does not run and review is refused"
+        }
+      ],
+      "paths": [
+        "RUN-LOG.md"
+      ],
+      "operations": [
+        "create"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "huge_output",
+            "stream_bytes": 8388608,
+            "edits": [
+              {
+                "path": "RUN-LOG.md",
+                "content": "# Run log\n\n- spool-cap run recorded.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "failed",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "not_run"
+          },
+          {
+            "index": 1,
+            "expect": "not_run"
+          }
+        ]
+      },
+      "notes": "huge_output spool case: 8 MiB of output exceeds the 4 MiB spool, the last 8 KiB are reserved for the terminal normalized spool_full status record, the supervisor stops the job and packs a failed manifest. The attempt finalizes failed and the failed manifest is retained as custody evidence only (execution contract §3); with no head there is nothing to review, so the task remains reconciling."
+    },
+    {
+      "id": "task-11",
+      "repo": "calc",
+      "brief": "Add a function Abs(a int) int returning the absolute value of a to calc.go, and a TestAbs asserting Abs(-3) == 3. An approval will be requested and never granted.",
+      "criteria": [
+        {
+          "id": "t11-approval-blocked",
+          "text": "The harness blocks on approval_required, the attempt fails without bypassing approval, and the task stays blocked"
+        }
+      ],
+      "paths": [
+        "calc.go",
+        "calc_test.go"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "approval",
+            "edits": [
+              {
+                "path": "calc.go",
+                "content": "// Package calc is a disposable synthetic calculator used by Gaffer acceptance scenarios.\npackage calc\n\n// Add returns a + b.\nfunc Add(a, b int) int { return a + b }\n\n// Mul returns a * b.\nfunc Mul(a, b int) int { return a * b }\n\n// Abs returns the absolute value of a.\nfunc Abs(a int) int {\n\tif a < 0 {\n\t\treturn -a\n\t}\n\treturn a\n}\n"
+              },
+              {
+                "path": "calc_test.go",
+                "content": "package calc\n\nimport \"testing\"\n\nfunc TestAdd(t *testing.T) {\n\tif got := Add(2, 3); got != 5 {\n\t\tt.Fatalf(\"Add(2, 3) = %d, want 5\", got)\n\t}\n}\n\nfunc TestMul(t *testing.T) {\n\tif got := Mul(2, 3); got != 6 {\n\t\tt.Fatalf(\"Mul(2, 3) = %d, want 6\", got)\n\t}\n}\n\nfunc TestAbs(t *testing.T) {\n\tif got := Abs(-3); got != 3 {\n\t\tt.Fatalf(\"Abs(-3) = %d, want 3\", got)\n\t}\n}\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "approval_blocked",
+      "verification": {
+        "profile": "calc-go-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          },
+          {
+            "index": 1,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Approval-required fake mode: the job emits approval_required and blocks; the supervisor fails the attempt and never bypasses approval. The task is blocked pending an operator decision; no auto-retry."
+    },
+    {
+      "id": "task-12",
+      "repo": "notes",
+      "brief": "Create docs/usage.md with a level-1 heading \"Usage\" and one sentence linking to the existing overview page with the markdown link [overview](overview.md).",
+      "criteria": [
+        {
+          "id": "t12-usage-page",
+          "text": "docs/usage.md exists, introduces usage and links to overview.md"
+        }
+      ],
+      "paths": [
+        "docs/usage.md"
+      ],
+      "operations": [
+        "create"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/usage.md",
+                "content": "# Usage\n\nSynthetic usage notes. See the [overview](overview.md) for an introduction.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "New page whose only link targets an existing file, so the trusted link check stays green."
+    },
+    {
+      "id": "task-13",
+      "repo": "notes",
+      "brief": "Edit docs/overview.md so the opening sentence reads \"Synthetic overview page for the disposable notes fixture.\" while keeping the guide link unchanged.",
+      "criteria": [
+        {
+          "id": "t13-overview-wording",
+          "text": "docs/overview.md opens with the required sentence and still links to guide.md"
+        }
+      ],
+      "paths": [
+        "docs/overview.md"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/overview.md",
+                "content": "# Overview\n\nSynthetic overview page for the disposable notes fixture. See the [guide](guide.md) for usage.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Single-file prose edit in the docs repository."
+    },
+    {
+      "id": "task-14",
+      "repo": "notes",
+      "brief": "Delete docs/placeholder.md and remove its \"[Placeholder](docs/placeholder.md)\" bullet from README.md so no link remains.",
+      "criteria": [
+        {
+          "id": "t14-placeholder-gone",
+          "text": "docs/placeholder.md no longer exists"
+        },
+        {
+          "id": "t14-readme-clean",
+          "text": "README.md contains no reference to the deleted page and the link check passes"
+        }
+      ],
+      "paths": [
+        "docs/placeholder.md",
+        "README.md"
+      ],
+      "operations": [
+        "delete",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "delete",
+            "edits": [
+              {
+                "path": "docs/placeholder.md",
+                "delete": true
+              },
+              {
+                "path": "README.md",
+                "content": "# notes\n\nDisposable synthetic markdown/docs repository for Gaffer acceptance scenarios.\n\n- [Overview](docs/overview.md)\n- [Guide](docs/guide.md)\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Delete-file case paired with the link fix the trusted check demands; the manifest must record the deletion and the verifier must recreate the absence."
+    },
+    {
+      "id": "task-15",
+      "repo": "notes",
+      "brief": "Append a \"## Steps\" section to docs/guide.md with three numbered steps for running the link check: clone the repository, run node scripts/check-links.js ., review the reported links.",
+      "criteria": [
+        {
+          "id": "t15-steps-section",
+          "text": "docs/guide.md gains a Steps section with the three numbered steps and no new relative links"
+        }
+      ],
+      "paths": [
+        "docs/guide.md"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake",
+        "opencode"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/guide.md",
+                "content": "# Guide\n\nSynthetic guide page. Start at the [overview](overview.md).\n\n## Steps\n\n1. Clone the repository.\n2. Run node scripts/check-links.js .\n3. Review the reported links.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Also runnable as opencode with the same brief; the section adds no markdown links so the trusted check is unaffected."
+    },
+    {
+      "id": "task-16",
+      "repo": "notes",
+      "brief": "Edit docs/overview.md so its intro sentence links to both the guide and the placeholder page: \"See the [guide](guide.md) and [placeholder](placeholder.md).\"",
+      "criteria": [
+        {
+          "id": "t16-toc-links",
+          "text": "docs/overview.md links to guide.md and placeholder.md and both targets exist"
+        }
+      ],
+      "paths": [
+        "docs/overview.md"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/overview.md",
+                "content": "# Overview\n\nSynthetic overview page. See the [guide](guide.md) and [placeholder](placeholder.md).\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Adds a second relative link; exercises the link checker against two targets."
+    },
+    {
+      "id": "task-17",
+      "repo": "notes",
+      "brief": "Create scripts/README.md with a level-1 heading \"Scripts\" and one sentence stating that check-links.js checks that relative markdown links resolve to files.",
+      "criteria": [
+        {
+          "id": "t17-scripts-readme",
+          "text": "scripts/README.md exists and documents check-links.js"
+        }
+      ],
+      "paths": [
+        "scripts/README.md"
+      ],
+      "operations": [
+        "create"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "scripts/README.md",
+                "content": "# Scripts\n\ncheck-links.js checks that relative markdown links resolve to files.\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Second create case in a nested directory the trusted check itself skips."
+    },
+    {
+      "id": "task-18",
+      "repo": "notes",
+      "brief": "Edit README.md replacing the phrase \"Disposable synthetic markdown/docs repository\" with \"Disposable synthetic documentation repository\"; leave every link bullet unchanged.",
+      "criteria": [
+        {
+          "id": "t18-wording",
+          "text": "README.md carries the new phrase and all three link bullets are intact"
+        }
+      ],
+      "paths": [
+        "README.md"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "README.md",
+                "content": "# notes\n\nDisposable synthetic documentation repository for Gaffer acceptance scenarios.\n\n- [Overview](docs/overview.md)\n- [Guide](docs/guide.md)\n- [Placeholder](docs/placeholder.md)\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Root-file prose edit; link set unchanged."
+    },
+    {
+      "id": "task-19",
+      "repo": "notes",
+      "brief": "Edit only docs/guide.md so its opening sentence reads \"Synthetic guide for the notes fixture.\" while keeping the overview link and every other line unchanged.",
+      "criteria": [
+        {
+          "id": "t19-guide-opening",
+          "text": "docs/guide.md opens with the required sentence and still links to overview.md"
+        }
+      ],
+      "paths": [
+        "docs/guide.md"
+      ],
+      "operations": [
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/guide.md",
+                "content": "# Guide\n\nSynthetic guide for the notes fixture. Start at the [overview](overview.md).\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Narrow single-path envelope: the task's allowed paths cover exactly one file, exercising the envelope check's boundary."
+    },
+    {
+      "id": "task-20",
+      "repo": "notes",
+      "brief": "Create docs/release.md with a level-1 heading \"Release notes\" and one sentence of synthetic release notes, then add a bullet linking to it as [Release notes](docs/release.md) at the end of README.md.",
+      "criteria": [
+        {
+          "id": "t20-release-page",
+          "text": "docs/release.md exists with the heading"
+        },
+        {
+          "id": "t20-readme-link",
+          "text": "README.md ends with the release-notes bullet and the link check passes"
+        }
+      ],
+      "paths": [
+        "docs/release.md",
+        "README.md"
+      ],
+      "operations": [
+        "create",
+        "edit"
+      ],
+      "harness": [
+        "fake"
+      ],
+      "fake_spec": {
+        "attempts": [
+          {
+            "mode": "edit",
+            "edits": [
+              {
+                "path": "docs/release.md",
+                "content": "# Release notes\n\nSynthetic release notes for the notes fixture.\n"
+              },
+              {
+                "path": "README.md",
+                "content": "# notes\n\nDisposable synthetic markdown/docs repository for Gaffer acceptance scenarios.\n\n- [Overview](docs/overview.md)\n- [Guide](docs/guide.md)\n- [Placeholder](docs/placeholder.md)\n- [Release notes](docs/release.md)\n"
+              }
+            ]
+          }
+        ]
+      },
+      "expected_outcome": "succeeded",
+      "verification": {
+        "profile": "notes-links-v1",
+        "commands": [
+          {
+            "index": 0,
+            "expect": "pass"
+          }
+        ]
+      },
+      "notes": "Create plus edit across two files; closes the corpus with a multi-path, multi-operation success."
+    }
+  ],
+  "evidence": "None. This file is a data fixture and plan for the S-12 system test. Nothing here is evidence of execution; no supported runtime, verification report or acceptance follows from it."
+}

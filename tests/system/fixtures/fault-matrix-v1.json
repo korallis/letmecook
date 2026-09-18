@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "fixture": "fault-matrix-v1",
+  "scenario": "S-11",
+  "purpose": "Expected outcome rows for every fault-injection fake mode the S-11 system test drives against the real binaries. Each row is asserted on persisted state, never on logs alone.",
+  "conventions": {
+    "repo": "All rows run against the greeting repository (base 479eec44aa5cda0a5f91a48b2e5b6119c18570ba) with one trivial deterministic edit unless a row says otherwise.",
+    "attempt_state": "Terminal state of the attempt record after reconcile settles.",
+    "task_state": "tasks.state for the task once the row's terminal condition is reached.",
+    "reservation_released": "Whether dispatch_releases must contain a release for the dispatch, making a further dispatch admissible.",
+    "remote_work": "Expected boundary remote-work classification at terminal state; unknown is blocking, never released on its own.",
+    "receipt": "Expected custody/receipt observability: a failed attempt may retain a failed manifest as custody evidence (execution contract §3: result bytes may be retained as recovery evidence, never promoted); no failed row may produce a task head; stop/crash-after-edit rows may hold a custody receipt.",
+    "invariants": "Named assertions every S-11 row must verify, listed once here and applying to every row: identity (attempt belongs to the approved grant identity: task, grant, generation, epoch, runner), revision (all writes carried the expected monotonic revision; no stale-generation write was accepted), watermark (stream sink watermark equals the highest contiguous spooled record; claimed watermark in finalize/termination evidence never exceeds it), receipt (any custody receipt is machine-verifiable and byte-identical on replay), no_second_active_attempt (admitting the next dispatch is impossible while this attempt's reservation is held), and release_before_readmission (a released reservation exists before any retry dispatch is admitted)."
+  },
+  "modes": [
+    {
+      "mode": "crash",
+      "scenario": "Job process dies abruptly (SIGKILL semantics) mid-run before any edit is applied.",
+      "attempt_state": "failed",
+      "task_state": "reconciling",
+      "reservation_released": true,
+      "remote_work": "quiescent (reservations == terminal receipts, in-flight 0)",
+      "receipt": "none or a retained failed manifest (evidence only, never a head)",
+      "expected": "Guardian observes the dead pgid and reports termination; boundary is quiescent; the attempt finalizes failed via runner evidence and the reservation is released. Auto-retry stays off in S-11; the operator may dispatch a fresh attempt afterwards.",
+      "assertions": [
+        "invariants",
+        "guardian_termination_observed",
+        "boundary_quiescent",
+        "reservation_released_before_retry_admissible",
+        "no_head_promoted"
+      ]
+    },
+    {
+      "mode": "approval",
+      "scenario": "Job emits approval_required and blocks awaiting an approval the supervisor never grants.",
+      "attempt_state": "failed",
+      "task_state": "reconciling",
+      "reservation_released": true,
+      "remote_work": "quiescent",
+      "receipt": "none or a retained failed manifest (evidence only, never a head)",
+      "expected": "The supervisor fails the attempt; it never bypasses or answers the approval. Reservation released. The task is blocked pending an operator decision, not auto-retried.",
+      "assertions": [
+        "invariants",
+        "approval_never_bypassed",
+        "no_approval_reply_in_stream",
+        "reservation_released",
+        "no_head_promoted"
+      ]
+    },
+    {
+      "mode": "ignore_term",
+      "scenario": "Job ignores SIGTERM; the guardian escalates to SIGKILL after the grace window.",
+      "attempt_state": "cancelled_or_expired",
+      "task_state": "reconciling",
+      "reservation_released": true,
+      "remote_work": "quiescent (after measured KILL escalation confirms the pgid is gone)",
+      "receipt": "none",
+      "expected": "Termination is measured: TERM is ignored, the guardian escalates to KILL within kill_ms (5 s), observes ESRCH, and the confirmed termination with quiescent boundary releases the reservation. If driven by a lease lapse instead of a cancel, terminal state is expired with cause lease_expired.",
+      "assertions": [
+        "invariants",
+        "escalation_to_kill_within_kill_ms",
+        "confirmed_process_terminated",
+        "reservation_released"
+      ]
+    },
+    {
+      "mode": "huge_output",
+      "scenario": "Job floods stdout past the 4 MiB spool cap (stream_bytes 8 MiB).",
+      "attempt_state": "failed",
+      "task_state": "reconciling",
+      "reservation_released": true,
+      "remote_work": "quiescent",
+      "receipt": "retained failed manifest (custody evidence only, never a head)",
+      "expected": "The spool reserves its last 8 KiB for one terminal normalized status record spool_full; promised native bytes are never silently dropped. The supervisor requests stop and packs a failed manifest; the attempt finalizes failed and releases.",
+      "assertions": [
+        "invariants",
+        "terminal_spool_full_record_present",
+        "no_dropped_native_bytes",
+        "spool_size_within_cap",
+        "reservation_released"
+      ]
+    },
+    {
+      "mode": "create_empty",
+      "scenario": "Job creates a zero-byte file (the empty-file support case).",
+      "attempt_state": "succeeded",
+      "task_state": "awaiting_review",
+      "reservation_released": true,
+      "remote_work": "quiescent",
+      "receipt": "custody receipt present; manifest carries a zero-byte entry",
+      "expected": "A benign mode: the empty file packs, uploads (Content-Length 0), digests as the empty-string SHA-256 and recreates exactly. The row exists so the fault matrix also proves the zero-byte path end to end.",
+      "assertions": [
+        "invariants",
+        "empty_file_byte_exact",
+        "empty_manifest_entry_bytes_zero",
+        "custody_receipt_present",
+        "reservation_released"
+      ]
+    },
+    {
+      "mode": "delete",
+      "scenario": "Job deletes a tracked file inside the allowed path envelope.",
+      "attempt_state": "succeeded",
+      "task_state": "awaiting_review",
+      "reservation_released": true,
+      "remote_work": "quiescent",
+      "receipt": "custody receipt present; manifest records the deletion",
+      "expected": "Another benign mode: the deletion is inside the envelope (operations include delete), the manifest records it, and verification recreates the absence. The matrix row proves deletion is a first-class outcome, not a fault.",
+      "assertions": [
+        "invariants",
+        "deletion_recorded_in_manifest",
+        "envelope_honours_delete",
+        "reservation_released"
+      ]
+    },
+    {
+      "mode": "exit_nonzero",
+      "scenario": "Job exits with a nonzero status after making no edit.",
+      "attempt_state": "failed",
+      "task_state": "reconciling",
+      "reservation_released": true,
+      "remote_work": "quiescent",
+      "receipt": "none or a retained failed manifest (evidence only, never a head)",
+      "expected": "The exit code is observed and journaled; the attempt finalizes failed from the nonzero exit; a failed manifest, if the harness packs one, is retained as evidence only and never becomes a head; reservation released. Distinct from crash: the process exits by itself, so the guardian merely observes.",
+      "assertions": [
+        "invariants",
+        "exit_code_recorded",
+        "reservation_released",
+        "no_head_promoted"
+      ]
+    },
+    {
+      "mode": "detached_child",
+      "scenario": "Job spawns a setsid child outside the job's process group before finishing.",
+      "attempt_state": "unknown_or_stopping",
+      "task_state": "reconciling",
+      "reservation_released": false,
+      "remote_work": "unknown",
+      "receipt": "none",
+      "expected": "Termination cannot be confirmed (ErrTerminationUnconfirmed): confirmed_process is unknown, remote_work is unknown, and the attempt stays stopping|unknown with the reservation held. The row counts as blocking; only owner-reviewed reconcile (or a later current-boot quiescent observation) can release it.",
+      "assertions": [
+        "invariants",
+        "confirmed_process_unknown",
+        "remote_work_unknown_blocks_release",
+        "reservation_held",
+        "counts_as_blocking"
+      ]
+    },
+    {
+      "mode": "hang",
+      "scenario": "Inference mock accepts the connection then never answers (hang): the job blocks awaiting its first model response.",
+      "attempt_state": "failed",
+      "task_state": "reconciling",
+      "reservation_released": true,
+      "remote_work": "non_terminal_receipt_before_drain, quiescent after timeout cancel",
+      "receipt": "none (the hung request's reservation is non-terminal until cancelled and drained, or stays non-terminal and blocks release)",
+      "expected": "The boundary has a journaled reservation with no terminal receipt, so State().Quiescent is false while the request hangs. Either the supervisor cancels the attempt and the boundary drains the upstream request within RequestTimeout (then quiescent, failed, released), or the non-terminal receipt keeps remote_work non-quiescent and the row blocks like detached_child. The system test must assert whichever branch the implementation takes and never accept release while a receipt is non-terminal.",
+      "assertions": [
+        "invariants",
+        "reservation_journaled_before_send",
+        "no_release_while_non_terminal_receipt_exists",
+        "drain_within_request_timeout_or_blocked"
+      ]
+    }
+  ],
+  "cross_mode_invariants": [
+    "identity: every persisted write names the approved grant identity (task, grant, generation, epoch, runner); no foreign or stale-generation write is accepted",
+    "revision: revisions advance monotonically per object; a write carrying a stale revision is refused, never merged",
+    "watermark: the sink watermark equals the highest contiguous record actually spooled; no claim may exceed it",
+    "receipt: any custody receipt is machine-verifiable and replays byte-identically; failed-before-custody attempts have none",
+    "no_second_active_attempt: while any row's reservation is held, a new dispatch for that task is refused",
+    "release_before_readmission: a released dispatch_reservations row exists before any retry dispatch is admitted",
+    "unknown_is_blocking: rows ending unknown (remote work or process) count as blocking in the S-11 outcome table, never as recovered"
+  ],
+  "evidence": "None. Expected-state data for the S-11 system test only; nothing here is evidence of execution."
+}
